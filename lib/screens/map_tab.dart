@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
+import 'package:provider/provider.dart';
 import '../models/map_location.dart';
 import '../models/map_layer.dart';
 import '../models/parcel.dart';
@@ -20,6 +21,7 @@ import '../widgets/navigation_compass_dialog.dart';
 import '../widgets/tile_download_dialog.dart';
 import '../widgets/map_long_press_menu.dart';
 import '../widgets/navigation_target_banner.dart';
+import '../providers/map_provider.dart';
 
 /// Map Tab screen for the Gozdar app
 /// Displays an interactive map with support for multiple layers,
@@ -35,7 +37,6 @@ class MapTabState extends State<MapTab> {
   // Map controller for programmatic map control
   final MapController _mapController = MapController();
   final MapPreferencesService _prefsService = MapPreferencesService();
-  final CadastralService _cadastralService = CadastralService();
   final TileCacheService _tileCacheService = TileCacheService();
 
   // Initial map state (loaded from preferences)
@@ -92,6 +93,9 @@ class MapTabState extends State<MapTab> {
 
   /// Set navigation target and center map on it
   void setNavigationTarget(NavigationTarget target, {bool zoomIn = true}) {
+    // Update provider state
+    context.read<MapProvider>().setNavigationTarget(target);
+
     setState(() {
       _navigationTarget = target;
     });
@@ -106,6 +110,7 @@ class MapTabState extends State<MapTab> {
 
   /// Clear navigation target
   void clearNavigationTarget() {
+    context.read<MapProvider>().clearNavigationTarget();
     setState(() {
       _navigationTarget = null;
     });
@@ -444,13 +449,22 @@ class MapTabState extends State<MapTab> {
         longitude: lng,
       );
 
-      await DatabaseService().insertLocation(location);
-      await _loadLocations();
+      // Use provider for the operation
+      final success = await context.read<MapProvider>().addLocation(location);
+      if (success) {
+        await _loadLocations(); // Sync local state
+      }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Dodano "$name"')),
-        );
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Dodano "$name"')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Napaka: ${context.read<MapProvider>().error}')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -527,14 +541,23 @@ class MapTabState extends State<MapTab> {
   Future<void> _deleteLocation(MapLocation location) async {
     try {
       if (location.id != null) {
-        await DatabaseService().deleteLocation(location.id!);
-        await _loadLocations();
-      }
+        // Use provider for the operation
+        final success = await context.read<MapProvider>().deleteLocation(location.id!);
+        if (success) {
+          await _loadLocations(); // Sync local state
+        }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Izbrisano "${location.name}"')),
-        );
+        if (mounted) {
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Izbrisano "${location.name}"')),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Napaka: ${context.read<MapProvider>().error}')),
+            );
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -554,7 +577,8 @@ class MapTabState extends State<MapTab> {
     });
 
     try {
-      final parcel = await _cadastralService.queryParcelAtLocation(location);
+      // Use provider for the query
+      final parcel = await context.read<MapProvider>().queryParcelAtLocation(location);
 
       if (!mounted) return;
 
@@ -585,8 +609,9 @@ class MapTabState extends State<MapTab> {
 
   /// Show dialog to import a cadastral parcel
   Future<void> _showImportParcelDialog(CadastralParcel cadastralParcel) async {
-    // Check if parcel already exists
-    final exists = await DatabaseService().cadastralParcelExists(
+    // Check if parcel already exists using provider
+    final mapProvider = context.read<MapProvider>();
+    final exists = await mapProvider.cadastralParcelExists(
       cadastralParcel.cadastralMunicipality,
       cadastralParcel.parcelNumber,
     );
@@ -699,25 +724,26 @@ class MapTabState extends State<MapTab> {
   /// Import a cadastral parcel into the database
   Future<void> _importCadastralParcel(CadastralParcel cadastralParcel) async {
     try {
-      // Create parcel with cadastral data
-      final parcel = Parcel(
-        name: 'Parcela ${cadastralParcel.parcelNumber} (KO ${cadastralParcel.cadastralMunicipality})',
-        polygon: cadastralParcel.polygon,
-        cadastralMunicipality: cadastralParcel.cadastralMunicipality,
-        parcelNumber: cadastralParcel.parcelNumber,
-      );
+      // Use provider for the import
+      final success = await context.read<MapProvider>().importCadastralParcel(cadastralParcel);
 
-      await DatabaseService().insertParcel(parcel);
-
-      // Reload parcels to show the new one on the map
-      await _loadParcels();
+      if (success) {
+        // Reload parcels to show the new one on the map
+        await _loadParcels();
+      }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Parcela ${cadastralParcel.parcelNumber} uspesno uvozena'),
-          ),
-        );
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Parcela ${cadastralParcel.parcelNumber} uspesno uvozena'),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Napaka: ${context.read<MapProvider>().error}')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -1200,16 +1226,22 @@ class MapTabState extends State<MapTab> {
 
           // Long press action menu
           if (_longPressScreenPosition != null && _longPressMapPosition != null)
-            MapLongPressMenu(
-              screenPosition: _longPressScreenPosition!,
-              mapPosition: _longPressMapPosition!,
-              onAddLocation: () => _showAddLocationDialog(_longPressMapPosition!),
-              onAddLog: () => _showAddLogDialog(_longPressMapPosition!),
-              onImportParcel: () => _queryParcelAtLocation(_longPressMapPosition!),
-              onDismiss: () => setState(() {
-                _longPressScreenPosition = null;
-                _longPressMapPosition = null;
-              }),
+            Builder(
+              builder: (context) {
+                // Capture position at build time so it persists after onDismiss clears state
+                final position = _longPressMapPosition!;
+                return MapLongPressMenu(
+                  screenPosition: _longPressScreenPosition!,
+                  mapPosition: position,
+                  onAddLocation: () => _showAddLocationDialog(position),
+                  onAddLog: () => _showAddLogDialog(position),
+                  onImportParcel: () => _queryParcelAtLocation(position),
+                  onDismiss: () => setState(() {
+                    _longPressScreenPosition = null;
+                    _longPressMapPosition = null;
+                  }),
+                );
+              },
             ),
         ],
       ),

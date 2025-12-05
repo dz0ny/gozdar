@@ -29,8 +29,8 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
   String? _errorMessage;
   Map<String, dynamic>? _cacheStats;
 
-  int get _minZoom => widget.currentZoom.clamp(1, 17).toInt();
-  int get _maxZoom => widget.currentLayer.maxZoom.clamp(1, 17).toInt();
+  int get _minZoom => widget.currentZoom.clamp(1, widget.currentLayer.maxZoom).toInt();
+  int get _maxZoom => widget.currentLayer.maxZoom.toInt();
 
   @override
   void initState() {
@@ -55,14 +55,14 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     );
   }
 
+  /// WMS layers use {bbox} placeholder which flutter_map_tile_caching doesn't support.
+  /// Only XYZ tile layers with {x}, {y}, {z} placeholders can be cached offline.
+  bool get _canDownload => !widget.currentLayer.isWms;
+
   String? get _urlTemplate {
     if (widget.currentLayer.isWms) {
-      // Build WMS URL template
-      final baseUrl = widget.currentLayer.wmsBaseUrl;
-      final layers = widget.currentLayer.wmsLayers?.join(',') ?? '';
-      final format = widget.currentLayer.wmsFormat ?? 'image/jpeg';
-      final styles = widget.currentLayer.wmsStyles ?? '';
-      return '$baseUrl?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=$layers&STYLES=$styles&FORMAT=$format&TRANSPARENT=true&SRS=EPSG:3857&BBOX={bbox}&WIDTH=256&HEIGHT=256';
+      // WMS layers cannot be downloaded - they use {bbox} which is not supported
+      return null;
     }
     return widget.currentLayer.urlTemplate;
   }
@@ -191,7 +191,9 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                     _buildErrorMessage(),
                     const SizedBox(height: 16),
                   ],
-                  if (_isDownloading) ...[
+                  if (!_canDownload) ...[
+                    _buildWmsNotSupportedMessage(),
+                  ] else if (_isDownloading) ...[
                     _buildProgressSection(),
                     const SizedBox(height: 16),
                     _buildCancelButton(),
@@ -340,6 +342,36 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       icon: const Icon(Icons.cancel),
       label: const Text('Prekliči'),
       style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+    );
+  }
+
+  Widget _buildWmsNotSupportedMessage() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.info_outline, color: Colors.orange.shade700, size: 32),
+          const SizedBox(height: 12),
+          Text(
+            'WMS sloji ne podpirajo prenosa',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.orange.shade900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Izberite ploščično podlago (npr. OSM, TopoMap, ESRI) za prenos kart brez povezave.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.orange.shade800),
+          ),
+        ],
+      ),
     );
   }
 

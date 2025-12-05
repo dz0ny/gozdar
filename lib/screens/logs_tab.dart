@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/log_entry.dart';
-import '../services/database_service.dart';
-import '../services/export_service.dart';
+import '../providers/logs_provider.dart';
 import '../widgets/log_card.dart';
 import '../widgets/log_entry_form.dart';
 import '../widgets/add_log_sheet.dart';
@@ -9,88 +9,40 @@ import '../widgets/conversion_settings_sheet.dart';
 import '../widgets/save_batch_sheet.dart';
 import '../widgets/saved_batches_sheet.dart';
 
-class LogsTab extends StatefulWidget {
+class LogsTab extends StatelessWidget {
   const LogsTab({super.key});
 
-  @override
-  State<LogsTab> createState() => _LogsTabState();
-}
-
-class _LogsTabState extends State<LogsTab> {
-  final DatabaseService _databaseService = DatabaseService();
-
-  List<LogEntry> _logEntries = [];
-  double _totalVolume = 0.0;
-  bool _isLoading = true;
-
-  // Conversion factors (m³ → PRM/NM)
-  double _prmFactor = 0.65; // Default: hardwood
-  double _nmFactor = 0.40;  // Default: average
-
-  @override
-  void initState() {
-    super.initState();
-    _loadLogEntries();
-  }
-
-  void _showConversionDialog() {
+  void _showConversionDialog(BuildContext context) {
+    final provider = context.read<LogsProvider>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) => ConversionSettingsSheet(
-        totalVolume: _totalVolume,
-        prmFactor: _prmFactor,
-        nmFactor: _nmFactor,
+        totalVolume: provider.totalVolume,
+        prmFactor: provider.conversionFactors.prm,
+        nmFactor: provider.conversionFactors.nm,
         onChanged: (prm, nm) {
-          setState(() {
-            _prmFactor = prm;
-            _nmFactor = nm;
-          });
+          provider.setConversionFactors(prm, nm);
         },
       ),
     );
   }
 
-  Future<void> _loadLogEntries() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final entries = await _databaseService.getAllLogs();
-      final total = await _databaseService.getTotalVolume();
-
-      setState(() {
-        _logEntries = entries;
-        _totalVolume = total;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri nalaganju vnosov: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _addLogEntry() async {
+  Future<void> _addLogEntry(BuildContext context) async {
+    final provider = context.read<LogsProvider>();
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) => AddLogSheet(
         onAdd: (entry) async {
-          await _databaseService.insertLog(entry);
-          await _loadLogEntries();
+          await provider.addLogEntry(entry);
         },
       ),
     );
   }
 
-  Future<void> _editLogEntry(LogEntry entry) async {
+  Future<void> _editLogEntry(BuildContext context, LogEntry entry) async {
+    final provider = context.read<LogsProvider>();
     final result = await Navigator.of(context).push<LogEntry>(
       MaterialPageRoute(
         builder: (context) => LogEntryForm(logEntry: entry),
@@ -98,53 +50,45 @@ class _LogsTabState extends State<LogsTab> {
       ),
     );
 
-    if (result != null) {
-      try {
-        await _databaseService.updateLog(result);
-        await _loadLogEntries();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Vnos posodobljen')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka pri posodabljanju vnosa: $e')),
-          );
-        }
+    if (result != null && context.mounted) {
+      final success = await provider.updateLogEntry(result);
+      if (success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vnos posodobljen')),
+        );
+      } else if (!success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Napaka: ${provider.error}')),
+        );
       }
     }
   }
 
-  Future<void> _deleteLogEntry(LogEntry entry) async {
-    try {
-      await _databaseService.deleteLog(entry.id!);
-      await _loadLogEntries();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Vnos izbrisan'),
-            action: SnackBarAction(
-              label: 'Razveljavi',
-              onPressed: () async {
-                await _databaseService.insertLog(entry);
-                await _loadLogEntries();
-              },
-            ),
+  Future<void> _deleteLogEntry(BuildContext context, LogEntry entry) async {
+    final provider = context.read<LogsProvider>();
+    final success = await provider.deleteLogEntry(entry);
+
+    if (success && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Vnos izbrisan'),
+          action: SnackBarAction(
+            label: 'Razveljavi',
+            onPressed: () async {
+              await provider.restoreLogEntry(entry);
+            },
           ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri brisanju vnosa: $e')),
-        );
-      }
+        ),
+      );
+    } else if (!success && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Napaka: ${provider.error}')),
+      );
     }
   }
 
-  Future<void> _showExportMenu() async {
+  Future<void> _showExportMenu(BuildContext context) async {
+    final provider = context.read<LogsProvider>();
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -167,30 +111,32 @@ class _LogsTabState extends State<LogsTab> {
       ),
     );
 
-    if (result != null && mounted) {
-      try {
-        if (result == 'excel') {
-          await ExportService.exportToExcel(_logEntries);
-        } else if (result == 'json') {
-          await ExportService.exportToJson(_logEntries);
-        }
-        if (mounted) {
+    if (result != null && context.mounted) {
+      bool success;
+      if (result == 'excel') {
+        success = await provider.exportToExcel();
+      } else {
+        success = await provider.exportToJson();
+      }
+
+      if (context.mounted) {
+        if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Izvoz uspešen')),
           );
-        }
-      } catch (e) {
-        if (mounted) {
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka pri izvozu: $e')),
+            SnackBar(content: Text('Napaka: ${provider.error}')),
           );
         }
       }
     }
   }
 
-  Future<void> _deleteAllLogs() async {
-    if (_logEntries.isEmpty) {
+  Future<void> _deleteAllLogs(BuildContext context) async {
+    final provider = context.read<LogsProvider>();
+
+    if (!provider.hasEntries) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ni vnosov za brisanje')),
       );
@@ -202,8 +148,8 @@ class _LogsTabState extends State<LogsTab> {
       builder: (context) => AlertDialog(
         title: const Text('Odstrani vse hlode'),
         content: Text(
-          'Ali ste prepričani, da želite odstraniti vseh ${_logEntries.length} vnosov?\n\n'
-          'Skupni volumen: ${_totalVolume.toStringAsFixed(2)} m³\n\n'
+          'Ali ste prepričani, da želite odstraniti vseh ${provider.entryCount} vnosov?\n\n'
+          'Skupni volumen: ${provider.totalVolume.toStringAsFixed(2)} m³\n\n'
           'To dejanje ni mogoče razveljaviti.',
         ),
         actions: [
@@ -222,59 +168,57 @@ class _LogsTabState extends State<LogsTab> {
       ),
     );
 
-    if (confirmed == true && mounted) {
-      try {
-        await _databaseService.deleteAllLogs();
-        await _loadLogEntries();
-        if (mounted) {
+    if (confirmed == true && context.mounted) {
+      final success = await provider.deleteAllLogEntries();
+      if (context.mounted) {
+        if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Vsi vnosi odstranjeni')),
           );
-        }
-      } catch (e) {
-        if (mounted) {
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka pri brisanju: $e')),
+            SnackBar(content: Text('Napaka: ${provider.error}')),
           );
         }
       }
     }
   }
 
-  Future<void> _saveBatch() async {
-    if (_logEntries.isEmpty) {
+  Future<void> _saveBatch(BuildContext context) async {
+    final provider = context.read<LogsProvider>();
+
+    if (!provider.hasEntries) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ni vnosov za shranjevanje')),
       );
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => SaveBatchSheet(
-        totalVolume: _totalVolume,
-        logCount: _logEntries.length,
+      builder: (sheetContext) => SaveBatchSheet(
+        totalVolume: provider.totalVolume,
+        logCount: provider.entryCount,
         onSave: (batch) async {
-          await _databaseService.insertLogBatch(batch);
-          if (mounted) {
-            messenger.showSnackBar(
-              const SnackBar(content: Text('Shranjeno')),
-            );
+          final success = await provider.saveBatch(batch);
+          if (context.mounted) {
+            if (success) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Shranjeno')),
+              );
+            }
           }
         },
       ),
     );
   }
 
-  Future<void> _showSavedBatches() async {
+  Future<void> _showSavedBatches(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => SavedBatchesSheet(
-        databaseService: _databaseService,
-      ),
+      builder: (context) => const SavedBatchesSheet(),
     );
   }
 
@@ -284,42 +228,28 @@ class _LogsTabState extends State<LogsTab> {
       appBar: AppBar(
         title: const Text('Hlodi'),
         actions: [
+          Consumer<LogsProvider>(
+            builder: (context, provider, _) => IconButton(
+              icon: const Icon(Icons.save),
+              tooltip: 'Shrani',
+              onPressed: provider.hasEntries ? () => _saveBatch(context) : null,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.folder),
+            tooltip: 'Shranjeno',
+            onPressed: () => _showSavedBatches(context),
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
-              if (value == 'save') {
-                _saveBatch();
-              } else if (value == 'saved') {
-                _showSavedBatches();
-              } else if (value == 'export') {
-                _showExportMenu();
+              if (value == 'export') {
+                _showExportMenu(context);
               } else if (value == 'delete_all') {
-                _deleteAllLogs();
+                _deleteAllLogs(context);
               }
             },
             itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'save',
-                enabled: _logEntries.isNotEmpty,
-                child: const Row(
-                  children: [
-                    Icon(Icons.save),
-                    SizedBox(width: 8),
-                    Text('Shrani'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'saved',
-                child: Row(
-                  children: [
-                    Icon(Icons.folder),
-                    SizedBox(width: 8),
-                    Text('Shranjeno'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
               const PopupMenuItem(
                 value: 'export',
                 child: Row(
@@ -344,99 +274,112 @@ class _LogsTabState extends State<LogsTab> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadLogEntries,
-              child: Column(
-                children: [
-                  Card(
-                    margin: const EdgeInsets.all(12),
-                    child: InkWell(
-                      onTap: _showConversionDialog,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Row(
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${_totalVolume.toStringAsFixed(2)} m³',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green[400],
-                                      ),
+      body: Consumer<LogsProvider>(
+        builder: (context, provider, _) {
+          if (provider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return RefreshIndicator(
+            onRefresh: () => provider.loadLogEntries(),
+            child: Column(
+              children: [
+                // Volume summary card
+                Card(
+                  margin: const EdgeInsets.all(12),
+                  child: InkWell(
+                    onTap: () => _showConversionDialog(context),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${provider.totalVolume.toStringAsFixed(2)} m³',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green[400],
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${provider.prmVolume.toStringAsFixed(2)} PRM  •  ${provider.nmVolume.toStringAsFixed(2)} NM',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey[500],
+                                    ),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${provider.entryCount} hlodov',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey[500],
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${(_totalVolume * _prmFactor).toStringAsFixed(2)} PRM  •  ${(_totalVolume * _nmFactor).toStringAsFixed(2)} NM',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Colors.grey[500],
-                                      ),
-                                ),
-                              ],
-                            ),
-                            const Spacer(),
-                            Text(
-                              '${_logEntries.length} hlodov',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.grey[500],
-                                  ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  Expanded(
-                    child: _logEntries.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.forest_outlined,
-                                  size: 64,
-                                  color: Colors.grey[600],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Ni še hlodov',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        color: Colors.grey[500],
-                                      ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Tapnite + za dodajanje hloda',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: Colors.grey[600],
-                                      ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            itemCount: _logEntries.length,
-                            itemBuilder: (context, index) {
-                              final entry = _logEntries[index];
-                              return LogCard(
-                                logEntry: entry,
-                                onTap: () => _editLogEntry(entry),
-                                onDismissed: () => _deleteLogEntry(entry),
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
+                ),
+
+                // Log entries list
+                Expanded(
+                  child: provider.logEntries.isEmpty
+                      ? _buildEmptyState(context)
+                      : ListView.builder(
+                          itemCount: provider.logEntries.length,
+                          itemBuilder: (context, index) {
+                            final entry = provider.logEntries[index];
+                            return LogCard(
+                              logEntry: entry,
+                              onTap: () => _editLogEntry(context, entry),
+                              onDismissed: () => _deleteLogEntry(context, entry),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'logs_add',
-        onPressed: _addLogEntry,
+        onPressed: () => _addLogEntry(context),
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.forest_outlined,
+            size: 64,
+            color: Colors.grey[600],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Ni še hlodov',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.grey[500],
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tapnite + za dodajanje hloda',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[600],
+                ),
+          ),
+        ],
       ),
     );
   }

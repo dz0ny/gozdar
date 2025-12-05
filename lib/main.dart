@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 import 'screens/map_tab.dart';
 import 'screens/logs_tab.dart';
 import 'screens/forest_tab.dart';
@@ -7,6 +8,8 @@ import 'screens/intro_wizard_screen.dart';
 import 'services/database_service.dart';
 import 'services/tile_cache_service.dart';
 import 'services/onboarding_service.dart';
+import 'providers/logs_provider.dart';
+import 'providers/map_provider.dart';
 import 'theme/app_theme.dart';
 import 'models/navigation_target.dart';
 
@@ -36,13 +39,26 @@ class _GozdarAppState extends State<GozdarApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Gozdar',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.greenTheme,
-      home: _showOnboarding
-          ? IntroWizardScreen(onComplete: _onOnboardingComplete)
-          : const MainScreen(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => LogsProvider()..loadLogEntries(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => MapProvider()
+            ..loadPreferences()
+            ..loadLocations()
+            ..loadParcels(),
+        ),
+      ],
+      child: MaterialApp(
+        title: 'Gozdar',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.greenTheme,
+        home: _showOnboarding
+            ? IntroWizardScreen(onComplete: _onOnboardingComplete)
+            : const MainScreen(),
+      ),
     );
   }
 }
@@ -72,6 +88,9 @@ class MainScreenState extends State<MainScreen> {
 
   /// Set navigation target and switch to map tab
   void setNavigationTarget(NavigationTarget target) {
+    // Update provider state
+    context.read<MapProvider>().setNavigationTarget(target);
+
     setState(() {
       _currentIndex = 0; // Switch to map tab
     });

@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/log_batch.dart';
 import '../models/log_entry.dart';
+import '../providers/logs_provider.dart';
 import '../services/database_service.dart';
+import '../services/export_service.dart';
+import '../widgets/conversion_settings_sheet.dart';
 import '../widgets/log_card.dart';
 
 class BatchDetailScreen extends StatefulWidget {
@@ -38,6 +42,17 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
       for (final log in logs) {
         total += log.volume;
       }
+
+      // Update batch totals in database if changed
+      if (_batch.totalVolume != total || _batch.logCount != logs.length) {
+        final updatedBatch = _batch.copyWith(
+          totalVolume: total,
+          logCount: logs.length,
+        );
+        await _databaseService.updateLogBatch(updatedBatch);
+        _batch = updatedBatch;
+      }
+
       setState(() {
         _logs = logs;
         _totalVolume = total;
@@ -147,6 +162,76 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
     }
   }
 
+  void _showConversionDialog() {
+    final provider = context.read<LogsProvider>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => ConversionSettingsSheet(
+        totalVolume: _totalVolume,
+        prmFactor: provider.conversionFactors.prm,
+        nmFactor: provider.conversionFactors.nm,
+        onChanged: (prm, nm) {
+          provider.setConversionFactors(prm, nm);
+          setState(() {}); // Refresh to show updated conversions
+        },
+      ),
+    );
+  }
+
+  Future<void> _showExportMenu() async {
+    if (_logs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ni hlodov za izvoz')),
+      );
+      return;
+    }
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Izvozi hlode'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.table_chart),
+              title: const Text('Izvozi kot Excel'),
+              onTap: () => Navigator.of(context).pop('excel'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.code),
+              title: const Text('Izvozi kot JSON'),
+              onTap: () => Navigator.of(context).pop('json'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      try {
+        if (result == 'excel') {
+          await ExportService.exportToExcel(_logs);
+        } else {
+          await ExportService.exportToJson(_logs);
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Izvoz uspešen')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Napaka: $e')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('d. M. yyyy HH:mm');
@@ -155,6 +240,11 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
       appBar: AppBar(
         title: Text(_batch.owner ?? 'Projekt'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download),
+            tooltip: 'Izvozi',
+            onPressed: _showExportMenu,
+          ),
           IconButton(
             icon: const Icon(Icons.edit),
             tooltip: 'Uredi info',
@@ -169,126 +259,132 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Summary card
-                Card(
-                  margin: const EdgeInsets.all(12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            Column(
-                              children: [
-                                Text(
-                                  '${_totalVolume.toStringAsFixed(2)} m³',
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green[700],
-                                      ),
-                                ),
-                                Text(
-                                  'Volumen',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                            Column(
-                              children: [
-                                Text(
-                                  '${_logs.length}',
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                Text(
-                                  'Hlodov',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        if (_batch.notes != null && _batch.notes!.isNotEmpty) ...[
-                          const Divider(height: 24),
-                          Row(
-                            children: [
-                              Icon(Icons.note, size: 16, color: Colors.grey[600]),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _batch.notes!,
-                                  style: TextStyle(color: Colors.grey[600]),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.calendar_today, size: 14, color: Colors.grey[500]),
-                            const SizedBox(width: 4),
-                            Text(
-                              dateFormat.format(_batch.createdAt),
-                              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                            ),
-                            if (_batch.hasLocation) ...[
-                              const SizedBox(width: 16),
-                              Icon(Icons.location_on, size: 14, color: Colors.grey[500]),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${_batch.latitude!.toStringAsFixed(4)}, ${_batch.longitude!.toStringAsFixed(4)}',
-                                style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Logs list
-                Expanded(
-                  child: _logs.isEmpty
-                      ? Center(
+          : Consumer<LogsProvider>(
+              builder: (context, provider, _) {
+                final prmVolume = _totalVolume * provider.conversionFactors.prm;
+                final nmVolume = _totalVolume * provider.conversionFactors.nm;
+                return Column(
+                  children: [
+                    // Summary card (tap for conversion dialog)
+                    Card(
+                      margin: const EdgeInsets.all(12),
+                      child: InkWell(
+                        onTap: _showConversionDialog,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.forest_outlined, size: 64, color: Colors.grey[600]),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Ni še hlodov',
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      color: Colors.grey[500],
-                                    ),
+                              Row(
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${_totalVolume.toStringAsFixed(2)} m³',
+                                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green[400],
+                                            ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${prmVolume.toStringAsFixed(2)} PRM  •  ${nmVolume.toStringAsFixed(2)} NM',
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: Colors.grey[500],
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    '${_logs.length} hlodov',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: Colors.grey[500],
+                                        ),
+                                  ),
+                                ],
                               ),
+                              if (_batch.notes != null && _batch.notes!.isNotEmpty) ...[
+                                const Divider(height: 16),
+                                Row(
+                                  children: [
+                                    Icon(Icons.note, size: 16, color: Colors.grey[600]),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _batch.notes!,
+                                        style: TextStyle(color: Colors.grey[600]),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                               const SizedBox(height: 8),
-                              Text(
-                                'Tapnite + za dodajanje hloda',
-                                style: TextStyle(color: Colors.grey[600]),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.calendar_today, size: 14, color: Colors.grey[500]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    dateFormat.format(_batch.createdAt),
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                                  ),
+                                  if (_batch.hasLocation) ...[
+                                    const SizedBox(width: 16),
+                                    Icon(Icons.location_on, size: 14, color: Colors.grey[500]),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${_batch.latitude!.toStringAsFixed(4)}, ${_batch.longitude!.toStringAsFixed(4)}',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ],
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount: _logs.length,
-                          itemBuilder: (context, index) {
-                            final entry = _logs[index];
-                            return LogCard(
-                              logEntry: entry,
-                              onTap: () {}, // View-only in batch
-                              onDismissed: () => _deleteLog(entry),
-                            );
-                          },
                         ),
-                ),
-              ],
+                      ),
+                    ),
+
+                    // Logs list
+                    Expanded(
+                      child: _logs.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.forest_outlined, size: 64, color: Colors.grey[600]),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Ni še hlodov',
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                          color: Colors.grey[500],
+                                        ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Tapnite + za dodajanje hloda',
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: _logs.length,
+                              itemBuilder: (context, index) {
+                                final entry = _logs[index];
+                                return LogCard(
+                                  logEntry: entry,
+                                  onTap: () {}, // View-only in batch
+                                  onDismissed: () => _deleteLog(entry),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
             ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'batch_add_log',
