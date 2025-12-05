@@ -64,17 +64,21 @@ build-no-bump: ## Build release APK without bumping version
 	flutter build apk --release
 	@ls -lh $(BUILD_DIR)/app-release.apk
 
-release: build ## Create GitHub release with APK
-	@echo "Creating GitHub release v$(NEW_VERSION)..."
+release: build ## Build APK and create GitHub release
+	$(eval VERSION := $(shell grep '^version:' $(PUBSPEC) | sed 's/version: //' | cut -d'+' -f1))
+	@echo "Creating GitHub release v$(VERSION)..."
 	@if ! command -v gh &> /dev/null; then \
 		echo "Error: GitHub CLI (gh) not installed. Install with: brew install gh"; \
 		exit 1; \
 	fi
-	gh release create "v$(shell grep '^version:' $(PUBSPEC) | sed 's/version: //' | cut -d'+' -f1)" \
-		$(BUILD_DIR)/app-release.apk \
-		--title "Gozdar v$(shell grep '^version:' $(PUBSPEC) | sed 's/version: //' | cut -d'+' -f1)" \
-		--notes "Release $(shell grep '^version:' $(PUBSPEC) | sed 's/version: //' | cut -d'+' -f1)"
-	@echo "Release created!"
+	@cp $(BUILD_DIR)/app-release.apk $(BUILD_DIR)/gozdar-$(VERSION).apk
+	gh release create "v$(VERSION)" \
+		"$(BUILD_DIR)/gozdar-$(VERSION).apk#Gozdar $(VERSION) APK" \
+		--title "Gozdar v$(VERSION)" \
+		--notes "Release $(VERSION)" \
+		--latest
+	@echo "Release v$(VERSION) created!"
+	@echo "URL: https://github.com/dz0ny/gozdar/releases/tag/v$(VERSION)"
 
 clean: ## Clean build artifacts
 	flutter clean

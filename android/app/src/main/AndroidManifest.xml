@@ -7,7 +7,7 @@
     <!-- OTA Update: permission to install APK packages -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <application
-        android:label="gozdar"
+        android:label="Gozdar"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity
