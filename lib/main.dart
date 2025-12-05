@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -8,16 +9,24 @@ import 'screens/intro_wizard_screen.dart';
 import 'services/database_service.dart';
 import 'services/tile_cache_service.dart';
 import 'services/onboarding_service.dart';
+import 'services/update_service.dart';
 import 'providers/logs_provider.dart';
 import 'providers/map_provider.dart';
 import 'theme/app_theme.dart';
 import 'models/navigation_target.dart';
+import 'widgets/update_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DatabaseService().initialize();
   await TileCacheService.initialize();
   await OnboardingService.initialize();
+
+  // Initialize update service (Android only)
+  if (Platform.isAndroid) {
+    await UpdateService().init();
+  }
+
   runApp(const GozdarApp());
 }
 
@@ -50,6 +59,8 @@ class _GozdarAppState extends State<GozdarApp> {
             ..loadLocations()
             ..loadParcels(),
         ),
+        if (Platform.isAndroid)
+          ChangeNotifierProvider.value(value: UpdateService()),
       ],
       child: MaterialApp(
         title: 'Gozdar',
@@ -85,6 +96,17 @@ class MainScreenState extends State<MainScreen> {
   final GlobalKey<ForestTabState> _forestTabKey = GlobalKey<ForestTabState>();
   // GlobalKey to access MapTab state for navigation
   final GlobalKey<MapTabState> _mapTabKey = GlobalKey<MapTabState>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Check for updates on startup (Android only)
+    if (Platform.isAndroid) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        UpdateService().checkForUpdate();
+      });
+    }
+  }
 
   /// Set navigation target and switch to map tab
   void setNavigationTarget(NavigationTarget target) {
@@ -148,24 +170,31 @@ class MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
+      body: Stack(
         children: [
-          MediaQuery.removePadding(
-            context: context,
-            removeBottom: true,
-            child: MapTab(key: _mapTabKey),
+          IndexedStack(
+            index: _currentIndex,
+            children: [
+              MediaQuery.removePadding(
+                context: context,
+                removeBottom: true,
+                child: MapTab(key: _mapTabKey),
+              ),
+              MediaQuery.removePadding(
+                context: context,
+                removeBottom: true,
+                child: ForestTab(key: _forestTabKey),
+              ),
+              MediaQuery.removePadding(
+                context: context,
+                removeBottom: true,
+                child: const LogsTab(),
+              ),
+            ],
           ),
-          MediaQuery.removePadding(
-            context: context,
-            removeBottom: true,
-            child: ForestTab(key: _forestTabKey),
-          ),
-          MediaQuery.removePadding(
-            context: context,
-            removeBottom: true,
-            child: const LogsTab(),
-          ),
+          // Update banner overlay (Android only)
+          if (Platform.isAndroid)
+            UpdateBanner(updateService: UpdateService()),
         ],
       ),
       bottomNavigationBar: NavigationBar(
