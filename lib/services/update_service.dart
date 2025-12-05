@@ -162,11 +162,12 @@ class UpdateService extends ChangeNotifier {
   }
 
   /// Compare versions to check if release is newer
+  /// Supports YYYY.MMDD.N format (e.g., 2025.1205.1)
   bool _isNewerVersion(ReleaseInfo release) {
     final currentParts = currentVersion.split('.').map(int.tryParse).toList();
     final releaseParts = release.version.split('.').map(int.tryParse).toList();
 
-    // Pad to ensure same length
+    // Pad to ensure same length (3 parts: YYYY.MMDD.N)
     while (currentParts.length < 3) {
       currentParts.add(0);
     }
@@ -174,7 +175,7 @@ class UpdateService extends ChangeNotifier {
       releaseParts.add(0);
     }
 
-    // Compare major.minor.patch
+    // Compare each part: YYYY, MMDD, N
     for (int i = 0; i < 3; i++) {
       final current = currentParts[i] ?? 0;
       final remote = releaseParts[i] ?? 0;
@@ -183,8 +184,8 @@ class UpdateService extends ChangeNotifier {
       if (remote < current) return false;
     }
 
-    // Same version, compare build number
-    return release.buildNumber > currentBuildNumber;
+    // Same version
+    return false;
   }
 
   /// Download and install the update
@@ -245,6 +246,15 @@ class UpdateService extends ChangeNotifier {
             case OtaStatus.INSTALLATION_DONE:
               // Installation completed successfully
               _status = UpdateStatus.idle;
+              notifyListeners();
+              break;
+            case OtaStatus.INSTALLATION_ERROR:
+              _status = UpdateStatus.error;
+              _errorMessage = event.value ?? 'Installation failed';
+              notifyListeners();
+              break;
+            case OtaStatus.CANCELED:
+              _status = UpdateStatus.available;
               notifyListeners();
               break;
           }
