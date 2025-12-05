@@ -242,6 +242,11 @@ class UpdateService extends ChangeNotifier {
               _errorMessage = 'Checksum verification failed';
               notifyListeners();
               break;
+            case OtaStatus.INSTALLATION_DONE:
+              // Installation completed successfully
+              _status = UpdateStatus.idle;
+              notifyListeners();
+              break;
           }
         },
         onError: (e) {
