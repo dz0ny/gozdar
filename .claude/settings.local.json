@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(xargs ls:*)",
+      "Bash(cat:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter pub get:*)",
+      "Bash(flutter pub upgrade:*)",
+      "Bash(flutter --version:*)",
+      "Bash(flutter pub deps:*)",
+      "WebFetch(domain:prostor.zgs.gov.si)",
+      "Bash(curl:*)",
+      "Bash(paste:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(dart run:*)",
+      "WebSearch",
+      "WebFetch(domain:wiki.openstreetmap.org)",
+      "Skill(flutter-development)",
+      "Bash(tree:*)",
+      "Bash(wc:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

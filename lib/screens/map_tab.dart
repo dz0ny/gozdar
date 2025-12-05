@@ -1,0 +1,1278 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_compass/flutter_compass.dart';
+import '../models/map_location.dart';
+import '../models/map_layer.dart';
+import '../models/parcel.dart';
+import '../models/navigation_target.dart';
+import '../models/log_entry.dart';
+import '../utils/slovenian_crs.dart';
+import '../services/database_service.dart';
+import '../widgets/log_entry_form.dart';
+import '../services/map_preferences_service.dart';
+import '../services/cadastral_service.dart';
+import '../services/tile_cache_service.dart';
+import '../widgets/location_pointer.dart';
+import '../widgets/navigation_compass_dialog.dart';
+import '../widgets/tile_download_dialog.dart';
+import '../widgets/map_long_press_menu.dart';
+import '../widgets/navigation_target_banner.dart';
+
+/// Map Tab screen for the Gozdar app
+/// Displays an interactive map with support for multiple layers,
+/// saved locations, and GPS functionality
+class MapTab extends StatefulWidget {
+  const MapTab({super.key});
+
+  @override
+  State<MapTab> createState() => MapTabState();
+}
+
+class MapTabState extends State<MapTab> {
+  // Map controller for programmatic map control
+  final MapController _mapController = MapController();
+  final MapPreferencesService _prefsService = MapPreferencesService();
+  final CadastralService _cadastralService = CadastralService();
+  final TileCacheService _tileCacheService = TileCacheService();
+
+  // Initial map state (loaded from preferences)
+  LatLng _initialCenter = const LatLng(46.0569, 14.5058);
+  double _initialZoom = 13.0;
+  double _initialRotation = 0.0;
+
+  // Current map state
+  MapLayer _currentBaseLayer = MapLayer.openStreetMap;
+  final Set<MapLayerType> _activeOverlays = {};
+  List<MapLocation> _locations = [];
+  List<Parcel> _parcels = [];
+  bool _isLoadingLocations = false;
+  bool _isQueryingParcel = false;
+  bool _isLoadingPreferences = true; // Wait for preferences before rendering map
+
+  // User location tracking
+  Position? _userPosition;
+  double? _userHeading;
+  StreamSubscription<Position>? _positionSubscription;
+  StreamSubscription<CompassEvent>? _compassSubscription;
+
+  // Navigation target (set from ParcelDetailScreen)
+  NavigationTarget? _navigationTarget;
+
+  // Long press menu state
+  Offset? _longPressScreenPosition;
+  LatLng? _longPressMapPosition;
+
+  // Current zoom level for dynamic marker sizing
+  double _currentZoom = 13.0;
+
+  /// Check if markers should be visible at current zoom
+  /// Slovenian CRS has different zoom scale, so lower threshold needed
+  bool get _showMarkers {
+    if (_currentBaseLayer.isWms) {
+      return _currentZoom >= 11; // Slovenian CRS
+    }
+    return _currentZoom >= 15; // Standard Web Mercator
+  }
+
+  /// Calculate marker size based on zoom level
+  /// Returns smaller sizes at lower zoom levels
+  double _getMarkerSize(double baseSize) {
+    if (_currentBaseLayer.isWms) {
+      // Slovenian CRS: scale 0.4-1.0 for zoom 11-15
+      final scale = ((_currentZoom - 11) / 4).clamp(0.4, 1.0);
+      return baseSize * scale;
+    }
+    // Standard Web Mercator: scale 0.5-1.0 for zoom 15-17
+    final scale = ((_currentZoom - 15) / 2).clamp(0.5, 1.0);
+    return baseSize * scale;
+  }
+
+  /// Set navigation target and center map on it
+  void setNavigationTarget(NavigationTarget target, {bool zoomIn = true}) {
+    setState(() {
+      _navigationTarget = target;
+    });
+    // Center map on target location
+    final currentRotation = _mapController.camera.rotation;
+    final currentZoom = _mapController.camera.zoom;
+    final targetZoom = zoomIn
+        ? 17.0.clamp(7.0, _currentBaseLayer.maxZoom)
+        : currentZoom;
+    _mapController.moveAndRotate(target.location, targetZoom, currentRotation);
+  }
+
+  /// Clear navigation target
+  void clearNavigationTarget() {
+    setState(() {
+      _navigationTarget = null;
+    });
+  }
+
+  /// Show compass dialog for navigation target
+  void _showCompassForTarget() {
+    if (_navigationTarget == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: NavigationCompassDialog(
+          targetLocation: _navigationTarget!.location,
+          targetName: _navigationTarget!.name,
+        ),
+      ),
+    );
+  }
+
+  /// Show tile download dialog (triggered by triple-tap on Karta tab)
+  void showTileDownloadDialog() {
+    final bounds = _mapController.camera.visibleBounds;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: TileDownloadDialog(
+          currentLayer: _currentBaseLayer,
+          bounds: bounds,
+          currentZoom: _currentZoom.toInt(),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+    _loadLocations();
+    _loadParcels();
+    _initializeLocationTracking();
+  }
+
+  /// Load saved map preferences
+  Future<void> _loadPreferences() async {
+    final state = await _prefsService.loadAll();
+
+    // Find the base layer from saved type
+    MapLayer baseLayer = MapLayer.openStreetMap;
+    for (final layer in MapLayer.baseLayers) {
+      if (layer.type == state.baseLayer) {
+        baseLayer = layer;
+        break;
+      }
+    }
+
+    setState(() {
+      _initialCenter = LatLng(state.latitude, state.longitude);
+      _initialZoom = state.zoom;
+      _currentZoom = state.zoom;
+      _initialRotation = state.rotation;
+      _currentBaseLayer = baseLayer;
+      _activeOverlays.clear();
+      _activeOverlays.addAll(state.overlays);
+      _isLoadingPreferences = false;
+    });
+  }
+
+  /// Save current map state to preferences
+  Future<void> _saveMapState() async {
+    final camera = _mapController.camera;
+    await _prefsService.saveAll(
+      latitude: camera.center.latitude,
+      longitude: camera.center.longitude,
+      zoom: camera.zoom,
+      rotation: camera.rotation,
+      baseLayer: _currentBaseLayer.type,
+      overlays: _activeOverlays,
+    );
+  }
+
+  @override
+  void dispose() {
+    _compassSubscription?.cancel();
+    _positionSubscription?.cancel();
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  /// Load saved locations from database
+  Future<void> _loadLocations() async {
+    setState(() {
+      _isLoadingLocations = true;
+    });
+
+    try {
+      final locations = await DatabaseService().getAllLocations();
+
+      setState(() {
+        _locations = locations;
+        _isLoadingLocations = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingLocations = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Napaka pri nalaganju lokacij: $e')),
+        );
+      }
+    }
+  }
+
+  /// Load saved parcels from database
+  Future<void> _loadParcels() async {
+    try {
+      final parcels = await DatabaseService().getAllParcels();
+      if (mounted) {
+        setState(() {
+          _parcels = parcels;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading parcels: $e');
+    }
+  }
+
+  /// Initialize real-time location and compass tracking
+  Future<void> _initializeLocationTracking() async {
+    // Check location permission first
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+    }
+
+    // Subscribe to compass updates for heading
+    final compassStream = FlutterCompass.events;
+    if (compassStream != null) {
+      _compassSubscription = compassStream.listen((event) {
+        if (mounted && event.heading != null) {
+          setState(() {
+            _userHeading = event.heading;
+          });
+        }
+      });
+    }
+
+    // Subscribe to position updates
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5, // Update every 5 meters
+      ),
+    ).listen(
+      (position) {
+        if (mounted) {
+          setState(() {
+            _userPosition = position;
+            // Use GPS heading as fallback if compass is unavailable
+            if (_userHeading == null && position.heading >= 0) {
+              _userHeading = position.heading;
+            }
+          });
+        }
+      },
+      onError: (error) {
+        debugPrint('Position stream error: $error');
+      },
+    );
+
+    // Get initial position
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      if (mounted) {
+        setState(() {
+          _userPosition = position;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error getting initial position: $e');
+    }
+  }
+
+  /// Center map on user's current GPS location
+  Future<void> _centerOnGpsLocation() async {
+    try {
+      // Check location service status
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Lokacijske storitve so onemogočene')),
+          );
+        }
+        return;
+      }
+
+      // Check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Dovoljenje za lokacijo zavrnjeno')),
+            );
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Dovoljenje za lokacijo trajno zavrnjeno'),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Get current position
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      // Animate map to current location (respect maxZoom), reset rotation to north
+      final targetZoom = 15.0.clamp(7.0, _currentBaseLayer.maxZoom);
+      _mapController.moveAndRotate(
+        LatLng(position.latitude, position.longitude),
+        targetZoom,
+        0, // Reset rotation to north
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Napaka pri pridobivanju lokacije: $e')),
+        );
+      }
+    }
+  }
+
+  /// Show dialog to add a new location
+  Future<void> _showAddLocationDialog(LatLng position) async {
+    final nameController = TextEditingController();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Dodaj lokacijo'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Lat: ${position.latitude.toStringAsFixed(6)}\n'
+              'Lng: ${position.longitude.toStringAsFixed(6)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Ime lokacije',
+                hintText: 'Vnesite ime za to lokacijo',
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Prekliči'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (nameController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Prosim vnesite ime')),
+                );
+                return;
+              }
+              Navigator.of(context).pop(true);
+            },
+            child: const Text('Dodaj'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && nameController.text.trim().isNotEmpty) {
+      await _addLocation(
+        nameController.text.trim(),
+        position.latitude,
+        position.longitude,
+      );
+    }
+    // Note: Don't dispose nameController here - it will be garbage collected
+    // Disposing while dialog animations are completing causes "used after disposed" errors
+  }
+
+  /// Add a new location to the database
+  Future<void> _addLocation(String name, double lat, double lng) async {
+    try {
+      final location = MapLocation(
+        name: name,
+        latitude: lat,
+        longitude: lng,
+      );
+
+      await DatabaseService().insertLocation(location);
+      await _loadLocations();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Dodano "$name"')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Napaka pri dodajanju lokacije: $e')),
+        );
+      }
+    }
+  }
+
+  /// Show log entry form with pre-filled location
+  Future<void> _showAddLogDialog(LatLng position) async {
+    // Create a partial log entry with just the location
+    final prefilledEntry = LogEntry(
+      volume: 0,
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
+
+    final result = await Navigator.of(context).push<LogEntry>(
+      MaterialPageRoute(
+        builder: (context) => LogEntryForm(logEntry: prefilledEntry),
+        fullscreenDialog: true,
+      ),
+    );
+
+    if (result != null) {
+      try {
+        await DatabaseService().insertLog(result);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Hlod dodan (${result.volume.toStringAsFixed(3)} m³)')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Napaka pri dodajanju hloda: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  /// Show dialog to confirm location deletion
+  Future<void> _showDeleteLocationDialog(MapLocation location) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Izbriši lokacijo'),
+        content: Text('Ali ste prepričani, da želite izbrisati "${location.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Prekliči'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Izbriši'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      await _deleteLocation(location);
+    }
+  }
+
+  /// Delete a location from the database
+  Future<void> _deleteLocation(MapLocation location) async {
+    try {
+      if (location.id != null) {
+        await DatabaseService().deleteLocation(location.id!);
+        await _loadLocations();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Izbrisano "${location.name}"')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Napaka pri brisanju lokacije: $e')),
+        );
+      }
+    }
+  }
+
+  /// Query cadastral parcel at the given location and show import dialog
+  Future<void> _queryParcelAtLocation(LatLng location) async {
+    if (_isQueryingParcel) return;
+
+    setState(() {
+      _isQueryingParcel = true;
+    });
+
+    try {
+      final parcel = await _cadastralService.queryParcelAtLocation(location);
+
+      if (!mounted) return;
+
+      setState(() {
+        _isQueryingParcel = false;
+      });
+
+      if (parcel == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Na tej lokaciji ni najdene parcele')),
+        );
+        return;
+      }
+
+      // Show import dialog
+      await _showImportParcelDialog(parcel);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isQueryingParcel = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Napaka pri iskanju parcele: $e')),
+        );
+      }
+    }
+  }
+
+  /// Show dialog to import a cadastral parcel
+  Future<void> _showImportParcelDialog(CadastralParcel cadastralParcel) async {
+    // Check if parcel already exists
+    final exists = await DatabaseService().cadastralParcelExists(
+      cadastralParcel.cadastralMunicipality,
+      cadastralParcel.parcelNumber,
+    );
+
+    if (exists) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Parcela ${cadastralParcel.parcelNumber} (KO ${cadastralParcel.cadastralMunicipality}) je ze uvozena',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Uvozi parcelo'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Parcel info card
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.landscape, color: Colors.green),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Parcela ${cadastralParcel.parcelNumber}',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildInfoRow(
+                      Icons.location_city,
+                      'Katastrska obcina',
+                      cadastralParcel.cadastralMunicipality.toString(),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildInfoRow(
+                      Icons.straighten,
+                      'Povrsina',
+                      cadastralParcel.formattedArea,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Ali zelite uvoziti to parcelo v "Moj gozd"?',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Preklici'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(context).pop(true),
+            icon: const Icon(Icons.download),
+            label: const Text('Uvozi'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      await _importCadastralParcel(cadastralParcel);
+    }
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: const TextStyle(color: Colors.grey),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Import a cadastral parcel into the database
+  Future<void> _importCadastralParcel(CadastralParcel cadastralParcel) async {
+    try {
+      // Create parcel with cadastral data
+      final parcel = Parcel(
+        name: 'Parcela ${cadastralParcel.parcelNumber} (KO ${cadastralParcel.cadastralMunicipality})',
+        polygon: cadastralParcel.polygon,
+        cadastralMunicipality: cadastralParcel.cadastralMunicipality,
+        parcelNumber: cadastralParcel.parcelNumber,
+      );
+
+      await DatabaseService().insertParcel(parcel);
+
+      // Reload parcels to show the new one on the map
+      await _loadParcels();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Parcela ${cadastralParcel.parcelNumber} uspesno uvozena'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Napaka pri uvozu parcele: $e')),
+        );
+      }
+    }
+  }
+
+  /// Switch base layer while preserving current position
+  void _switchBaseLayer(MapLayer newLayer) {
+    final currentCenter = _mapController.camera.center;
+    final currentZoom = _mapController.camera.zoom;
+
+    // Clamp zoom to new layer's max zoom
+    final newZoom = currentZoom.clamp(7.0, newLayer.maxZoom);
+
+    setState(() {
+      _currentBaseLayer = newLayer;
+    });
+
+    // Move to same position with adjusted zoom if needed, preserving rotation
+    if (newZoom != currentZoom) {
+      final currentRotation = _mapController.camera.rotation;
+      Future.microtask(() {
+        if (mounted) {
+          _mapController.moveAndRotate(currentCenter, newZoom, currentRotation);
+        }
+      });
+    }
+
+    // Save layer preference
+    _saveMapState();
+  }
+
+  /// Show layer selection bottom sheet
+  Future<void> _showLayerSelector() async {
+    await showModalBottomSheet(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Osnovni sloj',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                const Divider(height: 1),
+                RadioGroup<MapLayerType>(
+                  groupValue: _currentBaseLayer.type,
+                  onChanged: (value) {
+                    if (value != null) {
+                      final layer = MapLayer.baseLayers.firstWhere((l) => l.type == value);
+                      _switchBaseLayer(layer);
+                      setModalState(() {});
+                    }
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: MapLayer.baseLayers.map((layer) => RadioListTile<MapLayerType>(
+                      value: layer.type,
+                      title: Text(layer.name),
+                    )).toList(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Prekrivni sloji',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                const Divider(height: 1),
+                // Filter overlays: only show Slovenian overlays when base layer is Slovenian
+                ...MapLayer.overlayLayers
+                    .where((layer) => !layer.isSlovenian || _currentBaseLayer.isSlovenian)
+                    .map((layer) => CheckboxListTile(
+                  value: _activeOverlays.contains(layer.type),
+                  onChanged: (value) {
+                    setState(() {
+                      if (value == true) {
+                        _activeOverlays.add(layer.type);
+                      } else {
+                        _activeOverlays.remove(layer.type);
+                      }
+                    });
+                    setModalState(() {});
+                    _saveMapState(); // Save overlay preference
+                  },
+                  title: Text(layer.name),
+                )),
+                // Show hint when Slovenian overlays are hidden
+                if (!_currentBaseLayer.isSlovenian)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Slovenski sloji (Kataster, Gozdne ceste...) so na voljo le z Ortofoto ali DTK25 podlago.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build tile layer for a specific layer
+  /// All layers are cached for up to 1 year
+  Widget _buildTileLayerForLayer(MapLayer layer) {
+    if (layer.isWms) {
+      // Use Slovenian cache for prostor.zgs.gov.si WMS layers
+      final isSlovenian = layer.isSlovenian;
+
+      return TileLayer(
+        wmsOptions: WMSTileLayerOptions(
+          baseUrl: layer.wmsBaseUrl!,
+          layers: layer.wmsLayers!,
+          styles: layer.wmsStyles != null ? [layer.wmsStyles!] : const [''],
+          format: layer.wmsFormat ?? 'image/jpeg',
+          transparent: layer.isTransparent,
+          crs: slovenianCrs,
+        ),
+        tileProvider: isSlovenian
+            ? _tileCacheService.getTileProvider()
+            : _tileCacheService.getGeneralTileProvider(),
+        userAgentPackageName: 'dev.dz0ny.gozdar',
+        maxZoom: layer.maxZoom,
+      );
+    } else {
+      // Use general cache for standard tile layers (OSM, ESRI, Google, etc.)
+      return TileLayer(
+        urlTemplate: layer.urlTemplate!,
+        maxZoom: layer.maxZoom,
+        tileProvider: _tileCacheService.getGeneralTileProvider(),
+        userAgentPackageName: 'dev.dz0ny.gozdar',
+      );
+    }
+  }
+
+  /// Build list of overlay tile layers
+  /// Slovenian overlays (from prostor.zgs.gov.si) only render when base layer is also Slovenian
+  List<Widget> _buildOverlayLayers() {
+    final isSlovenianBase = _currentBaseLayer.isSlovenian;
+
+    return MapLayer.overlayLayers
+        .where((layer) => _activeOverlays.contains(layer.type))
+        .where((layer) => !layer.isSlovenian || isSlovenianBase)
+        .map((layer) => _buildTileLayerForLayer(layer))
+        .toList();
+  }
+
+  /// Build markers for saved locations
+  List<Marker> _buildMarkers() {
+    final size = _getMarkerSize(40);
+    return _locations.map((location) {
+      return Marker(
+        point: LatLng(location.latitude, location.longitude),
+        width: size,
+        height: size,
+        child: GestureDetector(
+          onTap: () => _showDeleteLocationDialog(location),
+          child: Icon(
+            Icons.location_on,
+            size: size,
+            color: Colors.red,
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  /// Build markers for parcel vertices (mejne tocke)
+  List<Marker> _buildParcelVertexMarkers() {
+    final size = _getMarkerSize(28);
+    final fontSize = _getMarkerSize(12);
+    final borderWidth = _getMarkerSize(2);
+    final markers = <Marker>[];
+    for (final parcel in _parcels) {
+      for (int i = 0; i < parcel.polygon.length; i++) {
+        final point = parcel.polygon[i];
+        final pointName = parcel.getPointName(i);
+        markers.add(
+          Marker(
+            point: point,
+            width: size,
+            height: size,
+            child: GestureDetector(
+              onTap: () {
+                // Set as navigation target (don't zoom, just move)
+                setNavigationTarget(
+                  NavigationTarget(
+                    location: point,
+                    name: '$pointName (${parcel.name})',
+                  ),
+                  zoomIn: false,
+                );
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: borderWidth),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    '${i + 1}',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+    return markers;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Show loading indicator while preferences are loading
+    if (_isLoadingPreferences) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Nalagam karto...',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Map widget
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              // Use Slovenian CRS for WMS layers (EPSG:3794), otherwise default Web Mercator
+              crs: _currentBaseLayer.isWms ? slovenianCrs : const Epsg3857(),
+              initialCenter: _initialCenter,
+              initialZoom: _initialZoom,
+              initialRotation: _initialRotation,
+              minZoom: 7.0,
+              maxZoom: _currentBaseLayer.maxZoom,
+              // Move to saved position when map is ready
+              onMapReady: () {
+                _mapController.moveAndRotate(_initialCenter, _initialZoom, _initialRotation);
+              },
+              // Handle tap to dismiss long press menu
+              onTap: (tapPosition, point) {
+                if (_longPressScreenPosition != null) {
+                  setState(() {
+                    _longPressScreenPosition = null;
+                    _longPressMapPosition = null;
+                  });
+                }
+              },
+              // Handle long press to show action menu
+              onLongPress: (tapPosition, point) {
+                setState(() {
+                  _longPressScreenPosition = tapPosition.global;
+                  _longPressMapPosition = point;
+                });
+              },
+              // Save map state when position/zoom/rotation changes
+              onMapEvent: (event) {
+                if (event is MapEventMoveEnd || event is MapEventRotateEnd) {
+                  _saveMapState();
+                }
+                // Track zoom level for dynamic marker sizing
+                if (event.camera.zoom != _currentZoom) {
+                  setState(() {
+                    _currentZoom = event.camera.zoom;
+                  });
+                }
+                // Dismiss menu on map move
+                if (event is MapEventMoveStart && _longPressScreenPosition != null) {
+                  setState(() {
+                    _longPressScreenPosition = null;
+                    _longPressMapPosition = null;
+                  });
+                }
+              },
+            ),
+            children: [
+              _buildTileLayerForLayer(_currentBaseLayer),
+              // Overlay layers
+              ..._buildOverlayLayers(),
+              // Saved parcels as polygons
+              if (_parcels.isNotEmpty)
+                PolygonLayer(
+                  polygons: _parcels.map((parcel) => Polygon(
+                    points: parcel.polygon,
+                    color: Colors.green.withValues(alpha: 0.2),
+                    borderColor: Colors.green,
+                    borderStrokeWidth: 2.0,
+                    label: parcel.name,
+                    labelStyle: const TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  )).toList(),
+                ),
+              // Parcel vertex markers (mejne tocke) - hidden at low zoom
+              if (_parcels.isNotEmpty && _showMarkers)
+                MarkerLayer(
+                  markers: _buildParcelVertexMarkers(),
+                ),
+              // User location marker
+              if (_userPosition != null)
+                Builder(builder: (context) {
+                  final userSize = _getMarkerSize(30);
+                  return MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: LatLng(_userPosition!.latitude, _userPosition!.longitude),
+                        width: userSize,
+                        height: userSize,
+                        child: LocationPointer(
+                          heading: _userHeading,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: userSize,
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              // Saved locations marker layer - hidden at low zoom
+              if (_showMarkers)
+                MarkerLayer(
+                  markers: _buildMarkers(),
+                ),
+              // Navigation target line (from user to target)
+              if (_navigationTarget != null && _userPosition != null)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: [
+                        LatLng(_userPosition!.latitude, _userPosition!.longitude),
+                        _navigationTarget!.location,
+                      ],
+                      color: Colors.orange.withValues(alpha: 0.6),
+                      strokeWidth: 3,
+                      pattern: const StrokePattern.dotted(),
+                    ),
+                  ],
+                ),
+              // Navigation target marker
+              if (_navigationTarget != null)
+                Builder(builder: (context) {
+                  final navSize = _getMarkerSize(50);
+                  final navIconSize = _getMarkerSize(28);
+                  final navBorderWidth = _getMarkerSize(3);
+                  return MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _navigationTarget!.location,
+                        width: navSize,
+                        height: navSize,
+                        child: GestureDetector(
+                          onTap: _showCompassForTarget,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: navBorderWidth),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.navigation,
+                              color: Colors.white,
+                              size: navIconSize,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+            ],
+          ),
+
+          // Navigation target info banner
+          if (_navigationTarget != null)
+            NavigationTargetBanner(
+              target: _navigationTarget!,
+              onTap: _showCompassForTarget,
+              onClose: clearNavigationTarget,
+            ),
+
+          // Loading indicator for locations
+          if (_isLoadingLocations)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + (_navigationTarget != null ? 90 : 16),
+              left: 16,
+              child: const Material(
+                elevation: 4,
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            ),
+
+          // Loading indicator for parcel query
+          if (_isQueryingParcel)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + (_navigationTarget != null ? 90 : 16),
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Material(
+                  elevation: 4,
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Iskanje parcele...',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Long press action menu
+          if (_longPressScreenPosition != null && _longPressMapPosition != null)
+            MapLongPressMenu(
+              screenPosition: _longPressScreenPosition!,
+              mapPosition: _longPressMapPosition!,
+              onAddLocation: () => _showAddLocationDialog(_longPressMapPosition!),
+              onAddLog: () => _showAddLogDialog(_longPressMapPosition!),
+              onImportParcel: () => _queryParcelAtLocation(_longPressMapPosition!),
+              onDismiss: () => setState(() {
+                _longPressScreenPosition = null;
+                _longPressMapPosition = null;
+              }),
+            ),
+        ],
+      ),
+
+      // Zoom and layer controls at top, GPS at bottom
+      floatingActionButton: Stack(
+        children: [
+          // Top right: layers and zoom
+          Positioned(
+            top: 80,
+            right: 4,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FloatingActionButton(
+                  heroTag: 'map_layers',
+                  mini: true,
+                  onPressed: _showLayerSelector,
+                  tooltip: 'Izberi sloj',
+                  child: const Icon(Icons.layers),
+                ),
+                const SizedBox(height: 8),
+                FloatingActionButton(
+                  heroTag: 'map_zoom_in',
+                  mini: true,
+                  onPressed: () {
+                    final camera = _mapController.camera;
+                    final newZoom = camera.zoom + 1;
+                    if (newZoom <= _currentBaseLayer.maxZoom) {
+                      _mapController.moveAndRotate(camera.center, newZoom, camera.rotation);
+                    }
+                  },
+                  child: const Icon(Icons.add),
+                ),
+                const SizedBox(height: 8),
+                FloatingActionButton(
+                  heroTag: 'map_zoom_out',
+                  mini: true,
+                  onPressed: () {
+                    final camera = _mapController.camera;
+                    final newZoom = camera.zoom - 1;
+                    if (newZoom >= 7.0) {
+                      _mapController.moveAndRotate(camera.center, newZoom, camera.rotation);
+                    }
+                  },
+                  child: const Icon(Icons.remove),
+                ),
+              ],
+            ),
+          ),
+          // Bottom right: GPS
+          Positioned(
+            bottom: 8,
+            right: 4,
+            child: FloatingActionButton(
+              heroTag: 'map_gps',
+              onPressed: _centerOnGpsLocation,
+              tooltip: 'Centriraj na GPS lokacijo',
+              child: const Icon(Icons.my_location),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
