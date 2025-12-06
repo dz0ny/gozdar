@@ -29,7 +29,7 @@ class MapProvider extends ChangeNotifier {
   bool _isPreferencesLoaded = false;
 
   // Layer state
-  MapLayer _currentBaseLayer = MapLayer.openStreetMap;
+  MapLayer _currentBaseLayer = MapLayer.esriWorldImagery;
   final Set<MapLayerType> _activeOverlays = {};
   String? _workerUrl;
   bool _isDebugInfoVisible = false;
@@ -80,7 +80,7 @@ class MapProvider extends ChangeNotifier {
       final state = await _prefsService.loadAll();
 
       // Find the base layer from saved type
-      MapLayer baseLayer = MapLayer.openStreetMap;
+      MapLayer baseLayer = MapLayer.esriWorldImagery;
       for (final layer in MapLayer.baseLayers) {
         if (layer.type == state.baseLayer) {
           baseLayer = layer;

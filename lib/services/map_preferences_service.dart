@@ -11,6 +11,9 @@ class MapPreferencesService {
   static const String _keyOverlays = 'map_overlays';
   static const String _keyWorkerUrl = 'map_worker_url';
 
+  // Default proxy URL
+  static const String defaultWorkerUrl = 'https://gozdar-proxy.dz0ny.workers.dev';
+
   // Default values (Ljubljana, Slovenia)
   static const double defaultLatitude = 46.0569;
   static const double defaultLongitude = 14.5058;
@@ -115,13 +118,13 @@ class MapPreferencesService {
   Future<MapLayerType> getBaseLayer() async {
     final prefs = await SharedPreferences.getInstance();
     final layerName = prefs.getString(_keyBaseLayer);
-    // Default to Ortofoto for fresh installs
-    if (layerName == null) return MapLayerType.ortofoto;
+    // Default to ESRI for fresh installs
+    if (layerName == null) return MapLayerType.esriWorldImagery;
 
     try {
       return MapLayerType.values.firstWhere((e) => e.name == layerName);
     } catch (_) {
-      return MapLayerType.ortofoto;
+      return MapLayerType.esriWorldImagery;
     }
   }
 
@@ -149,9 +152,9 @@ class MapPreferencesService {
   }
 
   /// Load saved worker URL
-  Future<String?> getWorkerUrl() async {
+  Future<String> getWorkerUrl() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyWorkerUrl);
+    return prefs.getString(_keyWorkerUrl) ?? defaultWorkerUrl;
   }
 
   /// Load all map state at once
@@ -163,9 +166,9 @@ class MapPreferencesService {
     final zoom = prefs.getDouble(_keyZoom) ?? defaultZoom;
     final rotation = prefs.getDouble(_keyRotation) ?? defaultRotation;
 
-    // Default to Ortofoto for fresh installs
+    // Default to ESRI for fresh installs
     final layerName = prefs.getString(_keyBaseLayer);
-    MapLayerType baseLayer = MapLayerType.ortofoto;
+    MapLayerType baseLayer = MapLayerType.esriWorldImagery;
     if (layerName != null) {
       try {
         baseLayer = MapLayerType.values.firstWhere((e) => e.name == layerName);
@@ -187,7 +190,7 @@ class MapPreferencesService {
       }
     }
 
-    final workerUrl = prefs.getString(_keyWorkerUrl);
+    final workerUrl = prefs.getString(_keyWorkerUrl) ?? defaultWorkerUrl;
 
     return MapState(
       latitude: latitude,
@@ -209,7 +212,7 @@ class MapState {
   final double rotation;
   final MapLayerType baseLayer;
   final Set<MapLayerType> overlays;
-  final String? workerUrl;
+  final String workerUrl;
 
   const MapState({
     required this.latitude,
@@ -218,6 +221,6 @@ class MapState {
     required this.rotation,
     required this.baseLayer,
     required this.overlays,
-    this.workerUrl,
+    required this.workerUrl,
   });
 }

@@ -72,14 +72,20 @@ class _WorkerSettingsDialogState extends State<WorkerSettingsDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Pospeševalnik (Proxy)',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Vnesite URL Cloudflare Worker-ja za hitrejše nalaganje zemljevidov.',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -97,14 +103,20 @@ class _WorkerSettingsDialogState extends State<WorkerSettingsDialog> {
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Prenos kart (Offline)',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Prenesite karte za uporabo brez internetne povezave.',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 12),
             SizedBox(

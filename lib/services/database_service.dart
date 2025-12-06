@@ -349,6 +349,16 @@ class DatabaseService {
     );
   }
 
+  Future<void> updateLocationName(int id, String name) async {
+    final db = await database;
+    await db.update(
+      'locations',
+      {'name': name},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<List<MapLocation>> getAllLocations() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(

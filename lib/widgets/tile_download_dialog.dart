@@ -249,40 +249,64 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
   }
 
   Widget _buildLayerInfo() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
+      color: colorScheme.surfaceContainerHighest,
       child: ListTile(
         leading: Icon(
           widget.currentLayer.isWms ? Icons.layers : Icons.map,
-          color: Theme.of(context).colorScheme.primary,
+          color: colorScheme.primary,
         ),
-        title: const Text('Podlaga'),
-        subtitle: Text(widget.currentLayer.name),
+        title: Text(
+          'Podlaga',
+          style: TextStyle(color: colorScheme.onSurface),
+        ),
+        subtitle: Text(
+          widget.currentLayer.name,
+          style: TextStyle(color: colorScheme.onSurfaceVariant),
+        ),
       ),
     );
   }
 
   Widget _buildZoomInfo() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
+      color: colorScheme.surfaceContainerHighest,
       child: ListTile(
         leading: Icon(
           Icons.zoom_in,
-          color: Theme.of(context).colorScheme.primary,
+          color: colorScheme.primary,
         ),
-        title: const Text('Povečava'),
-        subtitle: Text('$_minZoom → $_maxZoom'),
+        title: Text(
+          'Povečava',
+          style: TextStyle(color: colorScheme.onSurface),
+        ),
+        subtitle: Text(
+          '$_minZoom → $_maxZoom',
+          style: TextStyle(color: colorScheme.onSurfaceVariant),
+        ),
       ),
     );
   }
 
   Widget _buildTileEstimate() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
+      color: colorScheme.surfaceContainerHighest,
       child: ListTile(
         leading: Icon(
           Icons.grid_view,
-          color: Theme.of(context).colorScheme.primary,
+          color: colorScheme.primary,
         ),
-        title: const Text('Ocena'),
-        subtitle: Text('~$_estimatedTileCount ploščic'),
+        title: Text(
+          'Ocena',
+          style: TextStyle(color: colorScheme.onSurface),
+        ),
+        subtitle: Text(
+          '~$_estimatedTileCount ploščic',
+          style: TextStyle(color: colorScheme.onSurfaceVariant),
+        ),
       ),
     );
   }
@@ -382,13 +406,20 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
 
     final totalTiles = _cacheStats!['totalTiles'] ?? 0;
     final totalSizeMB = _cacheStats!['totalSizeMB'] ?? '0';
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
-      color: Colors.grey.shade100,
+      color: colorScheme.surfaceContainerLow,
       child: ListTile(
-        leading: const Icon(Icons.storage, color: Colors.grey),
-        title: const Text('Predpomnilnik'),
-        subtitle: Text('$totalTiles ploščic ($totalSizeMB MB)'),
+        leading: Icon(Icons.storage, color: colorScheme.onSurfaceVariant),
+        title: Text(
+          'Predpomnilnik',
+          style: TextStyle(color: colorScheme.onSurface),
+        ),
+        subtitle: Text(
+          '$totalTiles ploščic ($totalSizeMB MB)',
+          style: TextStyle(color: colorScheme.onSurfaceVariant),
+        ),
       ),
     );
   }

@@ -1,5 +1,27 @@
 import 'package:flutter_map/flutter_map.dart';
 
+/// Categories for overlay layers
+enum OverlayCategory {
+  administrativno,
+  infrastruktura,
+  gozdnoGospodarstvo,
+  zavarovanaObmocja,
+  nevarnostiInSkode,
+  funkcijeGozda,
+  posebno,
+}
+
+/// Slovenian display names for overlay categories
+const Map<OverlayCategory, String> overlayCategoryNames = {
+  OverlayCategory.administrativno: 'Administrativno',
+  OverlayCategory.infrastruktura: 'Infrastruktura',
+  OverlayCategory.gozdnoGospodarstvo: 'Gozdno gospodarstvo',
+  OverlayCategory.zavarovanaObmocja: 'Zavarovana obmocja',
+  OverlayCategory.nevarnostiInSkode: 'Nevarnosti in skode',
+  OverlayCategory.funkcijeGozda: 'Funkcije gozda',
+  OverlayCategory.posebno: 'Posebno',
+};
+
 enum MapLayerType {
   // Base layers
   openStreetMap,
@@ -82,6 +104,7 @@ class MapLayer {
   final bool isOverlay;
   final Crs? crs;
   final bool queryable; // Supports GetFeatureInfo queries
+  final OverlayCategory? category; // Category for overlay layers
 
   const MapLayer({
     required this.type,
@@ -99,6 +122,7 @@ class MapLayer {
     this.isOverlay = false,
     this.crs,
     this.queryable = false,
+    this.category,
   });
 
   /// Check if this layer is from Slovenian prostor.zgs.gov.si server
@@ -205,6 +229,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.administrativno,
   );
 
   /// Katastrske obcine - Cadastral municipalities
@@ -220,6 +245,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.administrativno,
   );
 
   /// Kataster z nazivi - Cadastral parcels with names
@@ -237,6 +263,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.administrativno,
   );
 
   /// Gozdne ceste - Forest roads
@@ -251,6 +278,7 @@ class MapLayer {
     wmsFormat: 'image/png',
     isTransparent: true,
     isOverlay: true,
+    category: OverlayCategory.infrastruktura,
   );
 
   /// Glavne ceste - Main roads
@@ -265,6 +293,7 @@ class MapLayer {
     wmsFormat: 'image/png',
     isTransparent: true,
     isOverlay: true,
+    category: OverlayCategory.infrastruktura,
   );
 
   /// Zeleznice - Railways
@@ -279,6 +308,7 @@ class MapLayer {
     wmsFormat: 'image/png',
     isTransparent: true,
     isOverlay: true,
+    category: OverlayCategory.infrastruktura,
   );
 
   /// Planinske poti - Hiking trails
@@ -293,6 +323,7 @@ class MapLayer {
     wmsFormat: 'image/png',
     isTransparent: true,
     isOverlay: true,
+    category: OverlayCategory.infrastruktura,
   );
 
   /// Hisne stevilke - House numbers
@@ -307,6 +338,7 @@ class MapLayer {
     wmsFormat: 'image/png',
     isTransparent: true,
     isOverlay: true,
+    category: OverlayCategory.administrativno,
   );
 
   /// Naselja - Settlements
@@ -321,6 +353,7 @@ class MapLayer {
     wmsFormat: 'image/png',
     isTransparent: true,
     isOverlay: true,
+    category: OverlayCategory.administrativno,
   );
 
   /// Obcine - Municipalities
@@ -336,6 +369,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.administrativno,
   );
 
   /// Upravne enote - Administrative units
@@ -351,6 +385,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.administrativno,
   );
 
   /// Statisticne regije - Statistical regions
@@ -366,6 +401,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.administrativno,
   );
 
   /// Drzavna meja - State border
@@ -380,6 +416,7 @@ class MapLayer {
     wmsFormat: 'image/png',
     isTransparent: true,
     isOverlay: true,
+    category: OverlayCategory.administrativno,
   );
 
   // ============ FOREST MANAGEMENT LAYERS ============
@@ -397,6 +434,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.gozdnoGospodarstvo,
   );
 
   /// Odseki gozdni - Forest sections
@@ -412,6 +450,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.gozdnoGospodarstvo,
   );
 
   /// Revirji - Forest districts
@@ -427,6 +466,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.gozdnoGospodarstvo,
   );
 
   /// Gozdna maska - Forest mask
@@ -442,6 +482,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.gozdnoGospodarstvo,
   );
 
   /// GGE - Forest management units (Gozdnogospodarske enote)
@@ -457,6 +498,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.gozdnoGospodarstvo,
   );
 
   /// GGO - Forest management areas (Gozdnogospodarska obmocja)
@@ -472,6 +514,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.gozdnoGospodarstvo,
   );
 
   // ============ PROTECTED AREAS ============
@@ -489,6 +532,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.zavarovanaObmocja,
   );
 
   /// Varovalni gozdovi - Protective forests
@@ -504,6 +548,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.zavarovanaObmocja,
   );
 
   /// Natura 2000 - EU protected areas
@@ -519,6 +564,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.zavarovanaObmocja,
   );
 
   /// Zavarovana obmocja - Protected areas
@@ -534,6 +580,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.zavarovanaObmocja,
   );
 
   /// Naravne vrednote - Natural values
@@ -549,6 +596,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.zavarovanaObmocja,
   );
 
   /// Ekolosko pomembna obmocja - Ecologically important areas
@@ -564,6 +612,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.zavarovanaObmocja,
   );
 
   /// Koridorji - Ecological corridors
@@ -579,6 +628,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.zavarovanaObmocja,
   );
 
   /// Ekocelice - Eco-cells
@@ -594,6 +644,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.zavarovanaObmocja,
   );
 
   /// Habitatna drevesa - Habitat trees
@@ -609,6 +660,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.zavarovanaObmocja,
   );
 
   // ============ HAZARDS & DISASTERS ============
@@ -626,6 +678,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.nevarnostiInSkode,
   );
 
   /// Gozdni pozari - Historical forest fires
@@ -641,6 +694,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.nevarnostiInSkode,
   );
 
   /// Protipozarne preseke - Firebreaks
@@ -656,6 +710,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.nevarnostiInSkode,
   );
 
   /// Vetrolom 2017 - Windthrow 2017
@@ -671,6 +726,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.nevarnostiInSkode,
   );
 
   /// Vetrolom 2018 - Windthrow 2018
@@ -686,6 +742,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.nevarnostiInSkode,
   );
 
   /// Zled 2014 - Ice storm damage 2014
@@ -701,6 +758,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.nevarnostiInSkode,
   );
 
   /// Podlubniki - Bark beetle damage
@@ -716,6 +774,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.nevarnostiInSkode,
   );
 
   /// Krcitve - Forest clearings
@@ -731,6 +790,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.nevarnostiInSkode,
   );
 
   // ============ FOREST FUNCTIONS ============
@@ -747,6 +807,7 @@ class MapLayer {
     wmsFormat: 'image/png',
     isTransparent: true,
     isOverlay: true,
+    category: OverlayCategory.funkcijeGozda,
   );
 
   /// Varovalna funkcija - Protective function
@@ -761,6 +822,7 @@ class MapLayer {
     wmsFormat: 'image/png',
     isTransparent: true,
     isOverlay: true,
+    category: OverlayCategory.funkcijeGozda,
   );
 
   /// Rekreacija - Recreation areas
@@ -775,6 +837,7 @@ class MapLayer {
     wmsFormat: 'image/png',
     isTransparent: true,
     isOverlay: true,
+    category: OverlayCategory.funkcijeGozda,
   );
 
   // ============ SPECIAL ============
@@ -792,6 +855,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     queryable: true,
+    category: OverlayCategory.posebno,
   );
 
   /// Base layers (mutually exclusive)
@@ -863,4 +927,18 @@ class MapLayer {
   /// Get all queryable layers (support GetFeatureInfo)
   static List<MapLayer> get queryableLayers =>
       overlayLayers.where((l) => l.queryable).toList();
+
+  /// Get overlay layers grouped by category
+  static Map<OverlayCategory, List<MapLayer>> get overlaysByCategory {
+    final result = <OverlayCategory, List<MapLayer>>{};
+    for (final category in OverlayCategory.values) {
+      final layers = overlayLayers
+          .where((l) => l.category == category)
+          .toList();
+      if (layers.isNotEmpty) {
+        result[category] = layers;
+      }
+    }
+    return result;
+  }
 }

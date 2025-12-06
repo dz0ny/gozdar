@@ -85,6 +85,9 @@ export default {
         return new Response('Layer not found', { status: 404 });
       }
 
+      // Check if this is a base layer (no R2 caching for base layers)
+      const isBaseLayer = ['ortofoto', 'dof-ir', 'dmr'].includes(layerSlug);
+
       // 1. Calculate Web Mercator BBOX
       const bbox3857 = xyzToBbox(x, y, z);
 
@@ -130,39 +133,41 @@ export default {
       let response = await cache.match(request);
 
       if (!response) {
-        // Try R2 Cache
+        // Try R2 Cache (only for overlay layers, not base layers)
         const ext = layerConfig.format === 'image/jpeg' ? 'jpg' : 'png';
         const r2Key = `${layerSlug}/${z}/${x}/${y}.${ext}`;
         let r2Object = null;
 
-        try {
-          r2Object = await env.TILES_BUCKET.get(r2Key);
-        } catch (e) {
-          console.error(`R2 Error: ${e.message}`);
+        if (!isBaseLayer) {
+          try {
+            r2Object = await env.TILES_BUCKET.get(r2Key);
+          } catch (e) {
+            console.error(`R2 Error: ${e.message}`);
+          }
         }
 
         if (r2Object) {
           console.log(`R2 hit for ${r2Key}`);
           const headers = new Headers();
           r2Object.writeHttpMetadata(headers);
-          
+
           if (!headers.has('content-type')) {
             headers.set('content-type', layerConfig.format || 'image/jpeg');
           }
           headers.set('content-length', r2Object.size.toString());
           headers.set('etag', r2Object.httpEtag);
-          
+
           // Add standard HTTP headers to satisfy strict clients
           const now = new Date();
           headers.set('date', now.toUTCString());
           headers.set('last-modified', r2Object.uploaded.toUTCString());
           headers.set('expires', new Date(now.getTime() + 31536000000).toUTCString());
-          
+
           headers.set('cache-control', 'public, max-age=31536000, immutable');
           headers.set('access-control-allow-origin', '*');
-          
+
           response = new Response(r2Object.body, { headers });
-          
+
           // Re-populate Edge Cache
           ctx.waitUntil(cache.put(request, response.clone()));
         } else {
@@ -205,14 +210,16 @@ export default {
                 headers: headers
             });
             
-            // Store in R2 (background)
-            ctx.waitUntil(env.TILES_BUCKET.put(r2Key, buffer, {
-              httpMetadata: {
-                contentType: contentType,
-              }
-            }));
+            // Store in R2 (background) - only for overlay layers
+            if (!isBaseLayer) {
+              ctx.waitUntil(env.TILES_BUCKET.put(r2Key, buffer, {
+                httpMetadata: {
+                  contentType: contentType,
+                }
+              }));
+            }
 
-            // Store in cache (background)
+            // Store in edge cache (background)
             ctx.waitUntil(cache.put(request, response.clone()));
           } catch (e) {
             return new Response(`Proxy error: ${e.message}`, { status: 500 });
