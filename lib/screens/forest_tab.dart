@@ -55,9 +55,9 @@ class ForestTabState extends State<ForestTab> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri nalaganju: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Napaka pri nalaganju: $e')));
       }
     }
   }
@@ -75,15 +75,15 @@ class ForestTabState extends State<ForestTab> {
         await _databaseService.insertParcel(result);
         await _loadData();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Parcela dodana')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Parcela dodana')));
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka pri dodajanju: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Napaka pri dodajanju: $e')));
         }
       }
     }
@@ -107,7 +107,9 @@ class ForestTabState extends State<ForestTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Izbriši parcelo'),
-        content: Text('Ali ste prepričani, da želite izbrisati "${parcel.name}"?'),
+        content: Text(
+          'Ali ste prepričani, da želite izbrisati "${parcel.name}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -142,9 +144,9 @@ class ForestTabState extends State<ForestTab> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka pri brisanju: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Napaka pri brisanju: $e')));
         }
       }
     }
@@ -152,24 +154,24 @@ class ForestTabState extends State<ForestTab> {
 
   Future<void> _exportKml() async {
     if (_parcels.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ni parcel za izvoz')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Ni parcel za izvoz')));
       return;
     }
 
     try {
       await KmlService.exportToKml(_parcels);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('KML uspešno izvožen')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('KML uspešno izvožen')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri izvozu: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Napaka pri izvozu: $e')));
       }
     }
   }
@@ -186,6 +188,16 @@ class ForestTabState extends State<ForestTab> {
       final file = File(result.files.first.path!);
       final content = await file.readAsString();
 
+      // Try to import as full parcel export first (with logs, sečnja, locations)
+      final fullImport = KmlService.importParcelWithData(content);
+
+      if (fullImport != null && fullImport.totalItems > 0) {
+        // This is a full parcel export
+        await _importFullParcel(fullImport);
+        return;
+      }
+
+      // Fall back to simple parcel import
       final parcels = KmlService.importFromKml(content);
 
       if (parcels.isEmpty) {
@@ -223,20 +235,124 @@ class ForestTabState extends State<ForestTab> {
         }
         await _loadData();
         if (mounted) {
-          final totalArea = parcels.fold(0.0, (double sum, p) => sum + p.areaM2);
+          final totalArea = parcels.fold(
+            0.0,
+            (double sum, p) => sum + p.areaM2,
+          );
           final areaFormatted = totalArea >= 10000
               ? '${(totalArea / 10000).toStringAsFixed(2)} ha'
               : '${totalArea.toStringAsFixed(0)} m²';
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Uvoženih ${parcels.length} parcel ($areaFormatted)')),
+            SnackBar(
+              content: Text(
+                'Uvoženih ${parcels.length} parcel ($areaFormatted)',
+              ),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu: $e')));
+      }
+    }
+  }
+
+  Future<void> _importFullParcel(ParcelImportData data) async {
+    if (!mounted) return;
+
+    // Build description of what will be imported
+    final items = <String>[];
+    items.add('Parcela: ${data.parcel.name}');
+    if (data.logs.isNotEmpty) {
+      items.add('${data.logs.length} hlodov');
+    }
+    if (data.secnja.isNotEmpty) {
+      items.add('${data.secnja.length} sečenj');
+    }
+    if (data.locations.isNotEmpty) {
+      items.add('${data.locations.length} točk');
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Uvozi parcelo s podatki'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Najdeno:'),
+            const SizedBox(height: 8),
+            ...items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(left: 16, bottom: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check, size: 16, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Text(item),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Uvozim vse podatke?'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Prekliči'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Uvozi'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Insert parcel and get ID
+      final parcelId = await _databaseService.insertParcel(data.parcel);
+
+      // Insert logs with parcel ID
+      for (final log in data.logs) {
+        final logWithParcel = log.copyWith(parcelId: parcelId);
+        await _databaseService.insertLog(logWithParcel);
+      }
+
+      // Insert sečnja locations
+      for (final loc in data.secnja) {
+        await _databaseService.insertLocation(loc);
+      }
+
+      // Insert regular locations
+      for (final loc in data.locations) {
+        await _databaseService.insertLocation(loc);
+      }
+
+      await _loadData();
+
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri uvozu: $e')),
+          SnackBar(
+            content: Text(
+              'Uvožena parcela "${data.parcel.name}" z ${data.totalItems} elementi',
+            ),
+          ),
         );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu: $e')));
       }
     }
   }
@@ -349,16 +465,14 @@ class ForestTabState extends State<ForestTab> {
                                 const SizedBox(height: 16),
                                 Text(
                                   'Ni še parcel',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        color: Colors.grey[500],
-                                      ),
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(color: Colors.grey[500]),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   'Uvozite KML, narišite parcelo ali\ndolgo pritisnite na karti za uvoz iz katastra',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: Colors.grey[600],
-                                      ),
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(color: Colors.grey[600]),
                                   textAlign: TextAlign.center,
                                 ),
                                 const SizedBox(height: 24),
@@ -403,47 +517,80 @@ class ForestTabState extends State<ForestTab> {
                                   margin: const EdgeInsets.only(bottom: 8),
                                   child: ListTile(
                                     onTap: () => _openParcelDetail(parcel),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 4,
+                                    ),
                                     leading: parcel.polygon.isNotEmpty
                                         ? ParcelSilhouette(
                                             polygon: parcel.polygon,
                                             size: 48,
-                                            fillColor: getForestTypeIcon(parcel.forestType).$2.withValues(alpha: 0.3),
-                                            strokeColor: getForestTypeIcon(parcel.forestType).$2,
+                                            fillColor: getForestTypeIcon(
+                                              parcel.forestType,
+                                            ).$2.withValues(alpha: 0.3),
+                                            strokeColor: getForestTypeIcon(
+                                              parcel.forestType,
+                                            ).$2,
                                           )
                                         : Icon(
-                                            getForestTypeIcon(parcel.forestType).$1,
-                                            color: getForestTypeIcon(parcel.forestType).$2,
+                                            getForestTypeIcon(
+                                              parcel.forestType,
+                                            ).$1,
+                                            color: getForestTypeIcon(
+                                              parcel.forestType,
+                                            ).$2,
                                           ),
                                     title: Text(
                                       parcel.name,
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                     subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        if (parcel.owner != null && parcel.owner!.isNotEmpty)
+                                        if (parcel.owner != null &&
+                                            parcel.owner!.isNotEmpty)
                                           Text(
                                             parcel.owner!,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(color: Colors.grey[600]),
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                            ),
                                           ),
                                         Row(
                                           children: [
                                             Text(parcel.areaFormatted),
-                                            if (parcel.treesCut > 0 || parcel.woodCut > 0) ...[
-                                              Text(' · ', style: TextStyle(color: Colors.grey[400])),
+                                            if (parcel.treesCut > 0 ||
+                                                parcel.woodCut > 0) ...[
+                                              Text(
+                                                ' · ',
+                                                style: TextStyle(
+                                                  color: Colors.grey[400],
+                                                ),
+                                              ),
                                               if (parcel.treesCut > 0)
                                                 Text(
                                                   '${parcel.treesCut} dreves',
-                                                  style: TextStyle(color: Colors.orange[700]),
+                                                  style: TextStyle(
+                                                    color: Colors.orange[700],
+                                                  ),
                                                 ),
-                                              if (parcel.treesCut > 0 && parcel.woodCut > 0)
-                                                Text(' · ', style: TextStyle(color: Colors.grey[400])),
+                                              if (parcel.treesCut > 0 &&
+                                                  parcel.woodCut > 0)
+                                                Text(
+                                                  ' · ',
+                                                  style: TextStyle(
+                                                    color: Colors.grey[400],
+                                                  ),
+                                                ),
                                               if (parcel.woodCut > 0)
                                                 Text(
                                                   '${parcel.woodCut.toStringAsFixed(1)} m³',
-                                                  style: TextStyle(color: Colors.orange[700]),
+                                                  style: TextStyle(
+                                                    color: Colors.orange[700],
+                                                  ),
                                                 ),
                                             ],
                                           ],
@@ -454,34 +601,47 @@ class ForestTabState extends State<ForestTab> {
                                         ? SizedBox(
                                             width: 50,
                                             child: Column(
-                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
                                               children: [
                                                 Text(
                                                   '${parcel.woodUsedPercent.toStringAsFixed(0)}%',
                                                   style: TextStyle(
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.bold,
-                                                    color: parcel.woodUsedPercent >= 100
+                                                    color:
+                                                        parcel.woodUsedPercent >=
+                                                            100
                                                         ? Colors.red
-                                                        : parcel.woodUsedPercent >= 80
-                                                            ? Colors.orange
-                                                            : Colors.green,
+                                                        : parcel.woodUsedPercent >=
+                                                              80
+                                                        ? Colors.orange
+                                                        : Colors.green,
                                                   ),
                                                 ),
                                                 const SizedBox(height: 4),
                                                 ClipRRect(
-                                                  borderRadius: BorderRadius.circular(2),
+                                                  borderRadius:
+                                                      BorderRadius.circular(2),
                                                   child: LinearProgressIndicator(
-                                                    value: parcel.woodUsedPercent / 100,
+                                                    value:
+                                                        parcel.woodUsedPercent /
+                                                        100,
                                                     minHeight: 4,
-                                                    backgroundColor: Colors.grey[300],
-                                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                                      parcel.woodUsedPercent >= 100
-                                                          ? Colors.red
-                                                          : parcel.woodUsedPercent >= 80
+                                                    backgroundColor:
+                                                        Colors.grey[300],
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                          Color
+                                                        >(
+                                                          parcel.woodUsedPercent >=
+                                                                  100
+                                                              ? Colors.red
+                                                              : parcel.woodUsedPercent >=
+                                                                    80
                                                               ? Colors.orange
                                                               : Colors.green,
-                                                    ),
+                                                        ),
                                                   ),
                                                 ),
                                               ],
@@ -520,18 +680,17 @@ class _SummaryItem extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[500],
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
         ),
       ],
     );
   }
 }
-

@@ -7,6 +7,7 @@ class MapLongPressMenu extends StatelessWidget {
   final LatLng mapPosition;
   final VoidCallback onAddLocation;
   final VoidCallback onAddLog;
+  final VoidCallback onAddSecnja;
   final VoidCallback onImportParcel;
   final VoidCallback onDismiss;
 
@@ -16,6 +17,7 @@ class MapLongPressMenu extends StatelessWidget {
     required this.mapPosition,
     required this.onAddLocation,
     required this.onAddLog,
+    required this.onAddSecnja,
     required this.onImportParcel,
     required this.onDismiss,
   });
@@ -38,10 +40,7 @@ class MapLongPressMenu extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(color: color, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -81,11 +80,22 @@ class MapLongPressMenu extends StatelessWidget {
               // Add log button
               _buildMenuItem(
                 icon: Icons.forest,
-                label: 'Dodaj hlod',
+                label: 'Dodaj hlodovino',
                 color: Colors.brown,
                 onTap: () {
                   onDismiss();
                   onAddLog();
+                },
+              ),
+              const Divider(height: 8),
+              // Add sečnja button
+              _buildMenuItem(
+                icon: Icons.carpenter,
+                label: 'Označi sečnjo',
+                color: Colors.deepOrange,
+                onTap: () {
+                  onDismiss();
+                  onAddSecnja();
                 },
               ),
               const Divider(height: 8),

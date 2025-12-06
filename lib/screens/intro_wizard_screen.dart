@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/onboarding_service.dart';
 
 class IntroWizardScreen extends StatefulWidget {
@@ -20,7 +22,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
       title: 'Dobrodošli v Gozdar',
       description:
           'Aplikacija za upravljanje gozdnih parcel v Sloveniji. '
-          'Sledite poseku, uvažajte parcele iz katastra in uporabljajte GPS za delo na terenu.',
+          'Sledite poseku, beležite hlodovino in uporabljajte GPS za delo na terenu.',
       color: Colors.green,
     ),
     _WizardPage(
@@ -29,8 +31,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
       description:
           'Aplikacija ima tri zavihke:\n\n'
           '• Karta - Interaktivni zemljevid z vašimi parcelami\n'
-          '• Gozd - Seznam vseh parcel in uvoz/izvoz\n'
-          '• Hlodi - Sledenje posekanim hlodom',
+          '• Gozd - Seznam parcel s sledenjem poseku\n'
+          '• Hlodi - Beleženje hlodovine z izračunom volumna',
       color: Colors.blue,
     ),
     _WizardPage(
@@ -38,19 +40,34 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
       title: 'Dolg pritisk na karti',
       description:
           'Z dolgim pritiskom na karti odprete meni z možnostmi:\n\n'
-          '• Dodaj točko - Shranite lokacijo\n'
-          '• Dodaj hlod - Zabeležite posekan hlod\n'
+          '• Dodaj točko - Shranite lokacijo (npr. mejnik)\n'
+          '• Dodaj hlodovino - Zabeležite hlode na GPS lokaciji\n'
+          '• Označi sečnjo - Označite drevo za posek\n'
           '• Uvozi parcelo - Prenesite parcelo iz katastra',
       color: Colors.orange,
     ),
     _WizardPage(
-      icon: Icons.file_download,
-      title: 'Uvoz parcel',
+      icon: Icons.inventory_2,
+      title: 'Hlodovina in parcele',
       description:
-          'Parcele lahko uvozite na dva načina:\n\n'
-          '• Dolg pritisk na karti → "Uvozi parcelo" za uvoz iz katastra\n'
-          '• Zavihek Gozd → gumb "Uvozi KML" za uvoz iz datoteke\n\n'
-          'Uvožene parcele se samodejno povežejo s katastrskimi podatki.',
+          'Ko dodate hlodovino z GPS lokacijo, se samodejno poveže s parcelo.\n\n'
+          'V podrobnostih parcele vidite:\n'
+          '• Ročno beležen posek (m³ in število dreves)\n'
+          '• Vse hlode znotraj parcele (rjavi markerji)\n'
+          '• Označena drevesa za sečnjo (oranžni markerji)\n'
+          '• Shranjene točke (mejniki, skladišča)',
+      color: Colors.brown,
+    ),
+    _WizardPage(
+      icon: Icons.file_download,
+      title: 'Uvoz in izvoz',
+      description:
+          'Uvoz parcel:\n'
+          '• Dolg pritisk na karti → "Uvozi parcelo" iz katastra\n'
+          '• Zavihek Gozd → meni → "Uvozi KML"\n\n'
+          'Izvoz parcele s podatki:\n'
+          '• Odprite parcelo → meni → "Izvozi KML"\n'
+          '• Izvozi parcelo z vsemi hlodi, sečnjami in točkami',
       color: Colors.purple,
     ),
     _WizardPage(
@@ -73,6 +90,17 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           'prikaže se oranžni trak z imenom točke.\n\n'
           'Tapnite na trak za odprtje kompasa, ki vas vodi do izbrane točke v naravi.',
       color: Colors.deepOrange,
+    ),
+    _WizardPage(
+      icon: Icons.policy,
+      title: 'Pogoji uporabe',
+      description:
+          'Aplikacija uporablja javne podatke Zavoda za gozdove Slovenije.\n\n'
+          'Z uporabo te aplikacije se strinjate s pogoji uporabe podatkov, '
+          'ki so na voljo na:',
+      color: Colors.indigo,
+      linkUrl: 'https://prostor.zgs.gov.si/pregledovalnik/',
+      linkText: 'prostor.zgs.gov.si/pregledovalnik',
     ),
   ];
 
@@ -209,11 +237,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
               color: page.color.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              page.icon,
-              size: 52,
-              color: page.color,
-            ),
+            child: Icon(page.icon, size: 52, color: page.color),
           ),
           const SizedBox(height: 32),
 
@@ -221,9 +245,9 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           Text(
             page.title,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
@@ -233,22 +257,58 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: page.color.withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
-            child: Text(
-              page.description,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
-                    height: 1.7,
-                    fontSize: 17,
+            child: page.linkUrl != null
+                ? RichText(
+                    textAlign: TextAlign.left,
+                    text: TextSpan(
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.9),
+                        height: 1.7,
+                        fontSize: 17,
+                      ),
+                      children: [
+                        TextSpan(text: page.description),
+                        const TextSpan(text: '\n\n'),
+                        TextSpan(
+                          text: page.linkText ?? page.linkUrl,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            decoration: TextDecoration.underline,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              launchUrl(
+                                Uri.parse(page.linkUrl!),
+                                mode: LaunchMode.externalApplication,
+                              );
+                            },
+                        ),
+                      ],
+                    ),
+                  )
+                : Text(
+                    page.description,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.9),
+                      height: 1.7,
+                      fontSize: 17,
+                    ),
+                    textAlign: TextAlign.left,
                   ),
-              textAlign: TextAlign.left,
-            ),
           ),
         ],
       ),
@@ -276,11 +336,15 @@ class _WizardPage {
   final String title;
   final String description;
   final Color color;
+  final String? linkUrl;
+  final String? linkText;
 
   const _WizardPage({
     required this.icon,
     required this.title,
     required this.description,
     required this.color,
+    this.linkUrl,
+    this.linkText,
   });
 }

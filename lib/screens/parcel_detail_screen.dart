@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
 import '../models/parcel.dart';
 import '../models/map_location.dart';
+import '../models/log_entry.dart';
 import '../models/navigation_target.dart';
 import '../services/database_service.dart';
+import '../services/kml_service.dart';
+import '../providers/logs_provider.dart';
 import '../widgets/parcel_silhouette.dart';
 import '../main.dart';
 import 'parcel_editor.dart';
@@ -23,25 +27,69 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   final DatabaseService _databaseService = DatabaseService();
   late Parcel _parcel;
   bool _isLoading = false;
-  List<MapLocation> _locationsInParcel = [];
+  List<MapLocation> _locationsInParcel = []; // Regular POIs
+  List<MapLocation> _secnjaInParcel = []; // Trees marked for cutting
+  List<LogEntry> _logsInParcel = [];
+  double _logsVolume = 0.0;
+  LogsProvider? _logsProvider;
 
   @override
   void initState() {
     super.initState();
     _parcel = widget.parcel;
     _loadLocationsInParcel();
+    _loadLogsInParcel();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Subscribe to logs provider changes
+    _logsProvider?.removeListener(_onLogsChanged);
+    _logsProvider = context.read<LogsProvider>();
+    _logsProvider?.addListener(_onLogsChanged);
+  }
+
+  @override
+  void dispose() {
+    _logsProvider?.removeListener(_onLogsChanged);
+    super.dispose();
+  }
+
+  void _onLogsChanged() {
+    // Reload logs when provider notifies of changes
+    _loadLogsInParcel();
   }
 
   Future<void> _loadLocationsInParcel() async {
     try {
       final allLocations = await _databaseService.getAllLocations();
+      final inParcel = allLocations
+          .where(
+            (loc) => _parcel.containsPoint(LatLng(loc.latitude, loc.longitude)),
+          )
+          .toList();
       setState(() {
-        _locationsInParcel = allLocations
-            .where((loc) => _parcel.containsPoint(LatLng(loc.latitude, loc.longitude)))
-            .toList();
+        // Separate regular locations from sečnja markers
+        _locationsInParcel = inParcel.where((loc) => !loc.isSecnja).toList();
+        _secnjaInParcel = inParcel.where((loc) => loc.isSecnja).toList();
       });
     } catch (e) {
       debugPrint('Error loading locations in parcel: $e');
+    }
+  }
+
+  Future<void> _loadLogsInParcel() async {
+    if (_parcel.id == null) return;
+    try {
+      final logs = await _databaseService.getLogsByParcel(_parcel.id!);
+      final volume = await _databaseService.getParcelTotalVolume(_parcel.id!);
+      setState(() {
+        _logsInParcel = logs;
+        _logsVolume = volume;
+      });
+    } catch (e) {
+      debugPrint('Error loading logs in parcel: $e');
     }
   }
 
@@ -56,9 +104,26 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri posodabljanju: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Napaka pri posodabljanju: $e')));
+      }
+    }
+  }
+
+  Future<void> _exportParcel() async {
+    try {
+      await KmlService.exportParcelWithData(
+        parcel: _parcel,
+        logs: _logsInParcel,
+        secnja: _secnjaInParcel,
+        locations: _locationsInParcel,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Napaka pri izvozu: $e')));
       }
     }
   }
@@ -140,7 +205,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     );
 
     if (result != null) {
-      await _updateParcel(_parcel.copyWith(owner: result.isEmpty ? null : result));
+      await _updateParcel(
+        _parcel.copyWith(owner: result.isEmpty ? null : result),
+      );
     }
   }
 
@@ -186,9 +253,10 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   }
 
   Future<void> _logWoodCut() async {
-    final controller = TextEditingController();
+    final volumeController = TextEditingController();
+    final treesController = TextEditingController(text: '1');
 
-    final result = await showDialog<double>(
+    final result = await showDialog<({double volume, int trees})>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Zabeleži posek'),
@@ -204,14 +272,14 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
               const SizedBox(height: 4),
               Text(
                 'Se na voljo: ${_parcel.woodRemaining.toStringAsFixed(2)} m³',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.green,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.green),
               ),
             ],
             const SizedBox(height: 16),
             TextField(
-              controller: controller,
+              controller: volumeController,
               decoration: const InputDecoration(
                 labelText: 'Dodaj posek (m³)',
                 hintText: 'Vnesite kolicino',
@@ -219,7 +287,20 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                 suffixText: 'm³',
               ),
               autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: treesController,
+              decoration: const InputDecoration(
+                labelText: 'Stevilo dreves',
+                hintText: 'Vnesite stevilo',
+                border: OutlineInputBorder(),
+                suffixText: 'dreves',
+              ),
+              keyboardType: TextInputType.number,
             ),
           ],
         ),
@@ -230,8 +311,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
           ),
           FilledButton(
             onPressed: () {
-              final value = double.tryParse(controller.text) ?? 0.0;
-              Navigator.of(context).pop(value);
+              final volume = double.tryParse(volumeController.text) ?? 0.0;
+              final trees = int.tryParse(treesController.text) ?? 0;
+              Navigator.of(context).pop((volume: volume, trees: trees));
             },
             child: const Text('Dodaj'),
           ),
@@ -239,16 +321,20 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       ),
     );
 
-    if (result != null && result > 0) {
-      final newWoodCut = _parcel.woodCut + result;
-      await _updateParcel(_parcel.copyWith(woodCut: newWoodCut));
+    if (result != null && result.volume > 0) {
+      final newWoodCut = _parcel.woodCut + result.volume;
+      final newTreesCut = _parcel.treesCut + result.trees;
+      await _updateParcel(
+        _parcel.copyWith(woodCut: newWoodCut, treesCut: newTreesCut),
+      );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Dodano ${result.toStringAsFixed(2)} m³ poseka'),
-          ),
-        );
+        final message = result.trees > 0
+            ? 'Dodano ${result.volume.toStringAsFixed(2)} m³ poseka (${result.trees} dreves)'
+            : 'Dodano ${result.volume.toStringAsFixed(2)} m³ poseka';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     }
   }
@@ -258,7 +344,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Ponastavi posek'),
-        content: const Text('Ali ste prepricani, da zelite ponastaviti kolicino posekanega lesa na 0?'),
+        content: const Text(
+          'Ali ste prepricani, da zelite ponastaviti kolicino posekanega lesa na 0?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -312,7 +400,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     );
 
     if (result != null && result > 0) {
-      await _updateParcel(_parcel.copyWith(treesCut: _parcel.treesCut + result));
+      await _updateParcel(
+        _parcel.copyWith(treesCut: _parcel.treesCut + result),
+      );
     }
   }
 
@@ -321,7 +411,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Ponastavi drevesa'),
-        content: const Text('Ali ste prepricani, da zelite ponastaviti stevilo posekanih dreves na 0?'),
+        content: const Text(
+          'Ali ste prepricani, da zelite ponastaviti stevilo posekanih dreves na 0?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -368,7 +460,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Izbrisi parcelo'),
-        content: Text('Ali ste prepricani, da zelite izbrisati "${_parcel.name}"?'),
+        content: Text(
+          'Ali ste prepricani, da zelite izbrisati "${_parcel.name}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -391,9 +485,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka pri brisanju: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Napaka pri brisanju: $e')));
         }
       }
     }
@@ -401,54 +495,15 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
 
   /// Navigate to map with target point
   void _navigateToPoint(LatLng point, String name) {
-    // Get the main screen state before popping
-    final mainState = context.findAncestorStateOfType<MainScreenState>();
+    final target = NavigationTarget(location: point, name: name);
+
     // Pop back to main screen
     Navigator.of(context).popUntil((route) => route.isFirst);
-    // Navigate to map with target after frame
-    if (mainState != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        mainState.setNavigationTarget(NavigationTarget(location: point, name: name));
-      });
-    }
-  }
 
-  /// Edit point name dialog
-  Future<void> _editPointName(int index) async {
-    final currentName = _parcel.pointNames.length > index ? _parcel.pointNames[index] : null;
-    final controller = TextEditingController(text: currentName ?? '');
-
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Poimenuj tocko ${index + 1}'),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: 'Ime tocke',
-            hintText: 'Tocka ${index + 1}',
-            border: const OutlineInputBorder(),
-          ),
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Preklici'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Shrani'),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null) {
-      final updatedParcel = _parcel.withPointName(index, result.isEmpty ? null : result);
-      await _updateParcel(updatedParcel);
-    }
+    // Use static method to navigate to map with target
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      MainScreen.navigateToMapWithTarget(target);
+    });
   }
 
   @override
@@ -464,10 +519,37 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
             tooltip: 'Uredi obliko',
             onPressed: _editPolygon,
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: 'Izbrisi',
-            onPressed: _deleteParcel,
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'export') {
+                _exportParcel();
+              } else if (value == 'delete') {
+                _deleteParcel();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'export',
+                child: Row(
+                  children: [
+                    Icon(Icons.file_download),
+                    SizedBox(width: 8),
+                    Text('Izvozi KML'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Izbriši', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -493,20 +575,32 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                                     ? ParcelSilhouette(
                                         polygon: _parcel.polygon,
                                         size: 72,
-                                        fillColor: getForestTypeIcon(_parcel.forestType).$2.withValues(alpha: 0.3),
-                                        strokeColor: getForestTypeIcon(_parcel.forestType).$2,
+                                        fillColor: getForestTypeIcon(
+                                          _parcel.forestType,
+                                        ).$2.withValues(alpha: 0.3),
+                                        strokeColor: getForestTypeIcon(
+                                          _parcel.forestType,
+                                        ).$2,
                                         strokeWidth: 2,
                                       )
                                     : Container(
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          color: getForestTypeIcon(_parcel.forestType).$2.withValues(alpha: 0.2),
-                                          borderRadius: BorderRadius.circular(12),
+                                          color: getForestTypeIcon(
+                                            _parcel.forestType,
+                                          ).$2.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
                                         child: Icon(
-                                          getForestTypeIcon(_parcel.forestType).$1,
+                                          getForestTypeIcon(
+                                            _parcel.forestType,
+                                          ).$1,
                                           size: 32,
-                                          color: getForestTypeIcon(_parcel.forestType).$2,
+                                          color: getForestTypeIcon(
+                                            _parcel.forestType,
+                                          ).$2,
                                         ),
                                       ),
                               ),
@@ -517,15 +611,25 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                                   children: [
                                     Text(
                                       _parcel.areaFormatted,
-                                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall
+                                          ?.copyWith(
                                             fontWeight: FontWeight.bold,
-                                            color: Theme.of(context).colorScheme.primary,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
                                           ),
                                     ),
                                     Text(
                                       '${_parcel.polygon.length} tock',
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
                                           ),
                                     ),
                                   ],
@@ -586,9 +690,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                               const SizedBox(width: 8),
                               Text(
                                 'Posek lesa',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -604,11 +707,15 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Dovoljen posek',
-                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
                                                 color: Colors.grey[600],
                                               ),
                                         ),
@@ -616,7 +723,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                                           _parcel.woodAllowance > 0
                                               ? '${_parcel.woodAllowance.toStringAsFixed(2)} m³'
                                               : 'Ni dolocen',
-                                          style: Theme.of(context).textTheme.titleLarge,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleLarge,
                                         ),
                                       ],
                                     ),
@@ -638,15 +747,17 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                                   children: [
                                     Text(
                                       'Posekano',
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            color: Colors.grey[600],
-                                          ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(color: Colors.grey[600]),
                                     ),
                                     Text(
                                       '${_parcel.woodCut.toStringAsFixed(2)} m³',
-                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                            color: Colors.orange[700],
-                                          ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(color: Colors.orange[700]),
                                     ),
                                   ],
                                 ),
@@ -673,8 +784,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                                   _parcel.woodUsedPercent >= 100
                                       ? Colors.red
                                       : _parcel.woodUsedPercent >= 80
-                                          ? Colors.orange
-                                          : Colors.green,
+                                      ? Colors.orange
+                                      : Colors.green,
                                 ),
                               ),
                             ),
@@ -688,7 +799,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                                 ),
                                 Text(
                                   'Se na voljo: ${_parcel.woodRemaining.toStringAsFixed(2)} m³',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
                                         color: Colors.green[700],
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -708,15 +820,17 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                                   children: [
                                     Text(
                                       'Posekanih dreves',
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            color: Colors.grey[600],
-                                          ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(color: Colors.grey[600]),
                                     ),
                                     Text(
                                       '${_parcel.treesCut}',
-                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                            color: Colors.green[700],
-                                          ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(color: Colors.green[700]),
                                     ),
                                   ],
                                 ),
@@ -757,79 +871,257 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                     ),
                   ),
 
-                  // Boundary Points Card (parcel polygon vertices) - collapsible
+                  // See on map button
                   const SizedBox(height: 16),
-                  Card(
-                    clipBehavior: Clip.antiAlias,
-                    child: ExpansionTile(
-                      leading: const Icon(Icons.pentagon_outlined, color: Colors.green),
-                      title: Text(
-                        'Mejne tocke (${_parcel.polygon.length})',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      initiallyExpanded: false,
-                      children: [
-                        const Divider(height: 1),
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _parcel.polygon.length,
-                          separatorBuilder: (context, index) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final point = _parcel.polygon[index];
-                            final pointName = _parcel.getPointName(index);
-                            final hasCustomName = _parcel.pointNames.length > index && _parcel.pointNames[index] != null;
-                            return ListTile(
-                              leading: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '${index + 1}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ),
-                              title: Row(
-                                children: [
-                                  Expanded(child: Text(pointName)),
-                                  IconButton(
-                                    icon: Icon(
-                                      hasCustomName ? Icons.edit : Icons.edit_outlined,
-                                      size: 18,
-                                      color: hasCustomName ? Colors.green : Colors.grey,
-                                    ),
-                                    tooltip: 'Poimenuj',
-                                    onPressed: () => _editPointName(index),
-                                  ),
-                                ],
-                              ),
-                              subtitle: Text(
-                                '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}',
-                                style: TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.navigation, color: Colors.blue),
-                                tooltip: 'Navigiraj',
-                                onPressed: () => _navigateToPoint(point, pointName),
-                              ),
-                              onTap: () => _navigateToPoint(point, pointName),
-                            );
-                          },
-                        ),
-                      ],
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () =>
+                          _navigateToPoint(_parcel.center, _parcel.name),
+                      icon: const Icon(Icons.map),
+                      label: const Text('Poglej na karti'),
                     ),
                   ),
+
+                  // Logs Card (logs geolocated within parcel)
+                  if (_logsInParcel.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.inventory_2,
+                                  color: Colors.brown,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Hlodovina na parceli (${_logsInParcel.length})',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                Text(
+                                  '${_logsVolume.toStringAsFixed(2)} m³',
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.brown[700],
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 1),
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _logsInParcel.length > 5
+                                ? 5
+                                : _logsInParcel.length,
+                            separatorBuilder: (context, index) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final log = _logsInParcel[index];
+                              return ListTile(
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.brown.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.circle,
+                                    color: Colors.brown,
+                                    size: 20,
+                                  ),
+                                ),
+                                title: Text(
+                                  '${log.volume.toStringAsFixed(4)} m³',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Row(
+                                  children: [
+                                    if (log.diameter != null &&
+                                        log.length != null)
+                                      Text(
+                                        'Ø ${log.diameter!.toStringAsFixed(0)} cm × ${log.length!.toStringAsFixed(1)} m',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      )
+                                    else
+                                      Text(
+                                        'Ročni vnos',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    if (log.hasLocation) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.gps_fixed,
+                                              size: 12,
+                                              color: Colors.green[700],
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              'GPS',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green[700],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                trailing: log.hasLocation
+                                    ? IconButton(
+                                        icon: const Icon(
+                                          Icons.navigation,
+                                          color: Colors.blue,
+                                        ),
+                                        tooltip: 'Navigiraj',
+                                        onPressed: () => _navigateToPoint(
+                                          LatLng(log.latitude!, log.longitude!),
+                                          'Hlod ${log.id}',
+                                        ),
+                                      )
+                                    : null,
+                              );
+                            },
+                          ),
+                          if (_logsInParcel.length > 5)
+                            Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Center(
+                                child: Text(
+                                  '... in še ${_logsInParcel.length - 5} hlodov',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Sečnja Card (trees marked for cutting within parcel)
+                  if (_secnjaInParcel.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.carpenter,
+                                  color: Colors.deepOrange,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Sečnja (${_secnjaInParcel.length})',
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 1),
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _secnjaInParcel.length,
+                            separatorBuilder: (context, index) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final location = _secnjaInParcel[index];
+                              return ListTile(
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.deepOrange.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.carpenter,
+                                    color: Colors.deepOrange,
+                                    size: 20,
+                                  ),
+                                ),
+                                title: Text(location.name),
+                                subtitle: Text(
+                                  '${location.latitude.toStringAsFixed(5)}, ${location.longitude.toStringAsFixed(5)}',
+                                  style: TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(
+                                    Icons.navigation,
+                                    color: Colors.blue,
+                                  ),
+                                  tooltip: 'Navigiraj',
+                                  onPressed: () => _navigateToPoint(
+                                    LatLng(
+                                      location.latitude,
+                                      location.longitude,
+                                    ),
+                                    location.name,
+                                  ),
+                                ),
+                                onTap: () => _navigateToPoint(
+                                  LatLng(location.latitude, location.longitude),
+                                  location.name,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   // Saved Locations Card (points saved within parcel)
                   if (_locationsInParcel.isNotEmpty) ...[
@@ -842,13 +1134,15 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                             padding: const EdgeInsets.all(16),
                             child: Row(
                               children: [
-                                const Icon(Icons.location_on, color: Colors.red),
+                                const Icon(
+                                  Icons.location_on,
+                                  color: Colors.orange,
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Shranjene tocke (${_locationsInParcel.length})',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -858,17 +1152,22 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: _locationsInParcel.length,
-                            separatorBuilder: (context, index) => const Divider(height: 1),
+                            separatorBuilder: (context, index) =>
+                                const Divider(height: 1),
                             itemBuilder: (context, index) {
                               final location = _locationsInParcel[index];
                               return ListTile(
                                 leading: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.red.withValues(alpha: 0.1),
+                                    color: Colors.orange.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(Icons.place, color: Colors.red, size: 20),
+                                  child: const Icon(
+                                    Icons.place,
+                                    color: Colors.orange,
+                                    size: 20,
+                                  ),
                                 ),
                                 title: Text(location.name),
                                 subtitle: Text(
@@ -880,10 +1179,16 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                                   ),
                                 ),
                                 trailing: IconButton(
-                                  icon: const Icon(Icons.navigation, color: Colors.blue),
+                                  icon: const Icon(
+                                    Icons.navigation,
+                                    color: Colors.blue,
+                                  ),
                                   tooltip: 'Navigiraj',
                                   onPressed: () => _navigateToPoint(
-                                    LatLng(location.latitude, location.longitude),
+                                    LatLng(
+                                      location.latitude,
+                                      location.longitude,
+                                    ),
                                     location.name,
                                   ),
                                 ),
@@ -922,14 +1227,8 @@ class _InfoRow extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: Colors.grey[600]),
         const SizedBox(width: 8),
-        Text(
-          '$label: ',
-          style: TextStyle(color: Colors.grey[600]),
-        ),
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ),
+        Text('$label: ', style: TextStyle(color: Colors.grey[600])),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
       ],
     );
   }

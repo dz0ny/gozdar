@@ -9,16 +9,10 @@ class ConversionFactors {
   final double prm;
   final double nm;
 
-  const ConversionFactors({
-    this.prm = 0.65,
-    this.nm = 0.40,
-  });
+  const ConversionFactors({this.prm = 0.65, this.nm = 0.40});
 
   ConversionFactors copyWith({double? prm, double? nm}) {
-    return ConversionFactors(
-      prm: prm ?? this.prm,
-      nm: nm ?? this.nm,
-    );
+    return ConversionFactors(prm: prm ?? this.prm, nm: nm ?? this.nm);
   }
 }
 
@@ -27,7 +21,7 @@ class LogsProvider extends ChangeNotifier {
   final DatabaseService _databaseService;
 
   LogsProvider({DatabaseService? databaseService})
-      : _databaseService = databaseService ?? DatabaseService();
+    : _databaseService = databaseService ?? DatabaseService();
 
   // State
   List<LogEntry> _logEntries = [];
@@ -76,6 +70,7 @@ class LogsProvider extends ChangeNotifier {
   }
 
   /// Add a new log entry
+  /// Parcel assignment is handled automatically by DatabaseService
   Future<bool> addLogEntry(LogEntry entry) async {
     try {
       await _databaseService.insertLog(entry);

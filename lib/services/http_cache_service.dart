@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:http/http.dart' as http;
@@ -32,11 +33,7 @@ class HttpCacheService {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, 'http_cache.db');
 
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _onCreate,
-    );
+    return await openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -92,8 +89,9 @@ class HttpCacheService {
 
       // Return cached response
       return http.Response(body, statusCode);
-    } catch (e) {
-      // On any cache error, return null to fetch fresh
+    } catch (e, stackTrace) {
+      // On any cache error, log and return null to fetch fresh
+      debugPrint('HttpCacheService.getCached error: $e\n$stackTrace');
       return null;
     }
   }
@@ -108,19 +106,16 @@ class HttpCacheService {
       final urlHash = _hashUrl(uri.toString());
       final now = DateTime.now().millisecondsSinceEpoch;
 
-      await db.insert(
-        'http_cache',
-        {
-          'url_hash': urlHash,
-          'url': uri.toString(),
-          'response_body': response.body,
-          'status_code': response.statusCode,
-          'cached_at': now,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    } catch (e) {
-      // Silently fail - caching is best-effort
+      await db.insert('http_cache', {
+        'url_hash': urlHash,
+        'url': uri.toString(),
+        'response_body': response.body,
+        'status_code': response.statusCode,
+        'cached_at': now,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    } catch (e, stackTrace) {
+      // Caching is best-effort, but log errors for debugging
+      debugPrint('HttpCacheService.cacheResponse error: $e\n$stackTrace');
     }
   }
 
@@ -157,7 +152,8 @@ class HttpCacheService {
         where: 'cached_at < ?',
         whereArgs: [cutoff],
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('HttpCacheService.clearExpired error: $e\n$stackTrace');
       return 0;
     }
   }
@@ -167,7 +163,8 @@ class HttpCacheService {
     try {
       final db = await database;
       return await db.delete('http_cache');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('HttpCacheService.clearAll error: $e\n$stackTrace');
       return 0;
     }
   }
@@ -192,7 +189,8 @@ class HttpCacheService {
         'sizeBytes': size,
         'sizeMB': (size / (1024 * 1024)).toStringAsFixed(2),
       };
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('HttpCacheService.getStats error: $e\n$stackTrace');
       return {'entries': 0, 'sizeBytes': 0, 'sizeMB': '0.00'};
     }
   }

@@ -1,6 +1,5 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'screens/map_tab.dart';
 import 'screens/logs_tab.dart';
@@ -67,7 +66,7 @@ class _GozdarAppState extends State<GozdarApp> {
         theme: AppTheme.greenTheme,
         home: _showOnboarding
             ? IntroWizardScreen(onComplete: _onOnboardingComplete)
-            : const MainScreen(),
+            : MainScreen(key: MainScreen.globalKey),
       ),
     );
   }
@@ -76,16 +75,13 @@ class _GozdarAppState extends State<GozdarApp> {
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
+  /// Global key to access MainScreenState from anywhere
+  static final GlobalKey<MainScreenState> globalKey =
+      GlobalKey<MainScreenState>();
+
   /// Navigate to map tab with a specific target location
-  static void navigateToMapWithTarget(
-    BuildContext context,
-    LatLng location,
-    String name,
-  ) {
-    final state = context.findAncestorStateOfType<MainScreenState>();
-    state?.setNavigationTarget(
-      NavigationTarget(location: location, name: name),
-    );
+  static void navigateToMapWithTarget(NavigationTarget target) {
+    globalKey.currentState?.setNavigationTarget(target);
   }
 
   @override

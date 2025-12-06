@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:latlong2/latlong.dart';
 import '../models/log_batch.dart';
 import '../models/log_entry.dart';
 import '../models/map_location.dart';
@@ -27,7 +28,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 8,
+      version: 10,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -45,8 +46,10 @@ class DatabaseService {
         longitude REAL,
         notes TEXT,
         batch_id INTEGER,
+        parcel_id INTEGER,
         created_at TEXT NOT NULL,
-        FOREIGN KEY (batch_id) REFERENCES log_batches (id) ON DELETE SET NULL
+        FOREIGN KEY (batch_id) REFERENCES log_batches (id) ON DELETE SET NULL,
+        FOREIGN KEY (parcel_id) REFERENCES parcels (id) ON DELETE SET NULL
       )
     ''');
 
@@ -57,6 +60,7 @@ class DatabaseService {
         name TEXT NOT NULL,
         latitude REAL NOT NULL,
         longitude REAL NOT NULL,
+        type TEXT DEFAULT 'point',
         created_at TEXT NOT NULL
       )
     ''');
@@ -115,7 +119,9 @@ class DatabaseService {
 
     if (oldVersion < 3) {
       // Add cadastral fields to parcels table
-      await db.execute('ALTER TABLE parcels ADD COLUMN cadastral_municipality INTEGER');
+      await db.execute(
+        'ALTER TABLE parcels ADD COLUMN cadastral_municipality INTEGER',
+      );
       await db.execute('ALTER TABLE parcels ADD COLUMN parcel_number TEXT');
 
       // Create unique index for cadastral parcels
@@ -129,18 +135,26 @@ class DatabaseService {
     if (oldVersion < 4) {
       // Add owner and wood tracking fields to parcels table
       await db.execute('ALTER TABLE parcels ADD COLUMN owner TEXT');
-      await db.execute('ALTER TABLE parcels ADD COLUMN wood_allowance REAL DEFAULT 0.0');
-      await db.execute('ALTER TABLE parcels ADD COLUMN wood_cut REAL DEFAULT 0.0');
+      await db.execute(
+        'ALTER TABLE parcels ADD COLUMN wood_allowance REAL DEFAULT 0.0',
+      );
+      await db.execute(
+        'ALTER TABLE parcels ADD COLUMN wood_cut REAL DEFAULT 0.0',
+      );
     }
 
     if (oldVersion < 5) {
       // Add trees cut count to parcels table
-      await db.execute('ALTER TABLE parcels ADD COLUMN trees_cut INTEGER DEFAULT 0');
+      await db.execute(
+        'ALTER TABLE parcels ADD COLUMN trees_cut INTEGER DEFAULT 0',
+      );
     }
 
     if (oldVersion < 6) {
       // Add forest type to parcels table (0=mixed, 1=deciduous, 2=coniferous)
-      await db.execute('ALTER TABLE parcels ADD COLUMN forest_type INTEGER DEFAULT 0');
+      await db.execute(
+        'ALTER TABLE parcels ADD COLUMN forest_type INTEGER DEFAULT 0',
+      );
     }
 
     if (oldVersion < 7) {
@@ -163,6 +177,18 @@ class DatabaseService {
       // Add batch_id to logs table for project management
       await db.execute('ALTER TABLE logs ADD COLUMN batch_id INTEGER');
     }
+
+    if (oldVersion < 9) {
+      // Add parcel_id to logs table for parcel association
+      await db.execute('ALTER TABLE logs ADD COLUMN parcel_id INTEGER');
+    }
+
+    if (oldVersion < 10) {
+      // Add type to locations table for different POI types (point, secnja)
+      await db.execute(
+        "ALTER TABLE locations ADD COLUMN type TEXT DEFAULT 'point'",
+      );
+    }
   }
 
   Future<void> initialize() async {
@@ -171,30 +197,35 @@ class DatabaseService {
 
   // ==================== LOG OPERATIONS ====================
 
+  /// Insert a log entry, automatically assigning it to a parcel if it has location
   Future<int> insertLog(LogEntry log) async {
     final db = await database;
-    final map = log.toMap();
+
+    // Auto-assign parcel if log has location and no parcel assigned
+    LogEntry logToInsert = log;
+    if (log.latitude != null && log.longitude != null && log.parcelId == null) {
+      final containingParcel = await findContainingParcel(
+        log.latitude!,
+        log.longitude!,
+      );
+      if (containingParcel != null && containingParcel.id != null) {
+        logToInsert = log.copyWith(parcelId: containingParcel.id);
+      }
+    }
+
+    final map = logToInsert.toMap();
     map.remove('id'); // Remove id to let SQLite auto-increment
     return await db.insert('logs', map);
   }
 
   Future<void> updateLog(LogEntry log) async {
     final db = await database;
-    await db.update(
-      'logs',
-      log.toMap(),
-      where: 'id = ?',
-      whereArgs: [log.id],
-    );
+    await db.update('logs', log.toMap(), where: 'id = ?', whereArgs: [log.id]);
   }
 
   Future<void> deleteLog(int id) async {
     final db = await database;
-    await db.delete(
-      'logs',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('logs', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> deleteAllLogs() async {
@@ -213,7 +244,9 @@ class DatabaseService {
 
   Future<double> getTotalVolume() async {
     final db = await database;
-    final result = await db.rawQuery('SELECT SUM(volume) as total FROM logs WHERE batch_id IS NULL');
+    final result = await db.rawQuery(
+      'SELECT SUM(volume) as total FROM logs WHERE batch_id IS NULL',
+    );
     final total = result.first['total'];
     return total != null ? (total as num).toDouble() : 0.0;
   }
@@ -284,6 +317,78 @@ class DatabaseService {
     return (result.first['count'] as int?) ?? 0;
   }
 
+  /// Get logs for a specific parcel
+  Future<List<LogEntry>> getLogsByParcel(int parcelId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'logs',
+      where: 'parcel_id = ?',
+      whereArgs: [parcelId],
+      orderBy: 'created_at DESC',
+    );
+    return maps.map((map) => LogEntry.fromMap(map)).toList();
+  }
+
+  /// Get total volume for a specific parcel
+  Future<double> getParcelTotalVolume(int parcelId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT SUM(volume) as total FROM logs WHERE parcel_id = ?',
+      [parcelId],
+    );
+    final total = result.first['total'];
+    return total != null ? (total as num).toDouble() : 0.0;
+  }
+
+  /// Get log count for a specific parcel
+  Future<int> getParcelLogCount(int parcelId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM logs WHERE parcel_id = ?',
+      [parcelId],
+    );
+    return (result.first['count'] as int?) ?? 0;
+  }
+
+  /// Assign a log to a parcel
+  Future<void> assignLogToParcel(int logId, int parcelId) async {
+    final db = await database;
+    await db.update(
+      'logs',
+      {'parcel_id': parcelId},
+      where: 'id = ?',
+      whereArgs: [logId],
+    );
+  }
+
+  /// Unassign a log from its parcel
+  Future<void> unassignLogFromParcel(int logId) async {
+    final db = await database;
+    await db.update(
+      'logs',
+      {'parcel_id': null},
+      where: 'id = ?',
+      whereArgs: [logId],
+    );
+  }
+
+  /// Find the parcel that contains a given point (lat/lng)
+  /// Returns the parcel if found, null otherwise
+  Future<Parcel?> findContainingParcel(
+    double latitude,
+    double longitude,
+  ) async {
+    final parcels = await getAllParcels();
+    final point = LatLng(latitude, longitude);
+
+    for (final parcel in parcels) {
+      if (parcel.containsPoint(point)) {
+        return parcel;
+      }
+    }
+    return null;
+  }
+
   // ==================== LOG BATCH OPERATIONS ====================
 
   Future<int> insertLogBatch(LogBatch batch) async {
@@ -305,11 +410,7 @@ class DatabaseService {
 
   Future<void> deleteLogBatch(int id) async {
     final db = await database;
-    await db.delete(
-      'log_batches',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('log_batches', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<List<LogBatch>> getAllLogBatches() async {
@@ -342,11 +443,7 @@ class DatabaseService {
 
   Future<void> deleteLocation(int id) async {
     final db = await database;
-    await db.delete(
-      'locations',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('locations', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> updateLocationName(int id, String name) async {
@@ -389,11 +486,49 @@ class DatabaseService {
 
   Future<void> deleteParcel(int id) async {
     final db = await database;
-    await db.delete(
+    await db.delete('parcels', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Delete a parcel and all points (logs and locations) inside it
+  /// Returns counts of deleted items: {'logs': n, 'locations': n}
+  Future<Map<String, int>> deleteParcelWithContents(int id) async {
+    final db = await database;
+
+    // First get the parcel to check containment
+    final parcelMaps = await db.query(
       'parcels',
       where: 'id = ?',
       whereArgs: [id],
+      limit: 1,
     );
+    if (parcelMaps.isEmpty) {
+      return {'logs': 0, 'locations': 0};
+    }
+
+    final parcel = Parcel.fromMap(parcelMaps.first);
+
+    // Delete logs inside the parcel (by parcel_id assignment)
+    final logsDeleted = await db.delete(
+      'logs',
+      where: 'parcel_id = ?',
+      whereArgs: [id],
+    );
+
+    // Find and delete locations inside the parcel polygon
+    final allLocations = await getAllLocations();
+    int locationsDeleted = 0;
+    for (final location in allLocations) {
+      final point = LatLng(location.latitude, location.longitude);
+      if (parcel.containsPoint(point)) {
+        await db.delete('locations', where: 'id = ?', whereArgs: [location.id]);
+        locationsDeleted++;
+      }
+    }
+
+    // Finally delete the parcel itself
+    await db.delete('parcels', where: 'id = ?', whereArgs: [id]);
+
+    return {'logs': logsDeleted, 'locations': locationsDeleted};
   }
 
   Future<List<Parcel>> getAllParcels() async {
@@ -415,7 +550,10 @@ class DatabaseService {
   }
 
   /// Check if a cadastral parcel with given KO and parcel number already exists
-  Future<bool> cadastralParcelExists(int cadastralMunicipality, String parcelNumber) async {
+  Future<bool> cadastralParcelExists(
+    int cadastralMunicipality,
+    String parcelNumber,
+  ) async {
     final db = await database;
     final result = await db.query(
       'parcels',
@@ -427,7 +565,10 @@ class DatabaseService {
   }
 
   /// Get existing cadastral parcel by KO and parcel number
-  Future<Parcel?> getCadastralParcel(int cadastralMunicipality, String parcelNumber) async {
+  Future<Parcel?> getCadastralParcel(
+    int cadastralMunicipality,
+    String parcelNumber,
+  ) async {
     final db = await database;
     final result = await db.query(
       'parcels',

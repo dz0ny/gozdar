@@ -21,6 +21,10 @@ import '../widgets/navigation_compass_dialog.dart';
 import '../widgets/tile_download_dialog.dart';
 import '../widgets/map_long_press_menu.dart';
 import '../widgets/navigation_target_banner.dart';
+import '../widgets/map_controls.dart';
+import '../widgets/map_layer_selector.dart';
+import '../widgets/map_dialogs.dart';
+import '../widgets/saved_locations_sheet.dart';
 import '../providers/map_provider.dart';
 
 /// Map Tab screen for the Gozdar app
@@ -49,6 +53,7 @@ class MapTabState extends State<MapTab> {
   final Set<MapLayerType> _activeOverlays = {};
   List<MapLocation> _locations = [];
   List<Parcel> _parcels = [];
+  List<LogEntry> _geolocatedLogs = [];
   bool _isLoadingLocations = false;
   bool _isQueryingParcel = false;
   bool _isLoadingPreferences =
@@ -171,6 +176,7 @@ class MapTabState extends State<MapTab> {
     _loadPreferences();
     _loadLocations();
     _loadParcels();
+    _loadGeolocatedLogs();
     _initializeLocationTracking();
   }
 
@@ -257,6 +263,21 @@ class MapTabState extends State<MapTab> {
       }
     } catch (e) {
       debugPrint('Error loading parcels: $e');
+    }
+  }
+
+  /// Load geolocated logs from database
+  Future<void> _loadGeolocatedLogs() async {
+    try {
+      final allLogs = await DatabaseService().getAllLogs();
+      final logsWithLocation = allLogs.where((log) => log.hasLocation).toList();
+      if (mounted) {
+        setState(() {
+          _geolocatedLogs = logsWithLocation;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading geolocated logs: $e');
     }
   }
 
@@ -389,64 +410,14 @@ class MapTabState extends State<MapTab> {
 
   /// Show dialog to add a new location
   Future<void> _showAddLocationDialog(LatLng position) async {
-    final nameController = TextEditingController();
-
-    final result = await showDialog<bool>(
+    final name = await MapDialogs.showAddLocationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Dodaj lokacijo'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Lat: ${position.latitude.toStringAsFixed(6)}\n'
-              'Lng: ${position.longitude.toStringAsFixed(6)}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Ime lokacije',
-                hintText: 'Vnesite ime za to lokacijo',
-                border: OutlineInputBorder(),
-              ),
-              autofocus: true,
-              textCapitalization: TextCapitalization.words,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (nameController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Prosim vnesite ime')),
-                );
-                return;
-              }
-              Navigator.of(context).pop(true);
-            },
-            child: const Text('Dodaj'),
-          ),
-        ],
-      ),
+      position: position,
     );
 
-    if (result == true && nameController.text.trim().isNotEmpty) {
-      await _addLocation(
-        nameController.text.trim(),
-        position.latitude,
-        position.longitude,
-      );
+    if (name != null) {
+      await _addLocation(name, position.latitude, position.longitude);
     }
-    // Note: Don't dispose nameController here - it will be garbage collected
-    // Disposing while dialog animations are completing causes "used after disposed" errors
   }
 
   /// Add a new location to the database
@@ -482,6 +453,56 @@ class MapTabState extends State<MapTab> {
     }
   }
 
+  /// Show dialog to add sečnja marker (tree to be cut)
+  Future<void> _showAddSecnjaDialog(LatLng position) async {
+    final name = await MapDialogs.showAddSecnjaDialog(
+      context: context,
+      position: position,
+    );
+
+    if (name != null) {
+      await _addSecnja(name, position.latitude, position.longitude);
+    }
+  }
+
+  /// Add a sečnja marker to the database
+  Future<void> _addSecnja(String name, double lat, double lng) async {
+    try {
+      final location = MapLocation(
+        name: name,
+        latitude: lat,
+        longitude: lng,
+        type: LocationType.secnja,
+      );
+
+      // Use provider for the operation
+      final success = await context.read<MapProvider>().addLocation(location);
+      if (success) {
+        await _loadLocations(); // Sync local state
+      }
+
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Sečnja "$name" označena')));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Napaka: ${context.read<MapProvider>().error}'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Napaka pri označevanju sečnje: $e')),
+        );
+      }
+    }
+  }
+
   /// Show log entry form with pre-filled location
   Future<void> _showAddLogDialog(LatLng position) async {
     // Create a partial log entry with just the location
@@ -501,6 +522,7 @@ class MapTabState extends State<MapTab> {
     if (result != null) {
       try {
         await DatabaseService().insertLog(result);
+        await _loadGeolocatedLogs(); // Refresh log markers
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -522,28 +544,12 @@ class MapTabState extends State<MapTab> {
 
   /// Show dialog to confirm location deletion
   Future<void> _showDeleteLocationDialog(MapLocation location) async {
-    final result = await showDialog<bool>(
+    final confirmed = await MapDialogs.showDeleteLocationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Izbriši lokacijo'),
-        content: Text(
-          'Ali ste prepričani, da želite izbrisati "${location.name}"?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Izbriši'),
-          ),
-        ],
-      ),
+      location: location,
     );
 
-    if (result == true) {
+    if (confirmed) {
       await _deleteLocation(location);
     }
   }
@@ -648,94 +654,14 @@ class MapTabState extends State<MapTab> {
 
     if (!mounted) return;
 
-    final result = await showDialog<bool>(
+    final confirmed = await MapDialogs.showImportParcelDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Uvozi parcelo'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Parcel info card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.landscape, color: Colors.green),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Parcela ${cadastralParcel.parcelNumber}',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildInfoRow(
-                      Icons.location_city,
-                      'Katastrska obcina',
-                      cadastralParcel.cadastralMunicipality.toString(),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildInfoRow(
-                      Icons.straighten,
-                      'Povrsina',
-                      cadastralParcel.formattedArea,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Ali zelite uvoziti to parcelo v "Moj gozd"?',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Preklici'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.of(context).pop(true),
-            icon: const Icon(Icons.download),
-            label: const Text('Uvozi'),
-          ),
-        ],
-      ),
+      cadastralParcel: cadastralParcel,
     );
 
-    if (result == true) {
+    if (confirmed) {
       await _importCadastralParcel(cadastralParcel);
     }
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
-        const SizedBox(width: 8),
-        Text('$label: ', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: colorScheme.onSurface,
-            ),
-          ),
-        ),
-      ],
-    );
   }
 
   /// Import a cadastral parcel into the database
@@ -805,108 +731,24 @@ class MapTabState extends State<MapTab> {
 
   /// Show layer selection bottom sheet
   Future<void> _showLayerSelector() async {
-    await showModalBottomSheet(
+    await MapLayerSelector.show(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'Osnovni sloj',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                const Divider(height: 1),
-                RadioGroup<MapLayerType>(
-                  groupValue: _currentBaseLayer.type,
-                  onChanged: (value) {
-                    if (value != null) {
-                      final layer = MapLayer.baseLayers.firstWhere(
-                        (l) => l.type == value,
-                      );
-                      _switchBaseLayer(layer);
-                      setModalState(() {});
-                    }
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: MapLayer.baseLayers
-                        .map(
-                          (layer) => RadioListTile<MapLayerType>(
-                            value: layer.type,
-                            title: Text(layer.name),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Overlay layers grouped by category
-                ...MapLayer.overlaysByCategory.entries.expand((entry) {
-                  final category = entry.key;
-                  final layers = entry.value
-                      .where(
-                        (layer) =>
-                            !layer.isSlovenian ||
-                            _currentBaseLayer.isSlovenian ||
-                            context.read<MapProvider>().workerUrl != null,
-                      )
-                      .toList();
-                  if (layers.isEmpty) return <Widget>[];
-                  return [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-                      child: Text(
-                        overlayCategoryNames[category] ?? category.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    ...layers.map(
-                      (layer) => CheckboxListTile(
-                        value: _activeOverlays.contains(layer.type),
-                        onChanged: (value) {
-                          setState(() {
-                            if (value == true) {
-                              _activeOverlays.add(layer.type);
-                            } else {
-                              _activeOverlays.remove(layer.type);
-                            }
-                          });
-                          setModalState(() {});
-                          _saveMapState(); // Save overlay preference
-                        },
-                        title: Text(layer.name),
-                      ),
-                    ),
-                  ];
-                }),
-                // Show hint when Slovenian overlays are hidden
-                if (!_currentBaseLayer.isSlovenian &&
-                    context.read<MapProvider>().workerUrl == null)
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      'Slovenski sloji (Kataster, Gozdne ceste...) so na voljo le z Ortofoto ali DTK25 podlago.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        ),
-      ),
+      currentBaseLayer: _currentBaseLayer,
+      activeOverlays: _activeOverlays,
+      workerUrl: context.read<MapProvider>().workerUrl,
+      onBaseLayerChanged: (layer) {
+        _switchBaseLayer(layer);
+      },
+      onOverlayToggled: (type) {
+        setState(() {
+          if (_activeOverlays.contains(type)) {
+            _activeOverlays.remove(type);
+          } else {
+            _activeOverlays.add(type);
+          }
+        });
+        _saveMapState();
+      },
     );
   }
 
@@ -985,12 +827,13 @@ class MapTabState extends State<MapTab> {
         .toList();
   }
 
-  /// Build markers for saved locations
+  /// Build markers for saved locations (excluding sečnja)
   List<Marker> _buildMarkers() {
     final size = _getMarkerSize(36);
     final iconSize = _getMarkerSize(18);
     final borderWidth = _getMarkerSize(2.5);
-    return _locations.map((location) {
+    // Filter out sečnja markers - they have their own layer
+    return _locations.where((loc) => !loc.isSecnja).map((location) {
       final point = LatLng(location.latitude, location.longitude);
       return Marker(
         point: point,
@@ -1000,10 +843,7 @@ class MapTabState extends State<MapTab> {
           onTap: () {
             // Set as navigation target
             setNavigationTarget(
-              NavigationTarget(
-                location: point,
-                name: location.name,
-              ),
+              NavigationTarget(location: point, name: location.name),
               zoomIn: false,
             );
           },
@@ -1027,6 +867,93 @@ class MapTabState extends State<MapTab> {
                 size: iconSize,
                 color: Colors.white,
               ),
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  /// Build markers for geolocated logs (hlodovina)
+  List<Marker> _buildLogMarkers() {
+    final size = _getMarkerSize(32);
+    final iconSize = _getMarkerSize(16);
+    final borderWidth = _getMarkerSize(2);
+    return _geolocatedLogs.map((log) {
+      final point = LatLng(log.latitude!, log.longitude!);
+      return Marker(
+        point: point,
+        width: size,
+        height: size,
+        child: GestureDetector(
+          onTap: () {
+            // Set as navigation target
+            setNavigationTarget(
+              NavigationTarget(
+                location: point,
+                name: '${log.volume.toStringAsFixed(2)} m³',
+              ),
+              zoomIn: false,
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.brown,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: borderWidth),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(Icons.forest, size: iconSize, color: Colors.white),
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  /// Build markers for sečnja (trees to be cut)
+  List<Marker> _buildSecnjaMarkers() {
+    final size = _getMarkerSize(34);
+    final iconSize = _getMarkerSize(17);
+    final borderWidth = _getMarkerSize(2);
+    // Filter only sečnja markers
+    return _locations.where((loc) => loc.isSecnja).map((location) {
+      final point = LatLng(location.latitude, location.longitude);
+      return Marker(
+        point: point,
+        width: size,
+        height: size,
+        child: GestureDetector(
+          onTap: () {
+            // Set as navigation target
+            setNavigationTarget(
+              NavigationTarget(location: point, name: location.name),
+              zoomIn: false,
+            );
+          },
+          onLongPress: () => _showDeleteLocationDialog(location),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.deepOrange,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: borderWidth),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(Icons.carpenter, size: iconSize, color: Colors.white),
             ),
           ),
         ),
@@ -1235,6 +1162,10 @@ class MapTabState extends State<MapTab> {
                 ),
               // Saved locations marker layer - hidden at low zoom
               if (_showMarkers) MarkerLayer(markers: _buildMarkers()),
+              // Geolocated logs marker layer - hidden at low zoom
+              if (_showMarkers) MarkerLayer(markers: _buildLogMarkers()),
+              // Sečnja markers layer - hidden at low zoom
+              if (_showMarkers) MarkerLayer(markers: _buildSecnjaMarkers()),
               // Navigation target line (from user to target)
               if (_navigationTarget != null && _userPosition != null)
                 PolylineLayer(
@@ -1404,6 +1335,7 @@ class MapTabState extends State<MapTab> {
                   mapPosition: position,
                   onAddLocation: () => _showAddLocationDialog(position),
                   onAddLog: () => _showAddLogDialog(position),
+                  onAddSecnja: () => _showAddSecnjaDialog(position),
                   onImportParcel: () => _queryParcelAtLocation(position),
                   onDismiss: () => setState(() {
                     _longPressScreenPosition = null;
@@ -1412,267 +1344,89 @@ class MapTabState extends State<MapTab> {
                 );
               },
             ),
+
+          // Attribution overlay (bottom left)
+          Positioned(
+            bottom: 4,
+            left: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                _buildAttributionText(),
+                style: const TextStyle(color: Colors.white, fontSize: 9),
+              ),
+            ),
+          ),
         ],
       ),
 
       // Zoom and layer controls at top, GPS at bottom
-      floatingActionButton: Stack(
-        children: [
-          // Top right: layers and zoom
-          Positioned(
-            top: 80,
-            right: 4,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FloatingActionButton(
-                  heroTag: 'map_layers',
-                  mini: true,
-                  onPressed: _showLayerSelector,
-                  tooltip: 'Izberi sloj',
-                  child: const Icon(Icons.layers),
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton(
-                  heroTag: 'map_zoom_in',
-                  mini: true,
-                  onPressed: () {
-                    final camera = _mapController.camera;
-                    final newZoom = camera.zoom + 1;
-                    if (newZoom <= _currentBaseLayer.maxZoom) {
-                      _mapController.moveAndRotate(
-                        camera.center,
-                        newZoom,
-                        camera.rotation,
-                      );
-                    }
-                  },
-                  child: const Icon(Icons.add),
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton(
-                  heroTag: 'map_zoom_out',
-                  mini: true,
-                  onPressed: () {
-                    final camera = _mapController.camera;
-                    final newZoom = camera.zoom - 1;
-                    if (newZoom >= 7.0) {
-                      _mapController.moveAndRotate(
-                        camera.center,
-                        newZoom,
-                        camera.rotation,
-                      );
-                    }
-                  },
-                  child: const Icon(Icons.remove),
-                ),
-              ],
-            ),
-          ),
-          // Bottom right: GPS
-          Positioned(
-            bottom: 8,
-            right: 4,
-            child: FloatingActionButton(
-              heroTag: 'map_gps',
-              onPressed: _centerOnGpsLocation,
-              tooltip: 'Centriraj na GPS lokacijo',
-              child: const Icon(Icons.my_location),
-            ),
-          ),
-          // Bottom left: Saved locations (only show if there are locations)
-          if (_locations.isNotEmpty)
-            Positioned(
-              bottom: 8,
-              left: 4,
-              child: FloatingActionButton(
-                heroTag: 'map_locations',
-                onPressed: _showLocationsSheet,
-                tooltip: 'Shranjene lokacije',
-                child: Badge(
-                  label: Text('${_locations.length}'),
-                  child: const Icon(Icons.location_on),
-                ),
-              ),
-            ),
-        ],
+      floatingActionButton: MapControls(
+        mapController: _mapController,
+        currentBaseLayer: _currentBaseLayer,
+        locationsCount: _locations.length,
+        onLayerSelectorPressed: _showLayerSelector,
+        onGpsPressed: _centerOnGpsLocation,
+        onLocationsPressed: _locations.isNotEmpty ? _showLocationsSheet : null,
       ),
     );
   }
 
   /// Show bottom sheet with saved locations
   void _showLocationsSheet() {
-    showModalBottomSheet(
+    SavedLocationsSheet.show(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) => Column(
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.location_on,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Shranjene lokacije',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${_locations.length}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(),
-            // List
-            Expanded(
-              child: ListView.builder(
-                controller: scrollController,
-                itemCount: _locations.length,
-                itemBuilder: (context, index) {
-                  final location = _locations[index];
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.errorContainer,
-                      child: Icon(
-                        Icons.location_on,
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                    title: Text(location.name),
-                    subtitle: Text(
-                      '${location.latitude.toStringAsFixed(5)}, ${location.longitude.toStringAsFixed(5)}',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 12,
-                      ),
-                    ),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) async {
-                        Navigator.pop(context); // Close sheet first
-                        if (value == 'navigate') {
-                          setNavigationTarget(
-                            NavigationTarget(
-                              location: LatLng(location.latitude, location.longitude),
-                              name: location.name,
-                            ),
-                            zoomIn: true,
-                          );
-                        } else if (value == 'edit') {
-                          await _editLocation(location);
-                        } else if (value == 'delete') {
-                          await _showDeleteLocationDialog(location);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'navigate',
-                          child: ListTile(
-                            leading: Icon(Icons.navigation),
-                            title: Text('Navigiraj'),
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: ListTile(
-                            leading: Icon(Icons.edit),
-                            title: Text('Preimenuj'),
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: ListTile(
-                            leading: Icon(
-                              Icons.delete,
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                            title: Text(
-                              'Izbriši',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.error,
-                              ),
-                            ),
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ],
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      setNavigationTarget(
-                        NavigationTarget(
-                          location: LatLng(location.latitude, location.longitude),
-                          name: location.name,
-                        ),
-                        zoomIn: true,
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+      locations: _locations,
+      logs: _geolocatedLogs,
+      parcels: _parcels,
+      onNavigate: (target) {
+        setNavigationTarget(target, zoomIn: true);
+      },
+      onEdit: (location) {
+        _editLocation(location);
+      },
+      onDelete: (location) {
+        _showDeleteLocationDialog(location);
+      },
     );
+  }
+
+  /// Build attribution text from base layer and active overlays
+  String _buildAttributionText() {
+    final attributions = <String>{};
+
+    // Add base layer attribution
+    if (_currentBaseLayer.attribution.isNotEmpty) {
+      attributions.add(_currentBaseLayer.attribution);
+    }
+
+    // Add active overlay attributions
+    for (final overlayType in _activeOverlays) {
+      final layer = MapLayer.overlayLayers.cast<MapLayer?>().firstWhere(
+        (l) => l?.type == overlayType,
+        orElse: () => null,
+      );
+      if (layer != null && layer.attribution.isNotEmpty) {
+        attributions.add(layer.attribution);
+      }
+    }
+
+    // Join unique attributions
+    return attributions.join(' | ');
   }
 
   /// Edit location name
   Future<void> _editLocation(MapLocation location) async {
-    final controller = TextEditingController(text: location.name);
-    final newName = await showDialog<String>(
+    final newName = await MapDialogs.showEditLocationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Preimenuj lokacijo'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Ime',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Prekliči'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Shrani'),
-          ),
-        ],
-      ),
+      location: location,
     );
 
-    if (newName != null && newName.isNotEmpty && newName != location.name) {
+    if (newName != null) {
       final db = DatabaseService();
       await db.updateLocationName(location.id!, newName);
       await _loadLocations();

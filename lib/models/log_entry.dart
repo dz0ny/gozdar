@@ -9,6 +9,7 @@ class LogEntry {
   final double? longitude;
   final String? notes;
   final int? batchId; // Project/batch this log belongs to
+  final int? parcelId; // Parcel this log is geolocated inside
   final DateTime createdAt;
 
   LogEntry({
@@ -20,6 +21,7 @@ class LogEntry {
     this.longitude,
     this.notes,
     this.batchId,
+    this.parcelId,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -43,6 +45,7 @@ class LogEntry {
       'longitude': longitude,
       'notes': notes,
       'batch_id': batchId,
+      'parcel_id': parcelId,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -57,6 +60,7 @@ class LogEntry {
       longitude: map['longitude'] as double?,
       notes: map['notes'] as String?,
       batchId: map['batch_id'] as int?,
+      parcelId: map['parcel_id'] as int?,
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
@@ -70,6 +74,7 @@ class LogEntry {
     double? longitude,
     String? notes,
     int? batchId,
+    int? parcelId,
     DateTime? createdAt,
   }) {
     return LogEntry(
@@ -81,6 +86,7 @@ class LogEntry {
       longitude: longitude ?? this.longitude,
       notes: notes ?? this.notes,
       batchId: batchId ?? this.batchId,
+      parcelId: parcelId ?? this.parcelId,
       createdAt: createdAt ?? this.createdAt,
     );
   }

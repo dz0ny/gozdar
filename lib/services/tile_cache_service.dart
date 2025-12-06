@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 
@@ -43,7 +44,9 @@ class TileCacheService {
   /// Get the tile provider for Slovenian prostor.zgs.gov.si tiles
   FMTCTileProvider getTileProvider() {
     if (!_initialized) {
-      throw StateError('TileCacheService not initialized. Call TileCacheService.initialize() first.');
+      throw StateError(
+        'TileCacheService not initialized. Call TileCacheService.initialize() first.',
+      );
     }
 
     return FMTCTileProvider(
@@ -56,7 +59,9 @@ class TileCacheService {
   /// Get the tile provider for general map tiles (OSM, ESRI, Google, etc.)
   FMTCTileProvider getGeneralTileProvider() {
     if (!_initialized) {
-      throw StateError('TileCacheService not initialized. Call TileCacheService.initialize() first.');
+      throw StateError(
+        'TileCacheService not initialized. Call TileCacheService.initialize() first.',
+      );
     }
 
     return FMTCTileProvider(
@@ -98,9 +103,11 @@ class TileCacheService {
           'misses': generalStats.misses,
         },
         'totalTiles': slovenianStats.length + generalStats.length,
-        'totalSizeMB': ((slovenianStats.size + generalStats.size) / 1024).toStringAsFixed(2),
+        'totalSizeMB': ((slovenianStats.size + generalStats.size) / 1024)
+            .toStringAsFixed(2),
       };
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('TileCacheService.getStats error: $e\n$stackTrace');
       return {'initialized': true, 'error': e.toString()};
     }
   }
@@ -115,8 +122,8 @@ class TileCacheService {
 
       final generalStore = FMTCStore(_generalStore);
       await generalStore.manage.reset();
-    } catch (e) {
-      // Silently fail
+    } catch (e, stackTrace) {
+      debugPrint('TileCacheService.clearCache error: $e\n$stackTrace');
     }
   }
 
@@ -153,7 +160,10 @@ class TileCacheService {
 
   int _latToTileY(double lat, int zoom) {
     final latRad = lat * math.pi / 180;
-    return ((1 - math.log(math.tan(latRad) + 1 / math.cos(latRad)) / math.pi) / 2 * math.pow(2, zoom)).floor();
+    return ((1 - math.log(math.tan(latRad) + 1 / math.cos(latRad)) / math.pi) /
+            2 *
+            math.pow(2, zoom))
+        .floor();
   }
 
   /// Download tiles for a region
@@ -172,7 +182,9 @@ class TileCacheService {
     Function(double progress)? onProgress,
   }) async {
     if (!_initialized) {
-      throw StateError('TileCacheService not initialized. Call TileCacheService.initialize() first.');
+      throw StateError(
+        'TileCacheService not initialized. Call TileCacheService.initialize() first.',
+      );
     }
 
     if (_isDownloading) {
@@ -214,8 +226,8 @@ class TileCacheService {
 
       final generalStore = FMTCStore(_generalStore);
       await generalStore.download.cancel();
-    } catch (e) {
-      // Silently fail
+    } catch (e, stackTrace) {
+      debugPrint('TileCacheService.cancelDownload error: $e\n$stackTrace');
     } finally {
       _isDownloading = false;
     }
