@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import '../models/parcel.dart';
 import '../services/database_service.dart';
 import '../services/kml_service.dart';
+import '../widgets/parcel_silhouette.dart';
 import 'parcel_editor.dart';
 import 'parcel_detail_screen.dart';
 
@@ -403,10 +404,17 @@ class ForestTabState extends State<ForestTab> {
                                   child: ListTile(
                                     onTap: () => _openParcelDetail(parcel),
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                    leading: Icon(
-                                      getForestTypeIcon(parcel.forestType).$1,
-                                      color: getForestTypeIcon(parcel.forestType).$2,
-                                    ),
+                                    leading: parcel.polygon.isNotEmpty
+                                        ? ParcelSilhouette(
+                                            polygon: parcel.polygon,
+                                            size: 48,
+                                            fillColor: getForestTypeIcon(parcel.forestType).$2.withValues(alpha: 0.3),
+                                            strokeColor: getForestTypeIcon(parcel.forestType).$2,
+                                          )
+                                        : Icon(
+                                            getForestTypeIcon(parcel.forestType).$1,
+                                            color: getForestTypeIcon(parcel.forestType).$2,
+                                          ),
                                     title: Text(
                                       parcel.name,
                                       style: const TextStyle(fontWeight: FontWeight.bold),

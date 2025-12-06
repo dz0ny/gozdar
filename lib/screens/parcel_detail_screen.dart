@@ -5,6 +5,7 @@ import '../models/parcel.dart';
 import '../models/map_location.dart';
 import '../models/navigation_target.dart';
 import '../services/database_service.dart';
+import '../widgets/parcel_silhouette.dart';
 import '../main.dart';
 import 'parcel_editor.dart';
 import 'forest_tab.dart' show getForestTypeIcon;
@@ -488,18 +489,26 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                             children: [
                               GestureDetector(
                                 onTap: _editForestType,
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: getForestTypeIcon(_parcel.forestType).$2.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    getForestTypeIcon(_parcel.forestType).$1,
-                                    size: 32,
-                                    color: getForestTypeIcon(_parcel.forestType).$2,
-                                  ),
-                                ),
+                                child: _parcel.polygon.isNotEmpty
+                                    ? ParcelSilhouette(
+                                        polygon: _parcel.polygon,
+                                        size: 72,
+                                        fillColor: getForestTypeIcon(_parcel.forestType).$2.withValues(alpha: 0.3),
+                                        strokeColor: getForestTypeIcon(_parcel.forestType).$2,
+                                        strokeWidth: 2,
+                                      )
+                                    : Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: getForestTypeIcon(_parcel.forestType).$2.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Icon(
+                                          getForestTypeIcon(_parcel.forestType).$1,
+                                          size: 32,
+                                          color: getForestTypeIcon(_parcel.forestType).$2,
+                                        ),
+                                      ),
                               ),
                               const SizedBox(width: 16),
                               Expanded(
@@ -510,13 +519,13 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                                       _parcel.areaFormatted,
                                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.green[400],
+                                            color: Theme.of(context).colorScheme.primary,
                                           ),
                                     ),
                                     Text(
                                       '${_parcel.polygon.length} tock',
                                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            color: Colors.grey[600],
+                                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                                           ),
                                     ),
                                   ],
