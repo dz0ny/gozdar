@@ -51,7 +51,8 @@ class MapTabState extends State<MapTab> {
   List<Parcel> _parcels = [];
   bool _isLoadingLocations = false;
   bool _isQueryingParcel = false;
-  bool _isLoadingPreferences = true; // Wait for preferences before rendering map
+  bool _isLoadingPreferences =
+      true; // Wait for preferences before rendering map
 
   // User location tracking
   Position? _userPosition;
@@ -277,27 +278,28 @@ class MapTabState extends State<MapTab> {
     }
 
     // Subscribe to position updates
-    _positionSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5, // Update every 5 meters
-      ),
-    ).listen(
-      (position) {
-        if (mounted) {
-          setState(() {
-            _userPosition = position;
-            // Use GPS heading as fallback if compass is unavailable
-            if (_userHeading == null && position.heading >= 0) {
-              _userHeading = position.heading;
+    _positionSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 5, // Update every 5 meters
+          ),
+        ).listen(
+          (position) {
+            if (mounted) {
+              setState(() {
+                _userPosition = position;
+                // Use GPS heading as fallback if compass is unavailable
+                if (_userHeading == null && position.heading >= 0) {
+                  _userHeading = position.heading;
+                }
+              });
             }
-          });
-        }
-      },
-      onError: (error) {
-        debugPrint('Position stream error: $error');
-      },
-    );
+          },
+          onError: (error) {
+            debugPrint('Position stream error: $error');
+          },
+        );
 
     // Get initial position
     try {
@@ -443,11 +445,7 @@ class MapTabState extends State<MapTab> {
   /// Add a new location to the database
   Future<void> _addLocation(String name, double lat, double lng) async {
     try {
-      final location = MapLocation(
-        name: name,
-        latitude: lat,
-        longitude: lng,
-      );
+      final location = MapLocation(name: name, latitude: lat, longitude: lng);
 
       // Use provider for the operation
       final success = await context.read<MapProvider>().addLocation(location);
@@ -457,12 +455,14 @@ class MapTabState extends State<MapTab> {
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Dodano "$name"')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Dodano "$name"')));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka: ${context.read<MapProvider>().error}')),
+            SnackBar(
+              content: Text('Napaka: ${context.read<MapProvider>().error}'),
+            ),
           );
         }
       }
@@ -496,7 +496,11 @@ class MapTabState extends State<MapTab> {
         await DatabaseService().insertLog(result);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Hlod dodan (${result.volume.toStringAsFixed(3)} m³)')),
+            SnackBar(
+              content: Text(
+                'Hlod dodan (${result.volume.toStringAsFixed(3)} m³)',
+              ),
+            ),
           );
         }
       } catch (e) {
@@ -515,7 +519,9 @@ class MapTabState extends State<MapTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Izbriši lokacijo'),
-        content: Text('Ali ste prepričani, da želite izbrisati "${location.name}"?'),
+        content: Text(
+          'Ali ste prepričani, da želite izbrisati "${location.name}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -523,9 +529,7 @@ class MapTabState extends State<MapTab> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Izbriši'),
           ),
         ],
@@ -542,7 +546,9 @@ class MapTabState extends State<MapTab> {
     try {
       if (location.id != null) {
         // Use provider for the operation
-        final success = await context.read<MapProvider>().deleteLocation(location.id!);
+        final success = await context.read<MapProvider>().deleteLocation(
+          location.id!,
+        );
         if (success) {
           await _loadLocations(); // Sync local state
         }
@@ -554,7 +560,9 @@ class MapTabState extends State<MapTab> {
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Napaka: ${context.read<MapProvider>().error}')),
+              SnackBar(
+                content: Text('Napaka: ${context.read<MapProvider>().error}'),
+              ),
             );
           }
         }
@@ -578,7 +586,9 @@ class MapTabState extends State<MapTab> {
 
     try {
       // Use provider for the query
-      final parcel = await context.read<MapProvider>().queryParcelAtLocation(location);
+      final parcel = await context.read<MapProvider>().queryParcelAtLocation(
+        location,
+      );
 
       if (!mounted) return;
 
@@ -653,9 +663,8 @@ class MapTabState extends State<MapTab> {
                         Expanded(
                           child: Text(
                             'Parcela ${cadastralParcel.parcelNumber}',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -707,10 +716,7 @@ class MapTabState extends State<MapTab> {
       children: [
         Icon(icon, size: 16, color: Colors.grey),
         const SizedBox(width: 8),
-        Text(
-          '$label: ',
-          style: const TextStyle(color: Colors.grey),
-        ),
+        Text('$label: ', style: const TextStyle(color: Colors.grey)),
         Expanded(
           child: Text(
             value,
@@ -725,7 +731,9 @@ class MapTabState extends State<MapTab> {
   Future<void> _importCadastralParcel(CadastralParcel cadastralParcel) async {
     try {
       // Use provider for the import
-      final success = await context.read<MapProvider>().importCadastralParcel(cadastralParcel);
+      final success = await context.read<MapProvider>().importCadastralParcel(
+        cadastralParcel,
+      );
 
       if (success) {
         // Reload parcels to show the new one on the map
@@ -736,20 +744,24 @@ class MapTabState extends State<MapTab> {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Parcela ${cadastralParcel.parcelNumber} uspesno uvozena'),
+              content: Text(
+                'Parcela ${cadastralParcel.parcelNumber} uspesno uvozena',
+              ),
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka: ${context.read<MapProvider>().error}')),
+            SnackBar(
+              content: Text('Napaka: ${context.read<MapProvider>().error}'),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri uvozu parcele: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu parcele: $e')));
       }
     }
   }
@@ -803,17 +815,23 @@ class MapTabState extends State<MapTab> {
                   groupValue: _currentBaseLayer.type,
                   onChanged: (value) {
                     if (value != null) {
-                      final layer = MapLayer.baseLayers.firstWhere((l) => l.type == value);
+                      final layer = MapLayer.baseLayers.firstWhere(
+                        (l) => l.type == value,
+                      );
                       _switchBaseLayer(layer);
                       setModalState(() {});
                     }
                   },
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: MapLayer.baseLayers.map((layer) => RadioListTile<MapLayerType>(
-                      value: layer.type,
-                      title: Text(layer.name),
-                    )).toList(),
+                    children: MapLayer.baseLayers
+                        .map(
+                          (layer) => RadioListTile<MapLayerType>(
+                            value: layer.type,
+                            title: Text(layer.name),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -827,22 +845,27 @@ class MapTabState extends State<MapTab> {
                 const Divider(height: 1),
                 // Filter overlays: only show Slovenian overlays when base layer is Slovenian
                 ...MapLayer.overlayLayers
-                    .where((layer) => !layer.isSlovenian || _currentBaseLayer.isSlovenian)
-                    .map((layer) => CheckboxListTile(
-                  value: _activeOverlays.contains(layer.type),
-                  onChanged: (value) {
-                    setState(() {
-                      if (value == true) {
-                        _activeOverlays.add(layer.type);
-                      } else {
-                        _activeOverlays.remove(layer.type);
-                      }
-                    });
-                    setModalState(() {});
-                    _saveMapState(); // Save overlay preference
-                  },
-                  title: Text(layer.name),
-                )),
+                    .where(
+                      (layer) =>
+                          !layer.isSlovenian || _currentBaseLayer.isSlovenian,
+                    )
+                    .map(
+                      (layer) => CheckboxListTile(
+                        value: _activeOverlays.contains(layer.type),
+                        onChanged: (value) {
+                          setState(() {
+                            if (value == true) {
+                              _activeOverlays.add(layer.type);
+                            } else {
+                              _activeOverlays.remove(layer.type);
+                            }
+                          });
+                          setModalState(() {});
+                          _saveMapState(); // Save overlay preference
+                        },
+                        title: Text(layer.name),
+                      ),
+                    ),
                 // Show hint when Slovenian overlays are hidden
                 if (!_currentBaseLayer.isSlovenian)
                   Padding(
@@ -867,6 +890,27 @@ class MapTabState extends State<MapTab> {
   /// Build tile layer for a specific layer
   /// All layers are cached for up to 1 year
   Widget _buildTileLayerForLayer(MapLayer layer) {
+    // Check for worker URL
+    final workerUrl = context.read<MapProvider>().workerUrl;
+
+    // If worker URL is set and layer is Slovenian/WMS, use the proxy
+    if (workerUrl != null && (layer.isSlovenian || layer.isWms)) {
+      // Convert enum name to kebab-case slug
+      // e.g. katasterNazivi -> kataster-nazivi, vetrolom2017 -> vetrolom-2017
+      final slug = layer.type.name
+          .replaceAllMapped(
+            RegExp(r'(?<!^)(?=[A-Z])|(?<=[a-z])(?=[0-9])'),
+            (match) => '-',
+          )
+          .toLowerCase();
+
+      return TileLayer(
+        urlTemplate: '$workerUrl/tiles/$slug/{z}/{x}/{y}',
+        maxZoom: layer.maxZoom,
+        userAgentPackageName: 'dev.dz0ny.gozdar',
+      );
+    }
+
     if (layer.isWms) {
       // Use Slovenian cache for prostor.zgs.gov.si WMS layers
       final isSlovenian = layer.isSlovenian;
@@ -919,11 +963,7 @@ class MapTabState extends State<MapTab> {
         height: size,
         child: GestureDetector(
           onTap: () => _showDeleteLocationDialog(location),
-          child: Icon(
-            Icons.location_on,
-            size: size,
-            color: Colors.red,
-          ),
+          child: Icon(Icons.location_on, size: size, color: Colors.red),
         ),
       );
     }).toList();
@@ -989,6 +1029,9 @@ class MapTabState extends State<MapTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch provider for changes (including worker URL)
+    context.watch<MapProvider>();
+
     // Show loading indicator while preferences are loading
     if (_isLoadingPreferences) {
       return Scaffold(
@@ -1026,7 +1069,11 @@ class MapTabState extends State<MapTab> {
               maxZoom: _currentBaseLayer.maxZoom,
               // Move to saved position when map is ready
               onMapReady: () {
-                _mapController.moveAndRotate(_initialCenter, _initialZoom, _initialRotation);
+                _mapController.moveAndRotate(
+                  _initialCenter,
+                  _initialZoom,
+                  _initialRotation,
+                );
               },
               // Handle tap to dismiss long press menu
               onTap: (tapPosition, point) {
@@ -1056,7 +1103,8 @@ class MapTabState extends State<MapTab> {
                   });
                 }
                 // Dismiss menu on map move
-                if (event is MapEventMoveStart && _longPressScreenPosition != null) {
+                if (event is MapEventMoveStart &&
+                    _longPressScreenPosition != null) {
                   setState(() {
                     _longPressScreenPosition = null;
                     _longPressMapPosition = null;
@@ -1071,55 +1119,62 @@ class MapTabState extends State<MapTab> {
               // Saved parcels as polygons
               if (_parcels.isNotEmpty)
                 PolygonLayer(
-                  polygons: _parcels.map((parcel) => Polygon(
-                    points: parcel.polygon,
-                    color: Colors.green.withValues(alpha: 0.2),
-                    borderColor: Colors.green,
-                    borderStrokeWidth: 2.0,
-                    label: parcel.name,
-                    labelStyle: const TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  )).toList(),
+                  polygons: _parcels
+                      .map(
+                        (parcel) => Polygon(
+                          points: parcel.polygon,
+                          color: Colors.green.withValues(alpha: 0.2),
+                          borderColor: Colors.green,
+                          borderStrokeWidth: 2.0,
+                          label: parcel.name,
+                          labelStyle: const TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               // Parcel vertex markers (mejne tocke) - hidden at low zoom
               if (_parcels.isNotEmpty && _showMarkers)
-                MarkerLayer(
-                  markers: _buildParcelVertexMarkers(),
-                ),
+                MarkerLayer(markers: _buildParcelVertexMarkers()),
               // User location marker
               if (_userPosition != null)
-                Builder(builder: (context) {
-                  final userSize = _getMarkerSize(30);
-                  return MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: LatLng(_userPosition!.latitude, _userPosition!.longitude),
-                        width: userSize,
-                        height: userSize,
-                        child: LocationPointer(
-                          heading: _userHeading,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: userSize,
+                Builder(
+                  builder: (context) {
+                    final userSize = _getMarkerSize(30);
+                    return MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: LatLng(
+                            _userPosition!.latitude,
+                            _userPosition!.longitude,
+                          ),
+                          width: userSize,
+                          height: userSize,
+                          child: LocationPointer(
+                            heading: _userHeading,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: userSize,
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                }),
-              // Saved locations marker layer - hidden at low zoom
-              if (_showMarkers)
-                MarkerLayer(
-                  markers: _buildMarkers(),
+                      ],
+                    );
+                  },
                 ),
+              // Saved locations marker layer - hidden at low zoom
+              if (_showMarkers) MarkerLayer(markers: _buildMarkers()),
               // Navigation target line (from user to target)
               if (_navigationTarget != null && _userPosition != null)
                 PolylineLayer(
                   polylines: [
                     Polyline(
                       points: [
-                        LatLng(_userPosition!.latitude, _userPosition!.longitude),
+                        LatLng(
+                          _userPosition!.latitude,
+                          _userPosition!.longitude,
+                        ),
                         _navigationTarget!.location,
                       ],
                       color: Colors.orange.withValues(alpha: 0.6),
@@ -1130,42 +1185,47 @@ class MapTabState extends State<MapTab> {
                 ),
               // Navigation target marker
               if (_navigationTarget != null)
-                Builder(builder: (context) {
-                  final navSize = _getMarkerSize(50);
-                  final navIconSize = _getMarkerSize(28);
-                  final navBorderWidth = _getMarkerSize(3);
-                  return MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: _navigationTarget!.location,
-                        width: navSize,
-                        height: navSize,
-                        child: GestureDetector(
-                          onTap: _showCompassForTarget,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.orange,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: navBorderWidth),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                Builder(
+                  builder: (context) {
+                    final navSize = _getMarkerSize(50);
+                    final navIconSize = _getMarkerSize(28);
+                    final navBorderWidth = _getMarkerSize(3);
+                    return MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: _navigationTarget!.location,
+                          width: navSize,
+                          height: navSize,
+                          child: GestureDetector(
+                            onTap: _showCompassForTarget,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: navBorderWidth,
                                 ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.navigation,
-                              color: Colors.white,
-                              size: navIconSize,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.navigation,
+                                color: Colors.white,
+                                size: navIconSize,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                }),
+                      ],
+                    );
+                  },
+                ),
             ],
           ),
 
@@ -1180,7 +1240,9 @@ class MapTabState extends State<MapTab> {
           // Loading indicator for locations
           if (_isLoadingLocations)
             Positioned(
-              top: MediaQuery.of(context).padding.top + (_navigationTarget != null ? 90 : 16),
+              top:
+                  MediaQuery.of(context).padding.top +
+                  (_navigationTarget != null ? 90 : 16),
               left: 16,
               child: const Material(
                 elevation: 4,
@@ -1195,7 +1257,9 @@ class MapTabState extends State<MapTab> {
           // Loading indicator for parcel query
           if (_isQueryingParcel)
             Positioned(
-              top: MediaQuery.of(context).padding.top + (_navigationTarget != null ? 90 : 16),
+              top:
+                  MediaQuery.of(context).padding.top +
+                  (_navigationTarget != null ? 90 : 16),
               left: 0,
               right: 0,
               child: Center(
@@ -1203,7 +1267,10 @@ class MapTabState extends State<MapTab> {
                   elevation: 4,
                   borderRadius: const BorderRadius.all(Radius.circular(8)),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -1271,7 +1338,11 @@ class MapTabState extends State<MapTab> {
                     final camera = _mapController.camera;
                     final newZoom = camera.zoom + 1;
                     if (newZoom <= _currentBaseLayer.maxZoom) {
-                      _mapController.moveAndRotate(camera.center, newZoom, camera.rotation);
+                      _mapController.moveAndRotate(
+                        camera.center,
+                        newZoom,
+                        camera.rotation,
+                      );
                     }
                   },
                   child: const Icon(Icons.add),
@@ -1284,7 +1355,11 @@ class MapTabState extends State<MapTab> {
                     final camera = _mapController.camera;
                     final newZoom = camera.zoom - 1;
                     if (newZoom >= 7.0) {
-                      _mapController.moveAndRotate(camera.center, newZoom, camera.rotation);
+                      _mapController.moveAndRotate(
+                        camera.center,
+                        newZoom,
+                        camera.rotation,
+                      );
                     }
                   },
                   child: const Icon(Icons.remove),

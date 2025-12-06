@@ -15,6 +15,7 @@ import 'providers/map_provider.dart';
 import 'theme/app_theme.dart';
 import 'models/navigation_target.dart';
 import 'widgets/update_banner.dart';
+import 'widgets/worker_settings_dialog.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,9 +51,7 @@ class _GozdarAppState extends State<GozdarApp> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => LogsProvider()..loadLogEntries(),
-        ),
+        ChangeNotifierProvider(create: (_) => LogsProvider()..loadLogEntries()),
         ChangeNotifierProvider(
           create: (_) => MapProvider()
             ..loadPreferences()
@@ -78,9 +77,15 @@ class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
   /// Navigate to map tab with a specific target location
-  static void navigateToMapWithTarget(BuildContext context, LatLng location, String name) {
+  static void navigateToMapWithTarget(
+    BuildContext context,
+    LatLng location,
+    String name,
+  ) {
     final state = context.findAncestorStateOfType<MainScreenState>();
-    state?.setNavigationTarget(NavigationTarget(location: location, name: name));
+    state?.setNavigationTarget(
+      NavigationTarget(location: location, name: name),
+    );
   }
 
   @override
@@ -126,10 +131,10 @@ class MainScreenState extends State<MainScreen> {
     // Track consecutive taps on the same tab
     if (index == _lastTappedTab && index == _currentIndex) {
       _tabTapCount++;
-      // 3 taps on Karta tab = show tile download dialog
+      // 3 taps on Karta tab = show worker settings dialog
       if (_tabTapCount >= 3 && index == 0) {
         _tabTapCount = 0;
-        _showTileDownloadDialog();
+        _showWorkerSettingsDialog();
       }
       // 5 taps on any tab = reset onboarding
       else if (_tabTapCount >= 5) {
@@ -160,7 +165,9 @@ class MainScreenState extends State<MainScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Uvodni vodič ponastavljen. Ponovno zaženi aplikacijo.'),
+          content: Text(
+            'Uvodni vodič ponastavljen. Ponovno zaženi aplikacijo.',
+          ),
           duration: Duration(seconds: 3),
         ),
       );
@@ -193,8 +200,7 @@ class MainScreenState extends State<MainScreen> {
             ],
           ),
           // Update banner overlay (Android only)
-          if (Platform.isAndroid)
-            UpdateBanner(updateService: UpdateService()),
+          if (Platform.isAndroid) UpdateBanner(updateService: UpdateService()),
         ],
       ),
       bottomNavigationBar: NavigationBar(

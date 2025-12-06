@@ -1,16 +1,52 @@
-# gozdar
+# Gozdar
 
-A new Flutter project.
+Gozdar is a Flutter forestry management app for Slovenia. Users can map forest parcels, track wood logging, view cadastral data, and use GPS/compass for field work.
 
-## Getting Started
+## Project Structure
 
-This project is a starting point for a Flutter application.
+- `lib/`: Flutter application code
+- `worker/`: Cloudflare Worker tile proxy
 
-A few resources to get you started if this is your first Flutter project:
+## Cloudflare Tile Proxy
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+The `worker/` directory contains a Cloudflare Worker that proxies and caches tiles from Slovenian government servers (`prostor.zgs.gov.si`).
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Features
+- **Reprojection:** Translates standard Web Mercator (XYZ) tile requests to Slovenian National Grid (EPSG:3794).
+- **Caching:** Caches rendered tiles at the edge for 1 year, significantly reducing load times and server strain.
+- **Compatibility:** Makes Slovenian WMS layers available as standard XYZ tile layers for any map client.
+
+### Deployment
+
+1. Navigate to the worker directory:
+   ```bash
+   cd worker
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Deploy to your Cloudflare account:
+   ```bash
+   npx wrangler deploy
+   ```
+
+### Usage API
+
+Once deployed, access layers via:
+`https://<your-worker>.workers.dev/tiles/<layer-name>/{z}/{x}/{y}`
+
+**Available Layers:**
+- `ortofoto` (Aerial imagery)
+- `kataster` (Cadastral parcels)
+- `sestoji` (Forest stands)
+- ...and 40+ others (see `worker/src/layers.js` for full list)
+
+## Flutter Development
+
+```bash
+flutter pub get
+flutter run
+```

@@ -18,9 +18,9 @@ class MapProvider extends ChangeNotifier {
     DatabaseService? databaseService,
     MapPreferencesService? prefsService,
     CadastralService? cadastralService,
-  })  : _databaseService = databaseService ?? DatabaseService(),
-        _prefsService = prefsService ?? MapPreferencesService(),
-        _cadastralService = cadastralService ?? CadastralService();
+  }) : _databaseService = databaseService ?? DatabaseService(),
+       _prefsService = prefsService ?? MapPreferencesService(),
+       _cadastralService = cadastralService ?? CadastralService();
 
   // Map position state
   LatLng _center = const LatLng(46.0569, 14.5058);
@@ -31,6 +31,7 @@ class MapProvider extends ChangeNotifier {
   // Layer state
   MapLayer _currentBaseLayer = MapLayer.openStreetMap;
   final Set<MapLayerType> _activeOverlays = {};
+  String? _workerUrl;
 
   // Data state
   List<MapLocation> _locations = [];
@@ -55,6 +56,7 @@ class MapProvider extends ChangeNotifier {
   MapLayer get currentBaseLayer => _currentBaseLayer;
   Set<MapLayerType> get activeOverlays => Set.unmodifiable(_activeOverlays);
   bool get isSlovenianBase => _currentBaseLayer.isSlovenian;
+  String? get workerUrl => _workerUrl;
 
   // Getters - Data
   List<MapLocation> get locations => List.unmodifiable(_locations);
@@ -116,6 +118,7 @@ class MapProvider extends ChangeNotifier {
       rotation: rotation,
       baseLayer: _currentBaseLayer.type,
       overlays: _activeOverlays,
+      workerUrl: _workerUrl,
     );
   }
 
@@ -156,7 +159,15 @@ class MapProvider extends ChangeNotifier {
       rotation: _rotation,
       baseLayer: _currentBaseLayer.type,
       overlays: _activeOverlays,
+      workerUrl: _workerUrl,
     );
+  }
+
+  /// Set worker URL
+  Future<void> setWorkerUrl(String? url) async {
+    _workerUrl = url;
+    notifyListeners();
+    await _saveLayerPreferences();
   }
 
   // Location operations
@@ -244,15 +255,22 @@ class MapProvider extends ChangeNotifier {
   }
 
   /// Check if cadastral parcel already exists
-  Future<bool> cadastralParcelExists(int municipality, String parcelNumber) async {
-    return await _databaseService.cadastralParcelExists(municipality, parcelNumber);
+  Future<bool> cadastralParcelExists(
+    int municipality,
+    String parcelNumber,
+  ) async {
+    return await _databaseService.cadastralParcelExists(
+      municipality,
+      parcelNumber,
+    );
   }
 
   /// Import a cadastral parcel
   Future<bool> importCadastralParcel(CadastralParcel cadastralParcel) async {
     try {
       final parcel = Parcel(
-        name: 'Parcela ${cadastralParcel.parcelNumber} (KO ${cadastralParcel.cadastralMunicipality})',
+        name:
+            'Parcela ${cadastralParcel.parcelNumber} (KO ${cadastralParcel.cadastralMunicipality})',
         polygon: cadastralParcel.polygon,
         cadastralMunicipality: cadastralParcel.cadastralMunicipality,
         parcelNumber: cadastralParcel.parcelNumber,

@@ -9,6 +9,7 @@ class MapPreferencesService {
   static const String _keyRotation = 'map_rotation';
   static const String _keyBaseLayer = 'map_base_layer';
   static const String _keyOverlays = 'map_overlays';
+  static const String _keyWorkerUrl = 'map_worker_url';
 
   // Default values (Ljubljana, Slovenia)
   static const double defaultLatitude = 46.0569;
@@ -48,6 +49,16 @@ class MapPreferencesService {
     await prefs.setStringList(_keyOverlays, overlayNames);
   }
 
+  /// Save worker URL
+  Future<void> saveWorkerUrl(String? url) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (url == null || url.isEmpty) {
+      await prefs.remove(_keyWorkerUrl);
+    } else {
+      await prefs.setString(_keyWorkerUrl, url);
+    }
+  }
+
   /// Save all map state at once
   Future<void> saveAll({
     required double latitude,
@@ -56,6 +67,7 @@ class MapPreferencesService {
     required double rotation,
     required MapLayerType baseLayer,
     required Set<MapLayerType> overlays,
+    String? workerUrl,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_keyLatitude, latitude);
@@ -63,7 +75,16 @@ class MapPreferencesService {
     await prefs.setDouble(_keyZoom, zoom);
     await prefs.setDouble(_keyRotation, rotation);
     await prefs.setString(_keyBaseLayer, baseLayer.name);
-    await prefs.setStringList(_keyOverlays, overlays.map((e) => e.name).toList());
+    await prefs.setStringList(
+      _keyOverlays,
+      overlays.map((e) => e.name).toList(),
+    );
+
+    if (workerUrl == null || workerUrl.isEmpty) {
+      await prefs.remove(_keyWorkerUrl);
+    } else {
+      await prefs.setString(_keyWorkerUrl, workerUrl);
+    }
   }
 
   /// Load saved latitude
@@ -127,6 +148,12 @@ class MapPreferencesService {
     return overlays;
   }
 
+  /// Load saved worker URL
+  Future<String?> getWorkerUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyWorkerUrl);
+  }
+
   /// Load all map state at once
   Future<MapState> loadAll() async {
     final prefs = await SharedPreferences.getInstance();
@@ -160,6 +187,8 @@ class MapPreferencesService {
       }
     }
 
+    final workerUrl = prefs.getString(_keyWorkerUrl);
+
     return MapState(
       latitude: latitude,
       longitude: longitude,
@@ -167,6 +196,7 @@ class MapPreferencesService {
       rotation: rotation,
       baseLayer: baseLayer,
       overlays: overlays,
+      workerUrl: workerUrl,
     );
   }
 }
@@ -179,6 +209,7 @@ class MapState {
   final double rotation;
   final MapLayerType baseLayer;
   final Set<MapLayerType> overlays;
+  final String? workerUrl;
 
   const MapState({
     required this.latitude,
@@ -187,5 +218,6 @@ class MapState {
     required this.rotation,
     required this.baseLayer,
     required this.overlays,
+    this.workerUrl,
   });
 }

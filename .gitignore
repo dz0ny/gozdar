@@ -47,3 +47,5 @@ app.*.map.json
 # Local settings
 .claude/settings.local.json
 .osgrep/
+worker/.wrangler*
+worker/node_modules*

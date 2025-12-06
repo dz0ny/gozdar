@@ -1,0 +1,14 @@
+{
+  "name": "gozdar-proxy",
+  "version": "1.0.0",
+  "description": "Tile proxy and cache for Slovenian forestry maps",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "proj4": "^2.9.0"
+  }
+}
