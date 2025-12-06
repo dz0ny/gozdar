@@ -22,7 +22,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
   final TileCacheService _tileCacheService = TileCacheService();
 
   List<LatLng> _polygon = [];
-  MapLayer _currentBaseLayer = MapLayer.ortofoto;
+  MapLayer _currentBaseLayer = MapLayer.esriWorldImagery;
   final Set<MapLayerType> _activeOverlays = {};
   bool _isDrawing = true;
   ForestType _forestType = ForestType.mixed;
@@ -102,10 +102,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
       if (point.longitude > maxLng) maxLng = point.longitude;
     }
 
-    final bounds = LatLngBounds(
-      LatLng(minLat, minLng),
-      LatLng(maxLat, maxLng),
-    );
+    final bounds = LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng));
 
     try {
       _mapController.fitCamera(
@@ -143,9 +140,9 @@ class _ParcelEditorState extends State<ParcelEditor> {
 
   void _finishDrawing() {
     if (_polygon.length < 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Narišite vsaj 3 točke')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Narišite vsaj 3 točke')));
       return;
     }
     setState(() {
@@ -155,16 +152,16 @@ class _ParcelEditorState extends State<ParcelEditor> {
 
   void _saveParcel() {
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Prosim vnesite ime')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Prosim vnesite ime')));
       return;
     }
 
     if (_polygon.length < 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Narišite vsaj 3 točke')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Narišite vsaj 3 točke')));
       return;
     }
 
@@ -220,17 +217,23 @@ class _ParcelEditorState extends State<ParcelEditor> {
                   groupValue: _currentBaseLayer.type,
                   onChanged: (value) {
                     if (value != null) {
-                      final layer = MapLayer.baseLayers.firstWhere((l) => l.type == value);
+                      final layer = MapLayer.baseLayers.firstWhere(
+                        (l) => l.type == value,
+                      );
                       _switchBaseLayer(layer);
                       setModalState(() {});
                     }
                   },
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: MapLayer.baseLayers.map((layer) => RadioListTile<MapLayerType>(
-                      value: layer.type,
-                      title: Text(layer.name),
-                    )).toList(),
+                    children: MapLayer.baseLayers
+                        .map(
+                          (layer) => RadioListTile<MapLayerType>(
+                            value: layer.type,
+                            title: Text(layer.name),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -242,20 +245,22 @@ class _ParcelEditorState extends State<ParcelEditor> {
                   ),
                 ),
                 const Divider(height: 1),
-                ...MapLayer.overlayLayers.map((layer) => CheckboxListTile(
-                      value: _activeOverlays.contains(layer.type),
-                      onChanged: (value) {
-                        setState(() {
-                          if (value == true) {
-                            _activeOverlays.add(layer.type);
-                          } else {
-                            _activeOverlays.remove(layer.type);
-                          }
-                        });
-                        setModalState(() {});
-                      },
-                      title: Text(layer.name),
-                    )),
+                ...MapLayer.overlayLayers.map(
+                  (layer) => CheckboxListTile(
+                    value: _activeOverlays.contains(layer.type),
+                    onChanged: (value) {
+                      setState(() {
+                        if (value == true) {
+                          _activeOverlays.add(layer.type);
+                        } else {
+                          _activeOverlays.remove(layer.type);
+                        }
+                      });
+                      setModalState(() {});
+                    },
+                    title: Text(layer.name),
+                  ),
+                ),
                 const SizedBox(height: 16),
               ],
             ),
@@ -268,7 +273,8 @@ class _ParcelEditorState extends State<ParcelEditor> {
   Widget _buildTileLayerForLayer(MapLayer layer) {
     if (layer.isWms) {
       // Use cached tile provider for prostor.zgs.gov.si WMS layers
-      final isCacheable = layer.wmsBaseUrl?.contains('prostor.zgs.gov.si') ?? false;
+      final isCacheable =
+          layer.wmsBaseUrl?.contains('prostor.zgs.gov.si') ?? false;
 
       return TileLayer(
         wmsOptions: WMSTileLayerOptions(
@@ -312,10 +318,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
       appBar: AppBar(
         title: Text(widget.parcel == null ? 'Dodaj parcelo' : 'Uredi parcelo'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: _saveParcel,
-          ),
+          IconButton(icon: const Icon(Icons.check), onPressed: _saveParcel),
         ],
       ),
       body: Column(
@@ -349,8 +352,16 @@ class _ParcelEditorState extends State<ParcelEditor> {
                       icon: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.nature, size: 16, color: Colors.green.shade600),
-                          Icon(Icons.park, size: 16, color: Colors.green.shade800),
+                          Icon(
+                            Icons.nature,
+                            size: 16,
+                            color: Colors.green.shade600,
+                          ),
+                          Icon(
+                            Icons.park,
+                            size: 16,
+                            color: Colors.green.shade800,
+                          ),
                         ],
                       ),
                     ),
@@ -393,9 +404,9 @@ class _ParcelEditorState extends State<ParcelEditor> {
                 ),
                 Text(
                   'Površina: $areaPreview',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -409,7 +420,9 @@ class _ParcelEditorState extends State<ParcelEditor> {
                   mapController: _mapController,
                   options: MapOptions(
                     // Use Slovenian CRS for WMS layers (EPSG:3794), otherwise default Web Mercator
-                    crs: _currentBaseLayer.isWms ? slovenianCrs : const Epsg3857(),
+                    crs: _currentBaseLayer.isWms
+                        ? slovenianCrs
+                        : const Epsg3857(),
                     initialCenter: widget.parcel?.center ?? _defaultCenter,
                     initialZoom: _defaultZoom,
                     minZoom: 7.0,
@@ -468,11 +481,13 @@ class _ParcelEditorState extends State<ParcelEditor> {
                                 color: isFirst
                                     ? Colors.green
                                     : isLast
-                                        ? Colors.orange
-                                        : Colors.green.shade300,
+                                    ? Colors.orange
+                                    : Colors.green.shade300,
                                 shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: Colors.white, width: 2),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
                               ),
                               child: Center(
                                 child: Text(
@@ -550,15 +565,23 @@ class _ParcelEditorState extends State<ParcelEditor> {
                                 final camera = _mapController.camera;
                                 final newZoom = camera.zoom + 1;
                                 if (newZoom <= _currentBaseLayer.maxZoom) {
-                                  _mapController.moveAndRotate(camera.center, newZoom, camera.rotation);
+                                  _mapController.moveAndRotate(
+                                    camera.center,
+                                    newZoom,
+                                    camera.rotation,
+                                  );
                                 }
                               },
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(8),
+                              ),
                               child: Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: Theme.of(context).cardColor,
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(8),
+                                  ),
                                 ),
                                 child: const Icon(Icons.add, size: 24),
                               ),
@@ -569,15 +592,23 @@ class _ParcelEditorState extends State<ParcelEditor> {
                                 final camera = _mapController.camera;
                                 final newZoom = camera.zoom - 1;
                                 if (newZoom >= 7.0) {
-                                  _mapController.moveAndRotate(camera.center, newZoom, camera.rotation);
+                                  _mapController.moveAndRotate(
+                                    camera.center,
+                                    newZoom,
+                                    camera.rotation,
+                                  );
                                 }
                               },
-                              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
+                              borderRadius: const BorderRadius.vertical(
+                                bottom: Radius.circular(8),
+                              ),
                               child: Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: Theme.of(context).cardColor,
-                                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
+                                  borderRadius: const BorderRadius.vertical(
+                                    bottom: Radius.circular(8),
+                                  ),
                                 ),
                                 child: const Icon(Icons.remove, size: 24),
                               ),
@@ -601,16 +632,23 @@ class _ParcelEditorState extends State<ParcelEditor> {
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed:
-                                  _polygon.isEmpty ? null : _removeLastPoint,
-                              icon: const Icon(Icons.undo),
-                              label: const Text('Razveljavi'),
+                              onPressed: _polygon.isEmpty
+                                  ? null
+                                  : _removeLastPoint,
+                              icon: const Icon(Icons.undo, size: 18),
+                              label: const Text(
+                                'Nazaj',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: _polygon.isEmpty ? null : _clearPolygon,
+                              onPressed: _polygon.isEmpty
+                                  ? null
+                                  : _clearPolygon,
                               icon: const Icon(Icons.clear),
                               label: const Text('Počisti'),
                             ),

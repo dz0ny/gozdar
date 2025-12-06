@@ -459,19 +459,20 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Izbrisi parcelo'),
+        title: const Text('Izbriši parcelo'),
         content: Text(
-          'Ali ste prepricani, da zelite izbrisati "${_parcel.name}"?',
+          'Ali ste prepričani, da želite izbrisati "${_parcel.name}"?\n\n'
+          'Izbrisane bodo tudi vse točke, sečnje in hlodovina znotraj parcele.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Preklici'),
+            child: const Text('Prekliči'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Izbrisi'),
+            child: const Text('Izbriši'),
           ),
         ],
       ),
@@ -479,8 +480,20 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
 
     if (confirmed == true && _parcel.id != null) {
       try {
-        await _databaseService.deleteParcel(_parcel.id!);
+        final deleted = await _databaseService.deleteParcelWithContents(
+          _parcel.id!,
+        );
         if (mounted) {
+          final logsCount = deleted['logs'] ?? 0;
+          final locationsCount = deleted['locations'] ?? 0;
+          final extras = <String>[];
+          if (logsCount > 0) extras.add('$logsCount hlodov');
+          if (locationsCount > 0) extras.add('$locationsCount točk');
+          final extraText = extras.isNotEmpty ? ' (${extras.join(', ')})' : '';
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Parcela izbrisana$extraText')),
+          );
           Navigator.of(context).pop(true); // Return true to indicate deletion
         }
       } catch (e) {

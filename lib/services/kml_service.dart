@@ -609,19 +609,24 @@ class KmlService {
     String? notes;
 
     final volumeMatch = RegExp(r'Volumen:\s*([\d.]+)').firstMatch(description);
-    if (volumeMatch != null)
+    if (volumeMatch != null) {
       volume = double.tryParse(volumeMatch.group(1) ?? '0') ?? 0;
+    }
 
     final diameterMatch = RegExp(r'Premer:\s*([\d.]+)').firstMatch(description);
-    if (diameterMatch != null)
+    if (diameterMatch != null) {
       diameter = double.tryParse(diameterMatch.group(1) ?? '');
+    }
 
     final lengthMatch = RegExp(r'Dolžina:\s*([\d.]+)').firstMatch(description);
-    if (lengthMatch != null)
+    if (lengthMatch != null) {
       length = double.tryParse(lengthMatch.group(1) ?? '');
+    }
 
     final notesMatch = RegExp(r'Opombe:\s*(.+)').firstMatch(description);
-    if (notesMatch != null) notes = notesMatch.group(1)?.trim();
+    if (notesMatch != null) {
+      notes = notesMatch.group(1)?.trim();
+    }
 
     // If no volume in description, try to parse from name
     if (volume == 0) {

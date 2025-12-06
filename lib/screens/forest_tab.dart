@@ -108,7 +108,8 @@ class ForestTabState extends State<ForestTab> {
       builder: (context) => AlertDialog(
         title: const Text('Izbriši parcelo'),
         content: Text(
-          'Ali ste prepričani, da želite izbrisati "${parcel.name}"?',
+          'Ali ste prepričani, da želite izbrisati "${parcel.name}"?\n\n'
+          'Izbrisane bodo tudi vse točke, sečnje in hlodovina znotraj parcele.',
         ),
         actions: [
           TextButton(
@@ -126,20 +127,20 @@ class ForestTabState extends State<ForestTab> {
 
     if (confirmed == true) {
       try {
-        await _databaseService.deleteParcel(parcel.id!);
+        final deleted = await _databaseService.deleteParcelWithContents(
+          parcel.id!,
+        );
         await _loadData();
         if (mounted) {
+          final logsCount = deleted['logs'] ?? 0;
+          final locationsCount = deleted['locations'] ?? 0;
+          final extras = <String>[];
+          if (logsCount > 0) extras.add('$logsCount hlodov');
+          if (locationsCount > 0) extras.add('$locationsCount točk');
+          final extraText = extras.isNotEmpty ? ' (${extras.join(', ')})' : '';
+
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Parcela izbrisana'),
-              action: SnackBarAction(
-                label: 'Razveljavi',
-                onPressed: () async {
-                  await _databaseService.insertParcel(parcel);
-                  await _loadData();
-                },
-              ),
-            ),
+            SnackBar(content: Text('Parcela izbrisana$extraText')),
           );
         }
       } catch (e) {
