@@ -1,6 +1,74 @@
 const GEOSERVER = 'https://prostor.zgs.gov.si/geoserver/wms';
 // const GEOWEBCACHE = 'https://prostor.zgs.gov.si/geowebcache/service/wms'; // Not used to allow on-the-fly rendering
 
+// Base layers (mutually exclusive)
+export const BASE_LAYERS = {
+  'osm': { name: 'OpenStreetMap', external: true, url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' },
+  'otm': { name: 'OpenTopoMap', external: true, url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png' },
+  'esri': { name: 'ESRI Satelit', external: true, url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' },
+  'ortofoto': { name: 'Ortofoto 2024', proxy: true },
+  'dof-ir': { name: 'Ortofoto IR', proxy: true },
+  'dmr': { name: 'DMR (relief)', proxy: true },
+};
+
+// Overlay layers organized by category
+export const OVERLAY_LAYERS = {
+  'Administrativno': {
+    'kataster': { name: 'Kataster' },
+    'kataster-nazivi': { name: 'Kataster z nazivi' },
+    'katastrske-obcine': { name: 'Katastrske obcine' },
+    'obcine': { name: 'Obcine' },
+    'upravne-enote': { name: 'Upravne enote' },
+    'statisticne-regije': { name: 'Statisticne regije' },
+    'naselja': { name: 'Naselja' },
+    'hisne-stevilke': { name: 'Hisne stevilke' },
+    'drzavna-meja': { name: 'Drzavna meja' },
+  },
+  'Infrastruktura': {
+    'gozdne-ceste': { name: 'Gozdne ceste' },
+    'glavne-ceste': { name: 'Glavne ceste' },
+    'zeleznice': { name: 'Zeleznice' },
+    'planinske-poti': { name: 'Planinske poti' },
+  },
+  'Gozdno gospodarstvo': {
+    'sestoji': { name: 'Sestoji' },
+    'odseki': { name: 'Odseki' },
+    'revirji': { name: 'Revirji' },
+    'gozdna-maska': { name: 'Gozdna maska' },
+    'gge': { name: 'GGE' },
+    'ggo': { name: 'GGO' },
+  },
+  'Zavarovana obmocja': {
+    'gozdni-rezervati': { name: 'Gozdni rezervati' },
+    'varovalni-gozdovi': { name: 'Varovalni gozdovi' },
+    'natura-2000': { name: 'Natura 2000' },
+    'zavarovana-obmocja': { name: 'Zavarovana obmocja' },
+    'naravne-vrednote': { name: 'Naravne vrednote' },
+    'ekolosko-obmocja': { name: 'Ekolosko pomembna obmocja' },
+    'koridorji': { name: 'Ekoloski koridorji' },
+    'ekocelice': { name: 'Ekocelice' },
+    'habitatna-drevesa': { name: 'Habitatna drevesa' },
+  },
+  'Nevarnosti in skode': {
+    'pozarna-ogrozenost': { name: 'Pozarna ogrozenost' },
+    'gozdni-pozari': { name: 'Gozdni pozari' },
+    'protipozarne-preseke': { name: 'Protipozarne preseke' },
+    'vetrolom-2017': { name: 'Vetrolom 2017' },
+    'vetrolom-2018': { name: 'Vetrolom 2018' },
+    'zled-2014': { name: 'Zled 2014' },
+    'podlubniki': { name: 'Podlubniki 2015-2019' },
+    'krcitve': { name: 'Krcitve' },
+  },
+  'Funkcije gozda': {
+    'lesna-proizvodnja': { name: 'Lesna proizvodnja' },
+    'varovalna-funkcija': { name: 'Varovalna funkcija' },
+    'rekreacija': { name: 'Rekreacija' },
+  },
+  'Posebno': {
+    'lovisca': { name: 'Lovisca' },
+  },
+};
+
 export const LAYERS = {
   // ============ BASE LAYERS ============
   'ortofoto': {

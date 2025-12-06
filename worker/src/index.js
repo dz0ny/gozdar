@@ -1,5 +1,6 @@
 import proj4 from 'proj4';
-import { LAYERS } from './layers.js';
+import { LAYERS, BASE_LAYERS, OVERLAY_LAYERS } from './layers.js';
+import { getMapHtml } from './map.js';
 
 // Define Projections
 // EPSG:3794 - Slovenia 1996 / Slovene National Grid
@@ -10,6 +11,19 @@ proj4.defs('EPSG:3857', '+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_
 // Constants for Web Mercator
 const R = 6378137;
 const MAX_EXTENT = 20037508.342789244;
+
+// Slovenia Bounds (EPSG:3794)
+// Approximately: X: 370k-620k, Y: 30k-190k
+// We use a generous buffer to include border areas but exclude invalid requests
+const SLOVENIA_BOUNDS = {
+  minX: 300000,
+  maxX: 700000,
+  minY: 10000,
+  maxY: 300000
+};
+
+// 1x1 Transparent PNG for out-of-bounds requests
+const EMPTY_IMAGE = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='), c => c.charCodeAt(0));
 
 /**
  * Convert XYZ tile coordinates to Web Mercator (EPSG:3857) BBOX
@@ -77,6 +91,21 @@ export default {
       // 2. Reproject to EPSG:3794
       const bbox3794 = reprojectBbox(bbox3857, 'EPSG:3857', 'EPSG:3794');
 
+      // Check if tile is within Slovenia bounds
+      // If outside, return empty image immediately to save resources and avoid upstream errors
+      if (bbox3794.maxX < SLOVENIA_BOUNDS.minX || 
+          bbox3794.minX > SLOVENIA_BOUNDS.maxX || 
+          bbox3794.maxY < SLOVENIA_BOUNDS.minY || 
+          bbox3794.minY > SLOVENIA_BOUNDS.maxY) {
+        return new Response(EMPTY_IMAGE, {
+          headers: {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=31536000, immutable',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
+
       // 3. Construct Upstream WMS URL
       // Switching to WMS 1.1.1 for better compatibility (SRS vs CRS)
       const params = new URLSearchParams({
@@ -94,7 +123,6 @@ export default {
       });
 
       const upstreamUrl = `${layerConfig.baseUrl}?${params.toString()}`;
-      console.log(`Fetching: ${upstreamUrl}`);
 
       // 4. Fetch and Cache
       // Use the Cache API
@@ -102,32 +130,93 @@ export default {
       let response = await cache.match(request);
 
       if (!response) {
-        console.log(`Cache miss for ${path}, fetching upstream...`);
+        // Try R2 Cache
+        const ext = layerConfig.format === 'image/jpeg' ? 'jpg' : 'png';
+        const r2Key = `${layerSlug}/${z}/${x}/${y}.${ext}`;
+        let r2Object = null;
+
         try {
-          // Fetch from upstream
-          const upstreamResponse = await fetch(upstreamUrl, {
-            headers: {
-              'User-Agent': 'Gozdar/1.0 (Cloudflare Worker Proxy)'
-            }
-          });
-
-          if (!upstreamResponse.ok) {
-            console.log(`Upstream failed: ${upstreamResponse.status} ${upstreamResponse.statusText}`);
-            const text = await upstreamResponse.text();
-            console.log(`Body: ${text}`);
-            return new Response(`Upstream error: ${upstreamResponse.status} - ${upstreamResponse.statusText}\n${text}`, { status: 502 });
-          }
-
-          // Create response to cache
-          // We need to recreate the response to set headers
-          response = new Response(upstreamResponse.body, upstreamResponse);
-          response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-          response.headers.set('Access-Control-Allow-Origin', '*');
-          
-          // Store in cache (background)
-          ctx.waitUntil(cache.put(request, response.clone()));
+          r2Object = await env.TILES_BUCKET.get(r2Key);
         } catch (e) {
-          return new Response(`Proxy error: ${e.message}`, { status: 500 });
+          console.error(`R2 Error: ${e.message}`);
+        }
+
+        if (r2Object) {
+          console.log(`R2 hit for ${r2Key}`);
+          const headers = new Headers();
+          r2Object.writeHttpMetadata(headers);
+          
+          if (!headers.has('content-type')) {
+            headers.set('content-type', layerConfig.format || 'image/jpeg');
+          }
+          headers.set('content-length', r2Object.size.toString());
+          headers.set('etag', r2Object.httpEtag);
+          
+          // Add standard HTTP headers to satisfy strict clients
+          const now = new Date();
+          headers.set('date', now.toUTCString());
+          headers.set('last-modified', r2Object.uploaded.toUTCString());
+          headers.set('expires', new Date(now.getTime() + 31536000000).toUTCString());
+          
+          headers.set('cache-control', 'public, max-age=31536000, immutable');
+          headers.set('access-control-allow-origin', '*');
+          
+          response = new Response(r2Object.body, { headers });
+          
+          // Re-populate Edge Cache
+          ctx.waitUntil(cache.put(request, response.clone()));
+        } else {
+          console.log(`Cache/R2 miss for ${path}, fetching upstream...`);
+          console.log(`Fetching: ${upstreamUrl}`);
+          try {
+            // Fetch from upstream
+            const upstreamResponse = await fetch(upstreamUrl, {
+              headers: {
+                'User-Agent': 'Gozdar/1.0 (Cloudflare Worker Proxy)'
+              }
+            });
+
+            if (!upstreamResponse.ok) {
+              console.log(`Upstream failed: ${upstreamResponse.status} ${upstreamResponse.statusText}`);
+              const text = await upstreamResponse.text();
+              console.log(`Body: ${text}`);
+              return new Response(`Upstream error: ${upstreamResponse.status} - ${upstreamResponse.statusText}\n${text}`, { status: 502 });
+            }
+
+            // Buffer the response to handle R2 put constraints
+            const buffer = await upstreamResponse.arrayBuffer();
+            const contentType = upstreamResponse.headers.get('content-type') || layerConfig.format || 'image/jpeg';
+            
+            const now = new Date();
+            const headers = new Headers({
+                'Content-Type': contentType,
+                'Content-Length': buffer.byteLength.toString(),
+                'Date': now.toUTCString(),
+                'Last-Modified': now.toUTCString(),
+                'Expires': new Date(now.getTime() + 31536000000).toUTCString(),
+                'Cache-Control': 'public, max-age=31536000, immutable',
+                'Access-Control-Allow-Origin': '*',
+                'ETag': `"${layerSlug}-${z}-${x}-${y}"`
+            });
+
+            // Create response to cache
+            response = new Response(buffer, {
+                status: 200,
+                headers: headers
+            });
+            
+            // Store in R2 (background)
+            ctx.waitUntil(env.TILES_BUCKET.put(r2Key, buffer, {
+              httpMetadata: {
+                contentType: contentType,
+              }
+            }));
+
+            // Store in cache (background)
+            ctx.waitUntil(cache.put(request, response.clone()));
+          } catch (e) {
+            return new Response(`Proxy error: ${e.message}`, { status: 500 });
+          }
         }
       } else {
          console.log(`Cache hit for ${path}`);
@@ -136,15 +225,20 @@ export default {
       return response;
     }
 
-    // Default route: List layers
-    if (path === '/' || path === '/layers') {
-      const layersList = Object.keys(LAYERS).map(k => {
-        const l = LAYERS[k];
-        return `- ${k} (${l.format})`;
-      }).join('\n');
-      
-      return new Response(`Gozdar Tile Proxy\n\nAvailable Layers:\n${layersList}`, {
-        headers: { 'Content-Type': 'text/plain' }
+    // Map viewer
+    if (path === '/' || path === '/map') {
+      return new Response(getMapHtml(url.origin), {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+      });
+    }
+
+    // API: List layers as JSON
+    if (path === '/layers' || path === '/api/layers') {
+      return new Response(JSON.stringify({ base: BASE_LAYERS, overlays: OVERLAY_LAYERS }, null, 2), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
       });
     }
 

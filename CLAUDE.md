@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important: Use Bun
+
+This project uses **bun** instead of npm/node. Always use:
+- `bun` instead of `npm`
+- `bunx` instead of `npx`
+- Never run `npm` or `npx` commands
+
 ## Project Overview
 
 Gozdar is a Flutter forestry management app for Slovenia. Users can map forest parcels, track wood logging, view cadastral data, and use GPS/compass for field work.

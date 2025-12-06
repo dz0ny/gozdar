@@ -1,3 +1,7 @@
 name = "gozdar-proxy"
 main = "src/index.js"
 compatibility_date = "2023-12-01"
+
+[[r2_buckets]]
+binding = "TILES_BUCKET"
+bucket_name = "gozdar-tiles"

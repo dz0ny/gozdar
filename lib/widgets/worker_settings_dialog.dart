@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import '../providers/map_provider.dart';
 
 class WorkerSettingsDialog extends StatefulWidget {
-  const WorkerSettingsDialog({super.key});
+  final VoidCallback? onOpenDownload;
+
+  const WorkerSettingsDialog({super.key, this.onOpenDownload});
 
   @override
   State<WorkerSettingsDialog> createState() => _WorkerSettingsDialogState();
@@ -60,30 +62,80 @@ class _WorkerSettingsDialogState extends State<WorkerSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch for changes (debug info toggle)
+    final mapProvider = context.watch<MapProvider>();
+
     return AlertDialog(
-      title: const Text('Nastavitve pospeševalnika (Worker)'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Vnesite URL Cloudflare Worker-ja za hitrejše nalaganje zemljevidov in podporo za caching.',
-            style: TextStyle(fontSize: 13, color: Colors.grey),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _urlController,
-            decoration: const InputDecoration(
-              labelText: 'Worker URL',
-              hintText: 'https://moj-projekt.workers.dev',
-              border: OutlineInputBorder(),
-              helperText: 'Pustite prazno za onemogočanje',
+      title: const Text('Nastavitve karte'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Pospeševalnik (Proxy)',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            keyboardType: TextInputType.url,
-            autocorrect: false,
-            enableSuggestions: false,
-          ),
-        ],
+            const SizedBox(height: 8),
+            const Text(
+              'Vnesite URL Cloudflare Worker-ja za hitrejše nalaganje zemljevidov.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _urlController,
+              decoration: const InputDecoration(
+                labelText: 'Worker URL',
+                hintText: 'https://moj-projekt.workers.dev',
+                border: OutlineInputBorder(),
+                helperText: 'Pustite prazno za onemogočanje',
+              ),
+              keyboardType: TextInputType.url,
+              autocorrect: false,
+              enableSuggestions: false,
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 8),
+            const Text(
+              'Prenos kart (Offline)',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Prenesite karte za uporabo brez internetne povezave.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close settings dialog
+                  widget.onOpenDownload?.call(); // Open download dialog
+                },
+                icon: const Icon(Icons.download_for_offline),
+                label: const Text('Odpri orodje za prenos'),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 8),
+            const Text(
+              'Razhroščevanje',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SwitchListTile(
+              title: const Text('Pokaži podatke o karti'),
+              subtitle: const Text('Zoom, koordinate, rotacija'),
+              value: mapProvider.isDebugInfoVisible,
+              onChanged: (value) {
+                mapProvider.setDebugInfoVisible(value);
+              },
+              contentPadding: EdgeInsets.zero,
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(

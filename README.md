@@ -33,16 +33,12 @@ The `worker/` directory contains a Cloudflare Worker that proxies and caches til
    npx wrangler deploy
    ```
 
-### Usage API
+### Configuration in App
 
-Once deployed, access layers via:
-`https://<your-worker>.workers.dev/tiles/<layer-name>/{z}/{x}/{y}`
-
-**Available Layers:**
-- `ortofoto` (Aerial imagery)
-- `kataster` (Cadastral parcels)
-- `sestoji` (Forest stands)
-- ...and 40+ others (see `worker/src/layers.js` for full list)
+1. Open the app.
+2. Triple-tap the "Karta" tab icon.
+3. Enter your worker URL (e.g. `https://your-worker.workers.dev`).
+4. Tap Save.
 
 ## Flutter Development
 

@@ -156,8 +156,15 @@ class MainScreenState extends State<MainScreen> {
     }
   }
 
-  void _showTileDownloadDialog() {
-    _mapTabKey.currentState?.showTileDownloadDialog();
+  void _showWorkerSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => WorkerSettingsDialog(
+        onOpenDownload: () {
+          _mapTabKey.currentState?.showTileDownloadDialog();
+        },
+      ),
+    );
   }
 
   Future<void> _resetOnboarding() async {

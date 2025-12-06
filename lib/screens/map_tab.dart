@@ -73,7 +73,12 @@ class MapTabState extends State<MapTab> {
   /// Check if markers should be visible at current zoom
   /// Slovenian CRS has different zoom scale, so lower threshold needed
   bool get _showMarkers {
-    if (_currentBaseLayer.isWms) {
+    // Check if proxy is active - if so, we use standard Web Mercator
+    // Note: We use read() here because watch() is called in build()
+    // or this getter is called during build where watch() has already registered
+    final workerUrl = context.read<MapProvider>().workerUrl;
+
+    if (_currentBaseLayer.isWms && workerUrl == null) {
       return _currentZoom >= 11; // Slovenian CRS
     }
     return _currentZoom >= 15; // Standard Web Mercator
@@ -82,7 +87,9 @@ class MapTabState extends State<MapTab> {
   /// Calculate marker size based on zoom level
   /// Returns smaller sizes at lower zoom levels
   double _getMarkerSize(double baseSize) {
-    if (_currentBaseLayer.isWms) {
+    final workerUrl = context.read<MapProvider>().workerUrl;
+
+    if (_currentBaseLayer.isWms && workerUrl == null) {
       // Slovenian CRS: scale 0.4-1.0 for zoom 11-15
       final scale = ((_currentZoom - 11) / 4).clamp(0.4, 1.0);
       return baseSize * scale;
@@ -844,10 +851,13 @@ class MapTabState extends State<MapTab> {
                 ),
                 const Divider(height: 1),
                 // Filter overlays: only show Slovenian overlays when base layer is Slovenian
+                // OR when using proxy (which handles projection)
                 ...MapLayer.overlayLayers
                     .where(
                       (layer) =>
-                          !layer.isSlovenian || _currentBaseLayer.isSlovenian,
+                          !layer.isSlovenian ||
+                          _currentBaseLayer.isSlovenian ||
+                          context.read<MapProvider>().workerUrl != null,
                     )
                     .map(
                       (layer) => CheckboxListTile(
@@ -907,7 +917,10 @@ class MapTabState extends State<MapTab> {
       return TileLayer(
         urlTemplate: '$workerUrl/tiles/$slug/{z}/{x}/{y}',
         maxZoom: layer.maxZoom,
+        minZoom: layer.minZoom,
         userAgentPackageName: 'dev.dz0ny.gozdar',
+        tileProvider: _tileCacheService
+            .getGeneralTileProvider(), // Enable local cache
       );
     }
 
@@ -929,12 +942,14 @@ class MapTabState extends State<MapTab> {
             : _tileCacheService.getGeneralTileProvider(),
         userAgentPackageName: 'dev.dz0ny.gozdar',
         maxZoom: layer.maxZoom,
+        minZoom: layer.minZoom,
       );
     } else {
       // Use general cache for standard tile layers (OSM, ESRI, Google, etc.)
       return TileLayer(
         urlTemplate: layer.urlTemplate!,
         maxZoom: layer.maxZoom,
+        minZoom: layer.minZoom,
         tileProvider: _tileCacheService.getGeneralTileProvider(),
         userAgentPackageName: 'dev.dz0ny.gozdar',
       );
@@ -943,12 +958,16 @@ class MapTabState extends State<MapTab> {
 
   /// Build list of overlay tile layers
   /// Slovenian overlays (from prostor.zgs.gov.si) only render when base layer is also Slovenian
+  /// OR when using proxy (which handles projection)
   List<Widget> _buildOverlayLayers() {
     final isSlovenianBase = _currentBaseLayer.isSlovenian;
+    final workerUrl = context.read<MapProvider>().workerUrl;
 
     return MapLayer.overlayLayers
         .where((layer) => _activeOverlays.contains(layer.type))
-        .where((layer) => !layer.isSlovenian || isSlovenianBase)
+        .where(
+          (layer) => !layer.isSlovenian || isSlovenianBase || workerUrl != null,
+        )
         .map((layer) => _buildTileLayerForLayer(layer))
         .toList();
   }
@@ -1061,7 +1080,12 @@ class MapTabState extends State<MapTab> {
             mapController: _mapController,
             options: MapOptions(
               // Use Slovenian CRS for WMS layers (EPSG:3794), otherwise default Web Mercator
-              crs: _currentBaseLayer.isWms ? slovenianCrs : const Epsg3857(),
+              // If proxy is active (workerUrl != null), always use Web Mercator (EPSG:3857)
+              crs:
+                  (_currentBaseLayer.isWms &&
+                      context.read<MapProvider>().workerUrl == null)
+                  ? slovenianCrs
+                  : const Epsg3857(),
               initialCenter: _initialCenter,
               initialZoom: _initialZoom,
               initialRotation: _initialRotation,
@@ -1237,12 +1261,44 @@ class MapTabState extends State<MapTab> {
               onClose: clearNavigationTarget,
             ),
 
+          // Debug info overlay
+          if (context.watch<MapProvider>().isDebugInfoVisible)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              left: 16,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Zoom: ${_currentZoom.toStringAsFixed(2)}',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                    Text(
+                      'Center: ${_mapController.camera.center.latitude.toStringAsFixed(4)}, ${_mapController.camera.center.longitude.toStringAsFixed(4)}',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                    Text(
+                      'Rotation: ${_mapController.camera.rotation.toStringAsFixed(1)}°',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           // Loading indicator for locations
           if (_isLoadingLocations)
             Positioned(
               top:
                   MediaQuery.of(context).padding.top +
-                  (_navigationTarget != null ? 90 : 16),
+                  (_navigationTarget != null ? 90 : 16) +
+                  (context.watch<MapProvider>().isDebugInfoVisible ? 80 : 0),
               left: 16,
               child: const Material(
                 elevation: 4,

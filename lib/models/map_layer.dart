@@ -71,6 +71,7 @@ class MapLayer {
   final String name;
   final String? urlTemplate;
   final String attribution;
+  final double minZoom;
   final double maxZoom;
   final bool isWms;
   final String? wmsBaseUrl;
@@ -87,6 +88,7 @@ class MapLayer {
     required this.name,
     this.urlTemplate,
     required this.attribution,
+    this.minZoom = 0.0,
     required this.maxZoom,
     this.isWms = false,
     this.wmsBaseUrl,
@@ -126,7 +128,8 @@ class MapLayer {
   static const esriWorldImagery = MapLayer(
     type: MapLayerType.esriWorldImagery,
     name: 'ESRI Satelit',
-    urlTemplate: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    urlTemplate:
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: '© Esri',
     maxZoom: 19,
   );
@@ -154,7 +157,7 @@ class MapLayer {
     type: MapLayerType.ortofoto,
     name: 'Ortofoto 2024',
     attribution: '© GURS',
-    maxZoom: 15,
+    maxZoom: 19,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
     wmsLayers: ['pregledovalnik:DOF_2024'],
@@ -166,7 +169,7 @@ class MapLayer {
     type: MapLayerType.dofIr,
     name: 'Ortofoto IR',
     attribution: '© GURS',
-    maxZoom: 15,
+    maxZoom: 19,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
     wmsLayers: ['pregledovalnik:DOF_IR'],
@@ -178,7 +181,7 @@ class MapLayer {
     type: MapLayerType.dmr,
     name: 'DMR (relief)',
     attribution: '© GURS',
-    maxZoom: 15,
+    maxZoom: 19,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
     wmsLayers: ['pregledovalnik:DMR'],
@@ -192,28 +195,13 @@ class MapLayer {
     type: MapLayerType.kataster,
     name: 'Kataster',
     attribution: '© GURS',
-    maxZoom: 15,
+    minZoom: 15,
+    maxZoom: 19,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
     wmsLayers: ['pregledovalnik:kn_parcele'],
     wmsFormat: 'image/png',
     wmsStyles: 'parcele',
-    isTransparent: true,
-    isOverlay: true,
-    queryable: true,
-  );
-
-  /// Kataster z nazivi - Cadastral parcels with names
-  static const katasterNazivi = MapLayer(
-    type: MapLayerType.katasterNazivi,
-    name: 'Kataster z nazivi',
-    attribution: '© GURS',
-    maxZoom: 19,
-    isWms: true,
-    wmsBaseUrl: 'https://prostor.zgs.gov.si/geoserver/wms?',
-    wmsLayers: ['pregledovalnik:kn_parcele'],
-    wmsFormat: 'image/png',
-    wmsStyles: 'parcele_nazivi',
     isTransparent: true,
     isOverlay: true,
     queryable: true,
@@ -234,17 +222,33 @@ class MapLayer {
     queryable: true,
   );
 
+  /// Kataster z nazivi - Cadastral parcels with names
+  static const katasterNazivi = MapLayer(
+    type: MapLayerType.katasterNazivi,
+    name: 'Kataster z nazivi',
+    attribution: '© GURS',
+    minZoom: 15,
+    maxZoom: 19,
+    isWms: true,
+    wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
+    wmsLayers: ['pregledovalnik:kn_parcele'],
+    wmsFormat: 'image/png',
+    wmsStyles: 'parcele_stevilke',
+    isTransparent: true,
+    isOverlay: true,
+    queryable: true,
+  );
+
   /// Gozdne ceste - Forest roads
   static const gozdneCeste = MapLayer(
     type: MapLayerType.gozdneCeste,
     name: 'Gozdne ceste',
-    attribution: '© ZGS',
+    attribution: '© GURS',
     maxZoom: 19,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geoserver/wms?',
-    wmsLayers: ['pregledovalnik:gozdne_ceste'],
+    wmsLayers: ['pregledovalnik:KGI_LINIJE_CESTE_G'],
     wmsFormat: 'image/png',
-    wmsStyles: 'gozdne_ceste',
     isTransparent: true,
     isOverlay: true,
   );
@@ -257,7 +261,7 @@ class MapLayer {
     maxZoom: 19,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geoserver/wms?',
-    wmsLayers: ['pregledovalnik:KGI_LINIJE_CESTE_G'],
+    wmsLayers: ['pregledovalnik:KGI_LINIJE_CESTE_D'],
     wmsFormat: 'image/png',
     isTransparent: true,
     isOverlay: true,
@@ -854,10 +858,7 @@ class MapLayer {
   ];
 
   /// All layers for backwards compatibility
-  static const List<MapLayer> allLayers = [
-    ...baseLayers,
-    ...overlayLayers,
-  ];
+  static const List<MapLayer> allLayers = [...baseLayers, ...overlayLayers];
 
   /// Get all queryable layers (support GetFeatureInfo)
   static List<MapLayer> get queryableLayers =>
