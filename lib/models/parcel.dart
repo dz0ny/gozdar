@@ -1,68 +1,144 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:latlong2/latlong.dart';
+import 'package:objectbox/objectbox.dart';
+import 'log_entry.dart';
 
 /// Forest type for parcel icon display
 enum ForestType {
-  mixed,     // Mešani gozd
+  mixed, // Mešani gozd
   deciduous, // Listavci
   coniferous // Iglavci (smreka)
 }
 
+@Entity()
 class Parcel {
-  final int? id;
-  final String name;
-  final List<LatLng> polygon; // List of vertices
-  final List<String?> pointNames; // Optional names for each vertex
-  final DateTime createdAt;
-  final int? cadastralMunicipality; // KO (katastrska obcina)
-  final String? parcelNumber; // Parcel number from cadastre
-  final String? owner; // Owner name
-  final ForestType forestType; // Type of forest for icon display
-  final double woodAllowance; // Allowed wood to cut in m³
-  final double woodCut; // Wood already cut in m³
-  final int treesCut; // Number of trees cut
+  @Id()
+  int id;
+
+  String name;
+
+  // Store polygon as JSON string
+  String polygonJson;
+
+  @Property(type: PropertyType.date)
+  DateTime createdAt;
+
+  int? cadastralMunicipality; // KO (katastrska obcina)
+  String? parcelNumber; // Parcel number from cadastre
+  String? owner; // Owner name
+
+  // Store enum as int index
+  int forestTypeIndex;
+
+  double woodAllowance; // Allowed wood to cut in m³
+  double woodCut; // Wood already cut in m³
+  int treesCut; // Number of trees cut
+
+  // Backlink to logs in this parcel
+  @Backlink('parcel')
+  final logs = ToMany<LogEntry>();
+
+  // Transient: polygon as List<LatLng>
+  @Transient()
+  List<LatLng> get polygon {
+    if (polygonJson.isEmpty) return [];
+    final List<dynamic> decoded = jsonDecode(polygonJson);
+    return decoded.map((p) => LatLng(p['lat'] as double, p['lng'] as double)).toList();
+  }
+
+  set polygon(List<LatLng> value) {
+    final data = value.map((p) {
+      final map = <String, dynamic>{'lat': p.latitude, 'lng': p.longitude};
+      // Include point name if available
+      final idx = value.indexOf(p);
+      if (idx < _pointNames.length && _pointNames[idx] != null) {
+        map['name'] = _pointNames[idx];
+      }
+      return map;
+    }).toList();
+    polygonJson = jsonEncode(data);
+  }
+
+  // Transient: point names
+  @Transient()
+  List<String?> _pointNames = [];
+
+  @Transient()
+  List<String?> get pointNames {
+    if (polygonJson.isEmpty) return [];
+    final List<dynamic> decoded = jsonDecode(polygonJson);
+    return decoded.map((p) => p['name'] as String?).toList();
+  }
+
+  // Transient getter/setter for enum
+  @Transient()
+  ForestType get forestType => ForestType.values[forestTypeIndex];
+  set forestType(ForestType value) => forestTypeIndex = value.index;
 
   Parcel({
-    this.id,
+    this.id = 0,
     required this.name,
-    required this.polygon,
+    List<LatLng>? polygon,
     List<String?>? pointNames,
     DateTime? createdAt,
     this.cadastralMunicipality,
     this.parcelNumber,
     this.owner,
-    this.forestType = ForestType.mixed,
+    ForestType forestType = ForestType.mixed,
     this.woodAllowance = 0.0,
     this.woodCut = 0.0,
     this.treesCut = 0,
-  }) : createdAt = createdAt ?? DateTime.now(),
-       pointNames = pointNames ?? List.filled(polygon.length, null);
+    this.polygonJson = '[]',
+  })  : forestTypeIndex = forestType.index,
+        createdAt = createdAt ?? DateTime.now() {
+    if (polygon != null) {
+      _pointNames = pointNames ?? List.filled(polygon.length, null);
+      _setPolygonWithNames(polygon, _pointNames);
+    }
+  }
+
+  void _setPolygonWithNames(List<LatLng> polygonPoints, List<String?> names) {
+    final data = <Map<String, dynamic>>[];
+    for (int i = 0; i < polygonPoints.length; i++) {
+      final point = polygonPoints[i];
+      final map = <String, dynamic>{'lat': point.latitude, 'lng': point.longitude};
+      if (i < names.length && names[i] != null) {
+        map['name'] = names[i];
+      }
+      data.add(map);
+    }
+    polygonJson = jsonEncode(data);
+  }
 
   /// Get display name for a point at given index
   String getPointName(int index) {
+    final names = pointNames;
     if (index < 0 || index >= polygon.length) return 'Tocka ?';
-    final customName = index < pointNames.length ? pointNames[index] : null;
+    final customName = index < names.length ? names[index] : null;
     return customName ?? 'Tocka ${index + 1}';
   }
 
   /// Create a copy with updated point name
   Parcel withPointName(int index, String? name) {
-    if (index < 0 || index >= polygon.length) return this;
-    final newNames = List<String?>.from(pointNames);
+    final currentPolygon = polygon;
+    final currentNames = List<String?>.from(pointNames);
+    if (index < 0 || index >= currentPolygon.length) return this;
+
     // Ensure list is long enough
-    while (newNames.length < polygon.length) {
-      newNames.add(null);
+    while (currentNames.length < currentPolygon.length) {
+      currentNames.add(null);
     }
-    newNames[index] = name?.isEmpty == true ? null : name;
-    return copyWith(pointNames: newNames);
+    currentNames[index] = name?.isEmpty == true ? null : name;
+    return copyWith(polygon: currentPolygon, pointNames: currentNames);
   }
 
   /// Remaining wood allowance
   double get woodRemaining => (woodAllowance - woodCut).clamp(0.0, double.infinity);
 
   /// Percentage of allowance used
-  double get woodUsedPercent => woodAllowance > 0 ? (woodCut / woodAllowance * 100).clamp(0.0, 100.0) : 0.0;
+  double get woodUsedPercent =>
+      woodAllowance > 0 ? (woodCut / woodAllowance * 100).clamp(0.0, 100.0) : 0.0;
 
   /// Check if this is a cadastral parcel (imported from cadastre)
   bool get isCadastral => cadastralMunicipality != null && parcelNumber != null;
@@ -73,26 +149,28 @@ class Parcel {
   /// Calculate area in square meters using the Shoelace formula
   /// with geodetic corrections for latitude
   double get areaM2 {
-    if (polygon.length < 3) return 0.0;
+    final poly = polygon;
+    if (poly.length < 3) return 0.0;
 
     // Use the centroid latitude for the meter conversion
-    final centerLat = polygon.map((p) => p.latitude).reduce((a, b) => a + b) / polygon.length;
+    final centerLat = poly.map((p) => p.latitude).reduce((a, b) => a + b) / poly.length;
 
     // Meters per degree at this latitude
-    final metersPerDegreeLat = 111132.92 - 559.82 * math.cos(2 * centerLat * math.pi / 180) +
+    final metersPerDegreeLat = 111132.92 -
+        559.82 * math.cos(2 * centerLat * math.pi / 180) +
         1.175 * math.cos(4 * centerLat * math.pi / 180);
     final metersPerDegreeLon = 111412.84 * math.cos(centerLat * math.pi / 180) -
         93.5 * math.cos(3 * centerLat * math.pi / 180);
 
     // Convert to local meters and apply Shoelace formula
     double area = 0.0;
-    for (int i = 0; i < polygon.length; i++) {
-      final j = (i + 1) % polygon.length;
+    for (int i = 0; i < poly.length; i++) {
+      final j = (i + 1) % poly.length;
 
-      final x1 = polygon[i].longitude * metersPerDegreeLon;
-      final y1 = polygon[i].latitude * metersPerDegreeLat;
-      final x2 = polygon[j].longitude * metersPerDegreeLon;
-      final y2 = polygon[j].latitude * metersPerDegreeLat;
+      final x1 = poly[i].longitude * metersPerDegreeLon;
+      final y1 = poly[i].latitude * metersPerDegreeLat;
+      final x2 = poly[j].longitude * metersPerDegreeLon;
+      final y2 = poly[j].latitude * metersPerDegreeLat;
 
       area += x1 * y2 - x2 * y1;
     }
@@ -112,16 +190,17 @@ class Parcel {
 
   /// Check if a point is inside this parcel using ray casting algorithm
   bool containsPoint(LatLng point) {
-    if (polygon.length < 3) return false;
+    final poly = polygon;
+    if (poly.length < 3) return false;
 
     bool inside = false;
-    int j = polygon.length - 1;
+    int j = poly.length - 1;
 
-    for (int i = 0; i < polygon.length; i++) {
-      final xi = polygon[i].longitude;
-      final yi = polygon[i].latitude;
-      final xj = polygon[j].longitude;
-      final yj = polygon[j].latitude;
+    for (int i = 0; i < poly.length; i++) {
+      final xi = poly[i].longitude;
+      final yi = poly[i].latitude;
+      final xj = poly[j].longitude;
+      final yj = poly[j].latitude;
 
       if (((yi > point.latitude) != (yj > point.latitude)) &&
           (point.longitude < (xj - xi) * (point.latitude - yi) / (yj - yi) + xi)) {
@@ -135,75 +214,13 @@ class Parcel {
 
   /// Get the center point of the polygon
   LatLng get center {
-    if (polygon.isEmpty) return const LatLng(0, 0);
+    final poly = polygon;
+    if (poly.isEmpty) return const LatLng(0, 0);
 
-    final avgLat = polygon.map((p) => p.latitude).reduce((a, b) => a + b) / polygon.length;
-    final avgLng = polygon.map((p) => p.longitude).reduce((a, b) => a + b) / polygon.length;
+    final avgLat = poly.map((p) => p.latitude).reduce((a, b) => a + b) / poly.length;
+    final avgLng = poly.map((p) => p.longitude).reduce((a, b) => a + b) / poly.length;
 
     return LatLng(avgLat, avgLng);
-  }
-
-  Map<String, dynamic> toMap() {
-    // Store polygon with optional point names in JSON
-    final polygonData = <Map<String, dynamic>>[];
-    for (int i = 0; i < polygon.length; i++) {
-      final point = polygon[i];
-      final pointData = <String, dynamic>{
-        'lat': point.latitude,
-        'lng': point.longitude,
-      };
-      // Only include name if it's set
-      if (i < pointNames.length && pointNames[i] != null) {
-        pointData['name'] = pointNames[i];
-      }
-      polygonData.add(pointData);
-    }
-
-    return {
-      'id': id,
-      'name': name,
-      'polygon': jsonEncode(polygonData),
-      'created_at': createdAt.toIso8601String(),
-      'cadastral_municipality': cadastralMunicipality,
-      'parcel_number': parcelNumber,
-      'owner': owner,
-      'forest_type': forestType.index,
-      'wood_allowance': woodAllowance,
-      'wood_cut': woodCut,
-      'trees_cut': treesCut,
-    };
-  }
-
-  factory Parcel.fromMap(Map<String, dynamic> map) {
-    final polygonJson = jsonDecode(map['polygon'] as String) as List;
-    final polygon = <LatLng>[];
-    final pointNames = <String?>[];
-
-    for (final p in polygonJson) {
-      polygon.add(LatLng(p['lat'] as double, p['lng'] as double));
-      // Extract point name if present (backward compatible)
-      pointNames.add(p['name'] as String?);
-    }
-
-    final forestTypeIndex = map['forest_type'] as int? ?? 0;
-    final forestType = forestTypeIndex < ForestType.values.length
-        ? ForestType.values[forestTypeIndex]
-        : ForestType.mixed;
-
-    return Parcel(
-      id: map['id'] as int?,
-      name: map['name'] as String,
-      polygon: polygon,
-      pointNames: pointNames,
-      createdAt: DateTime.parse(map['created_at'] as String),
-      cadastralMunicipality: map['cadastral_municipality'] as int?,
-      parcelNumber: map['parcel_number'] as String?,
-      owner: map['owner'] as String?,
-      forestType: forestType,
-      woodAllowance: (map['wood_allowance'] as num?)?.toDouble() ?? 0.0,
-      woodCut: (map['wood_cut'] as num?)?.toDouble() ?? 0.0,
-      treesCut: (map['trees_cut'] as int?) ?? 0,
-    );
   }
 
   Parcel copyWith({

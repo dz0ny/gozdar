@@ -163,7 +163,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
     }
 
     final entry = LogEntry(
-      id: widget.logEntry?.id,
+      id: widget.logEntry?.id ?? 0,
       diameter: diameter,
       length: length,
       volume: volume,

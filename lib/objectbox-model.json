@@ -1,0 +1,276 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:4658729384674843745",
+      "lastPropertyId": "8:4903051158098597526",
+      "name": "LogBatch",
+      "properties": [
+        {
+          "id": "1:615432495870064772",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4485176547938856775",
+          "name": "owner",
+          "type": 9
+        },
+        {
+          "id": "3:8509776764539387592",
+          "name": "notes",
+          "type": 9
+        },
+        {
+          "id": "4:2845011411820907712",
+          "name": "latitude",
+          "type": 8
+        },
+        {
+          "id": "5:7105869703285045905",
+          "name": "longitude",
+          "type": 8
+        },
+        {
+          "id": "6:8401914449182871011",
+          "name": "totalVolume",
+          "type": 8
+        },
+        {
+          "id": "7:3746381525778729131",
+          "name": "logCount",
+          "type": 6
+        },
+        {
+          "id": "8:4903051158098597526",
+          "name": "createdAt",
+          "type": 10
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "2:3258460803860110807",
+      "lastPropertyId": "10:8160418153423733537",
+      "name": "LogEntry",
+      "properties": [
+        {
+          "id": "1:259656842806714057",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:3018480833393639677",
+          "name": "diameter",
+          "type": 8
+        },
+        {
+          "id": "3:6253536891015729498",
+          "name": "length",
+          "type": 8
+        },
+        {
+          "id": "4:607033104195117929",
+          "name": "volume",
+          "type": 8
+        },
+        {
+          "id": "5:6785067125998849368",
+          "name": "latitude",
+          "type": 8
+        },
+        {
+          "id": "6:7775608596234758066",
+          "name": "longitude",
+          "type": 8
+        },
+        {
+          "id": "7:6292438590926794467",
+          "name": "notes",
+          "type": 9
+        },
+        {
+          "id": "8:6120421034750751418",
+          "name": "createdAt",
+          "type": 10
+        },
+        {
+          "id": "9:6855917519966908061",
+          "name": "batchId",
+          "indexId": "1:7332073029063629073",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "LogBatch"
+        },
+        {
+          "id": "10:8160418153423733537",
+          "name": "parcelId",
+          "indexId": "2:2416280335665670942",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "Parcel"
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "3:9119904791546975638",
+      "lastPropertyId": "6:1512553072282750778",
+      "name": "MapLocation",
+      "properties": [
+        {
+          "id": "1:2202155098422181246",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:3244590868631914152",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:411182723433623766",
+          "name": "latitude",
+          "type": 8
+        },
+        {
+          "id": "4:8185530635729788931",
+          "name": "longitude",
+          "type": 8
+        },
+        {
+          "id": "5:89958773289807447",
+          "name": "typeIndex",
+          "type": 6
+        },
+        {
+          "id": "6:1512553072282750778",
+          "name": "createdAt",
+          "type": 10
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "4:1150465591501636009",
+      "lastPropertyId": "11:6772480910293055541",
+      "name": "Parcel",
+      "properties": [
+        {
+          "id": "1:1342535238101297136",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:2534531305218592517",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:4208430250289579226",
+          "name": "polygonJson",
+          "type": 9
+        },
+        {
+          "id": "4:4595354318594393384",
+          "name": "createdAt",
+          "type": 10
+        },
+        {
+          "id": "5:8492246665088015340",
+          "name": "cadastralMunicipality",
+          "type": 6
+        },
+        {
+          "id": "6:7306732174878860760",
+          "name": "parcelNumber",
+          "type": 9
+        },
+        {
+          "id": "7:6482780184020419380",
+          "name": "owner",
+          "type": 9
+        },
+        {
+          "id": "8:4514296672018729306",
+          "name": "forestTypeIndex",
+          "type": 6
+        },
+        {
+          "id": "9:1613256058478576352",
+          "name": "woodAllowance",
+          "type": 8
+        },
+        {
+          "id": "10:2387958365358532435",
+          "name": "woodCut",
+          "type": 8
+        },
+        {
+          "id": "11:6772480910293055541",
+          "name": "treesCut",
+          "type": 6
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "5:1599301179648303857",
+      "lastPropertyId": "6:6352423221128131205",
+      "name": "HttpCacheEntry",
+      "properties": [
+        {
+          "id": "1:2707972340378378649",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4569322675758256025",
+          "name": "urlHash",
+          "indexId": "3:1042657973952538395",
+          "type": 9,
+          "flags": 2080
+        },
+        {
+          "id": "3:2414247420210179960",
+          "name": "url",
+          "type": 9
+        },
+        {
+          "id": "4:4307469408138803252",
+          "name": "responseBody",
+          "type": 9
+        },
+        {
+          "id": "5:4692708033838747566",
+          "name": "statusCode",
+          "type": 6
+        },
+        {
+          "id": "6:6352423221128131205",
+          "name": "cachedAt",
+          "type": 10
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "5:1599301179648303857",
+  "lastIndexId": "3:1042657973952538395",
+  "lastRelationId": "0:0",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [],
+  "retiredRelationUids": [],
+  "version": 1
+}

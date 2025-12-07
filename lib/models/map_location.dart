@@ -1,3 +1,5 @@
+import 'package:objectbox/objectbox.dart';
+
 /// Type of map location/POI
 enum LocationType {
   /// General saved location (mejnik, skladišče, etc.)
@@ -7,55 +9,38 @@ enum LocationType {
   secnja,
 }
 
+@Entity()
 class MapLocation {
-  final int? id;
-  final String name;
-  final double latitude;
-  final double longitude;
-  final LocationType type;
-  final DateTime createdAt;
+  @Id()
+  int id;
+
+  String name;
+  double latitude;
+  double longitude;
+
+  // Store enum as int index
+  int typeIndex;
+
+  @Property(type: PropertyType.date)
+  DateTime createdAt;
+
+  // Transient getter/setter for enum
+  @Transient()
+  LocationType get type => LocationType.values[typeIndex];
+  set type(LocationType value) => typeIndex = value.index;
 
   MapLocation({
-    this.id,
+    this.id = 0,
     required this.name,
     required this.latitude,
     required this.longitude,
-    this.type = LocationType.point,
+    LocationType type = LocationType.point,
     DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+  })  : typeIndex = type.index,
+        createdAt = createdAt ?? DateTime.now();
 
   /// Check if this is a sečnja (tree to cut) marker
   bool get isSecnja => type == LocationType.secnja;
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'latitude': latitude,
-      'longitude': longitude,
-      'type': type.name,
-      'created_at': createdAt.toIso8601String(),
-    };
-  }
-
-  factory MapLocation.fromMap(Map<String, dynamic> map) {
-    return MapLocation(
-      id: map['id'] as int?,
-      name: map['name'] as String,
-      latitude: map['latitude'] as double,
-      longitude: map['longitude'] as double,
-      type: _parseLocationType(map['type'] as String?),
-      createdAt: DateTime.parse(map['created_at'] as String),
-    );
-  }
-
-  static LocationType _parseLocationType(String? typeStr) {
-    if (typeStr == null) return LocationType.point;
-    return LocationType.values.firstWhere(
-      (t) => t.name == typeStr,
-      orElse: () => LocationType.point,
-    );
-  }
 
   MapLocation copyWith({
     int? id,

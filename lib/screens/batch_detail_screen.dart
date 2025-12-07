@@ -37,7 +37,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
   Future<void> _loadLogs() async {
     setState(() => _isLoading = true);
     try {
-      final logs = await _databaseService.getLogsByBatch(_batch.id!);
+      final logs = await _databaseService.getLogsByBatch(_batch.id);
       double total = 0;
       for (final log in logs) {
         total += log.volume;
@@ -73,7 +73,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
       context: context,
       isScrollControlled: true,
       builder: (context) => _AddLogToBatchSheet(
-        batchId: _batch.id!,
+        batchId: _batch.id,
         onAdd: (entry) async {
           await _databaseService.insertLog(entry);
           await _loadLogs();
@@ -97,7 +97,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
 
   Future<void> _deleteLog(LogEntry entry) async {
     try {
-      await _databaseService.deleteLog(entry.id!);
+      await _databaseService.deleteLog(entry.id);
       await _loadLogs();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -155,7 +155,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
     );
 
     if (confirmed == true) {
-      await _databaseService.deleteLogBatch(_batch.id!);
+      await _databaseService.deleteLogBatch(_batch.id);
       if (mounted) {
         Navigator.pop(context, true);
       }

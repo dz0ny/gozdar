@@ -1,29 +1,46 @@
 import 'dart:math' as math;
+import 'package:objectbox/objectbox.dart';
+import 'log_batch.dart';
+import 'parcel.dart';
 
+@Entity()
 class LogEntry {
-  final int? id;
-  final double? diameter; // cm
-  final double? length; // m
-  final double volume; // m³
-  final double? latitude;
-  final double? longitude;
-  final String? notes;
-  final int? batchId; // Project/batch this log belongs to
-  final int? parcelId; // Parcel this log is geolocated inside
-  final DateTime createdAt;
+  @Id()
+  int id;
+
+  double? diameter; // cm
+  double? length; // m
+  double volume; // m³
+  double? latitude;
+  double? longitude;
+  String? notes;
+
+  @Property(type: PropertyType.date)
+  DateTime createdAt;
+
+  // Relations
+  final batch = ToOne<LogBatch>();
+  final parcel = ToOne<Parcel>();
 
   LogEntry({
-    this.id,
+    this.id = 0,
     this.diameter,
     this.length,
     required this.volume,
     this.latitude,
     this.longitude,
     this.notes,
-    this.batchId,
-    this.parcelId,
+    int? batchId,
+    int? parcelId,
     DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+  }) : createdAt = createdAt ?? DateTime.now() {
+    if (batchId != null && batchId != 0) {
+      batch.targetId = batchId;
+    }
+    if (parcelId != null && parcelId != 0) {
+      parcel.targetId = parcelId;
+    }
+  }
 
   /// Calculate volume from diameter (cm) and length (m)
   /// Formula: V = π × (d/200)² × L
@@ -35,35 +52,9 @@ class LogEntry {
 
   bool get hasLocation => latitude != null && longitude != null;
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'diameter': diameter,
-      'length': length,
-      'volume': volume,
-      'latitude': latitude,
-      'longitude': longitude,
-      'notes': notes,
-      'batch_id': batchId,
-      'parcel_id': parcelId,
-      'created_at': createdAt.toIso8601String(),
-    };
-  }
-
-  factory LogEntry.fromMap(Map<String, dynamic> map) {
-    return LogEntry(
-      id: map['id'] as int?,
-      diameter: map['diameter'] as double?,
-      length: map['length'] as double?,
-      volume: map['volume'] as double,
-      latitude: map['latitude'] as double?,
-      longitude: map['longitude'] as double?,
-      notes: map['notes'] as String?,
-      batchId: map['batch_id'] as int?,
-      parcelId: map['parcel_id'] as int?,
-      createdAt: DateTime.parse(map['created_at'] as String),
-    );
-  }
+  // Convenience getters for relation IDs
+  int? get batchId => batch.targetId == 0 ? null : batch.targetId;
+  int? get parcelId => parcel.targetId == 0 ? null : parcel.targetId;
 
   LogEntry copyWith({
     int? id,
@@ -77,7 +68,7 @@ class LogEntry {
     int? parcelId,
     DateTime? createdAt,
   }) {
-    return LogEntry(
+    final entry = LogEntry(
       id: id ?? this.id,
       diameter: diameter ?? this.diameter,
       length: length ?? this.length,
@@ -85,9 +76,19 @@ class LogEntry {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       notes: notes ?? this.notes,
-      batchId: batchId ?? this.batchId,
-      parcelId: parcelId ?? this.parcelId,
       createdAt: createdAt ?? this.createdAt,
     );
+    // Copy relations
+    if (batchId != null) {
+      entry.batch.targetId = batchId;
+    } else {
+      entry.batch.targetId = batch.targetId;
+    }
+    if (parcelId != null) {
+      entry.parcel.targetId = parcelId;
+    } else {
+      entry.parcel.targetId = parcel.targetId;
+    }
+    return entry;
   }
 }

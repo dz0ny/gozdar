@@ -43,8 +43,8 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
       ),
     );
 
-    if (confirmed == true && batch.id != null && mounted) {
-      await context.read<LogsProvider>().deleteBatch(batch.id!);
+    if (confirmed == true && batch.id != 0 && mounted) {
+      await context.read<LogsProvider>().deleteBatch(batch.id);
     }
   }
 

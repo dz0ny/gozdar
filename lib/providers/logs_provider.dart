@@ -99,7 +99,7 @@ class LogsProvider extends ChangeNotifier {
   /// Delete a log entry
   Future<bool> deleteLogEntry(LogEntry entry) async {
     try {
-      await _databaseService.deleteLog(entry.id!);
+      await _databaseService.deleteLog(entry.id);
       await loadLogEntries();
       return true;
     } catch (e) {
@@ -192,8 +192,8 @@ class LogsProvider extends ChangeNotifier {
 
       // Assign all current unassigned logs to this batch
       for (final log in _logEntries) {
-        if (log.id != null && log.batchId == null) {
-          await _databaseService.assignLogToBatch(log.id!, batchId);
+        if (log.id != 0 && log.batchId == null) {
+          await _databaseService.assignLogToBatch(log.id, batchId);
         }
       }
 

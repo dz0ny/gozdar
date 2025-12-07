@@ -80,10 +80,10 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   }
 
   Future<void> _loadLogsInParcel() async {
-    if (_parcel.id == null) return;
+    if (_parcel.id == 0) return;
     try {
-      final logs = await _databaseService.getLogsByParcel(_parcel.id!);
-      final volume = await _databaseService.getParcelTotalVolume(_parcel.id!);
+      final logs = await _databaseService.getLogsByParcel(_parcel.id);
+      final volume = await _databaseService.getParcelTotalVolume(_parcel.id);
       setState(() {
         _logsInParcel = logs;
         _logsVolume = volume;
@@ -478,10 +478,10 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       ),
     );
 
-    if (confirmed == true && _parcel.id != null) {
+    if (confirmed == true && _parcel.id != 0) {
       try {
         final deleted = await _databaseService.deleteParcelWithContents(
-          _parcel.id!,
+          _parcel.id,
         );
         if (mounted) {
           final logsCount = deleted['logs'] ?? 0;

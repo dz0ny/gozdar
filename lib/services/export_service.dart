@@ -29,7 +29,7 @@ class ExportService {
         final log = logs[rowIndex];
         final row = rowIndex + 1;
 
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row)).value = IntCellValue(log.id ?? 0);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row)).value = IntCellValue(log.id);
         sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: row)).value = log.diameter != null ? DoubleCellValue(log.diameter!) : TextCellValue('');
         sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: row)).value = log.length != null ? DoubleCellValue(log.length!) : TextCellValue('');
         sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: row)).value = DoubleCellValue(log.volume);

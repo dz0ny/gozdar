@@ -166,7 +166,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
     }
 
     final parcel = Parcel(
-      id: widget.parcel?.id,
+      id: widget.parcel?.id ?? 0,
       name: _nameController.text.trim(),
       polygon: _polygon,
       forestType: _forestType,

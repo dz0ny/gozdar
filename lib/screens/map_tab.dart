@@ -557,10 +557,10 @@ class MapTabState extends State<MapTab> {
   /// Delete a location from the database
   Future<void> _deleteLocation(MapLocation location) async {
     try {
-      if (location.id != null) {
+      if (location.id != 0) {
         // Use provider for the operation
         final success = await context.read<MapProvider>().deleteLocation(
-          location.id!,
+          location.id,
         );
         if (success) {
           await _loadLocations(); // Sync local state
@@ -1428,7 +1428,7 @@ class MapTabState extends State<MapTab> {
 
     if (newName != null) {
       final db = DatabaseService();
-      await db.updateLocationName(location.id!, newName);
+      await db.updateLocationName(location.id, newName);
       await _loadLocations();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

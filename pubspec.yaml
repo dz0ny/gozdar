@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2025.1206.10+10
+version: 2025.1207.2+2
 
 environment:
   sdk: ^3.9.2
@@ -39,10 +39,11 @@ dependencies:
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
   proj4dart: ^2.1.0
-  flutter_map_tile_caching: ^10.1.1
+  flutter_map_tile_caching: ^11.0.0-dev.2
 
   # Database & Storage
-  sqflite: ^2.4.2
+  objectbox: any
+  objectbox_flutter_libs: any
   path_provider: ^2.1.5
   path: ^1.9.0
 
@@ -81,6 +82,13 @@ dev_dependencies:
 
   # App icon generation
   flutter_launcher_icons: ^0.14.4
+
+  # ObjectBox code generation
+  objectbox_generator: ^4.0.3
+  build_runner: any
+
+dependency_overrides:
+  source_gen: ^4.0.0
 
 flutter_launcher_icons:
   android: "launcher_icon"

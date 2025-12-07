@@ -128,7 +128,7 @@ class ForestTabState extends State<ForestTab> {
     if (confirmed == true) {
       try {
         final deleted = await _databaseService.deleteParcelWithContents(
-          parcel.id!,
+          parcel.id,
         );
         await _loadData();
         if (mounted) {
