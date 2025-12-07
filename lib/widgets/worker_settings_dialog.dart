@@ -13,6 +13,8 @@ class WorkerSettingsDialog extends StatefulWidget {
 
 class _WorkerSettingsDialogState extends State<WorkerSettingsDialog> {
   final _urlController = TextEditingController();
+  int _debugTapCount = 0;
+  bool _showProxySettings = false;
 
   @override
   void initState() {
@@ -27,6 +29,21 @@ class _WorkerSettingsDialogState extends State<WorkerSettingsDialog> {
   void dispose() {
     _urlController.dispose();
     super.dispose();
+  }
+
+  void _onDebugTap() {
+    setState(() {
+      _debugTapCount++;
+      if (_debugTapCount >= 3) {
+        _showProxySettings = true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pospeševalnik odklenjen'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    });
   }
 
   void _save() {
@@ -72,37 +89,40 @@ class _WorkerSettingsDialogState extends State<WorkerSettingsDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Pospeševalnik (Proxy)',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+            // Proxy settings - hidden until unlocked
+            if (_showProxySettings) ...[
+              Text(
+                'Pospeševalnik (Proxy)',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Vnesite URL Cloudflare Worker-ja za hitrejše nalaganje zemljevidov.',
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              const SizedBox(height: 8),
+              Text(
+                'Vnesite URL Cloudflare Worker-ja za hitrejše nalaganje zemljevidov.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _urlController,
-              decoration: const InputDecoration(
-                labelText: 'Worker URL',
-                hintText: 'https://moj-projekt.workers.dev',
-                border: OutlineInputBorder(),
-                helperText: 'Pustite prazno za onemogočanje',
+              const SizedBox(height: 8),
+              TextField(
+                controller: _urlController,
+                decoration: const InputDecoration(
+                  labelText: 'Worker URL',
+                  hintText: 'https://moj-projekt.workers.dev',
+                  border: OutlineInputBorder(),
+                  helperText: 'Pustite prazno za onemogočanje',
+                ),
+                keyboardType: TextInputType.url,
+                autocorrect: false,
+                enableSuggestions: false,
               ),
-              keyboardType: TextInputType.url,
-              autocorrect: false,
-              enableSuggestions: false,
-            ),
-            const SizedBox(height: 24),
-            const Divider(),
-            const SizedBox(height: 8),
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 8),
+            ],
             Text(
               'Prenos kart (Offline)',
               style: TextStyle(
@@ -133,9 +153,12 @@ class _WorkerSettingsDialogState extends State<WorkerSettingsDialog> {
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 8),
-            const Text(
-              'Razhroščevanje',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            GestureDetector(
+              onTap: _showProxySettings ? null : _onDebugTap,
+              child: const Text(
+                'Razhroščevanje',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             SwitchListTile(
               title: const Text('Pokaži podatke o karti'),
