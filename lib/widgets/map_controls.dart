@@ -78,6 +78,8 @@ class MapControls extends StatelessWidget {
               tooltip: 'Shranjene lokacije',
               child: Badge(
                 label: Text('$locationsCount'),
+                backgroundColor: Theme.of(context).colorScheme.tertiary,
+                textColor: Theme.of(context).colorScheme.onTertiary,
                 child: const Icon(Icons.location_on),
               ),
             ),

@@ -1160,12 +1160,12 @@ class MapTabState extends State<MapTab> {
                     );
                   },
                 ),
-              // Saved locations marker layer - hidden at low zoom
-              if (_showMarkers) MarkerLayer(markers: _buildMarkers()),
-              // Geolocated logs marker layer - hidden at low zoom
-              if (_showMarkers) MarkerLayer(markers: _buildLogMarkers()),
-              // Sečnja markers layer - hidden at low zoom
-              if (_showMarkers) MarkerLayer(markers: _buildSecnjaMarkers()),
+              // Saved locations marker layer - always visible
+              MarkerLayer(markers: _buildMarkers()),
+              // Geolocated logs marker layer - always visible
+              MarkerLayer(markers: _buildLogMarkers()),
+              // Sečnja markers layer - always visible
+              MarkerLayer(markers: _buildSecnjaMarkers()),
               // Navigation target line (from user to target)
               if (_navigationTarget != null && _userPosition != null)
                 PolylineLayer(

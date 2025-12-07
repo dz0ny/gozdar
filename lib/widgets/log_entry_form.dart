@@ -189,7 +189,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.logEntry == null ? 'Dodaj hlod' : 'Uredi hlod'),
+        title: Text(widget.logEntry == null ? 'Nov' : 'Uredi'),
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
@@ -396,7 +396,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
             FilledButton.icon(
               onPressed: _saveEntry,
               icon: const Icon(Icons.save),
-              label: const Text('Shrani hlod'),
+              label: const Text('Shrani'),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.all(16),
               ),

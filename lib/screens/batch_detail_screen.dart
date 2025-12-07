@@ -525,7 +525,7 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
               Row(
                 children: [
                   Text(
-                    _addedCount > 0 ? 'Dodaj hlod (+$_addedCount)' : 'Dodaj hlod',
+                    _addedCount > 0 ? 'Dodaj (+$_addedCount)' : 'Dodaj',
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
