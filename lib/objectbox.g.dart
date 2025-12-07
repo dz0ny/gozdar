@@ -90,7 +90,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(2, 3258460803860110807),
     name: 'LogEntry',
-    lastPropertyId: const obx_int.IdUid(10, 8160418153423733537),
+    lastPropertyId: const obx_int.IdUid(11, 2409879774864062978),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -146,7 +146,7 @@ final _entities = <obx_int.ModelEntity>[
         name: 'batchId',
         type: 11,
         flags: 520,
-        indexId: const obx_int.IdUid(1, 7332073029063629073),
+        indexId: const obx_int.IdUid(6, 7549459949603585428),
         relationTarget: 'LogBatch',
       ),
       obx_int.ModelProperty(
@@ -154,8 +154,14 @@ final _entities = <obx_int.ModelEntity>[
         name: 'parcelId',
         type: 11,
         flags: 520,
-        indexId: const obx_int.IdUid(2, 2416280335665670942),
+        indexId: const obx_int.IdUid(7, 7980179310958526698),
         relationTarget: 'Parcel',
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(11, 2409879774864062978),
+        name: 'species',
+        type: 9,
+        flags: 0,
       ),
     ],
     relations: <obx_int.ModelRelation>[],
@@ -377,11 +383,16 @@ obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
     lastEntityId: const obx_int.IdUid(5, 1599301179648303857),
-    lastIndexId: const obx_int.IdUid(3, 1042657973952538395),
+    lastIndexId: const obx_int.IdUid(7, 7980179310958526698),
     lastRelationId: const obx_int.IdUid(0, 0),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [],
-    retiredIndexUids: const [],
+    retiredIndexUids: const [
+      7332073029063629073,
+      2416280335665670942,
+      6546084107865475637,
+      3650335391562379587,
+    ],
     retiredPropertyUids: const [],
     retiredRelationUids: const [],
     modelVersion: 5,
@@ -497,7 +508,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final notesOffset = object.notes == null
             ? null
             : fbb.writeString(object.notes!);
-        fbb.startTable(11);
+        final speciesOffset = object.species == null
+            ? null
+            : fbb.writeString(object.species!);
+        fbb.startTable(12);
         fbb.addInt64(0, object.id);
         fbb.addFloat64(1, object.diameter);
         fbb.addFloat64(2, object.length);
@@ -508,6 +522,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addInt64(7, object.createdAt.millisecondsSinceEpoch);
         fbb.addInt64(8, object.batch.targetId);
         fbb.addInt64(9, object.parcel.targetId);
+        fbb.addOffset(10, speciesOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -549,6 +564,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final notesParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 16);
+        final speciesParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 24);
         final createdAtParam = DateTime.fromMillisecondsSinceEpoch(
           const fb.Int64Reader().vTableGet(buffer, rootOffset, 18, 0),
         );
@@ -560,6 +578,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           latitude: latitudeParam,
           longitude: longitudeParam,
           notes: notesParam,
+          species: speciesParam,
           createdAt: createdAtParam,
         );
         object.batch.targetId = const fb.Int64Reader().vTableGet(
@@ -921,6 +940,11 @@ class LogEntry_ {
   /// See [LogEntry.parcel].
   static final parcel = obx.QueryRelationToOne<LogEntry, Parcel>(
     _entities[1].properties[9],
+  );
+
+  /// See [LogEntry.species].
+  static final species = obx.QueryStringProperty<LogEntry>(
+    _entities[1].properties[10],
   );
 }
 

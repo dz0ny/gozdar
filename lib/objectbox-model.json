@@ -54,7 +54,7 @@
     },
     {
       "id": "2:3258460803860110807",
-      "lastPropertyId": "10:8160418153423733537",
+      "lastPropertyId": "11:2409879774864062978",
       "name": "LogEntry",
       "properties": [
         {
@@ -101,7 +101,7 @@
         {
           "id": "9:6855917519966908061",
           "name": "batchId",
-          "indexId": "1:7332073029063629073",
+          "indexId": "6:7549459949603585428",
           "type": 11,
           "flags": 520,
           "relationTarget": "LogBatch"
@@ -109,10 +109,15 @@
         {
           "id": "10:8160418153423733537",
           "name": "parcelId",
-          "indexId": "2:2416280335665670942",
+          "indexId": "7:7980179310958526698",
           "type": 11,
           "flags": 520,
           "relationTarget": "Parcel"
+        },
+        {
+          "id": "11:2409879774864062978",
+          "name": "species",
+          "type": 9
         }
       ],
       "relations": []
@@ -263,13 +268,18 @@
     }
   ],
   "lastEntityId": "5:1599301179648303857",
-  "lastIndexId": "3:1042657973952538395",
+  "lastIndexId": "7:7980179310958526698",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",
   "modelVersion": 5,
   "modelVersionParserMinimum": 5,
   "retiredEntityUids": [],
-  "retiredIndexUids": [],
+  "retiredIndexUids": [
+    7332073029063629073,
+    2416280335665670942,
+    6546084107865475637,
+    3650335391562379587
+  ],
   "retiredPropertyUids": [],
   "retiredRelationUids": [],
   "version": 1

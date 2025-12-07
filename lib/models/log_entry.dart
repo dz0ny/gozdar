@@ -14,6 +14,7 @@ class LogEntry {
   double? latitude;
   double? longitude;
   String? notes;
+  String? species; // drevesna vrsta
 
   @Property(type: PropertyType.date)
   DateTime createdAt;
@@ -30,6 +31,7 @@ class LogEntry {
     this.latitude,
     this.longitude,
     this.notes,
+    this.species,
     int? batchId,
     int? parcelId,
     DateTime? createdAt,
@@ -53,7 +55,10 @@ class LogEntry {
   bool get hasLocation => latitude != null && longitude != null;
 
   // Convenience getters for relation IDs
+  @Transient()
   int? get batchId => batch.targetId == 0 ? null : batch.targetId;
+
+  @Transient()
   int? get parcelId => parcel.targetId == 0 ? null : parcel.targetId;
 
   LogEntry copyWith({
@@ -64,6 +69,7 @@ class LogEntry {
     double? latitude,
     double? longitude,
     String? notes,
+    String? species,
     int? batchId,
     int? parcelId,
     DateTime? createdAt,
@@ -76,6 +82,7 @@ class LogEntry {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       notes: notes ?? this.notes,
+      species: species ?? this.species,
       createdAt: createdAt ?? this.createdAt,
     );
     // Copy relations

@@ -10,6 +10,7 @@ import '../widgets/add_log_sheet.dart';
 import '../widgets/conversion_settings_sheet.dart';
 import '../widgets/save_batch_sheet.dart';
 import '../widgets/saved_batches_sheet.dart';
+import '../widgets/species_management_sheet.dart';
 
 class LogsTab extends StatelessWidget {
   const LogsTab({super.key});
@@ -262,6 +263,14 @@ class LogsTab extends StatelessWidget {
     );
   }
 
+  Future<void> _showSpeciesManagement(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => const SpeciesManagementSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -287,9 +296,21 @@ class LogsTab extends StatelessWidget {
                 _showExportMenu(context);
               } else if (value == 'delete_all') {
                 _deleteAllLogs(context);
+              } else if (value == 'manage_species') {
+                _showSpeciesManagement(context);
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'manage_species',
+                child: Row(
+                  children: [
+                    Icon(Icons.forest, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text('Upravljanje vrst'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'export',
                 child: Row(
@@ -370,17 +391,7 @@ class LogsTab extends StatelessWidget {
                 Expanded(
                   child: provider.logEntries.isEmpty
                       ? _buildEmptyState(context)
-                      : ListView.builder(
-                          itemCount: provider.logEntries.length,
-                          itemBuilder: (context, index) {
-                            final entry = provider.logEntries[index];
-                            return LogCard(
-                              logEntry: entry,
-                              onTap: () => _editLogEntry(context, entry),
-                              onDismissed: () => _deleteLogEntry(context, entry),
-                            );
-                          },
-                        ),
+                      : _buildGroupedLogsList(context, provider),
                 ),
               ],
             ),
@@ -392,6 +403,94 @@ class LogsTab extends StatelessWidget {
         onPressed: () => _addLogEntry(context),
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  Widget _buildGroupedLogsList(BuildContext context, LogsProvider provider) {
+    // Group logs by species
+    final groupedLogs = <String, List<LogEntry>>{};
+    for (final entry in provider.logEntries) {
+      final species = entry.species ?? 'Neznana vrsta';
+      if (!groupedLogs.containsKey(species)) {
+        groupedLogs[species] = [];
+      }
+      groupedLogs[species]!.add(entry);
+    }
+
+    // Progressive enhancement: only show grouping if more than one species
+    if (groupedLogs.length <= 1) {
+      return ListView.builder(
+        itemCount: provider.logEntries.length,
+        itemBuilder: (context, index) {
+          final entry = provider.logEntries[index];
+          return LogCard(
+            logEntry: entry,
+            onTap: () => _editLogEntry(context, entry),
+            onDismissed: () => _deleteLogEntry(context, entry),
+          );
+        },
+      );
+    }
+
+    // Sort species alphabetically, but put "Neznana vrsta" at the end
+    final sortedSpecies = groupedLogs.keys.toList()
+      ..sort((a, b) {
+        if (a == 'Neznana vrsta') return 1;
+        if (b == 'Neznana vrsta') return -1;
+        return a.compareTo(b);
+      });
+
+    return ListView.builder(
+      itemCount: sortedSpecies.length,
+      itemBuilder: (context, groupIndex) {
+        final species = sortedSpecies[groupIndex];
+        final entries = groupedLogs[species]!;
+        final count = entries.length;
+        final totalVolume = entries.fold<double>(0, (sum, entry) => sum + entry.volume);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Species header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.grey[100],
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.forest,
+                    size: 20,
+                    color: Colors.green[700],
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    species,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green[800],
+                        ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '$count hlodov • ${totalVolume.toStringAsFixed(2)} m³',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            // Logs in this group
+            ...entries.map((entry) {
+              return LogCard(
+                logEntry: entry,
+                onTap: () => _editLogEntry(context, entry),
+                onDismissed: () => _deleteLogEntry(context, entry),
+              );
+            }),
+          ],
+        );
+      },
     );
   }
 

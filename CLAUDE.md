@@ -25,6 +25,30 @@ flutter build android    # Build for Android
 flutter build macos      # Build for macOS
 ```
 
+## Android Signing Configuration
+
+Production keystore is stored **outside the project directory** at `~/android-keystores/gozdar-release-key.jks` to prevent deletion by `flutter clean`.
+
+### Configuration Files
+- **Keystore location:** `~/android-keystores/gozdar-release-key.jks`
+- **Key alias:** `gozdar-release`
+- **Credentials:** Stored in `android/key.properties` (gitignored)
+
+### Backup & Security
+- **IMPORTANT:** Backup the keystore file and passwords securely
+- The keystore cannot be regenerated if lost
+- `key.properties` is gitignored and should never be committed
+- Default passwords are set to `gozdar2024` (change for production use)
+
+### Regenerating Keystore (if needed)
+```bash
+keytool -genkey -v -keystore ~/android-keystores/gozdar-release-key.jks \
+  -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 \
+  -alias gozdar-release
+```
+
+After regenerating, update `android/key.properties` with new passwords.
+
 ## Architecture
 
 ### Service Layer (Singletons)

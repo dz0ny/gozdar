@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/log_entry.dart';
+import '../services/species_service.dart';
 
 /// Bottom sheet for adding a new log entry
 class AddLogSheet extends StatefulWidget {
@@ -31,11 +32,23 @@ class _AddLogSheetState extends State<AddLogSheet> {
   bool _isSaving = false;
   int _addedCount = 0;
 
+  final _speciesService = SpeciesService();
+  List<String> _availableSpecies = [];
+  String? _selectedSpecies;
+
   @override
   void initState() {
     super.initState();
+    _loadSpecies();
     _diameterController.addListener(_updateVolume);
     _lengthController.addListener(_updateVolume);
+  }
+
+  Future<void> _loadSpecies() async {
+    final species = await _speciesService.getSpecies();
+    setState(() {
+      _availableSpecies = species;
+    });
   }
 
   @override
@@ -95,6 +108,7 @@ class _AddLogSheetState extends State<AddLogSheet> {
       volume: _calculatedVolume!,
       latitude: _latitude,
       longitude: _longitude,
+      species: _selectedSpecies,
       batchId: widget.batchId,
     );
   }
@@ -185,6 +199,44 @@ class _AddLogSheetState extends State<AddLogSheet> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _selectedSpecies,
+                decoration: InputDecoration(
+                  labelText: 'Drevesna vrsta',
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.forest, size: 18),
+                  suffixIcon: _selectedSpecies != null
+                      ? IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () {
+                            setState(() {
+                              _selectedSpecies = null;
+                            });
+                          },
+                          visualDensity: VisualDensity.compact,
+                        )
+                      : null,
+                ),
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: null,
+                    child: Text('Ni izbrano'),
+                  ),
+                  ..._availableSpecies.map((species) {
+                    return DropdownMenuItem<String>(
+                      value: species,
+                      child: Text(species),
+                    );
+                  }),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedSpecies = value;
+                  });
+                },
               ),
               const SizedBox(height: 12),
               if (_calculatedVolume != null)

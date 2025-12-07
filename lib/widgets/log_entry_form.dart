@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/log_entry.dart';
+import '../services/species_service.dart';
 
 class LogEntryForm extends StatefulWidget {
   final LogEntry? logEntry;
@@ -28,14 +29,26 @@ class _LogEntryFormState extends State<LogEntryForm> {
   bool _isLoadingLocation = false;
   double? _calculatedVolume;
 
+  final _speciesService = SpeciesService();
+  List<String> _availableSpecies = [];
+  String? _selectedSpecies;
+
   @override
   void initState() {
     super.initState();
+    _loadSpecies();
     if (widget.logEntry != null) {
       _initializeFromEntry(widget.logEntry!);
     }
     _diameterController.addListener(_updateCalculatedVolume);
     _lengthController.addListener(_updateCalculatedVolume);
+  }
+
+  Future<void> _loadSpecies() async {
+    final species = await _speciesService.getSpecies();
+    setState(() {
+      _availableSpecies = species;
+    });
   }
 
   void _initializeFromEntry(LogEntry entry) {
@@ -48,6 +61,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
       _volumeController.text = entry.volume.toStringAsFixed(3);
     }
     _notesController.text = entry.notes ?? '';
+    _selectedSpecies = entry.species;
     _latitude = entry.latitude;
     _longitude = entry.longitude;
     _calculatedVolume = entry.volume;
@@ -139,6 +153,54 @@ class _LogEntryFormState extends State<LogEntryForm> {
     });
   }
 
+  Future<void> _showAddSpeciesDialog() async {
+    final controller = TextEditingController();
+    final newSpecies = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Dodaj novo vrsto'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Ime vrste',
+              hintText: 'Npr. Hrast',
+            ),
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Prekliči'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (controller.text.trim().isNotEmpty) {
+                  Navigator.pop(context, controller.text.trim());
+                }
+              },
+              child: const Text('Dodaj'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (newSpecies != null && newSpecies.isNotEmpty) {
+      await _speciesService.addSpecies(newSpecies);
+      await _loadSpecies();
+      setState(() {
+        _selectedSpecies = newSpecies;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Vrsta "$newSpecies" dodana')),
+        );
+      }
+    }
+  }
+
   void _saveEntry() {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -170,6 +232,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
       latitude: _latitude,
       longitude: _longitude,
       notes: _notesController.text.isEmpty ? null : _notesController.text,
+      species: _selectedSpecies,
       createdAt: widget.logEntry?.createdAt,
     );
 
@@ -343,6 +406,44 @@ class _LogEntryFormState extends State<LogEntryForm> {
                 },
               ),
             ],
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedSpecies,
+                    decoration: const InputDecoration(
+                      labelText: 'Drevesna vrsta (neobvezno)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.forest),
+                    ),
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('Ni izbrano'),
+                      ),
+                      ..._availableSpecies.map((species) {
+                        return DropdownMenuItem<String>(
+                          value: species,
+                          child: Text(species),
+                        );
+                      }),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedSpecies = value;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  tooltip: 'Dodaj novo vrsto',
+                  onPressed: _showAddSpeciesDialog,
+                ),
+              ],
+            ),
             const SizedBox(height: 24),
             Text(
               'Lokacija',
