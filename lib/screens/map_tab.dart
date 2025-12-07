@@ -12,6 +12,7 @@ import '../models/navigation_target.dart';
 import '../models/log_entry.dart';
 import '../utils/slovenian_crs.dart';
 import '../services/database_service.dart';
+import '../services/analytics_service.dart';
 import '../widgets/log_entry_form.dart';
 import '../services/map_preferences_service.dart';
 import '../services/cadastral_service.dart';
@@ -108,6 +109,7 @@ class MapTabState extends State<MapTab> {
   void setNavigationTarget(NavigationTarget target, {bool zoomIn = true}) {
     // Update provider state
     context.read<MapProvider>().setNavigationTarget(target);
+    AnalyticsService().logNavigationStarted();
 
     setState(() {
       _navigationTarget = target;
@@ -132,6 +134,7 @@ class MapTabState extends State<MapTab> {
   /// Show compass dialog for navigation target
   void _showCompassForTarget() {
     if (_navigationTarget == null) return;
+    AnalyticsService().logCompassOpened();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -399,6 +402,7 @@ class MapTabState extends State<MapTab> {
         targetZoom,
         0, // Reset rotation to north
       );
+      AnalyticsService().logGpsCentered();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -429,6 +433,7 @@ class MapTabState extends State<MapTab> {
       final success = await context.read<MapProvider>().addLocation(location);
       if (success) {
         await _loadLocations(); // Sync local state
+        AnalyticsService().logLocationAdded();
       }
 
       if (mounted) {
@@ -479,6 +484,7 @@ class MapTabState extends State<MapTab> {
       final success = await context.read<MapProvider>().addLocation(location);
       if (success) {
         await _loadLocations(); // Sync local state
+        AnalyticsService().logSecnjaAdded();
       }
 
       if (mounted) {
@@ -564,6 +570,7 @@ class MapTabState extends State<MapTab> {
         );
         if (success) {
           await _loadLocations(); // Sync local state
+          AnalyticsService().logLocationDeleted();
         }
 
         if (mounted) {
@@ -675,6 +682,10 @@ class MapTabState extends State<MapTab> {
       if (success) {
         // Reload parcels to show the new one on the map
         await _loadParcels();
+        AnalyticsService().logParcelImportedCadastral();
+
+        // Download tiles for offline use in the background
+        _downloadTilesForParcel(cadastralParcel.polygon);
       }
 
       if (mounted) {
@@ -703,6 +714,39 @@ class MapTabState extends State<MapTab> {
     }
   }
 
+  /// Download tiles for a parcel's bounding box in the background
+  void _downloadTilesForParcel(List<LatLng> polygon) {
+    if (polygon.isEmpty) return;
+
+    // Calculate bounding box from polygon with some padding
+    double minLat = polygon.first.latitude;
+    double maxLat = polygon.first.latitude;
+    double minLng = polygon.first.longitude;
+    double maxLng = polygon.first.longitude;
+
+    for (final point in polygon) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    // Add ~100m padding around the parcel
+    const padding = 0.001; // ~100m in degrees
+    minLat -= padding;
+    maxLat += padding;
+    minLng -= padding;
+    maxLng += padding;
+
+    final bounds = LatLngBounds(
+      LatLng(minLat, minLng),
+      LatLng(maxLat, maxLng),
+    );
+
+    // Start background download (fire-and-forget)
+    _tileCacheService.downloadForParcelBounds(bounds);
+  }
+
   /// Switch base layer while preserving current position
   void _switchBaseLayer(MapLayer newLayer) {
     final currentCenter = _mapController.camera.center;
@@ -714,6 +758,9 @@ class MapTabState extends State<MapTab> {
     setState(() {
       _currentBaseLayer = newLayer;
     });
+
+    // Track layer change
+    AnalyticsService().logMapLayerChanged(layerName: newLayer.type.name);
 
     // Move to same position with adjusted zoom if needed, preserving rotation
     if (newZoom != currentZoom) {
@@ -740,13 +787,18 @@ class MapTabState extends State<MapTab> {
         _switchBaseLayer(layer);
       },
       onOverlayToggled: (type) {
+        final wasEnabled = _activeOverlays.contains(type);
         setState(() {
-          if (_activeOverlays.contains(type)) {
+          if (wasEnabled) {
             _activeOverlays.remove(type);
           } else {
             _activeOverlays.add(type);
           }
         });
+        AnalyticsService().logMapOverlayToggled(
+          overlayName: type.name,
+          enabled: !wasEnabled,
+        );
         _saveMapState();
       },
     );
@@ -1021,8 +1073,51 @@ class MapTabState extends State<MapTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch provider for changes (including worker URL)
-    context.watch<MapProvider>();
+    // Watch provider for changes (including worker URL, parcels, locations)
+    final mapProvider = context.watch<MapProvider>();
+
+    // Sync parcels from provider when they change
+    if (mapProvider.parcels.length != _parcels.length ||
+        (mapProvider.parcels.isNotEmpty &&
+            _parcels.isNotEmpty &&
+            mapProvider.parcels.first.id != _parcels.first.id)) {
+      // Schedule sync after build to avoid setState during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _parcels = List.from(mapProvider.parcels);
+          });
+        }
+      });
+    }
+
+    // Sync geolocated logs from provider when they change
+    if (mapProvider.geolocatedLogs.length != _geolocatedLogs.length ||
+        (mapProvider.geolocatedLogs.isNotEmpty &&
+            _geolocatedLogs.isNotEmpty &&
+            mapProvider.geolocatedLogs.first.id != _geolocatedLogs.first.id)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _geolocatedLogs = List.from(mapProvider.geolocatedLogs);
+          });
+        }
+      });
+    }
+
+    // Sync locations from provider when they change
+    if (mapProvider.locations.length != _locations.length ||
+        (mapProvider.locations.isNotEmpty &&
+            _locations.isNotEmpty &&
+            mapProvider.locations.first.id != _locations.first.id)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _locations = List.from(mapProvider.locations);
+          });
+        }
+      });
+    }
 
     // Show loading indicator while preferences are loading
     if (_isLoadingPreferences) {
@@ -1345,19 +1440,29 @@ class MapTabState extends State<MapTab> {
               },
             ),
 
-          // Attribution overlay (bottom left)
+          // Attribution overlay (bottom left) - tap to see usage rights
           Positioned(
             bottom: 4,
             left: 4,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                _buildAttributionText(),
-                style: const TextStyle(color: Colors.white, fontSize: 9),
+            child: GestureDetector(
+              onTap: _showUsageRightsDialog,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.info_outline, color: Colors.white, size: 10),
+                    const SizedBox(width: 4),
+                    Text(
+                      _buildAttributionText(),
+                      style: const TextStyle(color: Colors.white, fontSize: 9),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1392,6 +1497,193 @@ class MapTabState extends State<MapTab> {
       onDelete: (location) {
         _showDeleteLocationDialog(location);
       },
+    );
+  }
+
+  /// Show detailed usage rights dialog
+  void _showUsageRightsDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Handle
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Pravice uporabe podatkov',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    _buildUsageRightsSection(
+                      context,
+                      'Geodetska uprava RS',
+                      'prostor.zgs.gov.si',
+                      'Podatki Geodetske uprave Republike Slovenije (ortofoto, kataster, '
+                          'topografske karte) so na voljo pod pogoji odprtih podatkov. '
+                          'Uporaba je dovoljena za nekomercialne in komercialne namene '
+                          'ob navedbi vira.',
+                      'https://www.gov.si/drzavni-organi/organi-v-sestavi/geodetska-uprava/',
+                    ),
+                    _buildUsageRightsSection(
+                      context,
+                      'Zavod za gozdove Slovenije',
+                      'ZGS',
+                      'Gozdarski podatki (gozdne združbe, sestojna karta, rastiščni koeficienti) '
+                          'so javno dostopni. Uporaba je dovoljena za informativne namene. '
+                          'Za komercialno uporabo je potrebno pridobiti dovoljenje ZGS.',
+                      'https://www.zgs.si/',
+                    ),
+                    _buildUsageRightsSection(
+                      context,
+                      'OpenStreetMap',
+                      'OSM',
+                      'Kartografski podatki OpenStreetMap so na voljo pod licenco '
+                          'Open Database License (ODbL). Uporaba je dovoljena ob navedbi '
+                          '"© OpenStreetMap contributors".',
+                      'https://www.openstreetmap.org/copyright',
+                    ),
+                    _buildUsageRightsSection(
+                      context,
+                      'ESRI',
+                      'Esri',
+                      'Esri satelitski posnetki so na voljo za osebno in nekomercialno '
+                          'uporabo. Za komercialno uporabo je potrebna licenca.',
+                      'https://www.esri.com/en-us/legal/terms/full-master-agreement',
+                    ),
+                    _buildUsageRightsSection(
+                      context,
+                      'Google',
+                      'Google',
+                      'Google Maps podatki so na voljo pod pogoji Google Maps Platform. '
+                          'Uporaba je dovoljena za osebne namene v skladu s pogoji uporabe.',
+                      'https://cloud.google.com/maps-platform/terms',
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .secondaryContainer
+                            .withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Ta aplikacija je namenjena informativni uporabi. '
+                              'Za uradne podatke se obrnite na pristojne institucije.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color:
+                                    Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build a single usage rights section
+  Widget _buildUsageRightsSection(
+    BuildContext context,
+    String title,
+    String shortName,
+    String description,
+    String url,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  shortName,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            description,
+            style: TextStyle(
+              fontSize: 13,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            url,
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const Divider(height: 24),
+        ],
+      ),
     );
   }
 

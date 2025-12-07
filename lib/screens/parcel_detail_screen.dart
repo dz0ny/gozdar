@@ -9,6 +9,7 @@ import '../models/navigation_target.dart';
 import '../services/database_service.dart';
 import '../services/kml_service.dart';
 import '../providers/logs_provider.dart';
+import '../providers/map_provider.dart';
 import '../widgets/parcel_silhouette.dart';
 import '../main.dart';
 import 'parcel_editor.dart';
@@ -483,6 +484,13 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         final deleted = await _databaseService.deleteParcelWithContents(
           _parcel.id,
         );
+        // Notify map provider to refresh parcels, logs, and locations on map
+        if (mounted) {
+          final mapProvider = context.read<MapProvider>();
+          mapProvider.loadParcels();
+          mapProvider.loadGeolocatedLogs();
+          mapProvider.loadLocations();
+        }
         if (mounted) {
           final logsCount = deleted['logs'] ?? 0;
           final locationsCount = deleted['locations'] ?? 0;

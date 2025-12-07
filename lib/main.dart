@@ -1,6 +1,11 @@
 import 'dart:io' show Platform;
+import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'firebase_options.dart';
 import 'screens/map_tab.dart';
 import 'screens/logs_tab.dart';
 import 'screens/forest_tab.dart';
@@ -15,9 +20,40 @@ import 'theme/app_theme.dart';
 import 'models/navigation_target.dart';
 import 'widgets/update_banner.dart';
 import 'widgets/worker_settings_dialog.dart';
+import 'services/analytics_service.dart';
+
+/// Firebase Analytics instance for tracking app usage (may be null if Firebase not configured)
+FirebaseAnalytics? _analytics;
+FirebaseAnalytics? get analytics => _analytics;
+
+/// Global analytics service instance
+final analyticsService = AnalyticsService();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase (gracefully handle missing platform config)
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    _analytics = FirebaseAnalytics.instance;
+
+    // Pass all uncaught "fatal" errors from the framework to Crashlytics
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
+
+    // Pass all uncaught asynchronous errors to Crashlytics
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  } catch (e) {
+    debugPrint('Firebase initialization failed: $e');
+    // Continue without Firebase - analytics and crashlytics will be null
+  }
+
   await DatabaseService().initialize();
   await TileCacheService.initialize();
   await OnboardingService.initialize();
@@ -26,6 +62,9 @@ void main() async {
   if (Platform.isAndroid) {
     await UpdateService().init();
   }
+
+  // Log app start
+  analyticsService.logAppStart();
 
   runApp(const GozdarApp());
 }
@@ -55,7 +94,8 @@ class _GozdarAppState extends State<GozdarApp> {
           create: (_) => MapProvider()
             ..loadPreferences()
             ..loadLocations()
-            ..loadParcels(),
+            ..loadParcels()
+            ..loadGeolocatedLogs(),
         ),
         if (Platform.isAndroid)
           ChangeNotifierProvider.value(value: UpdateService()),
@@ -146,6 +186,15 @@ class MainScreenState extends State<MainScreen> {
       _currentIndex = index;
     });
 
+    // Track tab switch
+    final tabNames = [
+      AnalyticsService.screenMap,
+      AnalyticsService.screenForest,
+      AnalyticsService.screenLogs,
+    ];
+    analyticsService.logTabSwitched(tabName: tabNames[index]);
+    analyticsService.logScreenView(tabNames[index]);
+
     // Refresh ForestTab when selected
     if (index == 1) {
       _forestTabKey.currentState?.refresh();
@@ -153,6 +202,7 @@ class MainScreenState extends State<MainScreen> {
   }
 
   void _showWorkerSettingsDialog() {
+    analyticsService.logWorkerSettingsOpened();
     showDialog(
       context: context,
       builder: (context) => WorkerSettingsDialog(
@@ -165,6 +215,7 @@ class MainScreenState extends State<MainScreen> {
 
   Future<void> _resetOnboarding() async {
     await OnboardingService.instance.resetOnboarding();
+    analyticsService.logOnboardingReset();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

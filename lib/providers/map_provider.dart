@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/map_location.dart';
 import '../models/map_layer.dart';
 import '../models/parcel.dart';
+import '../models/log_entry.dart';
 import '../models/navigation_target.dart';
 import '../services/database_service.dart';
 import '../services/map_preferences_service.dart';
@@ -37,8 +38,10 @@ class MapProvider extends ChangeNotifier {
   // Data state
   List<MapLocation> _locations = [];
   List<Parcel> _parcels = [];
+  List<LogEntry> _geolocatedLogs = [];
   bool _isLoadingLocations = false;
   bool _isLoadingParcels = false;
+  bool _isLoadingLogs = false;
   bool _isQueryingParcel = false;
 
   // Navigation state
@@ -63,8 +66,10 @@ class MapProvider extends ChangeNotifier {
   // Getters - Data
   List<MapLocation> get locations => List.unmodifiable(_locations);
   List<Parcel> get parcels => List.unmodifiable(_parcels);
+  List<LogEntry> get geolocatedLogs => List.unmodifiable(_geolocatedLogs);
   bool get isLoadingLocations => _isLoadingLocations;
   bool get isLoadingParcels => _isLoadingParcels;
+  bool get isLoadingLogs => _isLoadingLogs;
   bool get isQueryingParcel => _isQueryingParcel;
 
   // Getters - Navigation
@@ -221,6 +226,25 @@ class MapProvider extends ChangeNotifier {
       _error = e.toString();
       notifyListeners();
       return false;
+    }
+  }
+
+  // Log operations
+
+  /// Load all geolocated logs from database (logs with latitude/longitude)
+  Future<void> loadGeolocatedLogs() async {
+    _isLoadingLogs = true;
+    notifyListeners();
+
+    try {
+      final allLogs = await _databaseService.getAllLogs();
+      _geolocatedLogs = allLogs.where((log) => log.hasLocation).toList();
+      _isLoadingLogs = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoadingLogs = false;
+      _error = e.toString();
+      notifyListeners();
     }
   }
 

@@ -232,4 +232,68 @@ class TileCacheService {
       _isDownloading = false;
     }
   }
+
+  /// Download tiles for a parcel's bounding box in the background
+  /// Downloads ESRI satellite imagery at zoom levels 14-17 for field use
+  /// This is non-blocking and will not show progress to the user
+  Future<void> downloadForParcelBounds(LatLngBounds bounds) async {
+    if (!_initialized) return;
+    if (_isDownloading) return; // Skip if another download is in progress
+
+    // ESRI World Imagery - best for field navigation
+    const urlTemplate =
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+
+    // Download at field-useful zoom levels (14-17)
+    // 14: ~1km view, 15: ~500m, 16: ~250m, 17: ~125m (detail for walking)
+    const minZoom = 14;
+    const maxZoom = 17;
+
+    // Estimate tile count - skip if too many tiles
+    final tileCount = estimateTileCount(
+      bounds: bounds,
+      minZoom: minZoom,
+      maxZoom: maxZoom,
+    );
+
+    // Don't download if more than 500 tiles (avoid excessive downloads)
+    if (tileCount > 500) {
+      debugPrint(
+        'TileCacheService: Skipping parcel download - too many tiles ($tileCount)',
+      );
+      return;
+    }
+
+    debugPrint(
+      'TileCacheService: Starting background download for parcel ($tileCount tiles)',
+    );
+
+    _isDownloading = true;
+
+    try {
+      final store = FMTCStore(_generalStore);
+      final region = RectangleRegion(bounds);
+
+      final downloadable = region.toDownloadable(
+        minZoom: minZoom,
+        maxZoom: maxZoom,
+        options: TileLayer(urlTemplate: urlTemplate),
+      );
+
+      final download = store.download.startForeground(region: downloadable);
+
+      await for (final progress in download.downloadProgress) {
+        // Silent progress - no callback
+        if (progress.percentageProgress >= 100) break;
+      }
+
+      debugPrint('TileCacheService: Parcel tiles downloaded successfully');
+    } catch (e, stackTrace) {
+      debugPrint(
+        'TileCacheService.downloadForParcelBounds error: $e\n$stackTrace',
+      );
+    } finally {
+      _isDownloading = false;
+    }
+  }
 }

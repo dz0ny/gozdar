@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:provider/provider.dart';
 import '../models/parcel.dart';
+import '../providers/map_provider.dart';
 import '../services/database_service.dart';
 import '../services/kml_service.dart';
+import '../services/analytics_service.dart';
 import '../widgets/parcel_silhouette.dart';
 import 'parcel_editor.dart';
 import 'parcel_detail_screen.dart';
@@ -35,6 +38,29 @@ class ForestTabState extends State<ForestTab> {
 
   List<Parcel> _parcels = [];
   bool _isLoading = true;
+  String? _selectedOwnerFilter; // null means show all
+
+  /// Get unique owners from all parcels
+  List<String> get _uniqueOwners {
+    final owners = _parcels
+        .map((p) => p.owner)
+        .where((owner) => owner != null && owner.isNotEmpty)
+        .cast<String>()
+        .toSet()
+        .toList();
+    owners.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return owners;
+  }
+
+  /// Get filtered parcels based on selected owner
+  List<Parcel> get _filteredParcels {
+    if (_selectedOwnerFilter == null) {
+      return _parcels;
+    }
+    return _parcels
+        .where((p) => p.owner == _selectedOwnerFilter)
+        .toList();
+  }
 
   @override
   void initState() {
@@ -74,6 +100,7 @@ class ForestTabState extends State<ForestTab> {
       try {
         await _databaseService.insertParcel(result);
         await _loadData();
+        AnalyticsService().logParcelAdded(areaMSquared: result.areaM2);
         if (mounted) {
           ScaffoldMessenger.of(
             context,
@@ -90,6 +117,7 @@ class ForestTabState extends State<ForestTab> {
   }
 
   Future<void> _openParcelDetail(Parcel parcel) async {
+    AnalyticsService().logParcelViewed();
     final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (context) => ParcelDetailScreen(parcel: parcel),
@@ -131,6 +159,14 @@ class ForestTabState extends State<ForestTab> {
           parcel.id,
         );
         await _loadData();
+        AnalyticsService().logParcelDeleted();
+        // Notify map provider to refresh parcels, logs, and locations on map
+        if (mounted) {
+          final mapProvider = context.read<MapProvider>();
+          mapProvider.loadParcels();
+          mapProvider.loadGeolocatedLogs();
+          mapProvider.loadLocations();
+        }
         if (mounted) {
           final logsCount = deleted['logs'] ?? 0;
           final locationsCount = deleted['locations'] ?? 0;
@@ -163,6 +199,7 @@ class ForestTabState extends State<ForestTab> {
 
     try {
       await KmlService.exportToKml(_parcels);
+      AnalyticsService().logParcelExportedKml(count: _parcels.length);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -235,6 +272,7 @@ class ForestTabState extends State<ForestTab> {
           await _databaseService.insertParcel(parcel);
         }
         await _loadData();
+        AnalyticsService().logParcelImportedKml(count: parcels.length);
         if (mounted) {
           final totalArea = parcels.fold(
             0.0,
@@ -339,6 +377,7 @@ class ForestTabState extends State<ForestTab> {
       }
 
       await _loadData();
+      AnalyticsService().logParcelImportedKml(count: 1);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -358,18 +397,105 @@ class ForestTabState extends State<ForestTab> {
     }
   }
 
+  Future<void> _showOwnerFilterDialog() async {
+    final owners = _uniqueOwners;
+
+    if (owners.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ni parcel z določenimi lastniki')),
+      );
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_list),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Filtriraj po lastniku',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // "Show all" option
+            ListTile(
+              leading: Icon(
+                Icons.clear_all,
+                color: _selectedOwnerFilter == null
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+              ),
+              title: const Text('Prikaži vse'),
+              selected: _selectedOwnerFilter == null,
+              onTap: () {
+                setState(() => _selectedOwnerFilter = null);
+                AnalyticsService().logOwnerFilterApplied(hasFilter: false);
+                Navigator.of(context).pop();
+              },
+            ),
+            const Divider(height: 1),
+            // Owner options
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: owners.length,
+                itemBuilder: (context, index) {
+                  final owner = owners[index];
+                  final parcelCount = _parcels
+                      .where((p) => p.owner == owner)
+                      .length;
+                  final isSelected = _selectedOwnerFilter == owner;
+
+                  return ListTile(
+                    leading: Icon(
+                      Icons.person,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                    title: Text(owner),
+                    subtitle: Text('$parcelCount parcel'),
+                    selected: isSelected,
+                    onTap: () {
+                      setState(() => _selectedOwnerFilter = owner);
+                      AnalyticsService().logOwnerFilterApplied(hasFilter: true);
+                      Navigator.of(context).pop();
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Calculate totals from parcel data
-    final totalArea = _parcels.fold(0.0, (double sum, p) => sum + p.areaM2);
+    // Use filtered parcels for display
+    final displayParcels = _filteredParcels;
+
+    // Calculate totals from filtered parcel data
+    final totalArea = displayParcels.fold(0.0, (double sum, p) => sum + p.areaM2);
     final totalAreaFormatted = totalArea >= 10000
         ? '${(totalArea / 10000).toStringAsFixed(2)} ha'
         : '${totalArea.toStringAsFixed(0)} m²';
 
-    // Sum up wood cut and trees from all parcels
+    // Sum up wood cut and trees from filtered parcels
     int totalTrees = 0;
     double totalVolume = 0.0;
-    for (final parcel in _parcels) {
+    for (final parcel in displayParcels) {
       totalTrees += parcel.treesCut;
       totalVolume += parcel.woodCut;
     }
@@ -378,6 +504,15 @@ class ForestTabState extends State<ForestTab> {
       appBar: AppBar(
         title: const Text('Moj Gozd'),
         actions: [
+          // Owner filter button
+          IconButton(
+            icon: Badge(
+              isLabelVisible: _selectedOwnerFilter != null,
+              child: const Icon(Icons.person),
+            ),
+            tooltip: 'Filtriraj po lastniku',
+            onPressed: _showOwnerFilterDialog,
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
@@ -433,7 +568,7 @@ class ForestTabState extends State<ForestTab> {
                           ),
                           _SummaryItem(
                             icon: Icons.grid_view,
-                            value: '${_parcels.length}',
+                            value: '${displayParcels.length}',
                             label: 'Parcel',
                           ),
                           _SummaryItem(
@@ -453,49 +588,77 @@ class ForestTabState extends State<ForestTab> {
 
                   // Parcels list
                   Expanded(
-                    child: _parcels.isEmpty
+                    child: displayParcels.isEmpty
                         ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.park_outlined,
-                                  size: 64,
-                                  color: Colors.grey[600],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Ni še parcel',
-                                  style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(color: Colors.grey[500]),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Uvozite KML, narišite parcelo ali\ndolgo pritisnite na karti za uvoz iz katastra',
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(color: Colors.grey[600]),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 24),
-                                OutlinedButton.icon(
-                                  onPressed: _importKml,
-                                  icon: const Icon(Icons.file_upload),
-                                  label: const Text('Uvozi KML'),
-                                ),
-                                const SizedBox(height: 12),
-                                FilledButton.icon(
-                                  onPressed: _addParcel,
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Dodaj parcelo'),
-                                ),
-                              ],
-                            ),
+                            child: _selectedOwnerFilter != null
+                                // Filter active but no matching parcels
+                                ? Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.person_off,
+                                        size: 64,
+                                        color: Colors.grey[600],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Ni parcel za "$_selectedOwnerFilter"',
+                                        style: Theme.of(context).textTheme.titleLarge
+                                            ?.copyWith(color: Colors.grey[500]),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      OutlinedButton.icon(
+                                        onPressed: () {
+                                          setState(() => _selectedOwnerFilter = null);
+                                        },
+                                        icon: const Icon(Icons.clear_all),
+                                        label: const Text('Prikaži vse'),
+                                      ),
+                                    ],
+                                  )
+                                // No parcels at all
+                                : Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.park_outlined,
+                                        size: 64,
+                                        color: Colors.grey[600],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Ni še parcel',
+                                        style: Theme.of(context).textTheme.titleLarge
+                                            ?.copyWith(color: Colors.grey[500]),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Uvozite KML, narišite parcelo ali\ndolgo pritisnite na karti za uvoz iz katastra',
+                                        style: Theme.of(context).textTheme.bodyMedium
+                                            ?.copyWith(color: Colors.grey[600]),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      OutlinedButton.icon(
+                                        onPressed: _importKml,
+                                        icon: const Icon(Icons.file_upload),
+                                        label: const Text('Uvozi KML'),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      FilledButton.icon(
+                                        onPressed: _addParcel,
+                                        icon: const Icon(Icons.add),
+                                        label: const Text('Dodaj parcelo'),
+                                      ),
+                                    ],
+                                  ),
                           )
                         : ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: _parcels.length,
+                            itemCount: displayParcels.length,
                             itemBuilder: (context, index) {
-                              final parcel = _parcels[index];
+                              final parcel = displayParcels[index];
 
                               return Dismissible(
                                 key: Key('parcel_${parcel.id}'),
