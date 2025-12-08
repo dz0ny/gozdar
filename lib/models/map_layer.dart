@@ -27,9 +27,11 @@ enum MapLayerType {
   openStreetMap,
   openTopoMap,
   esriWorldImagery,
+  esriTopoMap,
   googleHybrid,
-  googleTerrain,
   ortofoto,
+  ortofoto2023,
+  ortofoto2022,
   dofIr,
   dmr,
 
@@ -158,20 +160,21 @@ class MapLayer {
     maxZoom: 19,
   );
 
+  /// ESRI World Topo Map - Topographic map
+  static const esriTopoMap = MapLayer(
+    type: MapLayerType.esriTopoMap,
+    name: 'ESRI Topo',
+    urlTemplate:
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: '© Esri',
+    maxZoom: 19,
+  );
+
   /// Google Hybrid - Satellite with labels
   static const googleHybrid = MapLayer(
     type: MapLayerType.googleHybrid,
     name: 'Google Hibrid',
     urlTemplate: 'http://mt0.google.com/vt/lyrs=y&hl=sl&x={x}&y={y}&z={z}',
-    attribution: '© Google',
-    maxZoom: 20,
-  );
-
-  /// Google Terrain - Terrain map
-  static const googleTerrain = MapLayer(
-    type: MapLayerType.googleTerrain,
-    name: 'Google Teren',
-    urlTemplate: 'http://mt0.google.com/vt/lyrs=p&hl=sl&x={x}&y={y}&z={z}',
     attribution: '© Google',
     maxZoom: 20,
   );
@@ -185,6 +188,30 @@ class MapLayer {
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
     wmsLayers: ['pregledovalnik:DOF_2024'],
+    wmsFormat: 'image/jpeg',
+  );
+
+  /// Ortofoto 2023 - Aerial imagery (Slovenia)
+  static const ortofoto2023 = MapLayer(
+    type: MapLayerType.ortofoto2023,
+    name: 'Ortofoto 2023',
+    attribution: '© GURS',
+    maxZoom: 19,
+    isWms: true,
+    wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
+    wmsLayers: ['pregledovalnik:DOF_2023'],
+    wmsFormat: 'image/jpeg',
+  );
+
+  /// Ortofoto 2022 - Aerial imagery (Slovenia)
+  static const ortofoto2022 = MapLayer(
+    type: MapLayerType.ortofoto2022,
+    name: 'Ortofoto 2022',
+    attribution: '© GURS',
+    maxZoom: 19,
+    isWms: true,
+    wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
+    wmsLayers: ['pregledovalnik:DOF_2022'],
     wmsFormat: 'image/jpeg',
   );
 
@@ -863,9 +890,11 @@ class MapLayer {
     openStreetMap,
     openTopoMap,
     esriWorldImagery,
+    esriTopoMap,
     googleHybrid,
-    googleTerrain,
     ortofoto,
+    ortofoto2023,
+    ortofoto2022,
     dofIr,
     dmr,
   ];

@@ -9,6 +9,7 @@ class MapLayerSelector extends StatefulWidget {
   final ValueChanged<MapLayer> onBaseLayerChanged;
   final ValueChanged<MapLayerType> onOverlayToggled;
   final VoidCallback? onImportFile;
+  final VoidCallback? onDownloadTiles;
 
   const MapLayerSelector({
     super.key,
@@ -18,6 +19,7 @@ class MapLayerSelector extends StatefulWidget {
     required this.onBaseLayerChanged,
     required this.onOverlayToggled,
     this.onImportFile,
+    this.onDownloadTiles,
   });
 
   /// Show the layer selector as a modal bottom sheet
@@ -29,6 +31,7 @@ class MapLayerSelector extends StatefulWidget {
     required ValueChanged<MapLayer> onBaseLayerChanged,
     required ValueChanged<MapLayerType> onOverlayToggled,
     VoidCallback? onImportFile,
+    VoidCallback? onDownloadTiles,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -50,6 +53,7 @@ class MapLayerSelector extends StatefulWidget {
             onBaseLayerChanged: onBaseLayerChanged,
             onOverlayToggled: onOverlayToggled,
             onImportFile: onImportFile,
+            onDownloadTiles: onDownloadTiles,
           ),
         ),
       ),
@@ -67,14 +71,23 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
   String _searchQuery = '';
   final Map<OverlayCategory, bool> _expandedCategories = {};
 
+  // Local state for selections
+  late MapLayer _selectedBaseLayer;
+  late Set<MapLayerType> _selectedOverlays;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // Initialize local state from widget
+    _selectedBaseLayer = widget.currentBaseLayer;
+    _selectedOverlays = Set.from(widget.activeOverlays);
+
     // Expand categories that have active overlays
     for (final category in OverlayCategory.values) {
       final hasActiveOverlay = MapLayer.overlaysByCategory[category]
-              ?.any((layer) => widget.activeOverlays.contains(layer.type)) ??
+              ?.any((layer) => _selectedOverlays.contains(layer.type)) ??
           false;
       _expandedCategories[category] = hasActiveOverlay;
     }
@@ -89,8 +102,9 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
+    return SafeArea(
+      child: Column(
+        children: [
         // Drag handle
         Center(
           child: Container(
@@ -187,7 +201,8 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
             ],
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -202,8 +217,8 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
             MapLayer.openStreetMap,
             MapLayer.openTopoMap,
             MapLayer.esriWorldImagery,
+            MapLayer.esriTopoMap,
             MapLayer.googleHybrid,
-            MapLayer.googleTerrain,
           ],
         ),
         const SizedBox(height: 16),
@@ -212,10 +227,41 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
           'Slovenske karte',
           [
             MapLayer.ortofoto,
+            MapLayer.ortofoto2023,
+            MapLayer.ortofoto2022,
             MapLayer.dofIr,
             MapLayer.dmr,
           ],
         ),
+        const SizedBox(height: 24),
+        // Download tiles button
+        if (widget.onDownloadTiles != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                widget.onDownloadTiles!();
+              },
+              icon: const Icon(Icons.download, size: 20),
+              label: const Text('Prenesi za delo brez povezave'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 1.5,
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
+          ),
         const SizedBox(height: 16),
       ],
     );
@@ -241,7 +287,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
   }
 
   Widget _buildBaseLayerCard(MapLayer layer) {
-    final isSelected = widget.currentBaseLayer.type == layer.type;
+    final isSelected = _selectedBaseLayer.type == layer.type;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
@@ -259,8 +305,10 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
+          setState(() {
+            _selectedBaseLayer = layer;
+          });
           widget.onBaseLayerChanged(layer);
-          setState(() {});
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -328,86 +376,8 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
   Widget _buildOverlaysTab() {
     return Column(
       children: [
-        // Search bar
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Iskanje slojev...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-            ),
-            onChanged: (value) {
-              setState(() => _searchQuery = value.toLowerCase());
-            },
-          ),
-        ),
-        // Active overlays summary
-        if (widget.activeOverlays.isNotEmpty && _searchQuery.isEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.layers,
-                    color: Theme.of(context).colorScheme.onSecondaryContainer,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Aktivnih slojev: ${widget.activeOverlays.length}',
-                      style: TextStyle(
-                        color:
-                            Theme.of(context).colorScheme.onSecondaryContainer,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  if (widget.activeOverlays.isNotEmpty)
-                    TextButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          for (final type in widget.activeOverlays.toList()) {
-                            widget.onOverlayToggled(type);
-                          }
-                        });
-                      },
-                      icon: const Icon(Icons.clear_all, size: 18),
-                      label: const Text('Izklopi vse'),
-                      style: TextButton.styleFrom(
-                        foregroundColor:
-                            Theme.of(context).colorScheme.onSecondaryContainer,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
         // Hint for Slovenian layers
-        if (!widget.currentBaseLayer.isSlovenian &&
-            widget.workerUrl == null &&
-            _searchQuery.isEmpty)
+        if (!_selectedBaseLayer.isSlovenian && widget.workerUrl == null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Container(
@@ -439,7 +409,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
             ),
           ),
         // Import button
-        if (widget.onImportFile != null && _searchQuery.isEmpty)
+        if (widget.onImportFile != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: FilledButton.icon(
@@ -481,7 +451,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
         }
         // Filter by Slovenian availability
         if (!layer.isSlovenian) return true;
-        return widget.currentBaseLayer.isSlovenian ||
+        return _selectedBaseLayer.isSlovenian ||
             widget.workerUrl != null;
       }).toList();
       return layers.isNotEmpty;
@@ -528,14 +498,14 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       }
       // Filter by Slovenian availability
       if (!layer.isSlovenian) return true;
-      return widget.currentBaseLayer.isSlovenian || widget.workerUrl != null;
+      return _selectedBaseLayer.isSlovenian || widget.workerUrl != null;
     }).toList();
 
     if (filteredLayers.isEmpty) return const SizedBox.shrink();
 
     final isExpanded = _expandedCategories[category] ?? false;
     final activeCount = filteredLayers
-        .where((layer) => widget.activeOverlays.contains(layer.type))
+        .where((layer) => _selectedOverlays.contains(layer.type))
         .length;
 
     return Card(
@@ -623,12 +593,18 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
   }
 
   Widget _buildOverlayTile(MapLayer layer) {
-    final isActive = widget.activeOverlays.contains(layer.type);
+    final isActive = _selectedOverlays.contains(layer.type);
 
     return InkWell(
       onTap: () {
+        setState(() {
+          if (isActive) {
+            _selectedOverlays.remove(layer.type);
+          } else {
+            _selectedOverlays.add(layer.type);
+          }
+        });
         widget.onOverlayToggled(layer.type);
-        setState(() {});
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -641,8 +617,14 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
               child: Checkbox(
                 value: isActive,
                 onChanged: (_) {
+                  setState(() {
+                    if (isActive) {
+                      _selectedOverlays.remove(layer.type);
+                    } else {
+                      _selectedOverlays.add(layer.type);
+                    }
+                  });
                   widget.onOverlayToggled(layer.type);
-                  setState(() {});
                 },
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(4),
@@ -686,13 +668,14 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       case MapLayerType.openStreetMap:
         return Icons.map;
       case MapLayerType.openTopoMap:
+      case MapLayerType.esriTopoMap:
         return Icons.terrain;
       case MapLayerType.esriWorldImagery:
       case MapLayerType.googleHybrid:
         return Icons.satellite_alt;
-      case MapLayerType.googleTerrain:
-        return Icons.landscape;
       case MapLayerType.ortofoto:
+      case MapLayerType.ortofoto2023:
+      case MapLayerType.ortofoto2022:
         return Icons.image;
       case MapLayerType.dofIr:
         return Icons.gradient;

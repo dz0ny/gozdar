@@ -51,6 +51,30 @@ keytool -genkey -v -keystore ~/android-keystores/gozdar-release-key.jks \
 
 After regenerating, update `android/key.properties` with new passwords.
 
+## Versioning System
+
+The Makefile manages version numbers in the format: `YYYY.MMDD.DAILY+BUILD`
+
+### Version Components
+- **YYYY.MMDD.DAILY**: Human-readable version name (e.g., `2025.1208.3`)
+  - YYYY: Year
+  - MMDD: Month and day
+  - DAILY: Daily build counter (resets to 1 each day)
+- **BUILD**: Android version code (after the `+`)
+  - **CRITICAL**: Must ALWAYS increment, never decrease
+  - Android refuses to install APKs with lower version codes (security feature)
+  - Never resets, even on new days
+
+### Commands
+```bash
+make version    # Show current and next version
+make bump       # Increment version in pubspec.yaml
+make build      # Auto-bump version and build APK
+```
+
+### Why This Matters
+If version codes decrease (e.g., from 9 to 2 on date change), Android shows "package corrupted" error on updates. Users must uninstall first, losing data. The Makefile now ensures BUILD always increments to prevent this.
+
 ## Architecture
 
 ### Service Layer (Singletons)

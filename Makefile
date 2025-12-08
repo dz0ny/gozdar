@@ -19,14 +19,21 @@ CURRENT_BUILD_NUMBER := $(shell echo $(CURRENT_VERSION) | cut -d'+' -f2)
 CURRENT_MMDD := $(shell echo $(CURRENT_VERSION) | cut -d'.' -f2)
 
 # Calculate new build number
-# If MMDD matches today, increment; otherwise start at 1
-NEW_BUILD_NUMBER := $(shell \
+# IMPORTANT: Build number (version code) must ALWAYS increment for Android updates
+# Never reset to 1, even on date changes
+NEW_BUILD_NUMBER := $(shell echo $$(($(CURRENT_BUILD_NUMBER) + 1)))
+
+# Calculate daily sequence number (resets each day for version name readability)
+DAILY_BUILD := $(shell \
 	if [ "$(CURRENT_MMDD)" = "$(MMDD)" ]; then \
-		echo $$(($(CURRENT_BUILD_NUMBER) + 1)); \
+		echo $(CURRENT_VERSION) | cut -d'.' -f3 | cut -d'+' -f1 | awk '{print $$1 + 1}'; \
 	else \
 		echo 1; \
 	fi)
-NEW_VERSION := $(YEAR).$(MMDD).$(NEW_BUILD_NUMBER)+$(NEW_BUILD_NUMBER)
+
+# Version format: YYYY.MMDD.DAILY+BUILD
+# DAILY resets each day (for readability), BUILD always increments (for Android)
+NEW_VERSION := $(YEAR).$(MMDD).$(DAILY_BUILD)+$(NEW_BUILD_NUMBER)
 
 .PHONY: help version bump build release clean deps analyze test icon
 

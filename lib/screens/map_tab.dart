@@ -902,6 +902,7 @@ class MapTabState extends State<MapTab> {
         _saveMapState();
       },
       onImportFile: _importGeoFile,
+      onDownloadTiles: showTileDownloadDialog,
     );
   }
 
