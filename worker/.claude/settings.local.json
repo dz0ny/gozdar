@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(flutter analyze:*)",
-      "Bash(flutter pub add:*)"
+      "Bash(flutter pub add:*)",
+      "Bash(bun install:*)",
+      "WebFetch(domain:ipi.eprostor.gov.si)",
+      "Bash(bunx wrangler:*)",
+      "Bash(brew install:*)",
+      "Bash(rclone config create:*)",
+      "Bash(rclone purge:*)"
     ],
     "deny": [],
     "ask": []

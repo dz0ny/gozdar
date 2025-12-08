@@ -1,4 +1,5 @@
 const GEOSERVER = 'https://prostor.zgs.gov.si/geoserver/wms';
+const GURS_WMS = 'https://ipi.eprostor.gov.si/wms-si-gurs-kn/wms';
 // const GEOWEBCACHE = 'https://prostor.zgs.gov.si/geowebcache/service/wms'; // Not used to allow on-the-fly rendering
 
 // Base layers (mutually exclusive)
@@ -7,6 +8,8 @@ export const BASE_LAYERS = {
   'otm': { name: 'OpenTopoMap', external: true, url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png' },
   'esri': { name: 'ESRI Satelit', external: true, url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' },
   'ortofoto': { name: 'Ortofoto 2024', proxy: true },
+  'ortofoto-2023': { name: 'Ortofoto 2023', proxy: true },
+  'ortofoto-2022': { name: 'Ortofoto 2022', proxy: true },
   'dof-ir': { name: 'Ortofoto IR', proxy: true },
   'dmr': { name: 'DMR (relief)', proxy: true },
 };
@@ -74,6 +77,18 @@ export const LAYERS = {
   'ortofoto': {
     baseUrl: GEOSERVER,
     layers: 'pregledovalnik:DOF_2024',
+    format: 'image/jpeg',
+    transparent: false,
+  },
+  'ortofoto-2023': {
+    baseUrl: GEOSERVER,
+    layers: 'pregledovalnik:DOF_2023',
+    format: 'image/jpeg',
+    transparent: false,
+  },
+  'ortofoto-2022': {
+    baseUrl: GEOSERVER,
+    layers: 'pregledovalnik:DOF_2022',
     format: 'image/jpeg',
     transparent: false,
   },
