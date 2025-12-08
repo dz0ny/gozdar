@@ -16,7 +16,7 @@ class IntroWizardScreen extends StatefulWidget {
 class _IntroWizardScreenState extends State<IntroWizardScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  final int _totalPages = 8;
+  final int _totalPages = 9;
 
   @override
   void dispose() {
@@ -90,6 +90,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                 children: [
                   _buildWelcomePage(),
                   _buildNavigationPage(),
+                  _buildLogsPage(),
                   _buildLongPressPage(),
                   _buildMarkersPage(),
                   _buildLayersPage(),
@@ -233,6 +234,88 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
     );
   }
 
+  Widget _buildLogsPage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Beleženje hlodovine',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Log entry visualization
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.straighten, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 8),
+                    const Text('Premer: 45 cm'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.height, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 8),
+                    const Text('Dolžina: 4.5 m'),
+                  ],
+                ),
+                const Divider(height: 20),
+                Row(
+                  children: [
+                    Icon(Icons.calculate, color: Colors.green[700]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Volumen: 0.716 m³',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildInfoCard([
+            _buildInfoRow(
+              Icons.forest,
+              'Drevesne vrste',
+              'Beležite vrsto lesa (Smreka, Bukev, Jelka, ...)',
+            ),
+            _buildInfoRow(
+              Icons.calculate,
+              'Samodejni izračun',
+              'Aplikacija izračuna volumen iz premera in dolžine',
+            ),
+            _buildInfoRow(
+              Icons.group,
+              'Razvrščanje',
+              'Hlodi se samodejno razvrstijo po vrstah',
+            ),
+            _buildInfoRow(
+              Icons.settings,
+              'Upravljanje vrst',
+              'Dodajte ali odstranite vrste v meniju ⋮',
+            ),
+          ]),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLongPressPage() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -246,40 +329,73 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          // Simulated long press menu
+          // Icon
           Container(
-            padding: const EdgeInsets.all(12),
+            width: 100,
+            height: 100,
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              color: Theme.of(context).colorScheme.primaryContainer,
+              shape: BoxShape.circle,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildMenuItem(Icons.add_location_alt, 'Dodaj točko', Colors.red),
-                const Divider(height: 8),
-                _buildMenuItem(Icons.forest, 'Dodaj hlodovino', Colors.brown),
-                const Divider(height: 8),
-                _buildMenuItem(Icons.carpenter, 'Označi sečnjo', Colors.deepOrange),
-                const Divider(height: 8),
-                _buildMenuItem(Icons.download, 'Uvozi parcelo', Colors.blue),
-              ],
+            child: Icon(
+              Icons.touch_app,
+              size: 52,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(height: 24),
-          Text(
-            'Držite prst na karti za prikaz tega menija',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+          _buildInfoCard([
+            _buildInfoRow(
+              Icons.add_location_alt,
+              'Dodaj točko',
+              'Shrani lokacijo (mejnik, skladišče)',
+              iconColor: Colors.red,
             ),
-            textAlign: TextAlign.center,
+            _buildInfoRow(
+              Icons.forest,
+              'Dodaj hlodovino',
+              'Beleženje hloda z GPS koordinatami',
+              iconColor: Colors.brown,
+            ),
+            _buildInfoRow(
+              Icons.carpenter,
+              'Označi sečnjo',
+              'Označi drevo za posek na karti',
+              iconColor: Colors.deepOrange,
+            ),
+            _buildInfoRow(
+              Icons.download,
+              'Uvozi parcelo',
+              'Pridobi parcelo iz katastra (KO + številka)',
+              iconColor: Colors.blue,
+            ),
+          ]),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Theme.of(context).colorScheme.tertiary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Držite prst na karti za prikaz menija',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -462,48 +578,66 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          // Compass preview
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.explore,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 24),
-          // Navigation line preview
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.deepOrange,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.navigation, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Mejnik 1 • 45m',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          // Compass and navigation line preview
+          Column(
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
+                child: Icon(
+                  Icons.explore,
+                  size: 52,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.deepOrange,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.navigation, color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Mejnik 1 • 45m',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 24),
-          Text(
-            '1. Odprite parcelo v zavihku Gozd\n'
-            '2. Tapnite na mejno točko\n'
-            '3. Tapnite oranžni trak za kompas',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.8),
-            textAlign: TextAlign.center,
-          ),
+          _buildInfoCard([
+            _buildInfoRow(
+              Icons.forest,
+              'Odprite parcelo',
+              'V zavihku Gozd izberite parcelo',
+            ),
+            _buildInfoRow(
+              Icons.location_on,
+              'Tapnite mejno točko',
+              'Izberite točko na karti parcele',
+            ),
+            _buildInfoRow(
+              Icons.navigation,
+              'Aktivirajte kompas',
+              'Tapnite oranžni navigacijski trak',
+            ),
+            _buildInfoRow(
+              Icons.explore,
+              'Sledite smeri',
+              'Kompas kaže smer in razdaljo do točke',
+            ),
+          ]),
         ],
       ),
     );
@@ -573,20 +707,6 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
     );
   }
 
-  Widget _buildMenuItem(IconData icon, String label, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(width: 12),
-          Text(label, style: const TextStyle(fontSize: 16)),
-        ],
-      ),
-    );
-  }
-
   Widget _buildMarkerExample(IconData icon, Color color, String label) {
     return Column(
       children: [
@@ -620,12 +740,12 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String title, String subtitle) {
+  Widget _buildInfoRow(IconData icon, String title, String subtitle, {Color? iconColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          Icon(icon, size: 20, color: iconColor ?? Theme.of(context).colorScheme.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

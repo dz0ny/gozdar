@@ -411,6 +411,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
+                    // ignore: deprecated_member_use
                     value: _selectedSpecies,
                     decoration: const InputDecoration(
                       labelText: 'Drevesna vrsta (neobvezno)',

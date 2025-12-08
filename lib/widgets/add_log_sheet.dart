@@ -202,6 +202,7 @@ class _AddLogSheetState extends State<AddLogSheet> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
+                // ignore: deprecated_member_use
                 value: _selectedSpecies,
                 decoration: InputDecoration(
                   labelText: 'Drevesna vrsta',

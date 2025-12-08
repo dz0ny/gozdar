@@ -15,6 +15,7 @@ import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
 import 'models/http_cache_entry.dart';
+import 'models/imported_overlay.dart';
 import 'models/log_batch.dart';
 import 'models/log_entry.dart';
 import 'models/map_location.dart';
@@ -216,7 +217,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(4, 1150465591501636009),
     name: 'Parcel',
-    lastPropertyId: const obx_int.IdUid(11, 6772480910293055541),
+    lastPropertyId: const obx_int.IdUid(12, 6454727420891196624),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -285,6 +286,12 @@ final _entities = <obx_int.ModelEntity>[
         type: 6,
         flags: 0,
       ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(12, 6454727420891196624),
+        name: 'notes',
+        type: 9,
+        flags: 0,
+      ),
     ],
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[
@@ -342,6 +349,70 @@ final _entities = <obx_int.ModelEntity>[
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(6, 9108835119989098066),
+    name: 'ImportedOverlay',
+    lastPropertyId: const obx_int.IdUid(9, 2484458391629955181),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 4379128102586308085),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 4470717557830539678),
+        name: 'name',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 2320791695681775036),
+        name: 'layerName',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 797178476411385614),
+        name: 'geometryType',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 3971317127120794841),
+        name: 'geometryJson',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 1291040918249336657),
+        name: 'properties',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 1240497488195827897),
+        name: 'colorValue',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 1035808485245402638),
+        name: 'visible',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 2484458391629955181),
+        name: 'createdAt',
+        type: 10,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -382,7 +453,7 @@ Future<obx.Store> openStore({
 obx_int.ModelDefinition getObjectBoxModel() {
   final model = obx_int.ModelInfo(
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(5, 1599301179648303857),
+    lastEntityId: const obx_int.IdUid(6, 9108835119989098066),
     lastIndexId: const obx_int.IdUid(7, 7980179310958526698),
     lastRelationId: const obx_int.IdUid(0, 0),
     lastSequenceId: const obx_int.IdUid(0, 0),
@@ -686,7 +757,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final ownerOffset = object.owner == null
             ? null
             : fbb.writeString(object.owner!);
-        fbb.startTable(12);
+        final notesOffset = object.notes == null
+            ? null
+            : fbb.writeString(object.notes!);
+        fbb.startTable(13);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
         fbb.addOffset(2, polygonJsonOffset);
@@ -698,6 +772,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addFloat64(8, object.woodAllowance);
         fbb.addFloat64(9, object.woodCut);
         fbb.addInt64(10, object.treesCut);
+        fbb.addOffset(11, notesOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -724,6 +799,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final ownerParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGetNullable(buffer, rootOffset, 16);
+        final notesParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 26);
         final woodAllowanceParam = const fb.Float64Reader().vTableGet(
           buffer,
           rootOffset,
@@ -753,6 +831,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
                 cadastralMunicipality: cadastralMunicipalityParam,
                 parcelNumber: parcelNumberParam,
                 owner: ownerParam,
+                notes: notesParam,
                 woodAllowance: woodAllowanceParam,
                 woodCut: woodCutParam,
                 treesCut: treesCutParam,
@@ -832,6 +911,89 @@ obx_int.ModelDefinition getObjectBoxModel() {
           responseBody: responseBodyParam,
           statusCode: statusCodeParam,
           cachedAt: cachedAtParam,
+        );
+
+        return object;
+      },
+    ),
+    ImportedOverlay: obx_int.EntityDefinition<ImportedOverlay>(
+      model: _entities[5],
+      toOneRelations: (ImportedOverlay object) => [],
+      toManyRelations: (ImportedOverlay object) => {},
+      getId: (ImportedOverlay object) => object.id,
+      setId: (ImportedOverlay object, int id) {
+        object.id = id;
+      },
+      objectToFB: (ImportedOverlay object, fb.Builder fbb) {
+        final nameOffset = fbb.writeString(object.name);
+        final layerNameOffset = fbb.writeString(object.layerName);
+        final geometryTypeOffset = fbb.writeString(object.geometryType);
+        final geometryJsonOffset = fbb.writeString(object.geometryJson);
+        final propertiesOffset = object.properties == null
+            ? null
+            : fbb.writeString(object.properties!);
+        fbb.startTable(10);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, nameOffset);
+        fbb.addOffset(2, layerNameOffset);
+        fbb.addOffset(3, geometryTypeOffset);
+        fbb.addOffset(4, geometryJsonOffset);
+        fbb.addOffset(5, propertiesOffset);
+        fbb.addInt64(6, object.colorValue);
+        fbb.addBool(7, object.visible);
+        fbb.addInt64(8, object.createdAt.millisecondsSinceEpoch);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final nameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final layerNameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 8, '');
+        final geometryTypeParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 10, '');
+        final geometryJsonParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 12, '');
+        final propertiesParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 14);
+        final colorValueParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          16,
+          0,
+        );
+        final visibleParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          18,
+          false,
+        );
+        final createdAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 20, 0),
+        );
+        final object = ImportedOverlay(
+          id: idParam,
+          name: nameParam,
+          layerName: layerNameParam,
+          geometryType: geometryTypeParam,
+          geometryJson: geometryJsonParam,
+          properties: propertiesParam,
+          colorValue: colorValueParam,
+          visible: visibleParam,
+          createdAt: createdAtParam,
         );
 
         return object;
@@ -1038,6 +1200,11 @@ class Parcel_ {
     _entities[3].properties[10],
   );
 
+  /// See [Parcel.notes].
+  static final notes = obx.QueryStringProperty<Parcel>(
+    _entities[3].properties[11],
+  );
+
   /// see [Parcel.logs]
   static final logs = obx.QueryBacklinkToMany<LogEntry, Parcel>(
     LogEntry_.parcel,
@@ -1074,5 +1241,53 @@ class HttpCacheEntry_ {
   /// See [HttpCacheEntry.cachedAt].
   static final cachedAt = obx.QueryDateProperty<HttpCacheEntry>(
     _entities[4].properties[5],
+  );
+}
+
+/// [ImportedOverlay] entity fields to define ObjectBox queries.
+class ImportedOverlay_ {
+  /// See [ImportedOverlay.id].
+  static final id = obx.QueryIntegerProperty<ImportedOverlay>(
+    _entities[5].properties[0],
+  );
+
+  /// See [ImportedOverlay.name].
+  static final name = obx.QueryStringProperty<ImportedOverlay>(
+    _entities[5].properties[1],
+  );
+
+  /// See [ImportedOverlay.layerName].
+  static final layerName = obx.QueryStringProperty<ImportedOverlay>(
+    _entities[5].properties[2],
+  );
+
+  /// See [ImportedOverlay.geometryType].
+  static final geometryType = obx.QueryStringProperty<ImportedOverlay>(
+    _entities[5].properties[3],
+  );
+
+  /// See [ImportedOverlay.geometryJson].
+  static final geometryJson = obx.QueryStringProperty<ImportedOverlay>(
+    _entities[5].properties[4],
+  );
+
+  /// See [ImportedOverlay.properties].
+  static final properties = obx.QueryStringProperty<ImportedOverlay>(
+    _entities[5].properties[5],
+  );
+
+  /// See [ImportedOverlay.colorValue].
+  static final colorValue = obx.QueryIntegerProperty<ImportedOverlay>(
+    _entities[5].properties[6],
+  );
+
+  /// See [ImportedOverlay.visible].
+  static final visible = obx.QueryBooleanProperty<ImportedOverlay>(
+    _entities[5].properties[7],
+  );
+
+  /// See [ImportedOverlay.createdAt].
+  static final createdAt = obx.QueryDateProperty<ImportedOverlay>(
+    _entities[5].properties[8],
   );
 }

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(security find-identity:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

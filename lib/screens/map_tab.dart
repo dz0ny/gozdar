@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -16,6 +18,7 @@ import '../services/analytics_service.dart';
 import '../widgets/log_entry_form.dart';
 import '../services/map_preferences_service.dart';
 import '../services/cadastral_service.dart';
+import '../services/geopackage_service.dart';
 import '../services/tile_cache_service.dart';
 import '../widgets/location_pointer.dart';
 import '../widgets/navigation_compass_dialog.dart';
@@ -714,6 +717,103 @@ class MapTabState extends State<MapTab> {
     }
   }
 
+  /// Import geodata from file (KML, KMZ, or GeoPackage)
+  Future<void> _importGeoFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['kml', 'kmz', 'gpkg'],
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final file = File(result.files.first.path!);
+      final ext = result.files.first.extension?.toLowerCase();
+
+      // Handle GeoPackage import
+      if (ext == 'gpkg') {
+        final importResult =
+            await GeoPackageService.importFromGeoPackage(file.path);
+
+        if (importResult.totalCount == 0) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text('V datoteki ni veljavnih podatkov')),
+            );
+          }
+          return;
+        }
+
+        // Confirm import
+        if (!mounted) return;
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Uvozi podatke'),
+            content: Text(
+              'Najdenih ${importResult.totalCount} objektov v datoteki "${importResult.layerName}". Jih uvozim?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Prekliči'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Uvozi'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed == true) {
+          // Insert all data
+          final dbService = DatabaseService();
+          for (final parcel in importResult.parcels) {
+            await dbService.insertParcel(parcel);
+          }
+          for (final location in importResult.locations) {
+            await dbService.insertLocation(location);
+          }
+          for (final overlay in importResult.overlays) {
+            await dbService.insertOverlay(overlay);
+          }
+
+          // Reload data
+          await _loadParcels();
+          await _loadLocations();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Uvoženih ${importResult.totalCount} objektov',
+                ),
+              ),
+            );
+          }
+        }
+        return;
+      }
+
+      // TODO: Handle KML/KMZ import
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('KML/KMZ uvoz še ni podprt preko karte'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Napaka pri uvozu: $e')),
+        );
+      }
+    }
+  }
+
   /// Download tiles for a parcel's bounding box in the background
   void _downloadTilesForParcel(List<LatLng> polygon) {
     if (polygon.isEmpty) return;
@@ -801,6 +901,7 @@ class MapTabState extends State<MapTab> {
         );
         _saveMapState();
       },
+      onImportFile: _importGeoFile,
     );
   }
 

@@ -163,7 +163,7 @@
     },
     {
       "id": "4:1150465591501636009",
-      "lastPropertyId": "11:6772480910293055541",
+      "lastPropertyId": "12:6454727420891196624",
       "name": "Parcel",
       "properties": [
         {
@@ -221,6 +221,11 @@
           "id": "11:6772480910293055541",
           "name": "treesCut",
           "type": 6
+        },
+        {
+          "id": "12:6454727420891196624",
+          "name": "notes",
+          "type": 9
         }
       ],
       "relations": []
@@ -265,9 +270,63 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "6:9108835119989098066",
+      "lastPropertyId": "9:2484458391629955181",
+      "name": "ImportedOverlay",
+      "properties": [
+        {
+          "id": "1:4379128102586308085",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4470717557830539678",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:2320791695681775036",
+          "name": "layerName",
+          "type": 9
+        },
+        {
+          "id": "4:797178476411385614",
+          "name": "geometryType",
+          "type": 9
+        },
+        {
+          "id": "5:3971317127120794841",
+          "name": "geometryJson",
+          "type": 9
+        },
+        {
+          "id": "6:1291040918249336657",
+          "name": "properties",
+          "type": 9
+        },
+        {
+          "id": "7:1240497488195827897",
+          "name": "colorValue",
+          "type": 6
+        },
+        {
+          "id": "8:1035808485245402638",
+          "name": "visible",
+          "type": 1
+        },
+        {
+          "id": "9:2484458391629955181",
+          "name": "createdAt",
+          "type": 10
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "5:1599301179648303857",
+  "lastEntityId": "6:9108835119989098066",
   "lastIndexId": "7:7980179310958526698",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",

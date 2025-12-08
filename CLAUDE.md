@@ -18,12 +18,14 @@ Gozdar is a Flutter forestry management app for Slovenia. Users can map forest p
 ```bash
 flutter pub get          # Install dependencies
 flutter run              # Run in development
-flutter analyze          # Check for issues
+flutter analyze          # Check for issues (ALWAYS use this, never build)
 flutter test             # Run tests
 flutter build ios        # Build for iOS
 flutter build android    # Build for Android
 flutter build macos      # Build for macOS
 ```
+
+**IMPORTANT:** When checking code quality, ONLY use `flutter analyze`. Never run build commands unless explicitly requested by the user.
 
 ## Android Signing Configuration
 
@@ -53,30 +55,55 @@ After regenerating, update `android/key.properties` with new passwords.
 
 ### Service Layer (Singletons)
 All services use singleton pattern:
-- `DatabaseService` - SQLite (sqflite) with schema v4, tables: parcels, logs, locations
+- `DatabaseService` - ObjectBox database with entities: parcels, logs, log_batches, locations
 - `CadastralService` - WMS GetFeatureInfo queries to prostor.zgs.gov.si (30s timeout)
 - `HttpCacheService` - 1-year HTTP cache for Slovenian government APIs
 - `TileCacheService` - ObjectBox-backed tile caching
 - `OnboardingService` - First-run wizard state (SharedPreferences)
 - `MapPreferencesService` - Map layer preferences, defaults: Ortofoto + Kataster + Kataster z nazivi
+- `SpeciesService` - Tree species management (SharedPreferences), defaults: Smreka, Bukev, Jelka
 - `ExportService` - Excel (.xlsx) export for logs
 
 ### Key Models
 - `Parcel` - Forest polygon with cadastral data (KO + parcel number), wood tracking (allowance/cut)
-- `LogEntry` - Wood log with cylinder volume calculation: V = π × (d/200)² × L
+  - Fields: name, polygonJson, cadastralMunicipality, parcelNumber, owner, **notes**, forestTypeIndex, woodAllowance, woodCut, treesCut, createdAt
+  - Relations: ToMany<LogEntry> (backlink from logs)
+- `LogEntry` - Wood log with species tracking, cylinder volume calculation: V = π × (d/200)² × L
+  - Fields: diameter, length, volume, latitude, longitude, notes, **species**, createdAt
+  - Relations: ToOne<LogBatch>, ToOne<Parcel>
 - `MapLayer` - WMS/tile layer configuration with 40+ Slovenian overlay layers
 
-### Volume Conversions (Hlodi tab)
-Displays total m³ with conversions:
-- **PRM** (prostorninski meter) = m³ × factor (default 0.65) - stacked firewood
-- **NM** (nasuti meter) = m³ × factor (default 0.40) - loose chips/pieces
-- Factors configurable via settings sheet
+### Hlodi (Logs) Tab Features
+**Volume Conversions:**
+- Displays total m³ with conversions:
+  - **PRM** (prostorninski meter) = m³ × factor (default 0.65) - stacked firewood
+  - **NM** (nasuti meter) = m³ × factor (default 0.40) - loose chips/pieces
+  - Factors configurable via settings sheet
+
+**Species Tracking:**
+- Each log can have a species assigned (Smreka, Bukev, Jelka, or custom)
+- Logs automatically grouped by species when 2+ species exist (progressive enhancement)
+- Species headers show count and total volume per species (e.g., "3 hlodov • 1.25 m³")
+- Species management accessible via ⋮ menu → "Upravljanje vrst"
+- Users can add/remove species via SpeciesService
 
 ### Navigation
 3-tab bottom navigation: Karta (Map), Gozd (Forest), Hlodi (Logs)
 - Default tab: Gozd (Forest) - index 1
 - 5-tap on any tab resets onboarding wizard
-- First-run shows `IntroWizardScreen` with 5 pages explaining app features
+- First-run shows `IntroWizardScreen` with 9 pages explaining app features
+
+### Onboarding (IntroWizardScreen)
+9-page wizard with unified design pattern (icon circle + info card):
+1. **Dobrodošli v Gozdar** - Welcome and app overview
+2. **Navigacija** - 3-tab navigation explanation
+3. **Beleženje hlodovine** - Log tracking with species, auto-calculation, grouping
+4. **Dolg pritisk na karti** - Long press menu (add point, log, cutting, import parcel)
+5. **Označbe na karti** - Map markers (red=locations, brown=logs, orange=cuttings)
+6. **Sloji na karti** - Map layers (Ortofoto, Kataster, etc.)
+7. **Delo brez povezave** - Offline mode and caching
+8. **Navigacija do mejnika** - Compass navigation to boundary points
+9. **Pogoji uporabe** - Terms of use and data attribution
 
 ## Critical: Slovenian CRS (EPSG:3794)
 
@@ -100,20 +127,18 @@ Layers defined in `lib/models/map_layer.dart`:
 - Overlay layers use WMS from `prostor.zgs.gov.si/geoserver/wms`
 - Slovenian layers only visible when base layer is also Slovenian (isSlovenian getter)
 
-## Database Schema
+## Database Schema (ObjectBox)
 
-```sql
--- parcels table
-id, name, polygon (JSON), cadastral_municipality, parcel_number,
-owner, wood_allowance, wood_cut, created_at
--- Unique constraint on (cadastral_municipality, parcel_number)
-
--- logs table
-id, diameter, length, volume, latitude, longitude, notes, created_at
-
--- locations table
-id, name, latitude, longitude, created_at
-```
+**Entities:**
+- `Parcel` - id, name, polygonJson, cadastralMunicipality, parcelNumber, owner, **notes**, forestTypeIndex, woodAllowance, woodCut, treesCut, createdAt
+  - Unique constraint on (cadastralMunicipality, parcelNumber)
+  - ToMany<LogEntry> backlink
+- `LogEntry` - id, diameter, length, volume, latitude, longitude, notes, **species**, createdAt
+  - Relations: ToOne<LogBatch>, ToOne<Parcel>
+  - **IMPORTANT:** batchId and parcelId getters are marked @Transient() to avoid ObjectBox conflicts
+- `LogBatch` - id, name, totalVolume, logCount, prmFactor, nmFactor, createdAt
+- `Location` - id, name, latitude, longitude, createdAt
+- `HttpCacheEntry` - url, response, createdAt, expiresAt
 
 ## UI Language
 

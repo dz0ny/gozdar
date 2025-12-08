@@ -11,6 +11,7 @@ import '../services/kml_service.dart';
 import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
 import '../widgets/parcel_silhouette.dart';
+import '../widgets/notes_editor_sheet.dart';
 import '../main.dart';
 import 'parcel_editor.dart';
 import 'forest_tab.dart' show getForestTypeIcon;
@@ -208,6 +209,23 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     if (result != null) {
       await _updateParcel(
         _parcel.copyWith(owner: result.isEmpty ? null : result),
+      );
+    }
+  }
+
+  Future<void> _editNotes() async {
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => NotesEditorSheet(
+        initialNotes: _parcel.notes,
+        title: 'Opombe',
+      ),
+    );
+
+    if (result != null) {
+      await _updateParcel(
+        _parcel.copyWith(notes: result.isEmpty ? null : result),
       );
     }
   }
@@ -693,6 +711,19 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                       subtitle: Text(_parcel.owner ?? 'Ni dolocen'),
                       trailing: const Icon(Icons.edit),
                       onTap: _editOwner,
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Notes Card
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.note),
+                      title: const Text('Opombe'),
+                      subtitle: Text(_parcel.notes ?? 'Ni opomb'),
+                      trailing: const Icon(Icons.edit),
+                      onTap: _editNotes,
                     ),
                   ),
 

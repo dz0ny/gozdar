@@ -27,6 +27,7 @@ class Parcel {
   int? cadastralMunicipality; // KO (katastrska obcina)
   String? parcelNumber; // Parcel number from cadastre
   String? owner; // Owner name
+  String? notes; // Notes/description
 
   // Store enum as int index
   int forestTypeIndex;
@@ -85,6 +86,7 @@ class Parcel {
     this.cadastralMunicipality,
     this.parcelNumber,
     this.owner,
+    this.notes,
     ForestType forestType = ForestType.mixed,
     this.woodAllowance = 0.0,
     this.woodCut = 0.0,
@@ -232,6 +234,7 @@ class Parcel {
     int? cadastralMunicipality,
     String? parcelNumber,
     String? owner,
+    String? notes,
     ForestType? forestType,
     double? woodAllowance,
     double? woodCut,
@@ -246,6 +249,7 @@ class Parcel {
       cadastralMunicipality: cadastralMunicipality ?? this.cadastralMunicipality,
       parcelNumber: parcelNumber ?? this.parcelNumber,
       owner: owner ?? this.owner,
+      notes: notes ?? this.notes,
       forestType: forestType ?? this.forestType,
       woodAllowance: woodAllowance ?? this.woodAllowance,
       woodCut: woodCut ?? this.woodCut,

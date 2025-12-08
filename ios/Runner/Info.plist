@@ -32,6 +32,8 @@
 	<string>Aplikacija potrebuje dostop do lokacije za prikaz vaše pozicije na zemljevidu in označevanje lokacij hlodov.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Aplikacija uporablja senzorje gibanja za prikaz smeri kompasa.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Aplikacija potrebuje dostop do fotografij za izvoz in deljenje podatkov o gozdu.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

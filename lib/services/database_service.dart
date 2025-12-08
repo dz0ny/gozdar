@@ -4,6 +4,7 @@ import '../models/log_batch.dart';
 import '../models/log_entry.dart';
 import '../models/map_location.dart';
 import '../models/parcel.dart';
+import '../models/imported_overlay.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -26,6 +27,7 @@ class DatabaseService {
   Box<LogBatch> get _batchBox => store.box<LogBatch>();
   Box<MapLocation> get _locationBox => store.box<MapLocation>();
   Box<Parcel> get _parcelBox => store.box<Parcel>();
+  Box<ImportedOverlay> get _overlayBox => store.box<ImportedOverlay>();
 
   Future<void> initialize() async {
     if (_store != null) return;
@@ -335,6 +337,44 @@ class DatabaseService {
     final result = query.findFirst();
     query.close();
     return result;
+  }
+
+  // ==================== IMPORTED OVERLAY OPERATIONS ====================
+
+  Future<int> insertOverlay(ImportedOverlay overlay) async {
+    return _overlayBox.put(overlay);
+  }
+
+  Future<void> updateOverlay(ImportedOverlay overlay) async {
+    _overlayBox.put(overlay);
+  }
+
+  Future<void> deleteOverlay(int id) async {
+    _overlayBox.remove(id);
+  }
+
+  Future<List<ImportedOverlay>> getAllOverlays() async {
+    final query = _overlayBox.query()
+      ..order(ImportedOverlay_.createdAt, flags: Order.descending);
+    return query.build().find();
+  }
+
+  Future<List<ImportedOverlay>> getVisibleOverlays() async {
+    final query = _overlayBox.query(ImportedOverlay_.visible.equals(true))
+      ..order(ImportedOverlay_.createdAt, flags: Order.descending);
+    return query.build().find();
+  }
+
+  Future<void> toggleOverlayVisibility(int id) async {
+    final overlay = _overlayBox.get(id);
+    if (overlay != null) {
+      overlay.visible = !overlay.visible;
+      _overlayBox.put(overlay);
+    }
+  }
+
+  Future<void> deleteAllOverlays() async {
+    _overlayBox.removeAll();
   }
 
   // ==================== UTILITY METHODS ====================
