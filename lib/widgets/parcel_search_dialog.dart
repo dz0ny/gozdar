@@ -25,25 +25,25 @@ class ParcelSearchDialog extends StatefulWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      useRootNavigator: false,
       builder: (context) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        child: DraggableScrollableSheet(
-          initialChildSize: 0.35,
-          minChildSize: 0.3,
-          maxChildSize: 0.85,
-          builder: (context, scrollController) => Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        child: Wrap(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: ParcelSearchDialog(
+                mapController: mapController,
+                onParcelFound: onParcelFound,
+              ),
             ),
-            child: ParcelSearchDialog(
-              mapController: mapController,
-              onParcelFound: onParcelFound,
-            ),
-          ),
+          ],
         ),
       ),
     );
@@ -140,41 +140,39 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: 8, bottom: 4),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Handle bar
+        Container(
+          margin: const EdgeInsets.only(top: 8, bottom: 4),
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        // Title
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Row(
+            children: [
+              Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 12),
+              Text(
+                'Iskanje parcele',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
-            ),
-            // Title
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Row(
-                children: [
-                  Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Iskanje parcele',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-            // Content
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Form(
+            ],
+          ),
+        ),
+        // Content
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -318,15 +316,13 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
                             : const Icon(Icons.search),
                         label: Text(_isSearching ? 'Iskanje...' : 'Išči'),
                       ),
-                      ],
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
         ],
-      ),
-    );
+      );
   }
 }

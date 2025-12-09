@@ -491,30 +491,36 @@ class LogsTab extends StatelessWidget {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.forest_outlined,
-            size: 64,
-            color: Colors.grey[600],
+    return SingleChildScrollView(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.forest_outlined,
+                size: 48,
+                color: Colors.grey[600],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Ni še hlodov',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.grey[500],
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Tapnite + za dodajanje hloda',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Ni še hlodov',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.grey[500],
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tapnite + za dodajanje hloda',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-          ),
-        ],
+        ),
       ),
     );
   }
