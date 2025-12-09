@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:flutter_geokit/flutter_geokit.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/parcel.dart';
