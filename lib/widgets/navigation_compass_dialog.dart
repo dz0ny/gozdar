@@ -52,23 +52,24 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
     }
 
     // Subscribe to position updates
-    _positionSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.best,
-        distanceFilter: 1,
-      ),
-    ).listen(
-      (position) {
-        if (mounted) {
-          setState(() {
-            _currentPosition = position;
-          });
-        }
-      },
-      onError: (error) {
-        debugPrint('Position stream error: $error');
-      },
-    );
+    _positionSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.best,
+            distanceFilter: 1,
+          ),
+        ).listen(
+          (position) {
+            if (mounted) {
+              setState(() {
+                _currentPosition = position;
+              });
+            }
+          },
+          onError: (error) {
+            debugPrint('Position stream error: $error');
+          },
+        );
 
     // Get initial position
     _getCurrentPosition();
@@ -110,13 +111,16 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
   double? _calculateBearing() {
     if (_currentPosition == null) return null;
 
-    final dLon = (widget.targetLocation.longitude - _currentPosition!.longitude) * pi / 180;
+    final dLon =
+        (widget.targetLocation.longitude - _currentPosition!.longitude) *
+        pi /
+        180;
     final lat1Rad = _currentPosition!.latitude * pi / 180;
     final lat2Rad = widget.targetLocation.latitude * pi / 180;
 
     final y = sin(dLon) * cos(lat2Rad);
-    final x = cos(lat1Rad) * sin(lat2Rad) -
-        sin(lat1Rad) * cos(lat2Rad) * cos(dLon);
+    final x =
+        cos(lat1Rad) * sin(lat2Rad) - sin(lat1Rad) * cos(lat2Rad) * cos(dLon);
 
     final bearing = atan2(y, x) * 180 / pi;
     return (bearing + 360) % 360;
@@ -126,10 +130,17 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
     if (_currentPosition == null) return null;
 
     const R = 6371000; // Earth's radius in meters
-    final dLat = (widget.targetLocation.latitude - _currentPosition!.latitude) * pi / 180;
-    final dLon = (widget.targetLocation.longitude - _currentPosition!.longitude) * pi / 180;
+    final dLat =
+        (widget.targetLocation.latitude - _currentPosition!.latitude) *
+        pi /
+        180;
+    final dLon =
+        (widget.targetLocation.longitude - _currentPosition!.longitude) *
+        pi /
+        180;
 
-    final a = sin(dLat / 2) * sin(dLat / 2) +
+    final a =
+        sin(dLat / 2) * sin(dLat / 2) +
         cos(_currentPosition!.latitude * pi / 180) *
             cos(widget.targetLocation.latitude * pi / 180) *
             sin(dLon / 2) *
@@ -189,71 +200,78 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-        // Header
-        _buildHeader(context),
+          // Header
+          _buildHeader(context),
 
-        // Accuracy warning
-        if (accuracyWarning != null)
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _compassAccuracy! > 30
-                  ? Colors.red.shade100
-                  : Colors.orange.shade100,
-              borderRadius: BorderRadius.circular(8),
+          // Accuracy warning
+          if (accuracyWarning != null)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _compassAccuracy! > 30
+                    ? Colors.red.shade100
+                    : Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _compassAccuracy! > 30
+                        ? Icons.error_outline
+                        : Icons.warning_amber_outlined,
+                    color: _compassAccuracy! > 30
+                        ? Colors.red.shade700
+                        : Colors.orange.shade700,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      accuracyWarning,
+                      style: TextStyle(
+                        color: _compassAccuracy! > 30
+                            ? Colors.red.shade700
+                            : Colors.orange.shade700,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Row(
+
+          // Compass + Info
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
               children: [
-                Icon(
-                  _compassAccuracy! > 30 ? Icons.error_outline : Icons.warning_amber_outlined,
-                  color: _compassAccuracy! > 30 ? Colors.red.shade700 : Colors.orange.shade700,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    accuracyWarning,
-                    style: TextStyle(
-                      color: _compassAccuracy! > 30 ? Colors.red.shade700 : Colors.orange.shade700,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                // Info row: Distance, Bearing, Direction
+                _buildInfoRow(bearing, distance),
+                const SizedBox(height: 24),
+
+                // Compass
+                SizedBox(
+                  width: 280,
+                  height: 280,
+                  child: CustomPaint(
+                    painter: CompassPainter(
+                      heading: heading ?? 0,
+                      hasHeading: heading != null,
+                      currentPosition: _currentPosition,
+                      targetLocation: widget.targetLocation,
+                      theme: Theme.of(context),
                     ),
                   ),
                 ),
+                const SizedBox(height: 24),
+
+                // Target coordinates
+                _buildCoordinatesCard(),
               ],
             ),
           ),
-
-        // Compass + Info
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Info row: Distance, Bearing, Direction
-              _buildInfoRow(bearing, distance),
-              const SizedBox(height: 24),
-
-              // Compass
-              SizedBox(
-                width: 280,
-                height: 280,
-                child: CustomPaint(
-                  painter: CompassPainter(
-                    heading: heading ?? 0,
-                    hasHeading: heading != null,
-                    currentPosition: _currentPosition,
-                    targetLocation: widget.targetLocation,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Target coordinates
-              _buildCoordinatesCard(),
-            ],
-          ),
-        ),
         ],
       ),
     );
@@ -280,10 +298,7 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
                 ),
                 Text(
                   widget.targetName,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -321,17 +336,22 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
           Icons.gps_fixed,
           color: gpsAccuracy != null
               ? (gpsAccuracy <= 5
-                  ? Colors.green
-                  : gpsAccuracy <= 15
-                      ? Colors.orange
-                      : Colors.red)
+                    ? Colors.green
+                    : gpsAccuracy <= 15
+                    ? Colors.orange
+                    : Colors.red)
               : null,
         ),
       ],
     );
   }
 
-  Widget _buildInfoCard(String label, String value, IconData icon, {Color? color}) {
+  Widget _buildInfoCard(
+    String label,
+    String value,
+    IconData icon, {
+    Color? color,
+  }) {
     final displayColor = color ?? Theme.of(context).colorScheme.primary;
     return Column(
       children: [
@@ -340,14 +360,11 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
         Text(
           value,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: displayColor,
-              ),
+            fontWeight: FontWeight.bold,
+            color: displayColor,
+          ),
         ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
   }
@@ -379,16 +396,12 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
               Text(
                 displayText,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontFamily: 'monospace',
-                      fontWeight: FontWeight.w500,
-                    ),
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                Icons.swap_horiz,
-                size: 16,
-                color: Colors.grey.shade400,
-              ),
+              Icon(Icons.swap_horiz, size: 16, color: Colors.grey.shade400),
             ],
           ),
         ),
