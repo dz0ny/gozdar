@@ -26,24 +26,18 @@ class ParcelSearchDialog extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       useRootNavigator: false,
-      builder: (context) => Padding(
+      builder: (context) => Container(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        child: Wrap(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: ParcelSearchDialog(
-                mapController: mapController,
-                onParcelFound: onParcelFound,
-              ),
-            ),
-          ],
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ParcelSearchDialog(
+          mapController: mapController,
+          onParcelFound: onParcelFound,
         ),
       ),
     );

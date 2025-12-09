@@ -32,19 +32,12 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16,
-          right: 16,
-          top: 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
             Row(
               children: [
                 const Text(
@@ -134,8 +127,7 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
 

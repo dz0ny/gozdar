@@ -20,14 +20,25 @@ class LogsTab extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => ConversionSettingsSheet(
-        totalVolume: provider.totalVolume,
-        prmFactor: provider.conversionFactors.prm,
-        nmFactor: provider.conversionFactors.nm,
-        onChanged: (prm, nm) {
-          provider.setConversionFactors(prm, nm);
-          AnalyticsService().logConversionSettingsChanged();
-        },
+      useRootNavigator: false,
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ConversionSettingsSheet(
+          totalVolume: provider.totalVolume,
+          prmFactor: provider.conversionFactors.prm,
+          nmFactor: provider.conversionFactors.nm,
+          onChanged: (prm, nm) {
+            provider.setConversionFactors(prm, nm);
+            AnalyticsService().logConversionSettingsChanged();
+          },
+        ),
       ),
     );
   }
@@ -38,18 +49,29 @@ class LogsTab extends StatelessWidget {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => AddLogSheet(
-        onAdd: (entry) async {
-          await provider.addLogEntry(entry);
-          AnalyticsService().logLogAdded(
-            volumeM3: entry.volume,
-            hasLocation: entry.hasLocation,
-          );
-          // Refresh map markers if log has location
-          if (entry.hasLocation) {
-            mapProvider.loadGeolocatedLogs();
-          }
-        },
+      useRootNavigator: false,
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: AddLogSheet(
+          onAdd: (entry) async {
+            await provider.addLogEntry(entry);
+            AnalyticsService().logLogAdded(
+              volumeM3: entry.volume,
+              hasLocation: entry.hasLocation,
+            );
+            // Refresh map markers if log has location
+            if (entry.hasLocation) {
+              mapProvider.loadGeolocatedLogs();
+            }
+          },
+        ),
       ),
     );
   }
