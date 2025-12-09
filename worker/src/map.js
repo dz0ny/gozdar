@@ -118,6 +118,18 @@ export function getMapHtml(origin) {
       <div id="areaStatus" style="font-size: 11px; margin-top: 4px; color: #666; text-align: center;"></div>
     </div>
 
+    <div style="margin-bottom: 12px; padding: 12px; background: #f0f0f0; border-radius: 4px;">
+      <h3 style="margin: 0 0 8px 0; border: none; padding: 0;">🔍 Iskanje parcele</h3>
+      <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+        <input type="text" id="koInput" placeholder="KO številka" style="flex: 1; padding: 6px; border: 1px solid #ccc; border-radius: 3px; font-size: 13px;">
+        <input type="text" id="parcelInput" placeholder="Parcela (npr. 42 ali 1/1)" style="flex: 2; padding: 6px; border: 1px solid #ccc; border-radius: 3px; font-size: 13px;">
+      </div>
+      <button id="searchParcelBtn" style="width: 100%; padding: 8px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+        Poišči parcelo
+      </button>
+      <div id="searchStatus" style="font-size: 11px; margin-top: 4px; color: #666; text-align: center;"></div>
+    </div>
+
     <h3>Osnovni sloj</h3>
     <div class="radio-group">
       ${baseOptions}
@@ -131,6 +143,7 @@ export function getMapHtml(origin) {
       <div style="font-size: 11px; padding: 8px 0; line-height: 1.6;">
         <strong>WFS Cadastral Data:</strong><br>
         <code style="display: block; background: #e9ecef; padding: 4px; margin: 4px 0; border-radius: 2px;">/api/wfs/parcel/point?lat=46.05&lon=14.5</code>
+        <code style="display: block; background: #e9ecef; padding: 4px; margin: 4px 0; border-radius: 2px;">/api/wfs/parcel/ko/{koNumber}/{parcelNumber}</code>
         <code style="display: block; background: #e9ecef; padding: 4px; margin: 4px 0; border-radius: 2px;">/api/wfs/parcel/{id}</code>
         <code style="display: block; background: #e9ecef; padding: 4px; margin: 4px 0; border-radius: 2px;">/api/wfs/parcels/bbox?minLon=14.5&minLat=46&maxLon=14.6&maxLat=46.1</code>
         <code style="display: block; background: #e9ecef; padding: 4px; margin: 4px 0; border-radius: 2px;">/api/wfs/zoning</code>
@@ -589,6 +602,104 @@ export function getMapHtml(origin) {
         console.error('Area query error:', error);
         status.textContent = 'Napaka: ' + error.message;
         status.style.color = '#d32f2f';
+      }
+    });
+
+    // Parcel search by KO and number
+    document.getElementById('searchParcelBtn').addEventListener('click', async function() {
+      const koNumber = document.getElementById('koInput').value.trim();
+      const parcelNumber = document.getElementById('parcelInput').value.trim();
+      const status = document.getElementById('searchStatus');
+
+      if (!koNumber || !parcelNumber) {
+        status.textContent = 'Vnesite KO in številko parcele';
+        status.style.color = '#d32f2f';
+        return;
+      }
+
+      status.textContent = 'Iskanje...';
+      status.style.color = '#666';
+
+      try {
+        // URL encode parcel number (handles slashes like "1/1")
+        const encodedParcel = encodeURIComponent(parcelNumber);
+        const response = await fetch(ORIGIN + '/api/wfs/parcel/ko/' + koNumber + '/' + encodedParcel);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Search failed');
+        }
+
+        if (data.features && data.features.length > 0) {
+          const feature = data.features[0];
+          const props = feature.properties;
+
+          // Remove previous parcel layer
+          if (parcelLayer) {
+            map.removeLayer(parcelLayer);
+          }
+
+          // Render parcel boundary on map
+          if (feature.geometry) {
+            parcelLayer = L.geoJSON(feature, {
+              style: {
+                color: '#2d5016',
+                weight: 3,
+                opacity: 0.8,
+                fillColor: '#4CAF50',
+                fillOpacity: 0.2
+              }
+            }).addTo(map);
+
+            // Fit map to parcel bounds
+            const bounds = parcelLayer.getBounds();
+            if (bounds.isValid()) {
+              map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+            }
+
+            // Show popup with parcel info
+            const center = bounds.getCenter();
+            let html = '<div style="min-width: 250px;"><strong>Parcela</strong><br>';
+            if (props.label) {
+              html += '<b>Oznaka:</b> ' + props.label + '<br>';
+            }
+            if (props.nationalCadastralReference) {
+              html += '<b>KO-Parcela:</b> ' + props.nationalCadastralReference + '<br>';
+            }
+            if (props.areaValue) {
+              const area = typeof props.areaValue === 'object' ? props.areaValue.value : props.areaValue;
+              html += '<b>Površina:</b> ' + area + ' m²<br>';
+            }
+            html += '</div>';
+
+            L.popup()
+              .setLatLng(center)
+              .setContent(html)
+              .openOn(map);
+
+            status.textContent = '✓ Parcela najdena: ' + props.label;
+            status.style.color = '#2d5016';
+          }
+        } else {
+          status.textContent = 'Parcela ni najdena';
+          status.style.color = '#d32f2f';
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+        status.textContent = 'Napaka: ' + error.message;
+        status.style.color = '#d32f2f';
+      }
+    });
+
+    // Allow Enter key to trigger search
+    document.getElementById('koInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        document.getElementById('searchParcelBtn').click();
+      }
+    });
+    document.getElementById('parcelInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        document.getElementById('searchParcelBtn').click();
       }
     });
 

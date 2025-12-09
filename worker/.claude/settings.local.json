@@ -8,7 +8,8 @@
       "Bash(bunx wrangler:*)",
       "Bash(brew install:*)",
       "Bash(rclone config create:*)",
-      "Bash(rclone purge:*)"
+      "Bash(rclone purge:*)",
+      "WebFetch(domain:prostor.zgs.gov.si)"
     ],
     "deny": [],
     "ask": []

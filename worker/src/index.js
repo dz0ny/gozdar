@@ -5,7 +5,7 @@ import { BASE_LAYERS, OVERLAY_LAYERS } from './layers.js';
 import { getMapHtml } from './map.js';
 import { handleTileRequest } from './tiles.js';
 import { cache } from './middleware/cache.js';
-import { getParcelByPoint, getParcelById, getParcelsByBbox, getCadastralZoning } from './wfs.js';
+import { getParcelByPoint, getParcelById, getParcelsByBbox, getCadastralZoning, getParcelByKoAndNumber } from './wfs.js';
 
 // Create Hono app
 const app = new Hono();
@@ -53,6 +53,7 @@ app.get('/api/layers', (c) => {
 
 // WFS API endpoints
 app.get('/api/wfs/parcel/point', getParcelByPoint);
+app.get('/api/wfs/parcel/ko/:koNumber/:parcelNumber', getParcelByKoAndNumber);
 app.get('/api/wfs/parcel/:id', getParcelById);
 app.get('/api/wfs/parcels/bbox', getParcelsByBbox);
 app.get('/api/wfs/zoning', getCadastralZoning);

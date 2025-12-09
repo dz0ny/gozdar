@@ -6,7 +6,7 @@ import '../objectbox.g.dart';
 import '../models/http_cache_entry.dart';
 import 'database_service.dart';
 
-/// HTTP cache service for prostor.zgs.gov.si requests
+/// HTTP cache service for prostor.zgs.gov.si and Cloudflare Worker requests
 /// Caches successful (200) responses for up to 1 year
 class HttpCacheService {
   static final HttpCacheService _instance = HttpCacheService._internal();
@@ -14,8 +14,9 @@ class HttpCacheService {
   // Cache TTL: 1 year
   static const Duration _cacheTtl = Duration(days: 365);
 
-  // Domain to cache
+  // Domains to cache
   static const String _cachedDomain = 'prostor.zgs.gov.si';
+  static const String _workerDomain = 'gozdar-proxy.dz0ny.workers.dev';
 
   factory HttpCacheService() {
     return _instance;
@@ -34,7 +35,9 @@ class HttpCacheService {
 
   /// Check if URL should be cached
   bool _shouldCache(Uri uri) {
-    return uri.host == _cachedDomain || uri.host.endsWith('.$_cachedDomain');
+    return uri.host == _cachedDomain ||
+           uri.host.endsWith('.$_cachedDomain') ||
+           uri.host == _workerDomain;
   }
 
   /// Get cached response if available and not expired

@@ -254,6 +254,20 @@ class DatabaseService {
 
   // ==================== PARCEL OPERATIONS ====================
 
+  /// Check if a parcel with the same KO and parcel number already exists
+  Future<Parcel?> findParcelByKoAndNumber(int? koNumber, String? parcelNumber) async {
+    if (koNumber == null || parcelNumber == null) return null;
+
+    final query = _parcelBox.query(
+      Parcel_.cadastralMunicipality.equals(koNumber) &
+      Parcel_.parcelNumber.equals(parcelNumber)
+    ).build();
+
+    final result = query.findFirst();
+    query.close();
+    return result;
+  }
+
   Future<int> insertParcel(Parcel parcel) async {
     return _parcelBox.put(parcel);
   }

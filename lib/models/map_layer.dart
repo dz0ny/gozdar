@@ -199,7 +199,7 @@ class MapLayer {
     maxZoom: 19,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
-    wmsLayers: ['pregledovalnik:DOF_2023'],
+    wmsLayers: ['pregledovalnik:DOF25_2023'],
     wmsFormat: 'image/jpeg',
   );
 
@@ -211,7 +211,7 @@ class MapLayer {
     maxZoom: 19,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
-    wmsLayers: ['pregledovalnik:DOF_2022'],
+    wmsLayers: ['pregledovalnik:DOF25_2022'],
     wmsFormat: 'image/jpeg',
   );
 

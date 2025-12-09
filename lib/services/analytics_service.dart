@@ -1,14 +1,16 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:firebase_analytics/firebase_analytics.dart';
 import '../main.dart' show analytics;
 
 /// Centralized analytics service for tracking app usage
 /// Uses Firebase Analytics when available, gracefully handles missing config
+/// Analytics are automatically disabled in debug mode to avoid polluting production data
 class AnalyticsService {
   static final AnalyticsService _instance = AnalyticsService._internal();
   factory AnalyticsService() => _instance;
   AnalyticsService._internal();
 
-  FirebaseAnalytics? get _analytics => analytics;
+  FirebaseAnalytics? get _analytics => kDebugMode ? null : analytics;
 
   // Screen names for consistent tracking
   static const screenMap = 'karta';
@@ -46,6 +48,11 @@ class AnalyticsService {
   /// Log parcel imported from cadastral service
   Future<void> logParcelImportedCadastral() async {
     await _analytics?.logEvent(name: 'parcel_imported_cadastral');
+  }
+
+  /// Log parcel imported from WFS service
+  Future<void> logParcelImportedWfs() async {
+    await _analytics?.logEvent(name: 'parcel_imported_wfs');
   }
 
   /// Log parcel deleted

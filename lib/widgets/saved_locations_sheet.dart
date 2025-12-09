@@ -37,20 +37,25 @@ class SavedLocationsSheet extends StatelessWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.5,
         minChildSize: 0.3,
         maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) => _ContentWidget(
-          scrollController: scrollController,
-          locations: locations,
-          logs: logs,
-          parcels: parcels,
-          onNavigate: onNavigate,
-          onEdit: onEdit,
-          onDelete: onDelete,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: _ContentWidget(
+            scrollController: scrollController,
+            locations: locations,
+            logs: logs,
+            parcels: parcels,
+            onNavigate: onNavigate,
+            onEdit: onEdit,
+            onDelete: onDelete,
+          ),
         ),
       ),
     );
@@ -106,113 +111,112 @@ class _ContentWidget extends StatelessWidget {
     final totalCount = locations.length + geolocatedLogs.length;
 
     return Column(
-      children: [
-        // Handle bar
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 12),
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            borderRadius: BorderRadius.circular(2),
+        children: [
+          // Handle bar
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-        ),
-        // Header
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Icon(Icons.place, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(width: 8),
-              Text(
-                'Shranjene lokacije',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const Spacer(),
-              Text(
-                '$totalCount',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+            child: Row(
+              children: [
+                Icon(Icons.place, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Shranjene lokacije',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-              ),
-            ],
+                const Spacer(),
+                Text(
+                  '$totalCount',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        const Divider(),
-        // List
-        Expanded(
-          child: ListView(
-            controller: scrollController,
-            children: [
-              // Locations section (non-sečnja)
-              if (locations.where((l) => !l.isSecnja).isNotEmpty) ...[
-                _SectionHeader(
-                  icon: Icons.location_on,
-                  color: Colors.orange,
-                  title: 'Točke',
-                  count: locations.where((l) => !l.isSecnja).length,
-                ),
-                ...locations.where((l) => !l.isSecnja).map((location) {
-                  final parcelName = _findParcelName(
-                    location.latitude,
-                    location.longitude,
-                  );
-                  return _LocationListTile(
-                    location: location,
-                    parcelName: parcelName,
-                    onNavigate: onNavigate,
-                    onEdit: onEdit,
-                    onDelete: onDelete,
-                  );
-                }),
+          // List
+          Expanded(
+            child: ListView(
+              controller: scrollController,
+              children: [
+                // Locations section (non-sečnja)
+                if (locations.where((l) => !l.isSecnja).isNotEmpty) ...[
+                  _SectionHeader(
+                    icon: Icons.location_on,
+                    color: Colors.orange,
+                    title: 'Točke',
+                    count: locations.where((l) => !l.isSecnja).length,
+                  ),
+                  ...locations.where((l) => !l.isSecnja).map((location) {
+                    final parcelName = _findParcelName(
+                      location.latitude,
+                      location.longitude,
+                    );
+                    return _LocationListTile(
+                      location: location,
+                      parcelName: parcelName,
+                      onNavigate: onNavigate,
+                      onEdit: onEdit,
+                      onDelete: onDelete,
+                    );
+                  }),
+                ],
+                // Sečnja section
+                if (locations.any((l) => l.isSecnja)) ...[
+                  _SectionHeader(
+                    icon: Icons.carpenter,
+                    color: Colors.deepOrange,
+                    title: 'Sečnja',
+                    count: locations.where((l) => l.isSecnja).length,
+                  ),
+                  ...locations.where((l) => l.isSecnja).map((location) {
+                    final parcelName = _findParcelName(
+                      location.latitude,
+                      location.longitude,
+                    );
+                    return _LocationListTile(
+                      location: location,
+                      parcelName: parcelName,
+                      onNavigate: onNavigate,
+                      onEdit: onEdit,
+                      onDelete: onDelete,
+                    );
+                  }),
+                ],
+                // Logs section
+                if (geolocatedLogs.isNotEmpty) ...[
+                  _SectionHeader(
+                    icon: Icons.forest,
+                    color: Colors.brown,
+                    title: 'Hlodovina',
+                    count: geolocatedLogs.length,
+                  ),
+                  ...geolocatedLogs.map((log) {
+                    final parcelName = _findParcelName(
+                      log.latitude!,
+                      log.longitude!,
+                    );
+                    return _LogListTile(
+                      log: log,
+                      parcelName: parcelName,
+                      onNavigate: onNavigate,
+                    );
+                  }),
+                ],
               ],
-              // Sečnja section
-              if (locations.any((l) => l.isSecnja)) ...[
-                _SectionHeader(
-                  icon: Icons.carpenter,
-                  color: Colors.deepOrange,
-                  title: 'Sečnja',
-                  count: locations.where((l) => l.isSecnja).length,
-                ),
-                ...locations.where((l) => l.isSecnja).map((location) {
-                  final parcelName = _findParcelName(
-                    location.latitude,
-                    location.longitude,
-                  );
-                  return _LocationListTile(
-                    location: location,
-                    parcelName: parcelName,
-                    onNavigate: onNavigate,
-                    onEdit: onEdit,
-                    onDelete: onDelete,
-                  );
-                }),
-              ],
-              // Logs section
-              if (geolocatedLogs.isNotEmpty) ...[
-                _SectionHeader(
-                  icon: Icons.forest,
-                  color: Colors.brown,
-                  title: 'Hlodovina',
-                  count: geolocatedLogs.length,
-                ),
-                ...geolocatedLogs.map((log) {
-                  final parcelName = _findParcelName(
-                    log.latitude!,
-                    log.longitude!,
-                  );
-                  return _LogListTile(
-                    log: log,
-                    parcelName: parcelName,
-                    onNavigate: onNavigate,
-                  );
-                }),
-              ],
-            ],
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
   }
 }
 

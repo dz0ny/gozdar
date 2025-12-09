@@ -10,6 +10,7 @@ import '../services/analytics_service.dart';
 import '../widgets/parcel_silhouette.dart';
 import 'parcel_editor.dart';
 import 'parcel_detail_screen.dart';
+import '../main.dart' show MainScreen;
 
 /// Get icon and color for forest type
 (IconData, Color) getForestTypeIcon(ForestType type) {
@@ -114,6 +115,11 @@ class ForestTabState extends State<ForestTab> {
         }
       }
     }
+  }
+
+  /// Public method to open a specific parcel detail (can be called from outside)
+  Future<void> openParcelDetail(Parcel parcel) async {
+    await _openParcelDetail(parcel);
   }
 
   Future<void> _openParcelDetail(Parcel parcel) async {
@@ -634,19 +640,19 @@ class ForestTabState extends State<ForestTab> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Uvozite KML, narišite parcelo ali\ndolgo pritisnite na karti za uvoz iz katastra',
+                                        'Narišite parcelo ali\niščite parcelo v katastru',
                                         style: Theme.of(context).textTheme.bodyMedium
                                             ?.copyWith(color: Colors.grey[600]),
                                         textAlign: TextAlign.center,
                                       ),
                                       const SizedBox(height: 24),
-                                      OutlinedButton.icon(
-                                        onPressed: _importKml,
-                                        icon: const Icon(Icons.file_upload),
-                                        label: const Text('Uvozi KML'),
+                                      FilledButton.icon(
+                                        onPressed: () => MainScreen.navigateToMapWithSearch(),
+                                        icon: const Icon(Icons.search),
+                                        label: const Text('Išči parcelo'),
                                       ),
                                       const SizedBox(height: 12),
-                                      FilledButton.icon(
+                                      OutlinedButton.icon(
                                         onPressed: _addParcel,
                                         icon: const Icon(Icons.add),
                                         label: const Text('Dodaj parcelo'),
@@ -654,173 +660,238 @@ class ForestTabState extends State<ForestTab> {
                                     ],
                                   ),
                           )
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: displayParcels.length,
-                            itemBuilder: (context, index) {
-                              final parcel = displayParcels[index];
-
-                              return Dismissible(
-                                key: Key('parcel_${parcel.id}'),
-                                direction: DismissDirection.endToStart,
-                                confirmDismiss: (_) async {
-                                  await _deleteParcel(parcel);
-                                  return false; // We handle deletion ourselves
-                                },
-                                background: Container(
-                                  alignment: Alignment.centerRight,
-                                  padding: const EdgeInsets.only(right: 20),
-                                  color: Colors.red,
-                                  child: const Icon(
-                                    Icons.delete,
-                                    color: Colors.white,
-                                    size: 32,
-                                  ),
-                                ),
-                                child: Card(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  child: ListTile(
-                                    onTap: () => _openParcelDetail(parcel),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 4,
-                                    ),
-                                    leading: parcel.polygon.isNotEmpty
-                                        ? ParcelSilhouette(
-                                            polygon: parcel.polygon,
-                                            size: 48,
-                                            fillColor: getForestTypeIcon(
-                                              parcel.forestType,
-                                            ).$2.withValues(alpha: 0.3),
-                                            strokeColor: getForestTypeIcon(
-                                              parcel.forestType,
-                                            ).$2,
-                                          )
-                                        : Icon(
-                                            getForestTypeIcon(
-                                              parcel.forestType,
-                                            ).$1,
-                                            color: getForestTypeIcon(
-                                              parcel.forestType,
-                                            ).$2,
-                                          ),
-                                    title: Text(
-                                      parcel.name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        if (parcel.owner != null &&
-                                            parcel.owner!.isNotEmpty)
-                                          Text(
-                                            parcel.owner!,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                        Row(
-                                          children: [
-                                            Text(parcel.areaFormatted),
-                                            if (parcel.treesCut > 0 ||
-                                                parcel.woodCut > 0) ...[
-                                              Text(
-                                                ' · ',
-                                                style: TextStyle(
-                                                  color: Colors.grey[400],
-                                                ),
-                                              ),
-                                              if (parcel.treesCut > 0)
-                                                Text(
-                                                  '${parcel.treesCut} dreves',
-                                                  style: TextStyle(
-                                                    color: Colors.orange[700],
-                                                  ),
-                                                ),
-                                              if (parcel.treesCut > 0 &&
-                                                  parcel.woodCut > 0)
-                                                Text(
-                                                  ' · ',
-                                                  style: TextStyle(
-                                                    color: Colors.grey[400],
-                                                  ),
-                                                ),
-                                              if (parcel.woodCut > 0)
-                                                Text(
-                                                  '${parcel.woodCut.toStringAsFixed(1)} m³',
-                                                  style: TextStyle(
-                                                    color: Colors.orange[700],
-                                                  ),
-                                                ),
-                                            ],
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    trailing: parcel.woodAllowance > 0
-                                        ? SizedBox(
-                                            width: 50,
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Text(
-                                                  '${parcel.woodUsedPercent.toStringAsFixed(0)}%',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
-                                                    color:
-                                                        parcel.woodUsedPercent >=
-                                                            100
-                                                        ? Colors.red
-                                                        : parcel.woodUsedPercent >=
-                                                              80
-                                                        ? Colors.orange
-                                                        : Colors.green,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(2),
-                                                  child: LinearProgressIndicator(
-                                                    value:
-                                                        parcel.woodUsedPercent /
-                                                        100,
-                                                    minHeight: 4,
-                                                    backgroundColor:
-                                                        Colors.grey[300],
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation<
-                                                          Color
-                                                        >(
-                                                          parcel.woodUsedPercent >=
-                                                                  100
-                                                              ? Colors.red
-                                                              : parcel.woodUsedPercent >=
-                                                                    80
-                                                              ? Colors.orange
-                                                              : Colors.green,
-                                                        ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          )
-                                        : const Icon(Icons.chevron_right),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                        : _buildGroupedParcelsList(context, displayParcels),
                   ),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildGroupedParcelsList(
+    BuildContext context,
+    List<Parcel> parcels,
+  ) {
+    // Group parcels by cadastral municipality (KO)
+    final groupedParcels = <String, List<Parcel>>{};
+    for (final parcel in parcels) {
+      final ko = parcel.cadastralMunicipality != null
+          ? 'KO ${parcel.cadastralMunicipality}'
+          : 'Brez KO';
+      if (!groupedParcels.containsKey(ko)) {
+        groupedParcels[ko] = [];
+      }
+      groupedParcels[ko]!.add(parcel);
+    }
+
+    // Progressive enhancement: only show grouping if more than one KO
+    if (groupedParcels.length <= 1) {
+      return _buildSimpleParcelsList(context, parcels);
+    }
+
+    // Sort KOs, but put "Brez KO" at the end
+    final sortedKOs = groupedParcels.keys.toList()
+      ..sort((a, b) {
+        if (a == 'Brez KO') return 1;
+        if (b == 'Brez KO') return -1;
+        // Extract numeric KO for proper sorting
+        final aNum = int.tryParse(a.replaceAll('KO ', ''));
+        final bNum = int.tryParse(b.replaceAll('KO ', ''));
+        if (aNum != null && bNum != null) {
+          return aNum.compareTo(bNum);
+        }
+        return a.compareTo(b);
+      });
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: sortedKOs.length,
+      itemBuilder: (context, groupIndex) {
+        final ko = sortedKOs[groupIndex];
+        final groupParcels = groupedParcels[ko]!;
+        final count = groupParcels.length;
+        final totalArea = groupParcels.fold<double>(
+          0,
+          (sum, parcel) => sum + parcel.areaM2,
+        );
+        final areaFormatted = totalArea >= 10000
+            ? '${(totalArea / 10000).toStringAsFixed(2)} ha'
+            : '${totalArea.toStringAsFixed(0)} m²';
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // KO header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: EdgeInsets.only(top: groupIndex == 0 ? 0 : 8),
+              color: Colors.grey[100],
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 20,
+                    color: Colors.blue[700],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      ko,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[800],
+                          ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    '$count parcel • $areaFormatted',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            // Parcels in this group
+            ...groupParcels.map((parcel) => _buildParcelCard(context, parcel)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSimpleParcelsList(BuildContext context, List<Parcel> parcels) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: parcels.length,
+      itemBuilder: (context, index) {
+        final parcel = parcels[index];
+        return _buildParcelCard(context, parcel);
+      },
+    );
+  }
+
+  Widget _buildParcelCard(BuildContext context, Parcel parcel) {
+    return Dismissible(
+      key: Key('parcel_${parcel.id}'),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) async {
+        await _deleteParcel(parcel);
+        return false; // We handle deletion ourselves
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        color: Colors.red,
+        child: const Icon(
+          Icons.delete,
+          color: Colors.white,
+          size: 32,
+        ),
+      ),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: ListTile(
+          onTap: () => _openParcelDetail(parcel),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
+          ),
+          leading: parcel.polygon.isNotEmpty
+              ? ParcelSilhouette(
+                  polygon: parcel.polygon,
+                  size: 48,
+                  fillColor: getForestTypeIcon(parcel.forestType)
+                      .$2
+                      .withValues(alpha: 0.3),
+                  strokeColor: getForestTypeIcon(parcel.forestType).$2,
+                )
+              : Icon(
+                  getForestTypeIcon(parcel.forestType).$1,
+                  color: getForestTypeIcon(parcel.forestType).$2,
+                ),
+          title: Text(
+            parcel.name,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (parcel.owner != null && parcel.owner!.isNotEmpty)
+                Text(
+                  parcel.owner!,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              Row(
+                children: [
+                  Text(parcel.areaFormatted),
+                  if (parcel.treesCut > 0 || parcel.woodCut > 0) ...[
+                    Text(
+                      ' · ',
+                      style: TextStyle(color: Colors.grey[400]),
+                    ),
+                    if (parcel.treesCut > 0)
+                      Text(
+                        '${parcel.treesCut} dreves',
+                        style: TextStyle(color: Colors.orange[700]),
+                      ),
+                    if (parcel.treesCut > 0 && parcel.woodCut > 0)
+                      Text(
+                        ' · ',
+                        style: TextStyle(color: Colors.grey[400]),
+                      ),
+                    if (parcel.woodCut > 0)
+                      Text(
+                        '${parcel.woodCut.toStringAsFixed(1)} m³',
+                        style: TextStyle(color: Colors.orange[700]),
+                      ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+          trailing: parcel.woodAllowance > 0
+              ? SizedBox(
+                  width: 50,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '${parcel.woodUsedPercent.toStringAsFixed(0)}%',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: parcel.woodUsedPercent >= 100
+                              ? Colors.red
+                              : parcel.woodUsedPercent >= 80
+                                  ? Colors.orange
+                                  : Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: parcel.woodUsedPercent / 100,
+                          minHeight: 4,
+                          backgroundColor: Colors.grey[300],
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            parcel.woodUsedPercent >= 100
+                                ? Colors.red
+                                : parcel.woodUsedPercent >= 80
+                                    ? Colors.orange
+                                    : Colors.green,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : const Icon(Icons.chevron_right),
+        ),
+      ),
     );
   }
 }

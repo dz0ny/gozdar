@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import '../models/parcel.dart';
 
 /// Popup menu shown on map long press with location-based actions
 class MapLongPressMenu extends StatelessWidget {
@@ -9,7 +10,9 @@ class MapLongPressMenu extends StatelessWidget {
   final VoidCallback onAddLog;
   final VoidCallback onAddSecnja;
   final VoidCallback onImportParcel;
+  final VoidCallback? onViewParcel;
   final VoidCallback onDismiss;
+  final Parcel? existingParcel;
 
   const MapLongPressMenu({
     super.key,
@@ -19,7 +22,9 @@ class MapLongPressMenu extends StatelessWidget {
     required this.onAddLog,
     required this.onAddSecnja,
     required this.onImportParcel,
+    this.onViewParcel,
     required this.onDismiss,
+    this.existingParcel,
   });
 
   Widget _buildMenuItem({
@@ -99,16 +104,27 @@ class MapLongPressMenu extends StatelessWidget {
                 },
               ),
               const Divider(height: 8),
-              // Import parcel button
-              _buildMenuItem(
-                icon: Icons.download,
-                label: 'Uvozi parcelo',
-                color: Colors.blue,
-                onTap: () {
-                  onDismiss();
-                  onImportParcel();
-                },
-              ),
+              // Import parcel button (or view parcel if already on a parcel)
+              if (existingParcel != null)
+                _buildMenuItem(
+                  icon: Icons.visibility,
+                  label: 'Poglej parcelo',
+                  color: Colors.blue,
+                  onTap: () {
+                    onDismiss();
+                    onViewParcel?.call();
+                  },
+                )
+              else
+                _buildMenuItem(
+                  icon: Icons.download,
+                  label: 'Uvozi parcelo',
+                  color: Colors.blue,
+                  onTap: () {
+                    onDismiss();
+                    onImportParcel();
+                  },
+                ),
             ],
           ),
         ),

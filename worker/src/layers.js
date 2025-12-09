@@ -82,13 +82,13 @@ export const LAYERS = {
   },
   'ortofoto-2023': {
     baseUrl: GEOSERVER,
-    layers: 'pregledovalnik:DOF_2023',
+    layers: 'pregledovalnik:DOF25_2023',
     format: 'image/jpeg',
     transparent: false,
   },
   'ortofoto-2022': {
     baseUrl: GEOSERVER,
-    layers: 'pregledovalnik:DOF_2022',
+    layers: 'pregledovalnik:DOF25_2022',
     format: 'image/jpeg',
     transparent: false,
   },

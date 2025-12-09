@@ -226,7 +226,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           const SizedBox(height: 24),
           _buildInfoCard([
             _buildInfoRow(Icons.map, 'Karta', 'Interaktivni zemljevid z vašimi parcelami'),
-            _buildInfoRow(Icons.forest, 'Gozd', 'Seznam parcel s sledenjem poseku'),
+            _buildInfoRow(Icons.forest, 'Gozd', 'Seznam parcel in iskanje v katastru'),
             _buildInfoRow(Icons.inventory_2, 'Hlodi', 'Beleženje hlodovine z izračunom volumna'),
           ]),
         ],
@@ -346,6 +346,12 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           const SizedBox(height: 24),
           _buildInfoCard([
             _buildInfoRow(
+              Icons.search,
+              'Išči parcelo',
+              'Najdi parcelo v katastru (KO + številka)',
+              iconColor: Colors.blue,
+            ),
+            _buildInfoRow(
               Icons.add_location_alt,
               'Dodaj točko',
               'Shrani lokacijo (mejnik, skladišče)',
@@ -366,8 +372,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
             _buildInfoRow(
               Icons.download,
               'Uvozi parcelo',
-              'Pridobi parcelo iz katastra (KO + številka)',
-              iconColor: Colors.blue,
+              'Pridobi parcelo iz katastra na trenutni lokaciji',
+              iconColor: Colors.green,
             ),
           ]),
           const SizedBox(height: 16),
@@ -523,14 +529,14 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
               'Ogljedane karte se shranijo za kasnejšo uporabo',
             ),
             _buildInfoRow(
-              Icons.add_location_alt,
-              'Ob uvozu parcele',
+              Icons.search,
+              'Ob iskanju parcele',
               'Karte za območje parcele se prenesejo samodejno',
             ),
             _buildInfoRow(
               Icons.download_for_offline,
               'Ročni prenos',
-              '3× tapnite Karta zavihek za orodje za prenos',
+              'Uporabite gumb za sloje na karti za prenos območja',
             ),
           ]),
           const SizedBox(height: 16),

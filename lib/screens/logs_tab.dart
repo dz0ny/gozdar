@@ -256,11 +256,7 @@ class LogsTab extends StatelessWidget {
 
   Future<void> _showSavedBatches(BuildContext context) async {
     AnalyticsService().logBatchViewed();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => const SavedBatchesSheet(),
-    );
+    await SavedBatchesSheet.show(context);
   }
 
   Future<void> _showSpeciesManagement(BuildContext context) async {

@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:provider/provider.dart';
+import '../main.dart' show MainScreen;
 import '../models/map_location.dart';
 import '../models/map_layer.dart';
 import '../models/parcel.dart';
@@ -29,6 +30,9 @@ import '../widgets/map_controls.dart';
 import '../widgets/map_layer_selector.dart';
 import '../widgets/map_dialogs.dart';
 import '../widgets/saved_locations_sheet.dart';
+import '../widgets/parcel_search_dialog.dart';
+import '../widgets/parcel_silhouette.dart';
+import 'parcel_detail_screen.dart';
 import '../providers/map_provider.dart';
 
 /// Map Tab screen for the Gozdar app
@@ -78,6 +82,9 @@ class MapTabState extends State<MapTab> {
 
   // Current zoom level for dynamic marker sizing
   double _currentZoom = 13.0;
+
+  // Searched parcel from WFS query
+  WfsParcel? _searchedParcel;
 
   /// Check if markers should be visible at current zoom
   /// Slovenian CRS has different zoom scale, so lower threshold needed
@@ -551,6 +558,15 @@ class MapTabState extends State<MapTab> {
     }
   }
 
+  /// Navigate to parcel detail screen
+  Future<void> _navigateToParcelDetail(Parcel parcel) async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => ParcelDetailScreen(parcel: parcel),
+      ),
+    );
+  }
+
   /// Show dialog to confirm location deletion
   Future<void> _showDeleteLocationDialog(MapLocation location) async {
     final confirmed = await MapDialogs.showDeleteLocationDialog(
@@ -640,30 +656,47 @@ class MapTabState extends State<MapTab> {
     }
   }
 
-  /// Show dialog to import a cadastral parcel
+  /// Show dialog to import a cadastral parcel or view it if already imported
   Future<void> _showImportParcelDialog(CadastralParcel cadastralParcel) async {
-    // Check if parcel already exists using provider
-    final mapProvider = context.read<MapProvider>();
-    final exists = await mapProvider.cadastralParcelExists(
+    // Check if parcel already exists using database service
+    final dbService = DatabaseService();
+    final existingParcel = await dbService.findParcelByKoAndNumber(
       cadastralParcel.cadastralMunicipality,
       cadastralParcel.parcelNumber,
     );
 
-    if (exists) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+    if (!mounted) return;
+
+    if (existingParcel != null) {
+      // Parcel already exists - show option to view it
+      final viewParcel = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Parcela že obstaja'),
           content: Text(
-            'Parcela ${cadastralParcel.parcelNumber} (KO ${cadastralParcel.cadastralMunicipality}) je ze uvozena',
+            'Parcela ${cadastralParcel.cadastralMunicipality} - ${cadastralParcel.parcelNumber} je že v vaših parcelah.',
           ),
-          backgroundColor: Colors.orange,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Zapri'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(context).pop(true),
+              icon: const Icon(Icons.visibility),
+              label: const Text('Prikaži v mojih parcelah'),
+            ),
+          ],
         ),
       );
+
+      if (viewParcel == true && mounted) {
+        MainScreen.navigateToForestWithParcel(existingParcel);
+      }
       return;
     }
 
-    if (!mounted) return;
-
+    // Parcel doesn't exist - show import dialog
     final confirmed = await MapDialogs.showImportParcelDialog(
       context: context,
       cadastralParcel: cadastralParcel,
@@ -696,7 +729,7 @@ class MapTabState extends State<MapTab> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Parcela ${cadastralParcel.parcelNumber} uspesno uvozena',
+                'Parcela ${cadastralParcel.cadastralMunicipality} - ${cadastralParcel.parcelNumber} uspesno uvozena',
               ),
             ),
           );
@@ -1330,6 +1363,31 @@ class MapTabState extends State<MapTab> {
                       )
                       .toList(),
                 ),
+
+              // Searched parcel (highlighted)
+              if (_searchedParcel != null && _searchedParcel!.polygon.isNotEmpty)
+                PolygonLayer(
+                  polygons: [
+                    Polygon(
+                      points: _searchedParcel!.polygon,
+                      color: Colors.blue.withValues(alpha: 0.3),
+                      borderColor: Colors.blue,
+                      borderStrokeWidth: 3.0,
+                      label: 'Parcela ${_searchedParcel!.label}',
+                      labelStyle: const TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        shadows: [
+                          Shadow(
+                            color: Colors.white,
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               // Parcel vertex markers (mejne tocke) - hidden at low zoom
               if (_parcels.isNotEmpty && _showMarkers)
                 MarkerLayer(markers: _buildParcelVertexMarkers()),
@@ -1527,13 +1585,26 @@ class MapTabState extends State<MapTab> {
               builder: (context) {
                 // Capture position at build time so it persists after onDismiss clears state
                 final position = _longPressMapPosition!;
+                // Find parcel at this position
+                Parcel? parcelAtPosition;
+                try {
+                  parcelAtPosition = _parcels.firstWhere(
+                    (parcel) => parcel.containsPoint(position),
+                  );
+                } catch (_) {
+                  parcelAtPosition = null;
+                }
                 return MapLongPressMenu(
                   screenPosition: _longPressScreenPosition!,
                   mapPosition: position,
+                  existingParcel: parcelAtPosition,
                   onAddLocation: () => _showAddLocationDialog(position),
                   onAddLog: () => _showAddLogDialog(position),
                   onAddSecnja: () => _showAddSecnjaDialog(position),
                   onImportParcel: () => _queryParcelAtLocation(position),
+                  onViewParcel: parcelAtPosition != null
+                      ? () => _navigateToParcelDetail(parcelAtPosition!)
+                      : null,
                   onDismiss: () => setState(() {
                     _longPressScreenPosition = null;
                     _longPressMapPosition = null;
@@ -1577,6 +1648,7 @@ class MapTabState extends State<MapTab> {
         currentBaseLayer: _currentBaseLayer,
         locationsCount: _locations.length,
         onLayerSelectorPressed: _showLayerSelector,
+        onSearchPressed: showParcelSearchDialog,
         onGpsPressed: _centerOnGpsLocation,
         onLocationsPressed: _locations.isNotEmpty ? _showLocationsSheet : null,
       ),
@@ -1603,6 +1675,323 @@ class MapTabState extends State<MapTab> {
   }
 
   /// Show detailed usage rights dialog
+  /// Show parcel search dialog
+  void showParcelSearchDialog() {
+    ParcelSearchDialog.show(
+      context: context,
+      mapController: _mapController,
+      onParcelFound: _handleParcelFound,
+    );
+  }
+
+  /// Handle when a parcel is found from search
+  Future<void> _handleParcelFound(WfsParcel parcel) async {
+    setState(() {
+      _searchedParcel = parcel;
+    });
+
+    // Fit map to parcel bounds
+    if (parcel.polygon.isNotEmpty) {
+      final bounds = LatLngBounds.fromPoints(parcel.polygon);
+      _mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: bounds,
+          padding: const EdgeInsets.all(50),
+          maxZoom: 17,
+        ),
+      );
+    }
+
+    // Check if parcel already exists in database
+    final koInt = int.tryParse(parcel.koNumber);
+    final existingParcel = await DatabaseService().findParcelByKoAndNumber(
+      koInt,
+      parcel.parcelNumber,
+    );
+
+    if (!mounted) return;
+
+    // Show bottom sheet with conditional action
+    if (mounted) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (context) => Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Success header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.check_circle,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Parcela najdena',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        Text(
+                          existingParcel != null ? 'Vaša parcela' : 'Pregled meje parcele',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Card with parcel preview
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ParcelSilhouette(
+                      polygon: parcel.polygon,
+                      size: 56,
+                      fillColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                      strokeColor: Theme.of(context).colorScheme.primary,
+                      strokeWidth: 2.5,
+                    ),
+                  ),
+                    title: Text(
+                      'Parcela ${parcel.label}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.map,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'KO ${parcel.nationalCadastralReference}',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.square_foot,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                parcel.formattedArea,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Action buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _searchedParcel = null;
+                        });
+                        Navigator.of(context).pop();
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.close),
+                      label: const Text('Skrij'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton.icon(
+                      onPressed: () async {
+                        Navigator.of(context).pop();
+                        // Clear the blue overlay
+                        setState(() {
+                          _searchedParcel = null;
+                        });
+                        if (existingParcel != null) {
+                          // Parcel already exists - navigate to Forest tab
+                          MainScreen.navigateToForestWithParcel(existingParcel);
+                        } else {
+                          // Parcel doesn't exist - import it
+                          await _importSearchedParcel(parcel);
+                        }
+                      },
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: Icon(existingParcel != null ? Icons.visibility : Icons.download),
+                      label: Text(existingParcel != null ? 'Odpri parcelo' : 'Uvozi parcelo'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Import the searched parcel into the database
+  Future<void> _importSearchedParcel(WfsParcel wfsParcel) async {
+    try {
+      final dbService = DatabaseService();
+
+      // Convert KO number from string to int
+      final koInt = int.tryParse(wfsParcel.koNumber);
+
+      // Check if parcel already exists
+      final existingParcel = await dbService.findParcelByKoAndNumber(
+        koInt,
+        wfsParcel.parcelNumber,
+      );
+
+      if (existingParcel != null) {
+        // Parcel already exists - show option to view it
+        if (mounted) {
+          final viewParcel = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Parcela že obstaja'),
+              content: Text(
+                'Parcela ${wfsParcel.label} je že v vaših parcelah.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Zapri'),
+                ),
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  icon: const Icon(Icons.visibility),
+                  label: const Text('Prikaži v mojih parcelah'),
+                ),
+              ],
+            ),
+          );
+
+          if (viewParcel == true && mounted) {
+            MainScreen.navigateToForestWithParcel(existingParcel);
+          }
+        }
+        return;
+      }
+
+      // Convert WfsParcel to Parcel model
+      final parcel = Parcel(
+        name: '${wfsParcel.koNumber} - ${wfsParcel.parcelNumber}',
+        polygon: wfsParcel.polygon,
+        cadastralMunicipality: koInt,
+        parcelNumber: wfsParcel.parcelNumber,
+        createdAt: DateTime.now(),
+      );
+
+      await dbService.insertParcel(parcel);
+
+      // Reload parcels in provider (which will sync to local state via build method)
+      if (mounted) {
+        await context.read<MapProvider>().loadParcels();
+      }
+
+      // Reload local parcels as well to ensure immediate update
+      await _loadParcels();
+
+      // Clear searched parcel
+      setState(() {
+        _searchedParcel = null;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Parcela je bila uvožena'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // Log analytics event
+      await AnalyticsService().logParcelImportedWfs();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Napaka pri uvozu: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _showUsageRightsDialog() {
     showModalBottomSheet(
       context: context,

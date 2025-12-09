@@ -7,6 +7,7 @@ import 'http_cache_service.dart';
 /// Service for querying Slovenian WMS data via GetFeatureInfo
 class CadastralService {
   static const String _wmsBaseUrl = 'https://prostor.zgs.gov.si/geoserver/pregledovalnik/wms';
+  static const String _wfsApiUrl = 'https://gozdar-proxy.dz0ny.workers.dev/api/wfs';
 
   final HttpCacheService _httpCache = HttpCacheService();
 
@@ -131,6 +132,37 @@ class CadastralService {
     }
 
     return CadastralParcel.fromGeoJson(features.first);
+  }
+
+  /// Query cadastral parcel by KO number and parcel number
+  /// Returns null if no parcel found or on error
+  Future<WfsParcel?> queryParcelByKoAndNumber(
+    String koNumber,
+    String parcelNumber,
+  ) async {
+    try {
+      // URL encode parcel number (handles slashes like "1/1")
+      final encodedParcel = Uri.encodeComponent(parcelNumber);
+      final uri = Uri.parse('$_wfsApiUrl/parcel/ko/$koNumber/$encodedParcel');
+
+      final response = await _httpCache.get(uri, timeout: const Duration(seconds: 30));
+
+      if (response.statusCode != 200) {
+        return null;
+      }
+
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final features = json['features'] as List<dynamic>?;
+
+      if (features == null || features.isEmpty) {
+        return null;
+      }
+
+      return WfsParcel.fromGeoJson(features.first as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('Error querying parcel by KO $koNumber and number $parcelNumber: $e');
+      return null;
+    }
   }
 
   /// Query forest stand (sestoj) at given location
@@ -349,4 +381,118 @@ class CadastralParcel {
 
   /// Get display name for the parcel
   String get displayName => 'Parcela $parcelNumber (KO $cadastralMunicipality)';
+}
+
+/// Represents a cadastral parcel from the WFS API (GURS official data)
+class WfsParcel {
+  final String localId;
+  final String label;
+  final String nationalCadastralReference;
+  final double area; // in m²
+  final List<LatLng> polygon; // Converted to WGS84
+  final LatLng? referencePoint; // Centroid
+
+  const WfsParcel({
+    required this.localId,
+    required this.label,
+    required this.nationalCadastralReference,
+    required this.area,
+    required this.polygon,
+    this.referencePoint,
+  });
+
+  /// Create from WFS GeoJSON feature
+  factory WfsParcel.fromGeoJson(Map<String, dynamic> feature) {
+    final properties = feature['properties'] as Map<String, dynamic>;
+    final geometry = feature['geometry'] as Map<String, dynamic>;
+
+    // Parse area value
+    final areaValue = properties['areaValue'];
+    double area = 0.0;
+    if (areaValue is Map && areaValue['value'] != null) {
+      area = (areaValue['value'] as num).toDouble();
+    } else if (areaValue is num) {
+      area = areaValue.toDouble();
+    }
+
+    // Parse reference point (centroid)
+    LatLng? referencePoint;
+    final refPoint = properties['referencePoint'];
+    if (refPoint is Map && refPoint['coordinates'] is List) {
+      final coords = refPoint['coordinates'] as List<dynamic>;
+      if (coords.length >= 2) {
+        referencePoint = LatLng(
+          (coords[1] as num).toDouble(),
+          (coords[0] as num).toDouble(),
+        );
+      }
+    }
+
+    // Parse polygon coordinates (WGS84 from WFS)
+    List<LatLng> polygon = [];
+    try {
+      final geomType = geometry['type'] as String?;
+      final coordinates = geometry['coordinates'] as List<dynamic>?;
+
+      if (coordinates != null && coordinates.isNotEmpty) {
+        List<dynamic> ring;
+
+        if (geomType == 'MultiPolygon') {
+          final firstPolygon = coordinates[0] as List<dynamic>;
+          ring = firstPolygon[0] as List<dynamic>;
+        } else if (geomType == 'Polygon') {
+          ring = coordinates[0] as List<dynamic>;
+        } else {
+          ring = [];
+        }
+
+        if (ring.isNotEmpty) {
+          polygon = ring.map((coord) {
+            final c = coord as List<dynamic>;
+            return LatLng(
+              (c[1] as num).toDouble(), // lat
+              (c[0] as num).toDouble(), // lng
+            );
+          }).toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error parsing WfsParcel geometry: $e');
+    }
+
+    final inspireId = properties['inspireId'] as Map<String, dynamic>?;
+
+    return WfsParcel(
+      localId: inspireId?['localId'] as String? ?? '',
+      label: properties['label'] as String? ?? '',
+      nationalCadastralReference: properties['nationalCadastralReference'] as String? ?? '',
+      area: area,
+      polygon: polygon,
+      referencePoint: referencePoint,
+    );
+  }
+
+  /// Get formatted area string
+  String get formattedArea {
+    if (area >= 10000) {
+      return '${(area / 10000).toStringAsFixed(2)} ha';
+    } else {
+      return '${area.toStringAsFixed(0)} m²';
+    }
+  }
+
+  /// Get KO number from national cadastral reference (format: "KO_NUMBER PARCEL_NUMBER")
+  String get koNumber {
+    final parts = nationalCadastralReference.split(' ');
+    return parts.isNotEmpty ? parts[0] : '';
+  }
+
+  /// Get parcel number from national cadastral reference
+  String get parcelNumber {
+    final parts = nationalCadastralReference.split(' ');
+    return parts.length > 1 ? parts.sublist(1).join(' ') : label;
+  }
+
+  /// Get display name for the parcel
+  String get displayName => 'Parcela $label ($nationalCadastralReference)';
 }

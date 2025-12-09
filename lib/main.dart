@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 import 'dart:ui' show PlatformDispatcher;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -18,6 +19,7 @@ import 'providers/logs_provider.dart';
 import 'providers/map_provider.dart';
 import 'theme/app_theme.dart';
 import 'models/navigation_target.dart';
+import 'models/parcel.dart';
 import 'widgets/update_banner.dart';
 import 'widgets/worker_settings_dialog.dart';
 import 'services/analytics_service.dart';
@@ -32,26 +34,32 @@ final analyticsService = AnalyticsService();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase (gracefully handle missing platform config)
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    _analytics = FirebaseAnalytics.instance;
+  // Initialize Firebase only in release mode (skip for debug builds)
+  if (!kDebugMode) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      _analytics = FirebaseAnalytics.instance;
 
-    // Pass all uncaught "fatal" errors from the framework to Crashlytics
-    FlutterError.onError = (errorDetails) {
-      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-    };
+      // Pass all uncaught "fatal" errors from the framework to Crashlytics
+      FlutterError.onError = (errorDetails) {
+        FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+      };
 
-    // Pass all uncaught asynchronous errors to Crashlytics
-    PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
-    };
-  } catch (e) {
-    debugPrint('Firebase initialization failed: $e');
-    // Continue without Firebase - analytics and crashlytics will be null
+      // Pass all uncaught asynchronous errors to Crashlytics
+      PlatformDispatcher.instance.onError = (error, stack) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true;
+      };
+
+      debugPrint('Firebase initialized successfully');
+    } catch (e) {
+      debugPrint('Firebase initialization failed: $e');
+      // Continue without Firebase - analytics and crashlytics will be null
+    }
+  } else {
+    debugPrint('Firebase disabled in debug mode');
   }
 
   await DatabaseService().initialize();
@@ -124,6 +132,16 @@ class MainScreen extends StatefulWidget {
     globalKey.currentState?.setNavigationTarget(target);
   }
 
+  /// Navigate to forest tab and show a specific parcel
+  static void navigateToForestWithParcel(Parcel parcel) {
+    globalKey.currentState?.showParcelInForestTab(parcel);
+  }
+
+  /// Navigate to map tab and trigger search dialog
+  static void navigateToMapWithSearch() {
+    globalKey.currentState?.switchToMapAndSearch();
+  }
+
   @override
   State<MainScreen> createState() => MainScreenState();
 }
@@ -160,6 +178,29 @@ class MainScreenState extends State<MainScreen> {
     // Set the target on the map tab after the frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _mapTabKey.currentState?.setNavigationTarget(target);
+    });
+  }
+
+  /// Navigate to forest tab and show specific parcel detail
+  void showParcelInForestTab(Parcel parcel) {
+    setState(() {
+      _currentIndex = 1; // Switch to forest tab
+    });
+    // Open parcel detail after the frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _forestTabKey.currentState?.openParcelDetail(parcel);
+    });
+  }
+
+  /// Navigate to map tab and show parcel search dialog
+  void switchToMapAndSearch() {
+    setState(() {
+      _currentIndex = 0; // Switch to Karta (Map) tab
+    });
+
+    // Show search dialog after tab switch completes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _mapTabKey.currentState?.showParcelSearchDialog();
     });
   }
 

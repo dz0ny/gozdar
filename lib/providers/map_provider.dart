@@ -301,9 +301,20 @@ class MapProvider extends ChangeNotifier {
   /// Import a cadastral parcel
   Future<bool> importCadastralParcel(CadastralParcel cadastralParcel) async {
     try {
+      // Check if parcel already exists
+      final exists = await cadastralParcelExists(
+        cadastralParcel.cadastralMunicipality,
+        cadastralParcel.parcelNumber,
+      );
+
+      if (exists) {
+        _error = 'Parcela ${cadastralParcel.cadastralMunicipality} - ${cadastralParcel.parcelNumber} je že v bazi podatkov';
+        notifyListeners();
+        return false;
+      }
+
       final parcel = Parcel(
-        name:
-            'Parcela ${cadastralParcel.parcelNumber} (KO ${cadastralParcel.cadastralMunicipality})',
+        name: '${cadastralParcel.cadastralMunicipality} - ${cadastralParcel.parcelNumber}',
         polygon: cadastralParcel.polygon,
         cadastralMunicipality: cadastralParcel.cadastralMunicipality,
         parcelNumber: cadastralParcel.parcelNumber,

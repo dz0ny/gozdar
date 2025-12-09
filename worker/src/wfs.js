@@ -176,6 +176,55 @@ export async function getParcelsByBbox(c) {
 }
 
 /**
+ * Get cadastral parcel by KO number and parcel number (strict match)
+ * @param {string} koNumber - Cadastral municipality number
+ * @param {string} parcelNumber - Parcel number (e.g., "1/1" or "42")
+ * @returns {Promise<Response>}
+ */
+export async function getParcelByKoAndNumber(c) {
+  const { koNumber, parcelNumber } = c.req.param();
+
+  if (!koNumber || !parcelNumber) {
+    return c.json({ error: 'Missing koNumber or parcelNumber' }, 400);
+  }
+
+  // Construct nationalCadastralReference: "KO_NUMBER PARCEL_NUMBER"
+  const cadastralRef = `${koNumber} ${parcelNumber}`;
+
+  const params = new URLSearchParams({
+    service: 'WFS',
+    version: '2.0.0',
+    request: 'GetFeature',
+    typeName: 'cp:CadastralParcel',
+    outputFormat: 'application/json',
+    srsName: 'EPSG:4326',
+    CQL_FILTER: `nationalCadastralReference='${cadastralRef}'`
+  });
+
+  const url = `${WFS_BASE_URL}?${params.toString()}`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Gozdar/1.0 (Cloudflare Worker)'
+      }
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`WFS error: ${response.status}`, text);
+      return c.json({ error: `WFS request failed: ${response.status}` }, 502);
+    }
+
+    const data = await response.json();
+    return c.json(data);
+  } catch (e) {
+    console.error(`WFS request error: ${e.message}`);
+    return c.json({ error: `Request failed: ${e.message}` }, 500);
+  }
+}
+
+/**
  * Get cadastral municipalities (zoning)
  * @returns {Promise<Response>}
  */

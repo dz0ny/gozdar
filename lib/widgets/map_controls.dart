@@ -10,6 +10,7 @@ class MapControls extends StatelessWidget {
   final VoidCallback onLayerSelectorPressed;
   final VoidCallback onGpsPressed;
   final VoidCallback? onLocationsPressed;
+  final VoidCallback onSearchPressed;
 
   const MapControls({
     super.key,
@@ -18,6 +19,7 @@ class MapControls extends StatelessWidget {
     required this.locationsCount,
     required this.onLayerSelectorPressed,
     required this.onGpsPressed,
+    required this.onSearchPressed,
     this.onLocationsPressed,
   });
 
@@ -38,6 +40,14 @@ class MapControls extends StatelessWidget {
                 onPressed: onLayerSelectorPressed,
                 tooltip: 'Izberi sloj',
                 child: const Icon(Icons.layers),
+              ),
+              const SizedBox(height: 8),
+              FloatingActionButton(
+                heroTag: 'map_search',
+                mini: true,
+                onPressed: onSearchPressed,
+                tooltip: 'Išči parcelo po KO',
+                child: const Icon(Icons.search),
               ),
               const SizedBox(height: 8),
               FloatingActionButton(

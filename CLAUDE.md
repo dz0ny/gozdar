@@ -87,6 +87,19 @@ All services use singleton pattern:
 - `MapPreferencesService` - Map layer preferences, defaults: Ortofoto + Kataster + Kataster z nazivi
 - `SpeciesService` - Tree species management (SharedPreferences), defaults: Smreka, Bukev, Jelka
 - `ExportService` - Excel (.xlsx) export for logs
+- `AnalyticsService` - Firebase Analytics wrapper (disabled in debug mode)
+
+### Firebase Analytics & Crashlytics
+**Debug Mode Behavior:**
+- Firebase is **automatically disabled** in debug builds (`kDebugMode`)
+- Analytics events are not sent during development
+- Crashlytics does not report errors in debug mode
+- Production builds initialize Firebase normally
+
+**Implementation:**
+- Firebase initialization in `lib/main.dart` checks `!kDebugMode`
+- `AnalyticsService` returns null for analytics in debug mode
+- All analytics calls use null-safe operators (`?.`), so they're no-ops when disabled
 
 ### Key Models
 - `Parcel` - Forest polygon with cadastral data (KO + parcel number), wood tracking (allowance/cut)

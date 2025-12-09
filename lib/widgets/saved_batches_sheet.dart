@@ -9,6 +9,16 @@ import '../screens/batch_detail_screen.dart';
 class SavedBatchesSheet extends StatefulWidget {
   const SavedBatchesSheet({super.key});
 
+  /// Show the saved batches sheet as a modal bottom sheet
+  static Future<void> show(BuildContext context) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const SavedBatchesSheet(),
+    );
+  }
+
   @override
   State<SavedBatchesSheet> createState() => _SavedBatchesSheetState();
 }
@@ -67,30 +77,43 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
     return SafeArea(
       top: false,
       child: DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Text(
-                    'Shranjene meritve',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
+      initialChildSize: 0.6,
+      minChildSize: 0.3,
+      maxChildSize: 0.9,
+      builder: (context, scrollController) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            Expanded(
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.folder, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Shranjene meritve',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
               child: Consumer<LogsProvider>(
                 builder: (context, provider, child) {
                   if (provider.isBatchesLoading) {
@@ -233,7 +256,8 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                 },
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
