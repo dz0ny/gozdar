@@ -46,8 +46,8 @@ class ImportedOverlay {
     int? colorValue,
     this.visible = true,
     DateTime? createdAt,
-  })  : colorValue = colorValue ?? Colors.blue.value,
-        createdAt = createdAt ?? DateTime.now();
+  }) : colorValue = colorValue ?? Colors.blue.value,
+       createdAt = createdAt ?? DateTime.now();
 
   /// Get geometry as List of LatLng lists (for LineString, MultiLineString, Polygon)
   @Transient()
@@ -58,16 +58,18 @@ class ImportedOverlay {
     // Handle different geometry types
     if (geometryType == 'LineString' || geometryType == 'Polygon') {
       // Single line/polygon: [[lat, lng], [lat, lng], ...]
-      final coords = (decoded as List)
+      final coords = (decoded)
           .map((point) => LatLng(point[0] as double, point[1] as double))
           .toList();
       return [coords];
     } else if (geometryType == 'MultiLineString') {
       // Multiple lines: [[[lat, lng], ...], [[lat, lng], ...]]
       return decoded
-          .map((line) => (line as List)
-              .map((point) => LatLng(point[0] as double, point[1] as double))
-              .toList())
+          .map(
+            (line) => (line as List)
+                .map((point) => LatLng(point[0] as double, point[1] as double))
+                .toList(),
+          )
           .toList();
     }
 
@@ -82,8 +84,7 @@ class ImportedOverlay {
 
     if (geometryType == 'LineString' || geometryType == 'Polygon') {
       // Store as single array of [lat, lng] pairs
-      final coords =
-          value.first.map((p) => [p.latitude, p.longitude]).toList();
+      final coords = value.first.map((p) => [p.latitude, p.longitude]).toList();
       geometryJson = jsonEncode(coords);
     } else if (geometryType == 'MultiLineString') {
       // Store as array of arrays

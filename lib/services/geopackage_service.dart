@@ -65,8 +65,6 @@ class GeoPackageService {
         final feature = features[i];
         final geometry = feature.geometry;
 
-        if (geometry == null) continue;
-
         try {
           // Handle different geometry types
           if (geometry is GeoPoint) {
@@ -151,7 +149,8 @@ class GeoPackageService {
       final latLng = point.point;
 
       // Get name from properties or use default
-      final name = properties['name']?.toString() ??
+      final name =
+          properties['name']?.toString() ??
           properties['title']?.toString() ??
           'Point $featureIndex';
 
@@ -187,13 +186,14 @@ class GeoPackageService {
       if (finalCoords.length < 3) return null; // Need at least 3 points
 
       // Get name from properties or use default
-      final name = properties['name']?.toString() ??
+      final name =
+          properties['name']?.toString() ??
           properties['title']?.toString() ??
           '$layerName - $featureIndex';
 
       // Get owner from properties if available
-      final owner = properties['owner']?.toString() ??
-          properties['vlastnik']?.toString();
+      final owner =
+          properties['owner']?.toString() ?? properties['vlastnik']?.toString();
 
       return Parcel(
         name: name,
@@ -240,12 +240,13 @@ class GeoPackageService {
 
       if (finalCoords.length < 3) return null;
 
-      final name = properties['name']?.toString() ??
+      final name =
+          properties['name']?.toString() ??
           properties['title']?.toString() ??
           '$layerName - $featureIndex';
 
-      final owner = properties['owner']?.toString() ??
-          properties['vlastnik']?.toString();
+      final owner =
+          properties['owner']?.toString() ?? properties['vlastnik']?.toString();
 
       return Parcel(
         name: name,
@@ -272,7 +273,8 @@ class GeoPackageService {
       if (coords.length < 2) return null; // Need at least 2 points
 
       // Get name from properties or use default
-      final name = properties['name']?.toString() ??
+      final name =
+          properties['name']?.toString() ??
           properties['title']?.toString() ??
           '$layerName - Line $featureIndex';
 
@@ -317,7 +319,8 @@ class GeoPackageService {
       if (validLines.isEmpty) return null;
 
       // Get name from properties or use default
-      final name = properties['name']?.toString() ??
+      final name =
+          properties['name']?.toString() ??
           properties['title']?.toString() ??
           '$layerName - MultiLine $featureIndex';
 

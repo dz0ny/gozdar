@@ -26,18 +26,23 @@ class ParcelSearchDialog extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.35,
-        minChildSize: 0.3,
-        maxChildSize: 0.7,
-        builder: (context, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: ParcelSearchDialog(
-            mapController: mapController,
-            onParcelFound: onParcelFound,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.35,
+          minChildSize: 0.3,
+          maxChildSize: 0.85,
+          builder: (context, scrollController) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: ParcelSearchDialog(
+              mapController: mapController,
+              onParcelFound: onParcelFound,
+            ),
           ),
         ),
       ),
@@ -137,10 +142,11 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
             // Handle bar
             Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              margin: const EdgeInsets.only(top: 8, bottom: 4),
               width: 40,
               height: 4,
               decoration: BoxDecoration(
@@ -150,7 +156,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
             ),
             // Title
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Row(
                 children: [
                   Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
@@ -165,9 +171,9 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
               ),
             ),
             // Content
-            Expanded(
+            Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -216,7 +222,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
                       );
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   Autocomplete<String>(
                     optionsBuilder: (TextEditingValue textEditingValue) {
                       if (textEditingValue.text.isEmpty) {
@@ -260,7 +266,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
                     },
                   ),
                   if (_errorMessage != null) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -290,7 +296,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [

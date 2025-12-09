@@ -68,7 +68,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _searchController = TextEditingController();
-  String _searchQuery = '';
+  final String _searchQuery = '';
   final Map<OverlayCategory, bool> _expandedCategories = {};
 
   // Local state for selections
@@ -86,8 +86,10 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
 
     // Expand categories that have active overlays
     for (final category in OverlayCategory.values) {
-      final hasActiveOverlay = MapLayer.overlaysByCategory[category]
-              ?.any((layer) => _selectedOverlays.contains(layer.type)) ??
+      final hasActiveOverlay =
+          MapLayer.overlaysByCategory[category]?.any(
+            (layer) => _selectedOverlays.contains(layer.type),
+          ) ??
           false;
       _expandedCategories[category] = hasActiveOverlay;
     }
@@ -105,102 +107,104 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     return SafeArea(
       child: Column(
         children: [
-        // Drag handle
-        Center(
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
-              borderRadius: BorderRadius.circular(2),
+          // Drag handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-        ),
-        // Header with tabs
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Sloji karte',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+          // Header with tabs
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Sloji karte',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-        ),
-        // Tabs
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: TabBar(
-            controller: _tabController,
-            indicator: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
-            labelColor: Theme.of(context).colorScheme.onPrimary,
-            unselectedLabelColor:
-                Theme.of(context).colorScheme.onSurfaceVariant,
-            labelStyle: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.2,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-            dividerColor: Colors.transparent,
-            indicatorSize: TabBarIndicatorSize.tab,
-            splashFactory: NoSplash.splashFactory,
-            overlayColor: WidgetStateProperty.all(Colors.transparent),
-            tabs: const [
-              Tab(
-                height: 56,
-                icon: Icon(Icons.layers, size: 22),
-                iconMargin: EdgeInsets.only(bottom: 4),
-                text: 'Podlaga',
-              ),
-              Tab(
-                height: 56,
-                icon: Icon(Icons.tune, size: 22),
-                iconMargin: EdgeInsets.only(bottom: 4),
-                text: 'Prekrivni sloji',
-              ),
-            ],
           ),
-        ),
-        const SizedBox(height: 16),
-        // Tab views
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildBaseLayersTab(),
-              _buildOverlaysTab(),
-            ],
+          // Tabs
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              labelColor: Theme.of(context).colorScheme.onPrimary,
+              unselectedLabelColor: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant,
+              labelStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              dividerColor: Colors.transparent,
+              indicatorSize: TabBarIndicatorSize.tab,
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.all(Colors.transparent),
+              tabs: const [
+                Tab(
+                  height: 56,
+                  icon: Icon(Icons.layers, size: 22),
+                  iconMargin: EdgeInsets.only(bottom: 4),
+                  text: 'Podlaga',
+                ),
+                Tab(
+                  height: 56,
+                  icon: Icon(Icons.tune, size: 22),
+                  iconMargin: EdgeInsets.only(bottom: 4),
+                  text: 'Prekrivni sloji',
+                ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 16),
+          // Tab views
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [_buildBaseLayersTab(), _buildOverlaysTab()],
+            ),
+          ),
         ],
       ),
     );
@@ -211,28 +215,22 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
         // International base layers
-        _buildBaseLayerSection(
-          'Mednarodne karte',
-          [
-            MapLayer.openStreetMap,
-            MapLayer.openTopoMap,
-            MapLayer.esriWorldImagery,
-            MapLayer.esriTopoMap,
-            MapLayer.googleHybrid,
-          ],
-        ),
+        _buildBaseLayerSection('Mednarodne karte', [
+          MapLayer.openStreetMap,
+          MapLayer.openTopoMap,
+          MapLayer.esriWorldImagery,
+          MapLayer.esriTopoMap,
+          MapLayer.googleHybrid,
+        ]),
         const SizedBox(height: 16),
         // Slovenian base layers
-        _buildBaseLayerSection(
-          'Slovenske karte',
-          [
-            MapLayer.ortofoto,
-            MapLayer.ortofoto2023,
-            MapLayer.ortofoto2022,
-            MapLayer.dofIr,
-            MapLayer.dmr,
-          ],
-        ),
+        _buildBaseLayerSection('Slovenske karte', [
+          MapLayer.ortofoto,
+          MapLayer.ortofoto2023,
+          MapLayer.ortofoto2022,
+          MapLayer.dofIr,
+          MapLayer.dmr,
+        ]),
         const SizedBox(height: 24),
         // Download tiles button
         if (widget.onDownloadTiles != null)
@@ -276,9 +274,9 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
         ),
         ...layers.map((layer) => _buildBaseLayerCard(layer)),
@@ -339,33 +337,28 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                   children: [
                     Text(
                       layer.name,
-                      style:
-                          Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: isSelected
-                                    ? colorScheme.onPrimaryContainer
-                                    : null,
-                              ),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isSelected
+                            ? colorScheme.onPrimaryContainer
+                            : null,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       layer.attribution,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isSelected
-                                ? colorScheme.onPrimaryContainer.withOpacity(0.7)
-                                : colorScheme.onSurfaceVariant,
-                          ),
+                        color: isSelected
+                            ? colorScheme.onPrimaryContainer.withOpacity(0.7)
+                            : colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
               ),
               // Check icon
               if (isSelected)
-                Icon(
-                  Icons.check_circle,
-                  color: colorScheme.primary,
-                  size: 28,
-                ),
+                Icon(Icons.check_circle, color: colorScheme.primary, size: 28),
             ],
           ),
         ),
@@ -398,8 +391,9 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                     child: Text(
                       'Slovenski sloji so na voljo le z Ortofoto ali DMR podlago.',
                       style: TextStyle(
-                        color:
-                            Theme.of(context).colorScheme.onTertiaryContainer,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onTertiaryContainer,
                         fontSize: 13,
                       ),
                     ),
@@ -434,9 +428,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
             ),
           ),
         // Category list
-        Expanded(
-          child: _buildCategoryList(),
-        ),
+        Expanded(child: _buildCategoryList()),
       ],
     );
   }
@@ -451,8 +443,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
         }
         // Filter by Slovenian availability
         if (!layer.isSlovenian) return true;
-        return _selectedBaseLayer.isSlovenian ||
-            widget.workerUrl != null;
+        return _selectedBaseLayer.isSlovenian || widget.workerUrl != null;
       }).toList();
       return layers.isNotEmpty;
     }).toList();
@@ -471,8 +462,8 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
             Text(
               'Ni rezultatov',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -510,9 +501,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
           InkWell(
@@ -548,24 +537,18 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                       children: [
                         Text(
                           overlayCategoryNames[category] ?? category.name,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         if (activeCount > 0) ...[
                           const SizedBox(height: 2),
                           Text(
                             '$activeCount aktivnih',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ],
                       ],
@@ -640,18 +623,18 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                   Text(
                     layer.name,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                        ),
+                      fontWeight: isActive
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
                   ),
                   if (layer.attribution.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
                       layer.attribution,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ],
