@@ -7,10 +7,7 @@ import '../services/species_service.dart';
 class LogEntryForm extends StatefulWidget {
   final LogEntry? logEntry;
 
-  const LogEntryForm({
-    super.key,
-    this.logEntry,
-  });
+  const LogEntryForm({super.key, this.logEntry});
 
   @override
   State<LogEntryForm> createState() => _LogEntryFormState();
@@ -129,9 +126,9 @@ class _LogEntryFormState extends State<LogEntryForm> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Lokacija dodana')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Lokacija dodana')));
       }
     } catch (e) {
       if (mounted) {
@@ -194,9 +191,9 @@ class _LogEntryFormState extends State<LogEntryForm> {
         _selectedSpecies = newSpecies;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Vrsta "$newSpecies" dodana')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Vrsta "$newSpecies" dodana')));
       }
     }
   }
@@ -254,10 +251,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
       appBar: AppBar(
         title: Text(widget.logEntry == null ? 'Nov' : 'Uredi'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: _saveEntry,
-          ),
+          IconButton(icon: const Icon(Icons.check), onPressed: _saveEntry),
         ],
       ),
       body: Form(
@@ -294,9 +288,9 @@ class _LogEntryFormState extends State<LogEntryForm> {
                       _isCalculateMode
                           ? 'Izračunaj iz dimenzij'
                           : 'Vnesi volumen neposredno',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -312,7 +306,9 @@ class _LogEntryFormState extends State<LogEntryForm> {
                   prefixIcon: Icon(Icons.straighten),
                   helperText: 'Vnesite premer hloda v centimetrih',
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
@@ -336,7 +332,9 @@ class _LogEntryFormState extends State<LogEntryForm> {
                   prefixIcon: Icon(Icons.height),
                   helperText: 'Vnesite dolžino hloda v metrih',
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
@@ -354,25 +352,36 @@ class _LogEntryFormState extends State<LogEntryForm> {
               const SizedBox(height: 16),
               if (_calculatedVolume != null)
                 Card(
-                  color: Colors.green[50],
+                  color: Theme.of(context).colorScheme.secondaryContainer,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        const Icon(Icons.calculate, color: Colors.green),
+                        Icon(
+                          Icons.calculate,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
                         const SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'Izračunan volumen',
-                              style: Theme.of(context).textTheme.bodySmall,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSecondaryContainer,
+                                  ),
                             ),
                             Text(
                               '${_calculatedVolume!.toStringAsFixed(4)} m³',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.green[800],
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSecondaryContainer,
                                   ),
                             ),
                           ],
@@ -390,7 +399,9 @@ class _LogEntryFormState extends State<LogEntryForm> {
                   prefixIcon: Icon(Icons.inventory),
                   helperText: 'Vnesite volumen v kubičnih metrih',
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
@@ -411,8 +422,12 @@ class _LogEntryFormState extends State<LogEntryForm> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    // ignore: deprecated_member_use
-                    value: _selectedSpecies,
+                    // Only use selected species if it exists in available species
+                    initialValue:
+                        _selectedSpecies != null &&
+                            _availableSpecies.contains(_selectedSpecies)
+                        ? _selectedSpecies
+                        : null,
                     decoration: const InputDecoration(
                       labelText: 'Drevesna vrsta (neobvezno)',
                       border: OutlineInputBorder(),
@@ -446,10 +461,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
               ],
             ),
             const SizedBox(height: 24),
-            Text(
-              'Lokacija',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Lokacija', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (_latitude != null && _longitude != null)
               Card(
@@ -479,9 +491,11 @@ class _LogEntryFormState extends State<LogEntryForm> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.my_location),
-                label: Text(_isLoadingLocation
-                    ? 'Pridobivanje lokacije...'
-                    : 'Dodaj trenutno lokacijo'),
+                label: Text(
+                  _isLoadingLocation
+                      ? 'Pridobivanje lokacije...'
+                      : 'Dodaj trenutno lokacijo',
+                ),
               ),
             const SizedBox(height: 24),
             TextFormField(
@@ -499,9 +513,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
               onPressed: _saveEntry,
               icon: const Icon(Icons.save),
               label: const Text('Shrani'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-              ),
+              style: FilledButton.styleFrom(padding: const EdgeInsets.all(16)),
             ),
           ],
         ),
