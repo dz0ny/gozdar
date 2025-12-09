@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../models/parcel.dart';
@@ -10,11 +9,12 @@ import '../services/database_service.dart';
 import '../services/kml_service.dart';
 import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
-import '../widgets/parcel_silhouette.dart';
 import '../widgets/notes_editor_sheet.dart';
+import '../widgets/parcel_info_widgets.dart';
+import '../widgets/parcel_wood_tracking_card.dart';
+import '../widgets/parcel_data_cards.dart';
 import '../main.dart';
 import 'parcel_editor.dart';
-import 'forest_tab.dart' show getForestTypeIcon;
 
 class ParcelDetailScreen extends StatefulWidget {
   final Parcel parcel;
@@ -217,10 +217,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     final result = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => NotesEditorSheet(
-        initialNotes: _parcel.notes,
-        title: 'Opombe',
-      ),
+      builder: (context) =>
+          NotesEditorSheet(initialNotes: _parcel.notes, title: 'Opombe'),
     );
 
     if (result != null) {
@@ -547,8 +545,6 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('d. M. yyyy');
-
     return Scaffold(
       appBar: AppBar(
         title: Text(_parcel.name),
@@ -600,327 +596,31 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Parcel Info Card
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              GestureDetector(
-                                onTap: _editForestType,
-                                child: _parcel.polygon.isNotEmpty
-                                    ? ParcelSilhouette(
-                                        polygon: _parcel.polygon,
-                                        size: 72,
-                                        fillColor: getForestTypeIcon(
-                                          _parcel.forestType,
-                                        ).$2.withValues(alpha: 0.3),
-                                        strokeColor: getForestTypeIcon(
-                                          _parcel.forestType,
-                                        ).$2,
-                                        strokeWidth: 2,
-                                      )
-                                    : Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: getForestTypeIcon(
-                                            _parcel.forestType,
-                                          ).$2.withValues(alpha: 0.2),
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          getForestTypeIcon(
-                                            _parcel.forestType,
-                                          ).$1,
-                                          size: 32,
-                                          color: getForestTypeIcon(
-                                            _parcel.forestType,
-                                          ).$2,
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _parcel.areaFormatted,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                          ),
-                                    ),
-                                    Text(
-                                      '${_parcel.polygon.length} tock',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.onSurfaceVariant,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Divider(height: 24),
-                          _InfoRow(
-                            icon: Icons.calendar_today,
-                            label: 'Dodano',
-                            value: dateFormat.format(_parcel.createdAt),
-                          ),
-                          if (_parcel.isCadastral) ...[
-                            const SizedBox(height: 8),
-                            _InfoRow(
-                              icon: Icons.location_city,
-                              label: 'KO',
-                              value: _parcel.cadastralMunicipality.toString(),
-                            ),
-                            const SizedBox(height: 8),
-                            _InfoRow(
-                              icon: Icons.tag,
-                              label: 'Parcela',
-                              value: _parcel.parcelNumber!,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                  ParcelInfoCard(
+                    parcel: _parcel,
+                    onEditForestType: _editForestType,
                   ),
 
                   const SizedBox(height: 16),
 
                   // Owner Card
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.person),
-                      title: const Text('Lastnik'),
-                      subtitle: Text(_parcel.owner ?? 'Ni dolocen'),
-                      trailing: const Icon(Icons.edit),
-                      onTap: _editOwner,
-                    ),
-                  ),
+                  ParcelOwnerCard(owner: _parcel.owner, onEdit: _editOwner),
 
                   const SizedBox(height: 16),
 
                   // Notes Card
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.note),
-                      title: const Text('Opombe'),
-                      subtitle: Text(_parcel.notes ?? 'Ni opomb'),
-                      trailing: const Icon(Icons.edit),
-                      onTap: _editNotes,
-                    ),
-                  ),
+                  ParcelNotesCard(notes: _parcel.notes, onEdit: _editNotes),
 
                   const SizedBox(height: 16),
 
                   // Wood Tracking Card
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.forest, color: Colors.brown),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Posek lesa',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Allowance
-                          InkWell(
-                            onTap: _editWoodAllowance,
-                            borderRadius: BorderRadius.circular(8),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Dovoljen posek',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.copyWith(
-                                                color: Colors.grey[600],
-                                              ),
-                                        ),
-                                        Text(
-                                          _parcel.woodAllowance > 0
-                                              ? '${_parcel.woodAllowance.toStringAsFixed(2)} m³'
-                                              : 'Ni dolocen',
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.titleLarge,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(Icons.edit, color: Colors.grey),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          const Divider(),
-
-                          // Cut amount with progress
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Posekano',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(color: Colors.grey[600]),
-                                    ),
-                                    Text(
-                                      '${_parcel.woodCut.toStringAsFixed(2)} m³',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(color: Colors.orange[700]),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (_parcel.woodCut > 0)
-                                IconButton(
-                                  icon: const Icon(Icons.refresh),
-                                  tooltip: 'Ponastavi',
-                                  onPressed: _resetWoodCut,
-                                ),
-                            ],
-                          ),
-
-                          // Progress bar if allowance is set
-                          if (_parcel.woodAllowance > 0) ...[
-                            const SizedBox(height: 12),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: LinearProgressIndicator(
-                                value: _parcel.woodUsedPercent / 100,
-                                minHeight: 12,
-                                backgroundColor: Colors.grey[300],
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  _parcel.woodUsedPercent >= 100
-                                      ? Colors.red
-                                      : _parcel.woodUsedPercent >= 80
-                                      ? Colors.orange
-                                      : Colors.green,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  '${_parcel.woodUsedPercent.toStringAsFixed(0)}% izkorisceno',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                                Text(
-                                  'Se na voljo: ${_parcel.woodRemaining.toStringAsFixed(2)} m³',
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: Colors.green[700],
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ],
-
-                          const Divider(),
-
-                          // Trees cut
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Posekanih dreves',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(color: Colors.grey[600]),
-                                    ),
-                                    Text(
-                                      '${_parcel.treesCut}',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(color: Colors.green[700]),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (_parcel.treesCut > 0)
-                                IconButton(
-                                  icon: const Icon(Icons.refresh),
-                                  tooltip: 'Ponastavi',
-                                  onPressed: _resetTreesCut,
-                                ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Action buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: FilledButton.icon(
-                                  onPressed: _logWoodCut,
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Posek m³'),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _logTreesCut,
-                                  icon: const Icon(Icons.nature),
-                                  label: const Text('Drevo'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                  ParcelWoodTrackingCard(
+                    parcel: _parcel,
+                    onEditAllowance: _editWoodAllowance,
+                    onResetCut: _resetWoodCut,
+                    onResetTrees: _resetTreesCut,
+                    onLogWoodCut: _logWoodCut,
+                    onLogTreesCut: _logTreesCut,
                   ),
 
                   // See on map button
@@ -938,350 +638,33 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                   // Logs Card (logs geolocated within parcel)
                   if (_logsInParcel.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    Card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.inventory_2,
-                                  color: Colors.brown,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Hlodovina na parceli (${_logsInParcel.length})',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                                Text(
-                                  '${_logsVolume.toStringAsFixed(2)} m³',
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.brown[700],
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Divider(height: 1),
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _logsInParcel.length > 5
-                                ? 5
-                                : _logsInParcel.length,
-                            separatorBuilder: (context, index) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final log = _logsInParcel[index];
-                              return ListTile(
-                                leading: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.brown.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Icons.circle,
-                                    color: Colors.brown,
-                                    size: 20,
-                                  ),
-                                ),
-                                title: Text(
-                                  '${log.volume.toStringAsFixed(4)} m³',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                subtitle: Row(
-                                  children: [
-                                    if (log.diameter != null &&
-                                        log.length != null)
-                                      Text(
-                                        'Ø ${log.diameter!.toStringAsFixed(0)} cm × ${log.length!.toStringAsFixed(1)} m',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
-                                      )
-                                    else
-                                      Text(
-                                        'Ročni vnos',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                    if (log.hasLocation) ...[
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.green.withValues(
-                                            alpha: 0.15,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.gps_fixed,
-                                              size: 12,
-                                              color: Colors.green[700],
-                                            ),
-                                            const SizedBox(width: 3),
-                                            Text(
-                                              'GPS',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.green[700],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                trailing: log.hasLocation
-                                    ? IconButton(
-                                        icon: const Icon(
-                                          Icons.navigation,
-                                          color: Colors.blue,
-                                        ),
-                                        tooltip: 'Navigiraj',
-                                        onPressed: () => _navigateToPoint(
-                                          LatLng(log.latitude!, log.longitude!),
-                                          'Hlod ${log.id}',
-                                        ),
-                                      )
-                                    : null,
-                              );
-                            },
-                          ),
-                          if (_logsInParcel.length > 5)
-                            Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: Center(
-                                child: Text(
-                                  '... in še ${_logsInParcel.length - 5} hlodov',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                    ParcelLogsCard(
+                      logs: _logsInParcel,
+                      totalVolume: _logsVolume,
+                      onNavigateToPoint: _navigateToPoint,
                     ),
                   ],
 
                   // Sečnja Card (trees marked for cutting within parcel)
                   if (_secnjaInParcel.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    Card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.carpenter,
-                                  color: Colors.deepOrange,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Sečnja (${_secnjaInParcel.length})',
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Divider(height: 1),
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _secnjaInParcel.length,
-                            separatorBuilder: (context, index) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final location = _secnjaInParcel[index];
-                              return ListTile(
-                                leading: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.deepOrange.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Icons.carpenter,
-                                    color: Colors.deepOrange,
-                                    size: 20,
-                                  ),
-                                ),
-                                title: Text(location.name),
-                                subtitle: Text(
-                                  '${location.latitude.toStringAsFixed(5)}, ${location.longitude.toStringAsFixed(5)}',
-                                  style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                trailing: IconButton(
-                                  icon: const Icon(
-                                    Icons.navigation,
-                                    color: Colors.blue,
-                                  ),
-                                  tooltip: 'Navigiraj',
-                                  onPressed: () => _navigateToPoint(
-                                    LatLng(
-                                      location.latitude,
-                                      location.longitude,
-                                    ),
-                                    location.name,
-                                  ),
-                                ),
-                                onTap: () => _navigateToPoint(
-                                  LatLng(location.latitude, location.longitude),
-                                  location.name,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+                    ParcelSecnjaCard(
+                      secnja: _secnjaInParcel,
+                      onNavigateToPoint: _navigateToPoint,
                     ),
                   ],
 
                   // Saved Locations Card (points saved within parcel)
                   if (_locationsInParcel.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    Card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.location_on,
-                                  color: Colors.orange,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Shranjene tocke (${_locationsInParcel.length})',
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Divider(height: 1),
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _locationsInParcel.length,
-                            separatorBuilder: (context, index) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final location = _locationsInParcel[index];
-                              return ListTile(
-                                leading: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Icons.place,
-                                    color: Colors.orange,
-                                    size: 20,
-                                  ),
-                                ),
-                                title: Text(location.name),
-                                subtitle: Text(
-                                  '${location.latitude.toStringAsFixed(5)}, ${location.longitude.toStringAsFixed(5)}',
-                                  style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                trailing: IconButton(
-                                  icon: const Icon(
-                                    Icons.navigation,
-                                    color: Colors.blue,
-                                  ),
-                                  tooltip: 'Navigiraj',
-                                  onPressed: () => _navigateToPoint(
-                                    LatLng(
-                                      location.latitude,
-                                      location.longitude,
-                                    ),
-                                    location.name,
-                                  ),
-                                ),
-                                onTap: () => _navigateToPoint(
-                                  LatLng(location.latitude, location.longitude),
-                                  location.name,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+                    ParcelLocationsCard(
+                      locations: _locationsInParcel,
+                      onNavigateToPoint: _navigateToPoint,
                     ),
                   ],
                 ],
               ),
             ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey[600]),
-        const SizedBox(width: 8),
-        Text('$label: ', style: TextStyle(color: Colors.grey[600])),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
-      ],
     );
   }
 }

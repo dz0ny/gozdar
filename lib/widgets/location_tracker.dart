@@ -10,9 +10,14 @@ class LocationTracker {
   StreamSubscription<Position>? _positionSubscription;
   StreamSubscription<CompassEvent>? _compassSubscription;
 
+  // Callbacks for state updates
+  final Function(Position? position, double? heading)? onLocationUpdate;
+
   // Getters
   Position? get userPosition => _userPosition;
   double? get userHeading => _userHeading;
+
+  LocationTracker({this.onLocationUpdate});
 
   /// Initialize location tracking
   Future<void> initialize() async {
@@ -39,6 +44,7 @@ class LocationTracker {
         ),
       );
       _userPosition = position;
+      onLocationUpdate?.call(_userPosition, _userHeading);
     } catch (e) {
       debugPrint('Error getting initial position: $e');
     }
@@ -53,11 +59,27 @@ class LocationTracker {
         ).listen(
           (Position position) {
             _userPosition = position;
+            // Use GPS heading as fallback if compass is unavailable
+            if (_userHeading == null && position.heading >= 0) {
+              _userHeading = position.heading;
+            }
+            onLocationUpdate?.call(_userPosition, _userHeading);
           },
           onError: (error) {
             debugPrint('Location stream error: $error');
           },
         );
+
+    // Start compass updates
+    _compassSubscription = FlutterCompass.events?.listen(
+      (CompassEvent event) {
+        _userHeading = event.heading;
+        onLocationUpdate?.call(_userPosition, _userHeading);
+      },
+      onError: (error) {
+        debugPrint('Compass error: $error');
+      },
+    );
 
     // Start compass updates
     _compassSubscription = FlutterCompass.events?.listen(

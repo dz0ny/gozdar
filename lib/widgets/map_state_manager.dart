@@ -1,9 +1,6 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:flutter_compass/flutter_compass.dart';
 import '../models/map_layer.dart';
 import '../models/map_location.dart';
 import '../models/parcel.dart';
@@ -11,7 +8,7 @@ import '../models/log_entry.dart';
 import '../models/navigation_target.dart';
 import '../services/map_preferences_service.dart';
 
-/// Manages the state of the map including position, layers, and user location
+/// Manages the state of the map including position, layers, and data
 class MapStateManager {
   // Map controller for programmatic map control
   final MapController _mapController = MapController();
@@ -31,12 +28,6 @@ class MapStateManager {
   bool _isLoadingLocations = false;
   bool _isLoadingPreferences = true;
 
-  // User location tracking
-  Position? _userPosition;
-  double? _userHeading;
-  StreamSubscription<Position>? _positionSubscription;
-  StreamSubscription<CompassEvent>? _compassSubscription;
-
   // Navigation target
   NavigationTarget? _navigationTarget;
 
@@ -55,8 +46,6 @@ class MapStateManager {
   List<LogEntry> get geolocatedLogs => _geolocatedLogs;
   bool get isLoadingLocations => _isLoadingLocations;
   bool get isLoadingPreferences => _isLoadingPreferences;
-  Position? get userPosition => _userPosition;
-  double? get userHeading => _userHeading;
   NavigationTarget? get navigationTarget => _navigationTarget;
   double get currentZoom => _currentZoom;
 
@@ -145,64 +134,18 @@ class MapStateManager {
     _geolocatedLogs = logs;
   }
 
-  /// Initialize location tracking
-  Future<void> initializeLocationTracking() async {
-    // Check location permission first
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        debugPrint('Location permission denied');
-        return;
-      }
-    }
+  /// Set navigation target
+  set navigationTarget(NavigationTarget? target) {
+    _navigationTarget = target;
+  }
 
-    if (permission == LocationPermission.deniedForever) {
-      debugPrint('Location permission permanently denied');
-      return;
-    }
-
-    // Get initial position
-    try {
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      _userPosition = position;
-    } catch (e) {
-      debugPrint('Error getting initial position: $e');
-    }
-
-    // Start location updates
-    _positionSubscription =
-        Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 5, // Update every 5 meters
-          ),
-        ).listen(
-          (Position position) {
-            _userPosition = position;
-          },
-          onError: (error) {
-            debugPrint('Location stream error: $error');
-          },
-        );
-
-    // Start compass updates
-    _compassSubscription = FlutterCompass.events?.listen(
-      (CompassEvent event) {
-        _userHeading = event.heading;
-      },
-      onError: (error) {
-        debugPrint('Compass error: $error');
-      },
-    );
+  /// Update current zoom
+  set currentZoom(double zoom) {
+    _currentZoom = zoom;
   }
 
   /// Dispose of resources
   void dispose() {
-    _compassSubscription?.cancel();
-    _positionSubscription?.cancel();
     _mapController.dispose();
   }
 }

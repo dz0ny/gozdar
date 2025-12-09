@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_compass/flutter_compass.dart';
+
 import 'package:provider/provider.dart';
 import '../main.dart' show MainScreen;
 import '../models/map_location.dart';
@@ -21,7 +21,6 @@ import '../services/map_preferences_service.dart';
 import '../services/cadastral_service.dart';
 import '../services/geopackage_service.dart';
 import '../services/tile_cache_service.dart';
-import '../widgets/location_pointer.dart';
 import '../widgets/navigation_compass_dialog.dart';
 import '../widgets/tile_download_dialog.dart';
 import '../widgets/map_long_press_menu.dart';
@@ -32,6 +31,10 @@ import '../widgets/map_dialogs.dart';
 import '../widgets/saved_locations_sheet.dart';
 import '../widgets/parcel_search_dialog.dart';
 import '../widgets/parcel_silhouette.dart';
+import '../widgets/map_marker_renderer.dart';
+import '../widgets/map_layer_renderer.dart';
+import '../widgets/location_tracker.dart';
+import '../widgets/map_dialog_manager.dart';
 import 'parcel_detail_screen.dart';
 import '../providers/map_provider.dart';
 
@@ -51,6 +54,10 @@ class MapTabState extends State<MapTab> {
   final MapPreferencesService _prefsService = MapPreferencesService();
   final TileCacheService _tileCacheService = TileCacheService();
 
+  // User location tracking
+  late final LocationTracker _locationTracker;
+  late final MapDialogManager _dialogManager;
+
   // Initial map state (loaded from preferences)
   LatLng _initialCenter = const LatLng(46.0569, 14.5058);
   double _initialZoom = 13.0;
@@ -67,12 +74,6 @@ class MapTabState extends State<MapTab> {
   bool _isLoadingPreferences =
       true; // Wait for preferences before rendering map
 
-  // User location tracking
-  Position? _userPosition;
-  double? _userHeading;
-  StreamSubscription<Position>? _positionSubscription;
-  StreamSubscription<CompassEvent>? _compassSubscription;
-
   // Navigation target (set from ParcelDetailScreen)
   NavigationTarget? _navigationTarget;
 
@@ -85,20 +86,6 @@ class MapTabState extends State<MapTab> {
 
   // Searched parcel from WFS query
   WfsParcel? _searchedParcel;
-
-  /// Check if markers should be visible at current zoom
-  /// Slovenian CRS has different zoom scale, so lower threshold needed
-  bool get _showMarkers {
-    // Check if proxy is active - if so, we use standard Web Mercator
-    // Note: We use read() here because watch() is called in build()
-    // or this getter is called during build where watch() has already registered
-    final workerUrl = context.read<MapProvider>().workerUrl;
-
-    if (_currentBaseLayer.isWms && workerUrl == null) {
-      return _currentZoom >= 11; // Slovenian CRS
-    }
-    return _currentZoom >= 15; // Standard Web Mercator
-  }
 
   /// Calculate marker size based on zoom level
   /// Returns smaller sizes at lower zoom levels
@@ -186,6 +173,21 @@ class MapTabState extends State<MapTab> {
   @override
   void initState() {
     super.initState();
+    _locationTracker = LocationTracker(
+      onLocationUpdate: (position, heading) {
+        if (mounted) {
+          setState(() {
+            // LocationTracker already updated its internal state
+          });
+        }
+      },
+    );
+    _dialogManager = MapDialogManager(
+      context: context,
+      onDeleteLocation: _showDeleteLocationDialog,
+      onShowTileDownloadDialog: showTileDownloadDialog,
+      onResetOnboarding: null, // TODO: Implement onboarding reset
+    );
     _loadPreferences();
     _loadLocations();
     _loadParcels();
@@ -233,8 +235,7 @@ class MapTabState extends State<MapTab> {
 
   @override
   void dispose() {
-    _compassSubscription?.cancel();
-    _positionSubscription?.cancel();
+    _locationTracker.dispose();
     _mapController.dispose();
     super.dispose();
   }
@@ -296,67 +297,7 @@ class MapTabState extends State<MapTab> {
 
   /// Initialize real-time location and compass tracking
   Future<void> _initializeLocationTracking() async {
-    // Check location permission first
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return;
-      }
-    }
-
-    // Subscribe to compass updates for heading
-    final compassStream = FlutterCompass.events;
-    if (compassStream != null) {
-      _compassSubscription = compassStream.listen((event) {
-        if (mounted && event.heading != null) {
-          setState(() {
-            _userHeading = event.heading;
-          });
-        }
-      });
-    }
-
-    // Subscribe to position updates
-    _positionSubscription =
-        Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 5, // Update every 5 meters
-          ),
-        ).listen(
-          (position) {
-            if (mounted) {
-              setState(() {
-                _userPosition = position;
-                // Use GPS heading as fallback if compass is unavailable
-                if (_userHeading == null && position.heading >= 0) {
-                  _userHeading = position.heading;
-                }
-              });
-            }
-          },
-          onError: (error) {
-            debugPrint('Position stream error: $error');
-          },
-        );
-
-    // Get initial position
-    try {
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
-      if (mounted) {
-        setState(() {
-          _userPosition = position;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error getting initial position: $e');
-    }
+    await _locationTracker.initialize();
   }
 
   /// Center map on user's current GPS location
@@ -765,14 +706,14 @@ class MapTabState extends State<MapTab> {
 
       // Handle GeoPackage import
       if (ext == 'gpkg') {
-        final importResult =
-            await GeoPackageService.importFromGeoPackage(file.path);
+        final importResult = await GeoPackageService.importFromGeoPackage(
+          file.path,
+        );
 
         if (importResult.totalCount == 0) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('V datoteki ni veljavnih podatkov')),
+              const SnackBar(content: Text('V datoteki ni veljavnih podatkov')),
             );
           }
           return;
@@ -820,9 +761,7 @@ class MapTabState extends State<MapTab> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                  'Uvoženih ${importResult.totalCount} objektov',
-                ),
+                content: Text('Uvoženih ${importResult.totalCount} objektov'),
               ),
             );
           }
@@ -840,9 +779,9 @@ class MapTabState extends State<MapTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri uvozu: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu: $e')));
       }
     }
   }
@@ -871,10 +810,7 @@ class MapTabState extends State<MapTab> {
     minLng -= padding;
     maxLng += padding;
 
-    final bounds = LatLngBounds(
-      LatLng(minLat, minLng),
-      LatLng(maxLat, maxLng),
-    );
+    final bounds = LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng));
 
     // Start background download (fire-and-forget)
     _tileCacheService.downloadForParcelBounds(bounds);
@@ -941,275 +877,47 @@ class MapTabState extends State<MapTab> {
 
   /// Build tile layer for a specific layer
   /// All layers are cached for up to 1 year
-  Widget _buildTileLayerForLayer(MapLayer layer) {
-    // Check for worker URL
-    final workerUrl = context.read<MapProvider>().workerUrl;
-
-    // If worker URL is set and layer is Slovenian/WMS, use the proxy
-    if (workerUrl != null && (layer.isSlovenian || layer.isWms)) {
-      // Convert enum name to kebab-case slug
-      // e.g. katasterNazivi -> kataster-nazivi, vetrolom2017 -> vetrolom-2017
-      final slug = layer.type.name
-          .replaceAllMapped(
-            RegExp(r'(?<!^)(?=[A-Z])|(?<=[a-z])(?=[0-9])'),
-            (match) => '-',
-          )
-          .toLowerCase();
-
-      return TileLayer(
-        urlTemplate: '$workerUrl/tiles/$slug/{z}/{x}/{y}',
-        maxZoom: layer.maxZoom,
-        minZoom: layer.minZoom,
-        userAgentPackageName: 'dev.dz0ny.gozdar',
-        tileProvider: _tileCacheService
-            .getGeneralTileProvider(), // Enable local cache
-      );
-    }
-
-    if (layer.isWms) {
-      // Use Slovenian cache for prostor.zgs.gov.si WMS layers
-      final isSlovenian = layer.isSlovenian;
-
-      return TileLayer(
-        wmsOptions: WMSTileLayerOptions(
-          baseUrl: layer.wmsBaseUrl!,
-          layers: layer.wmsLayers!,
-          styles: layer.wmsStyles != null ? [layer.wmsStyles!] : const [''],
-          format: layer.wmsFormat ?? 'image/jpeg',
-          transparent: layer.isTransparent,
-          crs: slovenianCrs,
-        ),
-        tileProvider: isSlovenian
-            ? _tileCacheService.getTileProvider()
-            : _tileCacheService.getGeneralTileProvider(),
-        userAgentPackageName: 'dev.dz0ny.gozdar',
-        maxZoom: layer.maxZoom,
-        minZoom: layer.minZoom,
-      );
-    } else {
-      // Use general cache for standard tile layers (OSM, ESRI, Google, etc.)
-      return TileLayer(
-        urlTemplate: layer.urlTemplate!,
-        maxZoom: layer.maxZoom,
-        minZoom: layer.minZoom,
-        tileProvider: _tileCacheService.getGeneralTileProvider(),
-        userAgentPackageName: 'dev.dz0ny.gozdar',
-      );
-    }
-  }
-
-  /// Build list of overlay tile layers
-  /// Slovenian overlays (from prostor.zgs.gov.si) only render when base layer is also Slovenian
-  /// OR when using proxy (which handles projection)
-  List<Widget> _buildOverlayLayers() {
-    final isSlovenianBase = _currentBaseLayer.isSlovenian;
-    final workerUrl = context.read<MapProvider>().workerUrl;
-
-    return MapLayer.overlayLayers
-        .where((layer) => _activeOverlays.contains(layer.type))
-        .where(
-          (layer) => !layer.isSlovenian || isSlovenianBase || workerUrl != null,
-        )
-        .map((layer) => _buildTileLayerForLayer(layer))
-        .toList();
-  }
-
-  /// Build markers for saved locations (excluding sečnja)
-  List<Marker> _buildMarkers() {
-    final size = _getMarkerSize(36);
-    final iconSize = _getMarkerSize(18);
-    final borderWidth = _getMarkerSize(2.5);
-    // Filter out sečnja markers - they have their own layer
-    return _locations.where((loc) => !loc.isSecnja).map((location) {
-      final point = LatLng(location.latitude, location.longitude);
-      return Marker(
-        point: point,
-        width: size,
-        height: size,
-        child: GestureDetector(
-          onTap: () {
-            // Set as navigation target
-            setNavigationTarget(
-              NavigationTarget(location: point, name: location.name),
-              zoomIn: false,
-            );
-          },
-          onLongPress: () => _showDeleteLocationDialog(location),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.orange,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: borderWidth),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Icon(
-                Icons.location_on,
-                size: iconSize,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-      );
-    }).toList();
-  }
-
-  /// Build markers for geolocated logs (hlodovina)
-  List<Marker> _buildLogMarkers() {
-    final size = _getMarkerSize(32);
-    final iconSize = _getMarkerSize(16);
-    final borderWidth = _getMarkerSize(2);
-    return _geolocatedLogs.map((log) {
-      final point = LatLng(log.latitude!, log.longitude!);
-      return Marker(
-        point: point,
-        width: size,
-        height: size,
-        child: GestureDetector(
-          onTap: () {
-            // Set as navigation target
-            setNavigationTarget(
-              NavigationTarget(
-                location: point,
-                name: '${log.volume.toStringAsFixed(2)} m³',
-              ),
-              zoomIn: false,
-            );
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.brown,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: borderWidth),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Icon(Icons.forest, size: iconSize, color: Colors.white),
-            ),
-          ),
-        ),
-      );
-    }).toList();
-  }
-
-  /// Build markers for sečnja (trees to be cut)
-  List<Marker> _buildSecnjaMarkers() {
-    final size = _getMarkerSize(34);
-    final iconSize = _getMarkerSize(17);
-    final borderWidth = _getMarkerSize(2);
-    // Filter only sečnja markers
-    return _locations.where((loc) => loc.isSecnja).map((location) {
-      final point = LatLng(location.latitude, location.longitude);
-      return Marker(
-        point: point,
-        width: size,
-        height: size,
-        child: GestureDetector(
-          onTap: () {
-            // Set as navigation target
-            setNavigationTarget(
-              NavigationTarget(location: point, name: location.name),
-              zoomIn: false,
-            );
-          },
-          onLongPress: () => _showDeleteLocationDialog(location),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.deepOrange,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: borderWidth),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Icon(Icons.carpenter, size: iconSize, color: Colors.white),
-            ),
-          ),
-        ),
-      );
-    }).toList();
-  }
-
-  /// Build markers for parcel vertices (mejne tocke)
-  List<Marker> _buildParcelVertexMarkers() {
-    final size = _getMarkerSize(28);
-    final fontSize = _getMarkerSize(12);
-    final borderWidth = _getMarkerSize(2);
-    final markers = <Marker>[];
-    for (final parcel in _parcels) {
-      for (int i = 0; i < parcel.polygon.length; i++) {
-        final point = parcel.polygon[i];
-        final pointName = parcel.getPointName(i);
-        markers.add(
-          Marker(
-            point: point,
-            width: size,
-            height: size,
-            child: GestureDetector(
-              onTap: () {
-                // Set as navigation target (don't zoom, just move)
-                setNavigationTarget(
-                  NavigationTarget(
-                    location: point,
-                    name: '$pointName (${parcel.name})',
-                  ),
-                  zoomIn: false,
-                );
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: borderWidth),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    '${i + 1}',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: fontSize,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      }
-    }
-    return markers;
-  }
 
   @override
   Widget build(BuildContext context) {
     // Watch provider for changes (including worker URL, parcels, locations)
     final mapProvider = context.watch<MapProvider>();
+
+    // Create marker renderer
+    final markerRenderer = MapMarkerRenderer(
+      currentZoom: _currentZoom,
+      locations: _locations,
+      parcels: _parcels,
+      geolocatedLogs: _geolocatedLogs,
+      userPosition: _locationTracker.userPosition != null
+          ? LatLng(
+              _locationTracker.userPosition!.latitude,
+              _locationTracker.userPosition!.longitude,
+            )
+          : null,
+      userHeading: _locationTracker.userHeading,
+      primaryColor: Theme.of(context).colorScheme.primary,
+      onLocationTap: (point, name) => setNavigationTarget(
+        NavigationTarget(location: point, name: name),
+        zoomIn: false,
+      ),
+      onLocationLongPress: _dialogManager.showDeleteLocationDialog,
+      onLogTap: (point, name) => setNavigationTarget(
+        NavigationTarget(location: point, name: name),
+        zoomIn: false,
+      ),
+      onParcelVertexTap: (point, name) => setNavigationTarget(
+        NavigationTarget(location: point, name: name),
+        zoomIn: false,
+      ),
+    );
+
+    // Create layer renderer
+    final layerRenderer = MapLayerRenderer(
+      baseLayer: _currentBaseLayer,
+      activeOverlays: _activeOverlays,
+      workerUrl: mapProvider.workerUrl,
+    );
 
     // Sync parcels from provider when they change
     if (mapProvider.parcels.length != _parcels.length ||
@@ -1340,9 +1048,7 @@ class MapTabState extends State<MapTab> {
               },
             ),
             children: [
-              _buildTileLayerForLayer(_currentBaseLayer),
-              // Overlay layers
-              ..._buildOverlayLayers(),
+              ...layerRenderer.getAllTileLayers(),
               // Saved parcels as polygons
               if (_parcels.isNotEmpty)
                 PolygonLayer(
@@ -1365,7 +1071,8 @@ class MapTabState extends State<MapTab> {
                 ),
 
               // Searched parcel (highlighted)
-              if (_searchedParcel != null && _searchedParcel!.polygon.isNotEmpty)
+              if (_searchedParcel != null &&
+                  _searchedParcel!.polygon.isNotEmpty)
                 PolygonLayer(
                   polygons: [
                     Polygon(
@@ -1378,58 +1085,23 @@ class MapTabState extends State<MapTab> {
                         color: Colors.blue,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        shadows: [
-                          Shadow(
-                            color: Colors.white,
-                            blurRadius: 2,
-                          ),
-                        ],
+                        shadows: [Shadow(color: Colors.white, blurRadius: 2)],
                       ),
                     ),
                   ],
                 ),
-              // Parcel vertex markers (mejne tocke) - hidden at low zoom
-              if (_parcels.isNotEmpty && _showMarkers)
-                MarkerLayer(markers: _buildParcelVertexMarkers()),
-              // User location marker
-              if (_userPosition != null)
-                Builder(
-                  builder: (context) {
-                    final userSize = _getMarkerSize(30);
-                    return MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: LatLng(
-                            _userPosition!.latitude,
-                            _userPosition!.longitude,
-                          ),
-                          width: userSize,
-                          height: userSize,
-                          child: LocationPointer(
-                            heading: _userHeading,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: userSize,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              // Saved locations marker layer - always visible
-              MarkerLayer(markers: _buildMarkers()),
-              // Geolocated logs marker layer - always visible
-              MarkerLayer(markers: _buildLogMarkers()),
-              // Sečnja markers layer - always visible
-              MarkerLayer(markers: _buildSecnjaMarkers()),
+              // All markers using the unified renderer
+              MarkerLayer(markers: markerRenderer.getAllMarkers()),
               // Navigation target line (from user to target)
-              if (_navigationTarget != null && _userPosition != null)
+              if (_navigationTarget != null &&
+                  _locationTracker.userPosition != null)
                 PolylineLayer(
                   polylines: [
                     Polyline(
                       points: [
                         LatLng(
-                          _userPosition!.latitude,
-                          _userPosition!.longitude,
+                          _locationTracker.userPosition!.latitude,
+                          _locationTracker.userPosition!.longitude,
                         ),
                         _navigationTarget!.location,
                       ],
@@ -1628,7 +1300,11 @@ class MapTabState extends State<MapTab> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.info_outline, color: Colors.white, size: 10),
+                    const Icon(
+                      Icons.info_outline,
+                      color: Colors.white,
+                      size: 10,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       _buildAttributionText(),
@@ -1668,9 +1344,7 @@ class MapTabState extends State<MapTab> {
       onEdit: (location) {
         _editLocation(location);
       },
-      onDelete: (location) {
-        _showDeleteLocationDialog(location);
-      },
+      onDelete: _dialogManager.showDeleteLocationDialog,
     );
   }
 
@@ -1748,15 +1422,21 @@ class MapTabState extends State<MapTab> {
                       children: [
                         Text(
                           'Parcela najdena',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
                                 color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                               ),
                         ),
                         Text(
-                          existingParcel != null ? 'Vaša parcela' : 'Pregled meje parcele',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          existingParcel != null
+                              ? 'Vaša parcela'
+                              : 'Pregled meje parcele',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                         ),
                       ],
@@ -1771,7 +1451,9 @@ class MapTabState extends State<MapTab> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
-                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -1786,59 +1468,71 @@ class MapTabState extends State<MapTab> {
                     child: ParcelSilhouette(
                       polygon: parcel.polygon,
                       size: 56,
-                      fillColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                      fillColor: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.3),
                       strokeColor: Theme.of(context).colorScheme.primary,
                       strokeWidth: 2.5,
                     ),
                   ),
-                    title: Text(
-                      'Parcela ${parcel.label}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
+                  title: Text(
+                    'Parcela ${parcel.label}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
                     ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.map,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'KO ${parcel.nationalCadastralReference}',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                    ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.square_foot,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                parcel.formattedArea,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.map,
+                              size: 16,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'KO ${parcel.nationalCadastralReference}',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.square_foot,
+                              size: 16,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              parcel.formattedArea,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -1887,8 +1581,16 @@ class MapTabState extends State<MapTab> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      icon: Icon(existingParcel != null ? Icons.visibility : Icons.download),
-                      label: Text(existingParcel != null ? 'Odpri parcelo' : 'Uvozi parcelo'),
+                      icon: Icon(
+                        existingParcel != null
+                            ? Icons.visibility
+                            : Icons.download,
+                      ),
+                      label: Text(
+                        existingParcel != null
+                            ? 'Odpri parcelo'
+                            : 'Uvozi parcelo',
+                      ),
                     ),
                   ),
                 ],
@@ -2079,10 +1781,9 @@ class MapTabState extends State<MapTab> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .secondaryContainer
-                            .withValues(alpha: 0.3),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.secondaryContainer.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -2098,8 +1799,9 @@ class MapTabState extends State<MapTab> {
                               'Za uradne podatke se obrnite na pristojne institucije.',
                               style: TextStyle(
                                 fontSize: 13,
-                                color:
-                                    Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ),
