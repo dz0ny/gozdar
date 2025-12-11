@@ -33,7 +33,6 @@ class MapProvider extends ChangeNotifier {
   MapLayer _currentBaseLayer = MapLayer.esriWorldImagery;
   final Set<MapLayerType> _activeOverlays = {};
   String? _workerUrl;
-  bool _isDebugInfoVisible = false;
 
   // Data state
   List<MapLocation> _locations = [];
@@ -61,7 +60,6 @@ class MapProvider extends ChangeNotifier {
   Set<MapLayerType> get activeOverlays => Set.unmodifiable(_activeOverlays);
   bool get isSlovenianBase => _currentBaseLayer.isSlovenian;
   String? get workerUrl => _workerUrl;
-  bool get isDebugInfoVisible => _isDebugInfoVisible;
 
   // Getters - Data
   List<MapLocation> get locations => List.unmodifiable(_locations);
@@ -176,12 +174,6 @@ class MapProvider extends ChangeNotifier {
     _workerUrl = url;
     notifyListeners();
     await _saveLayerPreferences();
-  }
-
-  /// Set debug info visibility
-  void setDebugInfoVisible(bool visible) {
-    _isDebugInfoVisible = visible;
-    notifyListeners();
   }
 
   // Location operations

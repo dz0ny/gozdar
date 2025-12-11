@@ -248,9 +248,4 @@ class AnalyticsService {
   Future<void> logConversionSettingsChanged() async {
     await _analytics?.logEvent(name: 'conversion_settings_changed');
   }
-
-  /// Log worker settings dialog opened (triple-tap)
-  Future<void> logWorkerSettingsOpened() async {
-    await _analytics?.logEvent(name: 'worker_settings_opened');
-  }
 }

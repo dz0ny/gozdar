@@ -46,7 +46,7 @@ class ImportedOverlay {
     int? colorValue,
     this.visible = true,
     DateTime? createdAt,
-  }) : colorValue = colorValue ?? Colors.blue.value,
+  }) : colorValue = colorValue ?? Colors.blue.toARGB32(),
        createdAt = createdAt ?? DateTime.now();
 
   /// Get geometry as List of LatLng lists (for LineString, MultiLineString, Polygon)
@@ -99,7 +99,7 @@ class ImportedOverlay {
   @Transient()
   Color get color => Color(colorValue);
 
-  set color(Color value) => colorValue = value.value;
+  set color(Color value) => colorValue = value.toARGB32();
 
   /// Get properties as Map
   @Transient()

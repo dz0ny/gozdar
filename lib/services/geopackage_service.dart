@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_geokit/flutter_geokit.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/parcel.dart';
@@ -114,7 +115,7 @@ class GeoPackageService {
           }
           // Note: Other geometry types (GeometryCollection, etc.) are skipped
         } catch (e) {
-          print('Error processing feature $i: $e');
+          debugPrint('Error processing feature $i: $e');
           continue;
         }
       }
@@ -131,7 +132,7 @@ class GeoPackageService {
       try {
         geoPackageHandler.closeGeoPackage();
       } catch (e) {
-        print('Warning: Failed to close GeoPackage: $e');
+        debugPrint('Warning: Failed to close GeoPackage: $e');
       }
     }
   }
@@ -160,7 +161,7 @@ class GeoPackageService {
         type: LocationType.point,
       );
     } catch (e) {
-      print('Error creating location from point: $e');
+      debugPrint('Error creating location from point: $e');
       return null;
     }
   }
@@ -201,7 +202,7 @@ class GeoPackageService {
         forestType: ForestType.mixed,
       );
     } catch (e) {
-      print('Error creating parcel from polygon: $e');
+      debugPrint('Error creating parcel from polygon: $e');
       return null;
     }
   }
@@ -254,7 +255,7 @@ class GeoPackageService {
         forestType: ForestType.mixed,
       );
     } catch (e) {
-      print('Error creating parcel from multipolygon: $e');
+      debugPrint('Error creating parcel from multipolygon: $e');
       return null;
     }
   }
@@ -296,7 +297,7 @@ class GeoPackageService {
 
       return overlay;
     } catch (e) {
-      print('Error creating overlay from linestring: $e');
+      debugPrint('Error creating overlay from linestring: $e');
       return null;
     }
   }
@@ -342,7 +343,7 @@ class GeoPackageService {
 
       return overlay;
     } catch (e) {
-      print('Error creating overlay from multilinestring: $e');
+      debugPrint('Error creating overlay from multilinestring: $e');
       return null;
     }
   }

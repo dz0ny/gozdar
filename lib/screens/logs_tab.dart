@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/log_entry.dart';
 import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
+import '../router/app_router.dart';
+import '../router/route_names.dart';
 import '../services/analytics_service.dart';
 import '../widgets/log_card.dart';
-import '../widgets/log_entry_form.dart';
 import '../widgets/add_log_sheet.dart';
 import '../widgets/conversion_settings_sheet.dart';
 import '../widgets/save_batch_sheet.dart';
@@ -76,34 +78,34 @@ class LogsTab extends StatelessWidget {
     );
   }
 
-  Future<void> _editLogEntry(BuildContext context, LogEntry entry) async {
+  void _editLogEntry(BuildContext context, LogEntry entry) {
     final provider = context.read<LogsProvider>();
     final mapProvider = context.read<MapProvider>();
     final hadLocation = entry.hasLocation;
-    final result = await Navigator.of(context).push<LogEntry>(
-      MaterialPageRoute(
-        builder: (context) => LogEntryForm(logEntry: entry),
-        fullscreenDialog: true,
+
+    context.push(
+      AppRoutes.logEdit(entry.id),
+      extra: LogEntryFormParams(
+        logEntry: entry,
+        onSave: (result) async {
+          final success = await provider.updateLogEntry(result);
+          if (success && context.mounted) {
+            AnalyticsService().logLogEdited();
+            // Refresh map markers if location changed
+            if (hadLocation || result.hasLocation) {
+              mapProvider.loadGeolocatedLogs();
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Vnos posodobljen')),
+            );
+          } else if (!success && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Napaka: ${provider.error}')),
+            );
+          }
+        },
       ),
     );
-
-    if (result != null && context.mounted) {
-      final success = await provider.updateLogEntry(result);
-      if (success && context.mounted) {
-        AnalyticsService().logLogEdited();
-        // Refresh map markers if location changed
-        if (hadLocation || result.hasLocation) {
-          mapProvider.loadGeolocatedLogs();
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Vnos posodobljen')),
-        );
-      } else if (!success && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka: ${provider.error}')),
-        );
-      }
-    }
   }
 
   Future<void> _deleteLogEntry(BuildContext context, LogEntry entry) async {

@@ -1,16 +1,17 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/parcel.dart';
 import '../providers/map_provider.dart';
+import '../router/app_router.dart';
+import '../router/navigation_notifier.dart';
+import '../router/route_names.dart';
 import '../services/database_service.dart';
 import '../services/kml_service.dart';
 import '../services/analytics_service.dart';
 import '../widgets/parcel_silhouette.dart';
-import 'parcel_editor.dart';
-import 'parcel_detail_screen.dart';
-import '../main.dart' show MainScreen;
 
 /// Get icon and color for forest type
 (IconData, Color) getForestTypeIcon(ForestType type) {
@@ -58,9 +59,7 @@ class ForestTabState extends State<ForestTab> {
     if (_selectedOwnerFilter == null) {
       return _parcels;
     }
-    return _parcels
-        .where((p) => p.owner == _selectedOwnerFilter)
-        .toList();
+    return _parcels.where((p) => p.owner == _selectedOwnerFilter).toList();
   }
 
   @override
@@ -90,31 +89,29 @@ class ForestTabState extends State<ForestTab> {
   }
 
   Future<void> _addParcel() async {
-    final result = await Navigator.of(context).push<Parcel>(
-      MaterialPageRoute(
-        builder: (context) => const ParcelEditor(),
-        fullscreenDialog: true,
+    context.push(
+      AppRoutes.parcelNew,
+      extra: ParcelEditorParams(
+        onSave: (parcel) async {
+          try {
+            await _databaseService.insertParcel(parcel);
+            await _loadData();
+            AnalyticsService().logParcelAdded(areaMSquared: parcel.areaM2);
+            if (mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Parcela dodana')));
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('Napaka pri dodajanju: $e')));
+            }
+          }
+        },
       ),
     );
-
-    if (result != null) {
-      try {
-        await _databaseService.insertParcel(result);
-        await _loadData();
-        AnalyticsService().logParcelAdded(areaMSquared: result.areaM2);
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Parcela dodana')));
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Napaka pri dodajanju: $e')));
-        }
-      }
-    }
   }
 
   /// Public method to open a specific parcel detail (can be called from outside)
@@ -124,16 +121,12 @@ class ForestTabState extends State<ForestTab> {
 
   Future<void> _openParcelDetail(Parcel parcel) async {
     AnalyticsService().logParcelViewed();
-    final result = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (context) => ParcelDetailScreen(parcel: parcel),
-      ),
+    context.push(
+      AppRoutes.parcelDetail(parcel.id),
+      extra: parcel,
     );
-
-    // Refresh if parcel was deleted or modified
-    if (result == true || mounted) {
-      await _loadData();
-    }
+    // Always refresh when returning (parcel may have been modified)
+    await _loadData();
   }
 
   Future<void> _deleteParcel(Parcel parcel) async {
@@ -493,7 +486,10 @@ class ForestTabState extends State<ForestTab> {
     final displayParcels = _filteredParcels;
 
     // Calculate totals from filtered parcel data
-    final totalArea = displayParcels.fold(0.0, (double sum, p) => sum + p.areaM2);
+    final totalArea = displayParcels.fold(
+      0.0,
+      (double sum, p) => sum + p.areaM2,
+    );
     final totalAreaFormatted = totalArea >= 10000
         ? '${(totalArea / 10000).toStringAsFixed(2)} ha'
         : '${totalArea.toStringAsFixed(0)} m²';
@@ -609,14 +605,18 @@ class ForestTabState extends State<ForestTab> {
                                       const SizedBox(height: 16),
                                       Text(
                                         'Ni parcel za "$_selectedOwnerFilter"',
-                                        style: Theme.of(context).textTheme.titleLarge
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
                                             ?.copyWith(color: Colors.grey[500]),
                                         textAlign: TextAlign.center,
                                       ),
                                       const SizedBox(height: 24),
                                       OutlinedButton.icon(
                                         onPressed: () {
-                                          setState(() => _selectedOwnerFilter = null);
+                                          setState(
+                                            () => _selectedOwnerFilter = null,
+                                          );
                                         },
                                         icon: const Icon(Icons.clear_all),
                                         label: const Text('Prikaži vse'),
@@ -635,19 +635,26 @@ class ForestTabState extends State<ForestTab> {
                                       const SizedBox(height: 16),
                                       Text(
                                         'Ni še parcel',
-                                        style: Theme.of(context).textTheme.titleLarge
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
                                             ?.copyWith(color: Colors.grey[500]),
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
                                         'Narišite parcelo ali\niščite parcelo v katastru',
-                                        style: Theme.of(context).textTheme.bodyMedium
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
                                             ?.copyWith(color: Colors.grey[600]),
                                         textAlign: TextAlign.center,
                                       ),
                                       const SizedBox(height: 24),
                                       FilledButton.icon(
-                                        onPressed: () => MainScreen.navigateToMapWithSearch(),
+                                        onPressed: () {
+                                          context.read<NavigationNotifier>().navigateToMapWithSearch();
+                                          context.go(AppRoutes.map);
+                                        },
                                         icon: const Icon(Icons.search),
                                         label: const Text('Išči parcelo'),
                                       ),
@@ -668,10 +675,7 @@ class ForestTabState extends State<ForestTab> {
     );
   }
 
-  Widget _buildGroupedParcelsList(
-    BuildContext context,
-    List<Parcel> parcels,
-  ) {
+  Widget _buildGroupedParcelsList(BuildContext context, List<Parcel> parcels) {
     // Group parcels by cadastral municipality (KO)
     final groupedParcels = <String, List<Parcel>>{};
     for (final parcel in parcels) {
@@ -723,32 +727,35 @@ class ForestTabState extends State<ForestTab> {
           children: [
             // KO header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              margin: EdgeInsets.only(top: groupIndex == 0 ? 0 : 8),
-              color: Colors.grey[100],
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              margin: EdgeInsets.only(top: groupIndex == 0 ? 0 : 16, bottom: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Row(
                 children: [
                   Icon(
                     Icons.location_on,
                     size: 20,
-                    color: Colors.blue[700],
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       ko,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[800],
-                          ),
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Text(
                     '$count parcel • $areaFormatted',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -784,11 +791,7 @@ class ForestTabState extends State<ForestTab> {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         color: Colors.red,
-        child: const Icon(
-          Icons.delete,
-          color: Colors.white,
-          size: 32,
-        ),
+        child: const Icon(Icons.delete, color: Colors.white, size: 32),
       ),
       child: Card(
         margin: const EdgeInsets.only(bottom: 8),
@@ -802,9 +805,9 @@ class ForestTabState extends State<ForestTab> {
               ? ParcelSilhouette(
                   polygon: parcel.polygon,
                   size: 48,
-                  fillColor: getForestTypeIcon(parcel.forestType)
-                      .$2
-                      .withValues(alpha: 0.3),
+                  fillColor: getForestTypeIcon(
+                    parcel.forestType,
+                  ).$2.withValues(alpha: 0.3),
                   strokeColor: getForestTypeIcon(parcel.forestType).$2,
                 )
               : Icon(
@@ -828,20 +831,14 @@ class ForestTabState extends State<ForestTab> {
                 children: [
                   Text(parcel.areaFormatted),
                   if (parcel.treesCut > 0 || parcel.woodCut > 0) ...[
-                    Text(
-                      ' · ',
-                      style: TextStyle(color: Colors.grey[400]),
-                    ),
+                    Text(' · ', style: TextStyle(color: Colors.grey[400])),
                     if (parcel.treesCut > 0)
                       Text(
                         '${parcel.treesCut} dreves',
                         style: TextStyle(color: Colors.orange[700]),
                       ),
                     if (parcel.treesCut > 0 && parcel.woodCut > 0)
-                      Text(
-                        ' · ',
-                        style: TextStyle(color: Colors.grey[400]),
-                      ),
+                      Text(' · ', style: TextStyle(color: Colors.grey[400])),
                     if (parcel.woodCut > 0)
                       Text(
                         '${parcel.woodCut.toStringAsFixed(1)} m³',
@@ -866,8 +863,8 @@ class ForestTabState extends State<ForestTab> {
                           color: parcel.woodUsedPercent >= 100
                               ? Colors.red
                               : parcel.woodUsedPercent >= 80
-                                  ? Colors.orange
-                                  : Colors.green,
+                              ? Colors.orange
+                              : Colors.green,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -881,8 +878,8 @@ class ForestTabState extends State<ForestTab> {
                             parcel.woodUsedPercent >= 100
                                 ? Colors.red
                                 : parcel.woodUsedPercent >= 80
-                                    ? Colors.orange
-                                    : Colors.green,
+                                ? Colors.orange
+                                : Colors.green,
                           ),
                         ),
                       ),

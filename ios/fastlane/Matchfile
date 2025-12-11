@@ -1,9 +1,0 @@
-git_url("https://github.com/yourusername/certificates")
-storage_mode("git")
-
-type("appstore")
-
-app_identifier(["dev.dz0ny.gozdar"])
-username("hey@dz0ny.dev")
-
-team_id("JND55328G8")

@@ -1,13 +1,13 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../router/route_names.dart';
 import '../services/onboarding_service.dart';
 import '../services/analytics_service.dart';
 
 class IntroWizardScreen extends StatefulWidget {
-  final VoidCallback onComplete;
-
-  const IntroWizardScreen({super.key, required this.onComplete});
+  const IntroWizardScreen({super.key});
 
   @override
   State<IntroWizardScreen> createState() => _IntroWizardScreenState();
@@ -51,7 +51,9 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
     } else {
       AnalyticsService().logOnboardingCompleted();
     }
-    widget.onComplete();
+    if (mounted) {
+      context.go(AppRoutes.forest);
+    }
   }
 
   @override
@@ -172,8 +174,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           ),
           const SizedBox(height: 20),
           Text(
-            'Aplikacija za upravljanje gozdnih parcel v Sloveniji.\n\n'
-            'Sledite poseku, beležite hlodovino in uporabljajte GPS za delo na terenu.',
+            'Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji.\n\n'
+            'Sledite poseku, belezite hlodovino in uporabljajte GPS za delo na terenu.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.6),
             textAlign: TextAlign.center,
           ),
@@ -211,13 +213,13 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                   label: 'Karta',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.forest_outlined),
-                  selectedIcon: Icon(Icons.forest),
+                  icon: Icon(Icons.park_outlined),
+                  selectedIcon: Icon(Icons.park),
                   label: 'Gozd',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  selectedIcon: Icon(Icons.inventory_2),
+                  icon: Icon(Icons.forest_outlined),
+                  selectedIcon: Icon(Icons.forest),
                   label: 'Hlodi',
                 ),
               ],
@@ -226,8 +228,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           const SizedBox(height: 24),
           _buildInfoCard([
             _buildInfoRow(Icons.map, 'Karta', 'Interaktivni zemljevid z vašimi parcelami'),
-            _buildInfoRow(Icons.forest, 'Gozd', 'Seznam parcel in iskanje v katastru'),
-            _buildInfoRow(Icons.inventory_2, 'Hlodi', 'Beleženje hlodovine z izračunom volumna'),
+            _buildInfoRow(Icons.park, 'Gozd', 'Seznam parcel in iskanje v katastru'),
+            _buildInfoRow(Icons.forest, 'Hlodi', 'Beleženje hlodovine z izračunom volumna'),
           ]),
         ],
       ),
@@ -346,12 +348,6 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           const SizedBox(height: 24),
           _buildInfoCard([
             _buildInfoRow(
-              Icons.search,
-              'Išči parcelo',
-              'Najdi parcelo v katastru (KO + številka)',
-              iconColor: Colors.blue,
-            ),
-            _buildInfoRow(
               Icons.add_location_alt,
               'Dodaj točko',
               'Shrani lokacijo (mejnik, skladišče)',
@@ -373,7 +369,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
               Icons.download,
               'Uvozi parcelo',
               'Pridobi parcelo iz katastra na trenutni lokaciji',
-              iconColor: Colors.green,
+              iconColor: Colors.blue,
             ),
           ]),
           const SizedBox(height: 16),
@@ -526,7 +522,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
             _buildInfoRow(
               Icons.cached,
               'Samodejno predpomnjenje',
-              'Ogljedane karte se shranijo za kasnejšo uporabo',
+              'Ogledane karte se shranijo za kasnejšo uporabo',
             ),
             _buildInfoRow(
               Icons.search,

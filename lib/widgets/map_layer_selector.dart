@@ -116,7 +116,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
               decoration: BoxDecoration(
                 color: Theme.of(
                   context,
-                ).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -158,7 +158,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                   BoxShadow(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.3),
+                    ).colorScheme.primary.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -349,7 +349,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                       layer.attribution,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: isSelected
-                            ? colorScheme.onPrimaryContainer.withOpacity(0.7)
+                            ? colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
                             : colorScheme.onSurfaceVariant,
                       ),
                     ),

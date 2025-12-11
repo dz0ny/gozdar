@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -157,7 +158,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
     if (confirmed == true) {
       await _databaseService.deleteLogBatch(_batch.id);
       if (mounted) {
-        Navigator.pop(context, true);
+        context.pop();
       }
     }
   }

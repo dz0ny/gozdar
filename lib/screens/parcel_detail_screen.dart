@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../models/parcel.dart';
 import '../models/map_location.dart';
 import '../models/log_entry.dart';
 import '../models/navigation_target.dart';
+import '../router/app_router.dart';
+import '../router/navigation_notifier.dart';
+import '../router/route_names.dart';
 import '../services/database_service.dart';
 import '../services/kml_service.dart';
 import '../providers/logs_provider.dart';
@@ -13,8 +17,6 @@ import '../widgets/notes_editor_sheet.dart';
 import '../widgets/parcel_info_widgets.dart';
 import '../widgets/parcel_wood_tracking_card.dart';
 import '../widgets/parcel_data_cards.dart';
-import '../main.dart';
-import 'parcel_editor.dart';
 
 class ParcelDetailScreen extends StatefulWidget {
   final Parcel parcel;
@@ -451,25 +453,24 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   }
 
   Future<void> _editPolygon() async {
-    final result = await Navigator.of(context).push<Parcel>(
-      MaterialPageRoute(
-        builder: (context) => ParcelEditor(parcel: _parcel),
-        fullscreenDialog: true,
+    context.push(
+      AppRoutes.parcelEdit(_parcel.id),
+      extra: ParcelEditorParams(
+        parcel: _parcel,
+        onSave: (result) async {
+          // Preserve the existing metadata when updating polygon
+          final updatedParcel = result.copyWith(
+            owner: _parcel.owner,
+            woodAllowance: _parcel.woodAllowance,
+            woodCut: _parcel.woodCut,
+            treesCut: _parcel.treesCut,
+            cadastralMunicipality: _parcel.cadastralMunicipality,
+            parcelNumber: _parcel.parcelNumber,
+          );
+          await _updateParcel(updatedParcel);
+        },
       ),
     );
-
-    if (result != null) {
-      // Preserve the existing metadata when updating polygon
-      final updatedParcel = result.copyWith(
-        owner: _parcel.owner,
-        woodAllowance: _parcel.woodAllowance,
-        woodCut: _parcel.woodCut,
-        treesCut: _parcel.treesCut,
-        cadastralMunicipality: _parcel.cadastralMunicipality,
-        parcelNumber: _parcel.parcelNumber,
-      );
-      await _updateParcel(updatedParcel);
-    }
   }
 
   Future<void> _deleteParcel() async {
@@ -518,7 +519,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Parcela izbrisana$extraText')),
           );
-          Navigator.of(context).pop(true); // Return true to indicate deletion
+          context.pop();
         }
       } catch (e) {
         if (mounted) {
@@ -534,13 +535,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   void _navigateToPoint(LatLng point, String name) {
     final target = NavigationTarget(location: point, name: name);
 
-    // Pop back to main screen
-    Navigator.of(context).popUntil((route) => route.isFirst);
-
-    // Use static method to navigate to map with target
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      MainScreen.navigateToMapWithTarget(target);
-    });
+    // Set navigation target and switch to map
+    context.read<NavigationNotifier>().navigateToMapWithTarget(target);
+    context.go(AppRoutes.map);
   }
 
   @override

@@ -35,7 +35,7 @@ DAILY_BUILD := $(shell \
 # DAILY resets each day (for readability), BUILD always increments (for Android)
 NEW_VERSION := $(YEAR).$(MMDD).$(DAILY_BUILD)+$(NEW_BUILD_NUMBER)
 
-.PHONY: help version bump build release clean deps analyze test icon
+.PHONY: help version bump build release release-android release-ios clean deps analyze test icon
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -74,7 +74,7 @@ build-no-bump: ## Build release APK without bumping version
 	flutter build apk --release
 	@ls -lh $(BUILD_DIR)/app-release.apk
 
-release: build ## Build APK and create GitHub release
+release: build release-ios ## Build APK, create GitHub release, and upload iOS to TestFlight
 	$(eval VERSION := $(shell grep '^version:' $(PUBSPEC) | sed 's/version: //' | cut -d'+' -f1))
 	@echo "Creating GitHub release v$(VERSION)..."
 	@if ! command -v gh &> /dev/null; then \
@@ -89,6 +89,27 @@ release: build ## Build APK and create GitHub release
 		--latest
 	@echo "Release v$(VERSION) created!"
 	@echo "URL: https://github.com/dz0ny/gozdar/releases/tag/v$(VERSION)"
+
+release-android: build ## Build APK and create GitHub release (Android only)
+	$(eval VERSION := $(shell grep '^version:' $(PUBSPEC) | sed 's/version: //' | cut -d'+' -f1))
+	@echo "Creating GitHub release v$(VERSION)..."
+	@if ! command -v gh &> /dev/null; then \
+		echo "Error: GitHub CLI (gh) not installed. Install with: brew install gh"; \
+		exit 1; \
+	fi
+	@cp $(BUILD_DIR)/app-release.apk $(BUILD_DIR)/gozdar-$(VERSION).apk
+	gh release create "v$(VERSION)" \
+		"$(BUILD_DIR)/gozdar-$(VERSION).apk#Gozdar $(VERSION) APK" \
+		--title "Gozdar v$(VERSION)" \
+		--notes "Release $(VERSION)" \
+		--latest
+	@echo "Release v$(VERSION) created!"
+	@echo "URL: https://github.com/dz0ny/gozdar/releases/tag/v$(VERSION)"
+
+release-ios: ## Build iOS and upload to TestFlight
+	@echo "Building iOS and uploading to TestFlight..."
+	cd ios && fastlane release
+	@echo "iOS release uploaded!"
 
 clean: ## Clean build artifacts
 	flutter clean

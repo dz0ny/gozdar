@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/map_location.dart';
 import '../services/database_service.dart';
 import '../services/analytics_service.dart';
-import '../widgets/worker_settings_dialog.dart';
 
 /// Manages dialog operations for the map
 class MapDialogManager {
@@ -43,16 +42,6 @@ class MapDialogManager {
       onDeleteLocation(location);
       AnalyticsService().logLocationDeleted();
     }
-  }
-
-  /// Show worker settings dialog
-  void showWorkerSettingsDialog() {
-    AnalyticsService().logWorkerSettingsOpened();
-    showDialog(
-      context: context,
-      builder: (context) =>
-          WorkerSettingsDialog(onOpenDownload: onShowTileDownloadDialog),
-    );
   }
 
   /// Show reset onboarding confirmation

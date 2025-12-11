@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/log_entry.dart';
 import '../services/species_service.dart';
 
 class LogEntryForm extends StatefulWidget {
   final LogEntry? logEntry;
+  final void Function(LogEntry)? onSave;
 
-  const LogEntryForm({super.key, this.logEntry});
+  const LogEntryForm({super.key, this.logEntry, this.onSave});
 
   @override
   State<LogEntryForm> createState() => _LogEntryFormState();
@@ -233,7 +235,8 @@ class _LogEntryFormState extends State<LogEntryForm> {
       createdAt: widget.logEntry?.createdAt,
     );
 
-    Navigator.of(context).pop(entry);
+    widget.onSave?.call(entry);
+    context.pop();
   }
 
   @override

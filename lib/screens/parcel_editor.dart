@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/parcel.dart';
@@ -9,8 +10,9 @@ import '../services/tile_cache_service.dart';
 
 class ParcelEditor extends StatefulWidget {
   final Parcel? parcel;
+  final void Function(Parcel)? onSave;
 
-  const ParcelEditor({super.key, this.parcel});
+  const ParcelEditor({super.key, this.parcel, this.onSave});
 
   @override
   State<ParcelEditor> createState() => _ParcelEditorState();
@@ -173,7 +175,8 @@ class _ParcelEditorState extends State<ParcelEditor> {
       createdAt: widget.parcel?.createdAt,
     );
 
-    Navigator.of(context).pop(parcel);
+    widget.onSave?.call(parcel);
+    context.pop();
   }
 
   void _switchBaseLayer(MapLayer newLayer) {

@@ -6,8 +6,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../main.dart' show MainScreen;
+import '../router/navigation_notifier.dart';
+import '../router/route_names.dart';
 import '../models/map_location.dart';
 import '../models/map_layer.dart';
 import '../models/parcel.dart';
@@ -17,7 +19,6 @@ import '../utils/slovenian_crs.dart';
 import '../services/database_service.dart';
 import '../services/analytics_service.dart';
 import '../widgets/log_entry_form.dart';
-import '../services/map_preferences_service.dart';
 import '../services/cadastral_service.dart';
 import '../services/geopackage_service.dart';
 import '../services/tile_cache_service.dart';
@@ -30,11 +31,11 @@ import '../widgets/map_layer_selector.dart';
 import '../widgets/map_dialogs.dart';
 import '../widgets/saved_locations_sheet.dart';
 import '../widgets/parcel_search_dialog.dart';
-import '../widgets/parcel_silhouette.dart';
 import '../widgets/map_marker_renderer.dart';
 import '../widgets/map_layer_renderer.dart';
 import '../widgets/location_tracker.dart';
 import '../widgets/map_dialog_manager.dart';
+import '../widgets/parcel_found_sheet.dart';
 import 'parcel_detail_screen.dart';
 import '../providers/map_provider.dart';
 
@@ -51,31 +52,11 @@ class MapTab extends StatefulWidget {
 class MapTabState extends State<MapTab> {
   // Map controller for programmatic map control
   final MapController _mapController = MapController();
-  final MapPreferencesService _prefsService = MapPreferencesService();
   final TileCacheService _tileCacheService = TileCacheService();
 
   // User location tracking
   late final LocationTracker _locationTracker;
   late final MapDialogManager _dialogManager;
-
-  // Initial map state (loaded from preferences)
-  LatLng _initialCenter = const LatLng(46.0569, 14.5058);
-  double _initialZoom = 13.0;
-  double _initialRotation = 0.0;
-
-  // Current map state
-  MapLayer _currentBaseLayer = MapLayer.openStreetMap;
-  final Set<MapLayerType> _activeOverlays = {};
-  List<MapLocation> _locations = [];
-  List<Parcel> _parcels = [];
-  List<LogEntry> _geolocatedLogs = [];
-  bool _isLoadingLocations = false;
-  bool _isQueryingParcel = false;
-  bool _isLoadingPreferences =
-      true; // Wait for preferences before rendering map
-
-  // Navigation target (set from ParcelDetailScreen)
-  NavigationTarget? _navigationTarget;
 
   // Long press menu state
   Offset? _longPressScreenPosition;
@@ -89,10 +70,8 @@ class MapTabState extends State<MapTab> {
 
   /// Calculate marker size based on zoom level
   /// Returns smaller sizes at lower zoom levels
-  double _getMarkerSize(double baseSize) {
-    final workerUrl = context.read<MapProvider>().workerUrl;
-
-    if (_currentBaseLayer.isWms && workerUrl == null) {
+  double _getMarkerSize(double baseSize, MapProvider mapProvider) {
+    if (mapProvider.currentBaseLayer.isWms && mapProvider.workerUrl == null) {
       // Slovenian CRS: scale 0.4-1.0 for zoom 11-15
       final scale = ((_currentZoom - 11) / 4).clamp(0.4, 1.0);
       return baseSize * scale;
@@ -104,18 +83,15 @@ class MapTabState extends State<MapTab> {
 
   /// Set navigation target and center map on it
   void setNavigationTarget(NavigationTarget target, {bool zoomIn = true}) {
-    // Update provider state
-    context.read<MapProvider>().setNavigationTarget(target);
+    final mapProvider = context.read<MapProvider>();
+    mapProvider.setNavigationTarget(target);
     AnalyticsService().logNavigationStarted();
 
-    setState(() {
-      _navigationTarget = target;
-    });
     // Center map on target location
     final currentRotation = _mapController.camera.rotation;
     final currentZoom = _mapController.camera.zoom;
     final targetZoom = zoomIn
-        ? 17.0.clamp(7.0, _currentBaseLayer.maxZoom)
+        ? 17.0.clamp(7.0, mapProvider.currentBaseLayer.maxZoom)
         : currentZoom;
     _mapController.moveAndRotate(target.location, targetZoom, currentRotation);
   }
@@ -123,27 +99,25 @@ class MapTabState extends State<MapTab> {
   /// Clear navigation target
   void clearNavigationTarget() {
     context.read<MapProvider>().clearNavigationTarget();
-    setState(() {
-      _navigationTarget = null;
-    });
   }
 
   /// Show compass dialog for navigation target
   void _showCompassForTarget() {
-    if (_navigationTarget == null) return;
+    final navigationTarget = context.read<MapProvider>().navigationTarget;
+    if (navigationTarget == null) return;
     AnalyticsService().logCompassOpened();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (ctx) => Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: Theme.of(ctx).colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: NavigationCompassDialog(
-          targetLocation: _navigationTarget!.location,
-          targetName: _navigationTarget!.name,
+          targetLocation: navigationTarget.location,
+          targetName: navigationTarget.name,
         ),
       ),
     );
@@ -152,17 +126,18 @@ class MapTabState extends State<MapTab> {
   /// Show tile download dialog (triggered by triple-tap on Karta tab)
   void showTileDownloadDialog() {
     final bounds = _mapController.camera.visibleBounds;
+    final currentLayer = context.read<MapProvider>().currentBaseLayer;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (ctx) => Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: Theme.of(ctx).colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: TileDownloadDialog(
-          currentLayer: _currentBaseLayer,
+          currentLayer: currentLayer,
           bounds: bounds,
           currentZoom: _currentZoom.toInt(),
         ),
@@ -188,48 +163,30 @@ class MapTabState extends State<MapTab> {
       onShowTileDownloadDialog: showTileDownloadDialog,
       onResetOnboarding: null, // TODO: Implement onboarding reset
     );
-    _loadPreferences();
-    _loadLocations();
-    _loadParcels();
-    _loadGeolocatedLogs();
+    _initializeData();
     _initializeLocationTracking();
   }
 
-  /// Load saved map preferences
-  Future<void> _loadPreferences() async {
-    final state = await _prefsService.loadAll();
-
-    // Find the base layer from saved type
-    MapLayer baseLayer = MapLayer.openStreetMap;
-    for (final layer in MapLayer.baseLayers) {
-      if (layer.type == state.baseLayer) {
-        baseLayer = layer;
-        break;
-      }
-    }
-
-    setState(() {
-      _initialCenter = LatLng(state.latitude, state.longitude);
-      _initialZoom = state.zoom;
-      _currentZoom = state.zoom;
-      _initialRotation = state.rotation;
-      _currentBaseLayer = baseLayer;
-      _activeOverlays.clear();
-      _activeOverlays.addAll(state.overlays);
-      _isLoadingPreferences = false;
-    });
+  /// Initialize data loading from provider
+  Future<void> _initializeData() async {
+    final mapProvider = context.read<MapProvider>();
+    await mapProvider.loadPreferences();
+    _currentZoom = mapProvider.zoom;
+    await Future.wait([
+      mapProvider.loadLocations(),
+      mapProvider.loadParcels(),
+      mapProvider.loadGeolocatedLogs(),
+    ]);
   }
 
   /// Save current map state to preferences
   Future<void> _saveMapState() async {
     final camera = _mapController.camera;
-    await _prefsService.saveAll(
-      latitude: camera.center.latitude,
-      longitude: camera.center.longitude,
+    final mapProvider = context.read<MapProvider>();
+    await mapProvider.saveMapState(
+      center: camera.center,
       zoom: camera.zoom,
       rotation: camera.rotation,
-      baseLayer: _currentBaseLayer.type,
-      overlays: _activeOverlays,
     );
   }
 
@@ -240,61 +197,6 @@ class MapTabState extends State<MapTab> {
     super.dispose();
   }
 
-  /// Load saved locations from database
-  Future<void> _loadLocations() async {
-    setState(() {
-      _isLoadingLocations = true;
-    });
-
-    try {
-      final locations = await DatabaseService().getAllLocations();
-
-      setState(() {
-        _locations = locations;
-        _isLoadingLocations = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoadingLocations = false;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri nalaganju lokacij: $e')),
-        );
-      }
-    }
-  }
-
-  /// Load saved parcels from database
-  Future<void> _loadParcels() async {
-    try {
-      final parcels = await DatabaseService().getAllParcels();
-      if (mounted) {
-        setState(() {
-          _parcels = parcels;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading parcels: $e');
-    }
-  }
-
-  /// Load geolocated logs from database
-  Future<void> _loadGeolocatedLogs() async {
-    try {
-      final allLogs = await DatabaseService().getAllLogs();
-      final logsWithLocation = allLogs.where((log) => log.hasLocation).toList();
-      if (mounted) {
-        setState(() {
-          _geolocatedLogs = logsWithLocation;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading geolocated logs: $e');
-    }
-  }
-
   /// Initialize real-time location and compass tracking
   Future<void> _initializeLocationTracking() async {
     await _locationTracker.initialize();
@@ -302,6 +204,9 @@ class MapTabState extends State<MapTab> {
 
   /// Center map on user's current GPS location
   Future<void> _centerOnGpsLocation() async {
+    // Capture provider before async operations
+    final mapProvider = context.read<MapProvider>();
+
     try {
       // Check location service status
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -347,7 +252,8 @@ class MapTabState extends State<MapTab> {
       );
 
       // Animate map to current location (respect maxZoom), reset rotation to north
-      final targetZoom = 15.0.clamp(7.0, _currentBaseLayer.maxZoom);
+      final currentLayer = mapProvider.currentBaseLayer;
+      final targetZoom = 15.0.clamp(7.0, currentLayer.maxZoom);
       _mapController.moveAndRotate(
         LatLng(position.latitude, position.longitude),
         targetZoom,
@@ -379,24 +285,18 @@ class MapTabState extends State<MapTab> {
   Future<void> _addLocation(String name, double lat, double lng) async {
     try {
       final location = MapLocation(name: name, latitude: lat, longitude: lng);
-
-      // Use provider for the operation
-      final success = await context.read<MapProvider>().addLocation(location);
-      if (success) {
-        await _loadLocations(); // Sync local state
-        AnalyticsService().logLocationAdded();
-      }
+      final mapProvider = context.read<MapProvider>();
+      final success = await mapProvider.addLocation(location);
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Dodano "$name"')));
+          AnalyticsService().logLocationAdded();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Dodano "$name"')),
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Napaka: ${context.read<MapProvider>().error}'),
-            ),
+            SnackBar(content: Text('Napaka: ${mapProvider.error}')),
           );
         }
       }
@@ -431,23 +331,18 @@ class MapTabState extends State<MapTab> {
         type: LocationType.secnja,
       );
 
-      // Use provider for the operation
-      final success = await context.read<MapProvider>().addLocation(location);
-      if (success) {
-        await _loadLocations(); // Sync local state
-        AnalyticsService().logSecnjaAdded();
-      }
+      final mapProvider = context.read<MapProvider>();
+      final success = await mapProvider.addLocation(location);
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Sečnja "$name" označena')));
+          AnalyticsService().logSecnjaAdded();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Sečnja "$name" označena')),
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Napaka: ${context.read<MapProvider>().error}'),
-            ),
+            SnackBar(content: Text('Napaka: ${mapProvider.error}')),
           );
         }
       }
@@ -476,10 +371,11 @@ class MapTabState extends State<MapTab> {
       ),
     );
 
-    if (result != null) {
+    if (result != null && mounted) {
+      final mapProvider = context.read<MapProvider>();
       try {
         await DatabaseService().insertLog(result);
-        await _loadGeolocatedLogs(); // Refresh log markers
+        await mapProvider.loadGeolocatedLogs();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -524,25 +420,18 @@ class MapTabState extends State<MapTab> {
   Future<void> _deleteLocation(MapLocation location) async {
     try {
       if (location.id != 0) {
-        // Use provider for the operation
-        final success = await context.read<MapProvider>().deleteLocation(
-          location.id,
-        );
-        if (success) {
-          await _loadLocations(); // Sync local state
-          AnalyticsService().logLocationDeleted();
-        }
+        final mapProvider = context.read<MapProvider>();
+        final success = await mapProvider.deleteLocation(location.id);
 
         if (mounted) {
           if (success) {
+            AnalyticsService().logLocationDeleted();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Izbrisano "${location.name}"')),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Napaka: ${context.read<MapProvider>().error}'),
-              ),
+              SnackBar(content: Text('Napaka: ${mapProvider.error}')),
             );
           }
         }
@@ -558,23 +447,13 @@ class MapTabState extends State<MapTab> {
 
   /// Query cadastral parcel at the given location and show import dialog
   Future<void> _queryParcelAtLocation(LatLng location) async {
-    if (_isQueryingParcel) return;
-
-    setState(() {
-      _isQueryingParcel = true;
-    });
+    final mapProvider = context.read<MapProvider>();
+    if (mapProvider.isQueryingParcel) return;
 
     try {
-      // Use provider for the query
-      final parcel = await context.read<MapProvider>().queryParcelAtLocation(
-        location,
-      );
+      final parcel = await mapProvider.queryParcelAtLocation(location);
 
       if (!mounted) return;
-
-      setState(() {
-        _isQueryingParcel = false;
-      });
 
       if (parcel == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -587,9 +466,6 @@ class MapTabState extends State<MapTab> {
       await _showImportParcelDialog(parcel);
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isQueryingParcel = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Napaka pri iskanju parcele: $e')),
         );
@@ -632,7 +508,8 @@ class MapTabState extends State<MapTab> {
       );
 
       if (viewParcel == true && mounted) {
-        MainScreen.navigateToForestWithParcel(existingParcel);
+        context.read<NavigationNotifier>().navigateToForestWithParcel(existingParcel);
+        context.go(AppRoutes.parcelDetail(existingParcel.id));
       }
       return;
     }
@@ -651,22 +528,14 @@ class MapTabState extends State<MapTab> {
   /// Import a cadastral parcel into the database
   Future<void> _importCadastralParcel(CadastralParcel cadastralParcel) async {
     try {
-      // Use provider for the import
-      final success = await context.read<MapProvider>().importCadastralParcel(
-        cadastralParcel,
-      );
-
-      if (success) {
-        // Reload parcels to show the new one on the map
-        await _loadParcels();
-        AnalyticsService().logParcelImportedCadastral();
-
-        // Download tiles for offline use in the background
-        _downloadTilesForParcel(cadastralParcel.polygon);
-      }
+      final mapProvider = context.read<MapProvider>();
+      final success = await mapProvider.importCadastralParcel(cadastralParcel);
 
       if (mounted) {
         if (success) {
+          AnalyticsService().logParcelImportedCadastral();
+          // Download tiles for offline use in the background
+          _downloadTilesForParcel(cadastralParcel.polygon);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -676,17 +545,15 @@ class MapTabState extends State<MapTab> {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Napaka: ${context.read<MapProvider>().error}'),
-            ),
+            SnackBar(content: Text('Napaka: ${mapProvider.error}')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu parcele: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Napaka pri uvozu parcele: $e')),
+        );
       }
     }
   }
@@ -723,18 +590,18 @@ class MapTabState extends State<MapTab> {
         if (!mounted) return;
         final confirmed = await showDialog<bool>(
           context: context,
-          builder: (context) => AlertDialog(
+          builder: (ctx) => AlertDialog(
             title: const Text('Uvozi podatke'),
             content: Text(
               'Najdenih ${importResult.totalCount} objektov v datoteki "${importResult.layerName}". Jih uvozim?',
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
+                onPressed: () => Navigator.of(ctx).pop(false),
                 child: const Text('Prekliči'),
               ),
               FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
+                onPressed: () => Navigator.of(ctx).pop(true),
                 child: const Text('Uvozi'),
               ),
             ],
@@ -754,16 +621,21 @@ class MapTabState extends State<MapTab> {
             await dbService.insertOverlay(overlay);
           }
 
-          // Reload data
-          await _loadParcels();
-          await _loadLocations();
-
+          // Reload data via provider
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Uvoženih ${importResult.totalCount} objektov'),
-              ),
-            );
+            final mapProvider = context.read<MapProvider>();
+            await Future.wait([
+              mapProvider.loadParcels(),
+              mapProvider.loadLocations(),
+            ]);
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Uvoženih ${importResult.totalCount} objektov'),
+                ),
+              );
+            }
           }
         }
         return;
@@ -779,9 +651,9 @@ class MapTabState extends State<MapTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Napaka pri uvozu: $e')),
+        );
       }
     }
   }
@@ -824,9 +696,8 @@ class MapTabState extends State<MapTab> {
     // Clamp zoom to new layer's max zoom
     final newZoom = currentZoom.clamp(7.0, newLayer.maxZoom);
 
-    setState(() {
-      _currentBaseLayer = newLayer;
-    });
+    // Update provider
+    context.read<MapProvider>().setBaseLayer(newLayer);
 
     // Track layer change
     AnalyticsService().logMapLayerChanged(layerName: newLayer.type.name);
@@ -840,35 +711,26 @@ class MapTabState extends State<MapTab> {
         }
       });
     }
-
-    // Save layer preference
-    _saveMapState();
   }
 
   /// Show layer selection bottom sheet
   Future<void> _showLayerSelector() async {
+    final mapProvider = context.read<MapProvider>();
     await MapLayerSelector.show(
       context: context,
-      currentBaseLayer: _currentBaseLayer,
-      activeOverlays: _activeOverlays,
-      workerUrl: context.read<MapProvider>().workerUrl,
+      currentBaseLayer: mapProvider.currentBaseLayer,
+      activeOverlays: mapProvider.activeOverlays,
+      workerUrl: mapProvider.workerUrl,
       onBaseLayerChanged: (layer) {
         _switchBaseLayer(layer);
       },
       onOverlayToggled: (type) {
-        final wasEnabled = _activeOverlays.contains(type);
-        setState(() {
-          if (wasEnabled) {
-            _activeOverlays.remove(type);
-          } else {
-            _activeOverlays.add(type);
-          }
-        });
+        final wasEnabled = mapProvider.activeOverlays.contains(type);
+        mapProvider.toggleOverlay(type);
         AnalyticsService().logMapOverlayToggled(
           overlayName: type.name,
           enabled: !wasEnabled,
         );
-        _saveMapState();
       },
       onImportFile: _importGeoFile,
       onDownloadTiles: showTileDownloadDialog,
@@ -883,12 +745,12 @@ class MapTabState extends State<MapTab> {
     // Watch provider for changes (including worker URL, parcels, locations)
     final mapProvider = context.watch<MapProvider>();
 
-    // Create marker renderer
+    // Create marker renderer using provider data directly
     final markerRenderer = MapMarkerRenderer(
       currentZoom: _currentZoom,
-      locations: _locations,
-      parcels: _parcels,
-      geolocatedLogs: _geolocatedLogs,
+      locations: mapProvider.locations,
+      parcels: mapProvider.parcels,
+      geolocatedLogs: mapProvider.geolocatedLogs,
       userPosition: _locationTracker.userPosition != null
           ? LatLng(
               _locationTracker.userPosition!.latitude,
@@ -912,58 +774,15 @@ class MapTabState extends State<MapTab> {
       ),
     );
 
-    // Create layer renderer
+    // Create layer renderer using provider data
     final layerRenderer = MapLayerRenderer(
-      baseLayer: _currentBaseLayer,
-      activeOverlays: _activeOverlays,
+      baseLayer: mapProvider.currentBaseLayer,
+      activeOverlays: mapProvider.activeOverlays,
       workerUrl: mapProvider.workerUrl,
     );
 
-    // Sync parcels from provider when they change
-    if (mapProvider.parcels.length != _parcels.length ||
-        (mapProvider.parcels.isNotEmpty &&
-            _parcels.isNotEmpty &&
-            mapProvider.parcels.first.id != _parcels.first.id)) {
-      // Schedule sync after build to avoid setState during build
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _parcels = List.from(mapProvider.parcels);
-          });
-        }
-      });
-    }
-
-    // Sync geolocated logs from provider when they change
-    if (mapProvider.geolocatedLogs.length != _geolocatedLogs.length ||
-        (mapProvider.geolocatedLogs.isNotEmpty &&
-            _geolocatedLogs.isNotEmpty &&
-            mapProvider.geolocatedLogs.first.id != _geolocatedLogs.first.id)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _geolocatedLogs = List.from(mapProvider.geolocatedLogs);
-          });
-        }
-      });
-    }
-
-    // Sync locations from provider when they change
-    if (mapProvider.locations.length != _locations.length ||
-        (mapProvider.locations.isNotEmpty &&
-            _locations.isNotEmpty &&
-            mapProvider.locations.first.id != _locations.first.id)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _locations = List.from(mapProvider.locations);
-          });
-        }
-      });
-    }
-
     // Show loading indicator while preferences are loading
-    if (_isLoadingPreferences) {
+    if (!mapProvider.isPreferencesLoaded) {
       return Scaffold(
         body: Center(
           child: Column(
@@ -993,21 +812,21 @@ class MapTabState extends State<MapTab> {
               // Use Slovenian CRS for WMS layers (EPSG:3794), otherwise default Web Mercator
               // If proxy is active (workerUrl != null), always use Web Mercator (EPSG:3857)
               crs:
-                  (_currentBaseLayer.isWms &&
-                      context.read<MapProvider>().workerUrl == null)
+                  (mapProvider.currentBaseLayer.isWms &&
+                      mapProvider.workerUrl == null)
                   ? slovenianCrs
                   : const Epsg3857(),
-              initialCenter: _initialCenter,
-              initialZoom: _initialZoom,
-              initialRotation: _initialRotation,
+              initialCenter: mapProvider.center,
+              initialZoom: mapProvider.zoom,
+              initialRotation: mapProvider.rotation,
               minZoom: 7.0,
-              maxZoom: _currentBaseLayer.maxZoom,
+              maxZoom: mapProvider.currentBaseLayer.maxZoom,
               // Move to saved position when map is ready
               onMapReady: () {
                 _mapController.moveAndRotate(
-                  _initialCenter,
-                  _initialZoom,
-                  _initialRotation,
+                  mapProvider.center,
+                  mapProvider.zoom,
+                  mapProvider.rotation,
                 );
               },
               // Handle tap to dismiss long press menu
@@ -1050,9 +869,9 @@ class MapTabState extends State<MapTab> {
             children: [
               ...layerRenderer.getAllTileLayers(),
               // Saved parcels as polygons
-              if (_parcels.isNotEmpty)
+              if (mapProvider.parcels.isNotEmpty)
                 PolygonLayer(
-                  polygons: _parcels
+                  polygons: mapProvider.parcels
                       .map(
                         (parcel) => Polygon(
                           points: parcel.polygon,
@@ -1093,7 +912,7 @@ class MapTabState extends State<MapTab> {
               // All markers using the unified renderer
               MarkerLayer(markers: markerRenderer.getAllMarkers()),
               // Navigation target line (from user to target)
-              if (_navigationTarget != null &&
+              if (mapProvider.navigationTarget != null &&
                   _locationTracker.userPosition != null)
                 PolylineLayer(
                   polylines: [
@@ -1103,7 +922,7 @@ class MapTabState extends State<MapTab> {
                           _locationTracker.userPosition!.latitude,
                           _locationTracker.userPosition!.longitude,
                         ),
-                        _navigationTarget!.location,
+                        mapProvider.navigationTarget!.location,
                       ],
                       color: Colors.orange.withValues(alpha: 0.6),
                       strokeWidth: 3,
@@ -1112,16 +931,16 @@ class MapTabState extends State<MapTab> {
                   ],
                 ),
               // Navigation target marker
-              if (_navigationTarget != null)
+              if (mapProvider.navigationTarget != null)
                 Builder(
-                  builder: (context) {
-                    final navSize = _getMarkerSize(50);
-                    final navIconSize = _getMarkerSize(28);
-                    final navBorderWidth = _getMarkerSize(3);
+                  builder: (ctx) {
+                    final navSize = _getMarkerSize(50, mapProvider);
+                    final navIconSize = _getMarkerSize(28, mapProvider);
+                    final navBorderWidth = _getMarkerSize(3, mapProvider);
                     return MarkerLayer(
                       markers: [
                         Marker(
-                          point: _navigationTarget!.location,
+                          point: mapProvider.navigationTarget!.location,
                           width: navSize,
                           height: navSize,
                           child: GestureDetector(
@@ -1158,74 +977,44 @@ class MapTabState extends State<MapTab> {
           ),
 
           // Navigation target info banner
-          if (_navigationTarget != null)
+          if (mapProvider.navigationTarget != null)
             NavigationTargetBanner(
-              target: _navigationTarget!,
+              target: mapProvider.navigationTarget!,
               onTap: _showCompassForTarget,
               onClose: clearNavigationTarget,
             ),
 
-          // Debug info overlay
-          if (context.watch<MapProvider>().isDebugInfoVisible)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 16,
-              left: 16,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Zoom: ${_currentZoom.toStringAsFixed(2)}',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                    Text(
-                      'Center: ${_mapController.camera.center.latitude.toStringAsFixed(4)}, ${_mapController.camera.center.longitude.toStringAsFixed(4)}',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                    Text(
-                      'Rotation: ${_mapController.camera.rotation.toStringAsFixed(1)}°',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
           // Loading indicator for locations
-          if (_isLoadingLocations)
+          if (mapProvider.isLoadingLocations)
             Positioned(
-              top:
-                  MediaQuery.of(context).padding.top +
-                  (_navigationTarget != null ? 90 : 16) +
-                  (context.watch<MapProvider>().isDebugInfoVisible ? 80 : 0),
+              top: MediaQuery.of(context).padding.top +
+                  (mapProvider.navigationTarget != null ? 90 : 16),
               left: 16,
-              child: const Material(
+              child: Material(
                 elevation: 4,
-                borderRadius: BorderRadius.all(Radius.circular(8)),
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
+                color: Theme.of(context).colorScheme.surface,
                 child: Padding(
-                  padding: EdgeInsets.all(12),
-                  child: CircularProgressIndicator(),
+                  padding: const EdgeInsets.all(12),
+                  child: CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ),
             ),
 
           // Loading indicator for parcel query
-          if (_isQueryingParcel)
+          if (mapProvider.isQueryingParcel)
             Positioned(
-              top:
-                  MediaQuery.of(context).padding.top +
-                  (_navigationTarget != null ? 90 : 16),
+              top: MediaQuery.of(context).padding.top +
+                  (mapProvider.navigationTarget != null ? 90 : 16),
               left: 0,
               right: 0,
               child: Center(
                 child: Material(
                   elevation: 4,
                   borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  color: Theme.of(context).colorScheme.surface,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -1234,10 +1023,13 @@ class MapTabState extends State<MapTab> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const SizedBox(
+                        SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Text(
@@ -1254,13 +1046,13 @@ class MapTabState extends State<MapTab> {
           // Long press action menu
           if (_longPressScreenPosition != null && _longPressMapPosition != null)
             Builder(
-              builder: (context) {
+              builder: (ctx) {
                 // Capture position at build time so it persists after onDismiss clears state
                 final position = _longPressMapPosition!;
                 // Find parcel at this position
                 Parcel? parcelAtPosition;
                 try {
-                  parcelAtPosition = _parcels.firstWhere(
+                  parcelAtPosition = mapProvider.parcels.firstWhere(
                     (parcel) => parcel.containsPoint(position),
                   );
                 } catch (_) {
@@ -1321,23 +1113,24 @@ class MapTabState extends State<MapTab> {
       // Zoom and layer controls at top, GPS at bottom
       floatingActionButton: MapControls(
         mapController: _mapController,
-        currentBaseLayer: _currentBaseLayer,
-        locationsCount: _locations.length,
+        currentBaseLayer: mapProvider.currentBaseLayer,
+        locationsCount: mapProvider.locations.length,
         onLayerSelectorPressed: _showLayerSelector,
         onSearchPressed: showParcelSearchDialog,
         onGpsPressed: _centerOnGpsLocation,
-        onLocationsPressed: _locations.isNotEmpty ? _showLocationsSheet : null,
+        onLocationsPressed: mapProvider.locations.isNotEmpty ? _showLocationsSheet : null,
       ),
     );
   }
 
   /// Show bottom sheet with saved locations
   void _showLocationsSheet() {
+    final mapProvider = context.read<MapProvider>();
     SavedLocationsSheet.show(
       context: context,
-      locations: _locations,
-      logs: _geolocatedLogs,
-      parcels: _parcels,
+      locations: mapProvider.locations,
+      logs: mapProvider.geolocatedLogs,
+      parcels: mapProvider.parcels,
       onNavigate: (target) {
         setNavigationTarget(target, zoomIn: true);
       },
@@ -1387,217 +1180,29 @@ class MapTabState extends State<MapTab> {
 
     // Show bottom sheet with conditional action
     if (mounted) {
-      showModalBottomSheet(
+      await ParcelFoundSheet.show(
         context: context,
-        backgroundColor: Colors.transparent,
-        builder: (context) => Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Success header
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.check_circle,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Parcela najdena',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        Text(
-                          existingParcel != null
-                              ? 'Vaša parcela'
-                              : 'Pregled meje parcele',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              // Card with parcel preview
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.outline.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ParcelSilhouette(
-                      polygon: parcel.polygon,
-                      size: 56,
-                      fillColor: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.3),
-                      strokeColor: Theme.of(context).colorScheme.primary,
-                      strokeWidth: 2.5,
-                    ),
-                  ),
-                  title: Text(
-                    'Parcela ${parcel.label}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.map,
-                              size: 16,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'KO ${parcel.nationalCadastralReference}',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.square_foot,
-                              size: 16,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              parcel.formattedArea,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Action buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _searchedParcel = null;
-                        });
-                        Navigator.of(context).pop();
-                      },
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(Icons.close),
-                      label: const Text('Skrij'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton.icon(
-                      onPressed: () async {
-                        Navigator.of(context).pop();
-                        // Clear the blue overlay
-                        setState(() {
-                          _searchedParcel = null;
-                        });
-                        if (existingParcel != null) {
-                          // Parcel already exists - navigate to Forest tab
-                          MainScreen.navigateToForestWithParcel(existingParcel);
-                        } else {
-                          // Parcel doesn't exist - import it
-                          await _importSearchedParcel(parcel);
-                        }
-                      },
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: Icon(
-                        existingParcel != null
-                            ? Icons.visibility
-                            : Icons.download,
-                      ),
-                      label: Text(
-                        existingParcel != null
-                            ? 'Odpri parcelo'
-                            : 'Uvozi parcelo',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        wfsParcel: parcel,
+        existingParcel: existingParcel,
+        onHide: () {
+          setState(() {
+            _searchedParcel = null;
+          });
+        },
+        onAction: () async {
+          // Clear the blue overlay
+          setState(() {
+            _searchedParcel = null;
+          });
+          if (existingParcel != null) {
+            // Parcel already exists - navigate to Forest tab
+            context.read<NavigationNotifier>().navigateToForestWithParcel(existingParcel);
+            context.go(AppRoutes.parcelDetail(existingParcel.id));
+          } else {
+            // Parcel doesn't exist - import it
+            await _importSearchedParcel(parcel);
+          }
+        },
       );
     }
   }
@@ -1641,7 +1246,8 @@ class MapTabState extends State<MapTab> {
           );
 
           if (viewParcel == true && mounted) {
-            MainScreen.navigateToForestWithParcel(existingParcel);
+            context.read<NavigationNotifier>().navigateToForestWithParcel(existingParcel);
+            context.go(AppRoutes.parcelDetail(existingParcel.id));
           }
         }
         return;
@@ -1658,13 +1264,10 @@ class MapTabState extends State<MapTab> {
 
       await dbService.insertParcel(parcel);
 
-      // Reload parcels in provider (which will sync to local state via build method)
+      // Reload parcels in provider
       if (mounted) {
         await context.read<MapProvider>().loadParcels();
       }
-
-      // Reload local parcels as well to ensure immediate update
-      await _loadParcels();
 
       // Clear searched parcel
       setState(() {
@@ -1882,15 +1485,16 @@ class MapTabState extends State<MapTab> {
 
   /// Build attribution text from base layer and active overlays
   String _buildAttributionText() {
+    final mapProvider = context.read<MapProvider>();
     final attributions = <String>{};
 
     // Add base layer attribution
-    if (_currentBaseLayer.attribution.isNotEmpty) {
-      attributions.add(_currentBaseLayer.attribution);
+    if (mapProvider.currentBaseLayer.attribution.isNotEmpty) {
+      attributions.add(mapProvider.currentBaseLayer.attribution);
     }
 
     // Add active overlay attributions
-    for (final overlayType in _activeOverlays) {
+    for (final overlayType in mapProvider.activeOverlays) {
       final layer = MapLayer.overlayLayers.cast<MapLayer?>().firstWhere(
         (l) => l?.type == overlayType,
         orElse: () => null,
@@ -1911,10 +1515,11 @@ class MapTabState extends State<MapTab> {
       location: location,
     );
 
-    if (newName != null) {
+    if (newName != null && mounted) {
+      final mapProvider = context.read<MapProvider>();
       final db = DatabaseService();
       await db.updateLocationName(location.id, newName);
-      await _loadLocations();
+      await mapProvider.loadLocations();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Lokacija preimenovana v "$newName"')),
