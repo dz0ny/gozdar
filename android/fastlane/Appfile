@@ -1,0 +1,2 @@
+json_key_file("/Users/dz0ny/android-keystores/fastlane-480919-0cb30c62db50.json") # Path to the json secret file - Follow https://docs.fastlane.tools/actions/supply/#setup to get one
+package_name("dev.dz0ny.gozdar") # e.g. com.krausefx.app

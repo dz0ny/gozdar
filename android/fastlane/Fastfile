@@ -1,0 +1,58 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:android)
+
+platform :android do
+  desc "Runs all the tests"
+  lane :test do
+    gradle(task: "test")
+  end
+
+  desc "Build release APK"
+  lane :beta do
+    # Get the project root directory (two levels up from fastlane/)
+    project_root = File.expand_path("../..", __dir__)
+
+    # For Flutter projects, use flutter build instead of gradle directly
+    sh("cd #{project_root} && flutter build apk --release")
+
+    apk_path = File.join(project_root, "build/app/outputs/flutter-apk/app-release.apk")
+
+    # Uncomment to distribute via Firebase App Distribution:
+    # firebase_app_distribution(
+    #   app: "YOUR_FIREBASE_APP_ID",
+    #   apk_path: apk_path,
+    #   groups: "testers"
+    # )
+
+    UI.success("APK built successfully at: #{apk_path}")
+  end
+
+  desc "Deploy a new version to the Google Play"
+  lane :deploy do
+    # Get the project root directory (two levels up from fastlane/)
+    project_root = File.expand_path("../..", __dir__)
+
+    sh("cd #{project_root} && flutter build appbundle --release")
+
+    aab_path = File.join(project_root, "build/app/outputs/bundle/release/app-release.aab")
+
+    upload_to_play_store(
+      aab: aab_path,
+      track: "internal"
+    )
+  end
+end

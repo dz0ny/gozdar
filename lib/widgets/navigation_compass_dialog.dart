@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:latlong2/latlong.dart';
@@ -379,31 +380,55 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
           '${widget.targetLocation.latitude.toStringAsFixed(5)}, ${widget.targetLocation.longitude.toStringAsFixed(5)}';
     }
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _showDMS = !_showDMS;
-        });
-      },
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.location_on, color: Colors.red, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                displayText,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontFamily: 'monospace',
-                  fontWeight: FontWeight.w500,
-                ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.location_on, color: Colors.red, size: 20),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showDMS = !_showDMS;
+                });
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    displayText,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.swap_horiz, size: 16, color: Colors.grey.shade400),
+                ],
               ),
-              const SizedBox(width: 8),
-              Icon(Icons.swap_horiz, size: 16, color: Colors.grey.shade400),
-            ],
-          ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.copy, size: 18),
+              tooltip: 'Kopiraj koordinate',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              onPressed: () {
+                final copyText =
+                    '${widget.targetLocation.latitude.toStringAsFixed(6)}, ${widget.targetLocation.longitude.toStringAsFixed(6)}';
+                Clipboard.setData(ClipboardData(text: copyText));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Koordinate kopirane'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );

@@ -42,7 +42,6 @@ help: ## Show this help
 
 version: ## Show current and next version
 	@echo "Current version: $(CURRENT_VERSION)"
-	@echo "Current name:    $(CURRENT_VERSION_NAME)"
 	@echo "Current build:   $(CURRENT_BUILD_NUMBER)"
 	@echo "---"
 	@echo "Next version:    $(NEW_VERSION)"
