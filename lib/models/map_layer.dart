@@ -157,7 +157,7 @@ class MapLayer {
     urlTemplate:
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: '© Esri',
-    maxZoom: 19,
+    maxZoom: 21,
   );
 
   /// ESRI World Topo Map - Topographic map
@@ -167,7 +167,7 @@ class MapLayer {
     urlTemplate:
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
     attribution: '© Esri',
-    maxZoom: 19,
+    maxZoom: 21,
   );
 
   /// Google Hybrid - Satellite with labels
@@ -184,7 +184,7 @@ class MapLayer {
     type: MapLayerType.ortofoto,
     name: 'Ortofoto 2024',
     attribution: '© GURS',
-    maxZoom: 19,
+    maxZoom: 21,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
     wmsLayers: ['pregledovalnik:DOF_2024'],
@@ -196,7 +196,7 @@ class MapLayer {
     type: MapLayerType.ortofoto2023,
     name: 'Ortofoto 2023',
     attribution: '© GURS',
-    maxZoom: 19,
+    maxZoom: 21,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
     wmsLayers: ['pregledovalnik:DOF25_2023'],
@@ -208,7 +208,7 @@ class MapLayer {
     type: MapLayerType.ortofoto2022,
     name: 'Ortofoto 2022',
     attribution: '© GURS',
-    maxZoom: 19,
+    maxZoom: 21,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
     wmsLayers: ['pregledovalnik:DOF25_2022'],
@@ -220,7 +220,7 @@ class MapLayer {
     type: MapLayerType.dofIr,
     name: 'Ortofoto IR',
     attribution: '© GURS',
-    maxZoom: 19,
+    maxZoom: 21,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
     wmsLayers: ['pregledovalnik:DOF_IR'],
