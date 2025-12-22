@@ -51,7 +51,7 @@ keytool -genkey -v -keystore ~/android-keystores/gozdar-release-key.jks \
 - `SpeciesService` - Tree species (SharedPreferences, defaults: Smreka, Bukev, Jelka)
 - `OnboardingService` - First-run wizard (SharedPreferences)
 - `ExportService` - Excel (.xlsx) export
-- `AnalyticsService` - Firebase wrapper (auto-disabled in `kDebugMode`)
+- `AnalyticsService` - Aptabase analytics (privacy-first, key: A-EU-0504687602)
 
 ### Data Models (ObjectBox)
 - **Parcel** - Forest polygon: name, polygonJson, cadastralMunicipality, parcelNumber, owner, notes, forestTypeIndex, woodAllowance/Cut, treesCut, createdAt | Relations: ToMany<LogEntry>

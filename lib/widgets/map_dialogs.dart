@@ -7,63 +7,139 @@ import '../services/cadastral_service.dart';
 class MapDialogs {
   MapDialogs._(); // Private constructor - static methods only
 
-  /// Show dialog to add a new location
-  /// Returns the name if confirmed, null if cancelled
-  static Future<String?> showAddLocationDialog({
+  /// Show dialog to add a new location with editable coordinates
+  /// Returns a record with (name, latitude, longitude) if confirmed, null if cancelled
+  /// The position parameter pre-fills the coordinates from long-press
+  static Future<({String name, double latitude, double longitude})?> showAddLocationDialog({
     required BuildContext context,
     required LatLng position,
   }) async {
     final nameController = TextEditingController();
+    final latController = TextEditingController(text: position.latitude.toStringAsFixed(6));
+    final lngController = TextEditingController(text: position.longitude.toStringAsFixed(6));
+    final formKey = GlobalKey<FormState>();
 
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Dodaj lokacijo'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(
-              'Lat: ${position.latitude.toStringAsFixed(6)}\n'
-              'Lng: ${position.longitude.toStringAsFixed(6)}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Ime lokacije',
-                hintText: 'Vnesite ime za to lokacijo',
-                border: OutlineInputBorder(),
-              ),
-              autofocus: true,
-              textCapitalization: TextCapitalization.words,
-            ),
+            Icon(Icons.add_location_alt, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            const Expanded(child: Text('Dodaj lokacijo')),
           ],
+        ),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Koordinate iz dolgo-pritiska ali vnesite svoje',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: latController,
+                  decoration: const InputDecoration(
+                    labelText: 'Zemljepisna širina (Lat)',
+                    hintText: 'npr. 46.0569',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.north),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Vnesite širino';
+                    }
+                    final lat = double.tryParse(value.trim().replaceAll(',', '.'));
+                    if (lat == null) {
+                      return 'Neveljavna številka';
+                    }
+                    if (lat < -90 || lat > 90) {
+                      return 'Širina mora biti med -90 in 90';
+                    }
+                    // Slovenia bounds check (rough)
+                    if (lat < 45.4 || lat > 46.9) {
+                      return 'Lokacija ni v Sloveniji (45.4-46.9)';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: lngController,
+                  decoration: const InputDecoration(
+                    labelText: 'Zemljepisna dolžina (Lng)',
+                    hintText: 'npr. 14.5058',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.east),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Vnesite dolžino';
+                    }
+                    final lng = double.tryParse(value.trim().replaceAll(',', '.'));
+                    if (lng == null) {
+                      return 'Neveljavna številka';
+                    }
+                    if (lng < -180 || lng > 180) {
+                      return 'Dolžina mora biti med -180 in 180';
+                    }
+                    // Slovenia bounds check (rough)
+                    if (lng < 13.3 || lng > 16.6) {
+                      return 'Lokacija ni v Sloveniji (13.3-16.6)';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Ime lokacije',
+                    hintText: 'Vnesite ime za to lokacijo',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.label),
+                  ),
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Vnesite ime';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Prekliči'),
           ),
-          FilledButton(
+          FilledButton.icon(
             onPressed: () {
-              if (nameController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Prosim vnesite ime')),
-                );
-                return;
+              if (formKey.currentState!.validate()) {
+                Navigator.of(context).pop(true);
               }
-              Navigator.of(context).pop(true);
             },
-            child: const Text('Dodaj'),
+            icon: const Icon(Icons.add_location),
+            label: const Text('Dodaj'),
           ),
         ],
       ),
     );
 
-    if (result == true && nameController.text.trim().isNotEmpty) {
-      return nameController.text.trim();
+    if (result == true) {
+      final lat = double.parse(latController.text.trim().replaceAll(',', '.'));
+      final lng = double.parse(lngController.text.trim().replaceAll(',', '.'));
+      return (name: nameController.text.trim(), latitude: lat, longitude: lng);
     }
     return null;
   }
@@ -165,6 +241,140 @@ class MapDialogs {
     );
 
     return result ?? false;
+  }
+
+  /// Show dialog to add a location by entering coordinates manually
+  /// Returns a record with (name, latitude, longitude) if confirmed, null if cancelled
+  static Future<({String name, double latitude, double longitude})?> showAddLocationByCoordinatesDialog({
+    required BuildContext context,
+  }) async {
+    final nameController = TextEditingController();
+    final latController = TextEditingController();
+    final lngController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.edit_location_alt, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            const Expanded(child: Text('Dodaj lokacijo s koordinatami')),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Vnesite koordinate v WGS84 formatu (decimalne stopinje)',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: latController,
+                  decoration: const InputDecoration(
+                    labelText: 'Zemljepisna širina (Lat)',
+                    hintText: 'npr. 46.0569',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.north),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Vnesite širino';
+                    }
+                    final lat = double.tryParse(value.trim().replaceAll(',', '.'));
+                    if (lat == null) {
+                      return 'Neveljavna številka';
+                    }
+                    if (lat < -90 || lat > 90) {
+                      return 'Širina mora biti med -90 in 90';
+                    }
+                    // Slovenia bounds check (rough)
+                    if (lat < 45.4 || lat > 46.9) {
+                      return 'Lokacija ni v Sloveniji (45.4-46.9)';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: lngController,
+                  decoration: const InputDecoration(
+                    labelText: 'Zemljepisna dolžina (Lng)',
+                    hintText: 'npr. 14.5058',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.east),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Vnesite dolžino';
+                    }
+                    final lng = double.tryParse(value.trim().replaceAll(',', '.'));
+                    if (lng == null) {
+                      return 'Neveljavna številka';
+                    }
+                    if (lng < -180 || lng > 180) {
+                      return 'Dolžina mora biti med -180 in 180';
+                    }
+                    // Slovenia bounds check (rough)
+                    if (lng < 13.3 || lng > 16.6) {
+                      return 'Lokacija ni v Sloveniji (13.3-16.6)';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Ime lokacije',
+                    hintText: 'Vnesite ime za to lokacijo',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.label),
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Vnesite ime';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Prekliči'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.of(context).pop(true);
+              }
+            },
+            icon: const Icon(Icons.add_location),
+            label: const Text('Dodaj'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      final lat = double.parse(latController.text.trim().replaceAll(',', '.'));
+      final lng = double.parse(lngController.text.trim().replaceAll(',', '.'));
+      return (name: nameController.text.trim(), latitude: lat, longitude: lng);
+    }
+    return null;
   }
 
   /// Show dialog to edit location name

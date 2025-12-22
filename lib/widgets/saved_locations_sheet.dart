@@ -13,6 +13,7 @@ class SavedLocationsSheet extends StatelessWidget {
   final void Function(NavigationTarget target) onNavigate;
   final void Function(MapLocation location) onEdit;
   final void Function(MapLocation location) onDelete;
+  final void Function()? onAddByCoordinates;
 
   const SavedLocationsSheet({
     super.key,
@@ -22,6 +23,7 @@ class SavedLocationsSheet extends StatelessWidget {
     required this.onNavigate,
     required this.onEdit,
     required this.onDelete,
+    this.onAddByCoordinates,
   });
 
   /// Show the saved locations sheet as a modal bottom sheet
@@ -33,6 +35,7 @@ class SavedLocationsSheet extends StatelessWidget {
     required void Function(NavigationTarget target) onNavigate,
     required void Function(MapLocation location) onEdit,
     required void Function(MapLocation location) onDelete,
+    void Function()? onAddByCoordinates,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -55,6 +58,7 @@ class SavedLocationsSheet extends StatelessWidget {
             onNavigate: onNavigate,
             onEdit: onEdit,
             onDelete: onDelete,
+            onAddByCoordinates: onAddByCoordinates,
           ),
         ),
       ),
@@ -71,6 +75,7 @@ class SavedLocationsSheet extends StatelessWidget {
       onNavigate: onNavigate,
       onEdit: onEdit,
       onDelete: onDelete,
+      onAddByCoordinates: onAddByCoordinates,
     );
   }
 }
@@ -83,6 +88,7 @@ class _ContentWidget extends StatelessWidget {
   final void Function(NavigationTarget target) onNavigate;
   final void Function(MapLocation location) onEdit;
   final void Function(MapLocation location) onDelete;
+  final void Function()? onAddByCoordinates;
 
   const _ContentWidget({
     required this.scrollController,
@@ -92,6 +98,7 @@ class _ContentWidget extends StatelessWidget {
     required this.onNavigate,
     required this.onEdit,
     required this.onDelete,
+    this.onAddByCoordinates,
   });
 
   /// Find containing parcel for a point
@@ -140,6 +147,17 @@ class _ContentWidget extends StatelessWidget {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
+                if (onAddByCoordinates != null) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.add_location_alt),
+                    tooltip: 'Dodaj s koordinatami',
+                    onPressed: () {
+                      Navigator.pop(context);
+                      onAddByCoordinates!();
+                    },
+                  ),
+                ],
               ],
             ),
           ),

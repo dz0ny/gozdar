@@ -269,15 +269,15 @@ class MapTabState extends State<MapTab> {
     }
   }
 
-  /// Show dialog to add a new location
+  /// Show dialog to add a new location with editable coordinates
   Future<void> _showAddLocationDialog(LatLng position) async {
-    final name = await MapDialogs.showAddLocationDialog(
+    final result = await MapDialogs.showAddLocationDialog(
       context: context,
       position: position,
     );
 
-    if (name != null) {
-      await _addLocation(name, position.latitude, position.longitude);
+    if (result != null) {
+      await _addLocation(result.name, result.latitude, result.longitude);
     }
   }
 
@@ -1138,7 +1138,21 @@ class MapTabState extends State<MapTab> {
         _editLocation(location);
       },
       onDelete: _dialogManager.showDeleteLocationDialog,
+      onAddByCoordinates: _showAddLocationByCoordinatesDialog,
     );
+  }
+
+  /// Show dialog to add location by entering coordinates manually
+  Future<void> _showAddLocationByCoordinatesDialog() async {
+    final result = await MapDialogs.showAddLocationByCoordinatesDialog(
+      context: context,
+    );
+
+    if (result != null) {
+      await _addLocation(result.name, result.latitude, result.longitude);
+      // Center map on newly added location
+      _mapController.move(LatLng(result.latitude, result.longitude), 15);
+    }
   }
 
   /// Show detailed usage rights dialog
