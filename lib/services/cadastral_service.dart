@@ -34,7 +34,9 @@ class CadastralService {
         _epsg3794 = proj4.Projection.get('EPSG:3794');
       }
 
-      _wgs84 = proj4.Projection.get('EPSG:4326');
+      // Some proj4dart setups may not have EPSG:4326 pre-registered.
+      _wgs84 = proj4.Projection.get('EPSG:4326') ??
+          proj4.Projection.add('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs');
     }
   }
 

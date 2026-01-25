@@ -46,6 +46,7 @@ class _AddLogSheetState extends State<AddLogSheet> {
 
   Future<void> _loadSpecies() async {
     final species = await _speciesService.getSpecies();
+    if (!mounted) return;
     setState(() {
       _availableSpecies = species;
     });
@@ -76,12 +77,23 @@ class _AddLogSheetState extends State<AddLogSheet> {
     setState(() => _isLoadingLocation = true);
 
     try {
-      final permission = await Geolocator.checkPermission();
+      LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        await Geolocator.requestPermission();
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Dovoljenje za lokacijo zavrnjeno')),
+          );
+        }
+        return;
       }
 
       final position = await Geolocator.getCurrentPosition();
+      if (!mounted) return;
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;
@@ -93,7 +105,9 @@ class _AddLogSheetState extends State<AddLogSheet> {
         );
       }
     } finally {
-      setState(() => _isLoadingLocation = false);
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+      }
     }
   }
 
@@ -120,15 +134,20 @@ class _AddLogSheetState extends State<AddLogSheet> {
     setState(() => _isSaving = true);
     try {
       await widget.onAdd(entry);
+      if (!mounted) return;
       setState(() {
         _addedCount++;
         _diameterController.clear();
         _lengthController.clear();
         _calculatedVolume = null;
       });
-      _diameterFocus.requestFocus();
+      if (mounted) {
+        _diameterFocus.requestFocus();
+      }
     } finally {
-      setState(() => _isSaving = false);
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 

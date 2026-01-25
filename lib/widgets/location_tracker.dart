@@ -25,14 +25,11 @@ class LocationTracker {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        debugPrint('Location permission denied');
-        return;
-      }
     }
 
-    if (permission == LocationPermission.deniedForever) {
-      debugPrint('Location permission permanently denied');
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      debugPrint('Location permission denied (permanently: ${permission == LocationPermission.deniedForever})');
       return;
     }
 
@@ -75,16 +72,6 @@ class LocationTracker {
       (CompassEvent event) {
         _userHeading = event.heading;
         onLocationUpdate?.call(_userPosition, _userHeading);
-      },
-      onError: (error) {
-        debugPrint('Compass error: $error');
-      },
-    );
-
-    // Start compass updates
-    _compassSubscription = FlutterCompass.events?.listen(
-      (CompassEvent event) {
-        _userHeading = event.heading;
       },
       onError: (error) {
         debugPrint('Compass error: $error');

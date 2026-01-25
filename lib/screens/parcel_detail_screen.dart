@@ -49,9 +49,12 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Subscribe to logs provider changes
-    _logsProvider?.removeListener(_onLogsChanged);
-    _logsProvider = context.read<LogsProvider>();
-    _logsProvider?.addListener(_onLogsChanged);
+    final newProvider = context.read<LogsProvider>();
+    if (_logsProvider != newProvider) {
+      _logsProvider?.removeListener(_onLogsChanged);
+      _logsProvider = newProvider;
+      _logsProvider?.addListener(_onLogsChanged);
+    }
   }
 
   @override
@@ -73,6 +76,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
             (loc) => _parcel.containsPoint(LatLng(loc.latitude, loc.longitude)),
           )
           .toList();
+      if (!mounted) return;
       setState(() {
         // Separate regular locations from sečnja markers
         _locationsInParcel = inParcel.where((loc) => !loc.isSecnja).toList();
@@ -88,6 +92,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     try {
       final logs = await _databaseService.getLogsByParcel(_parcel.id);
       final volume = await _databaseService.getParcelTotalVolume(_parcel.id);
+      if (!mounted) return;
       setState(() {
         _logsInParcel = logs;
         _logsVolume = volume;

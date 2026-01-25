@@ -38,12 +38,23 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
     setState(() => _isLoadingLocation = true);
 
     try {
-      final permission = await Geolocator.checkPermission();
+      LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        await Geolocator.requestPermission();
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Dovoljenje za lokacijo zavrnjeno')),
+          );
+        }
+        return;
       }
 
       final position = await Geolocator.getCurrentPosition();
+      if (!mounted) return;
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;
@@ -55,7 +66,9 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
         );
       }
     } finally {
-      setState(() => _isLoadingLocation = false);
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+      }
     }
   }
 
@@ -77,7 +90,9 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
         Navigator.pop(context);
       }
     } finally {
-      setState(() => _isSaving = false);
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 

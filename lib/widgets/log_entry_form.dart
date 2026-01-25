@@ -45,6 +45,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
 
   Future<void> _loadSpecies() async {
     final species = await _speciesService.getSpecies();
+    if (!mounted) return;
     setState(() {
       _availableSpecies = species;
     });
@@ -139,9 +140,11 @@ class _LogEntryFormState extends State<LogEntryForm> {
         );
       }
     } finally {
-      setState(() {
-        _isLoadingLocation = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
     }
   }
 
