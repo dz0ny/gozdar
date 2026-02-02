@@ -23,6 +23,7 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _tabTapCount = 0;
   final _analyticsService = AnalyticsService();
+  NavigationNotifier? _navNotifier;
 
   @override
   void initState() {
@@ -31,6 +32,23 @@ class _MainScaffoldState extends State<MainScaffold> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handlePendingNavigation();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final notifier = context.read<NavigationNotifier>();
+    if (!identical(_navNotifier, notifier)) {
+      _navNotifier?.removeListener(_handlePendingNavigation);
+      _navNotifier = notifier;
+      _navNotifier?.addListener(_handlePendingNavigation);
+    }
+  }
+
+  @override
+  void dispose() {
+    _navNotifier?.removeListener(_handlePendingNavigation);
+    super.dispose();
   }
 
   void _handlePendingNavigation() {
@@ -136,9 +154,6 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget build(BuildContext context) {
     // Listen to navigation notifier changes
     context.watch<NavigationNotifier>();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _handlePendingNavigation();
-    });
 
     return Scaffold(
       body: Stack(

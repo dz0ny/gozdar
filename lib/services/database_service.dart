@@ -66,7 +66,12 @@ class DatabaseService {
   Future<List<LogEntry>> getAllLogs() async {
     final query = _logBox.query()
       ..order(LogEntry_.createdAt, flags: Order.descending);
-    return query.build().find();
+    final built = query.build();
+    try {
+      return built.find();
+    } finally {
+      built.close();
+    }
   }
 
   Future<double> getTotalVolume() async {
@@ -221,7 +226,12 @@ class DatabaseService {
   Future<List<LogBatch>> getAllLogBatches() async {
     final query = _batchBox.query()
       ..order(LogBatch_.createdAt, flags: Order.descending);
-    return query.build().find();
+    final built = query.build();
+    try {
+      return built.find();
+    } finally {
+      built.close();
+    }
   }
 
   // ==================== LOCATION OPERATIONS ====================
@@ -249,7 +259,12 @@ class DatabaseService {
   Future<List<MapLocation>> getAllLocations() async {
     final query = _locationBox.query()
       ..order(MapLocation_.createdAt, flags: Order.descending);
-    return query.build().find();
+    final built = query.build();
+    try {
+      return built.find();
+    } finally {
+      built.close();
+    }
   }
 
   // ==================== PARCEL OPERATIONS ====================
@@ -313,7 +328,12 @@ class DatabaseService {
   Future<List<Parcel>> getAllParcels() async {
     final query = _parcelBox.query()
       ..order(Parcel_.createdAt, flags: Order.descending);
-    return query.build().find();
+    final built = query.build();
+    try {
+      return built.find();
+    } finally {
+      built.close();
+    }
   }
 
   Future<double> getTotalParcelArea() async {
@@ -370,13 +390,23 @@ class DatabaseService {
   Future<List<ImportedOverlay>> getAllOverlays() async {
     final query = _overlayBox.query()
       ..order(ImportedOverlay_.createdAt, flags: Order.descending);
-    return query.build().find();
+    final built = query.build();
+    try {
+      return built.find();
+    } finally {
+      built.close();
+    }
   }
 
   Future<List<ImportedOverlay>> getVisibleOverlays() async {
     final query = _overlayBox.query(ImportedOverlay_.visible.equals(true))
       ..order(ImportedOverlay_.createdAt, flags: Order.descending);
-    return query.build().find();
+    final built = query.build();
+    try {
+      return built.find();
+    } finally {
+      built.close();
+    }
   }
 
   Future<void> toggleOverlayVisibility(int id) async {
