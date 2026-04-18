@@ -23,21 +23,29 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 Runs all the tests
 
-### android beta
+### android direct_apk
 
 ```sh
-[bundle exec] fastlane android beta
+[bundle exec] fastlane android direct_apk
 ```
 
-Build release APK
+Build direct-distribution release APK
 
-### android deploy
+### android internal
 
 ```sh
-[bundle exec] fastlane android deploy
+[bundle exec] fastlane android internal
 ```
 
-Deploy a new version to the Google Play
+Build Play release AAB and upload to internal testing
+
+### android production
+
+```sh
+[bundle exec] fastlane android production
+```
+
+Build Play release AAB and upload to production
 
 ----
 

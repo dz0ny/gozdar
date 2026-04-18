@@ -61,6 +61,7 @@ platform :android do
     upload_to_play_store(
       aab: play_aab_path,
       track: "internal",
+      release_status: "draft",
       json_key_data: play_service_account_json
     )
   end
