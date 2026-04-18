@@ -111,7 +111,7 @@ class MapControls extends StatelessWidget {
   void _zoomIn() {
     final camera = mapController.camera;
     final newZoom = camera.zoom + 1;
-    if (newZoom <= currentBaseLayer.maxZoom) {
+    if (newZoom <= MapLayer.appMaxZoom) {
       mapController.moveAndRotate(camera.center, newZoom, camera.rotation);
     }
   }

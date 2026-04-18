@@ -24,7 +24,8 @@ class MapLayerRenderer {
 
     return TileLayer(
       urlTemplate: urlTemplate,
-      maxZoom: layer.maxZoom,
+      maxZoom: MapLayer.appMaxZoom,
+      maxNativeZoom: layer.nativeMaxZoom,
       minZoom: layer.minZoom,
       tileProvider: tileCacheService.getGeneralTileProvider(),
       userAgentPackageName: 'dev.dz0ny.gozdar',

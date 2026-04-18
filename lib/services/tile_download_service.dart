@@ -15,7 +15,17 @@ class TileDownloadStarted extends TileDownloadEvent {
 }
 
 class TileDownloaded extends TileDownloadEvent {
-  TileDownloaded();
+  final double north;
+  final double south;
+  final double east;
+  final double west;
+
+  TileDownloaded({
+    required this.north,
+    required this.south,
+    required this.east,
+    required this.west,
+  });
 }
 
 class TileFailed extends TileDownloadEvent {
@@ -206,6 +216,7 @@ class TileDownloadService {
     String urlTemplate,
     String styleHash,
   ) async {
+    final bounds = TileMathService.tileBounds(tile.x, tile.y, tile.z);
     final subdomains = ['a', 'b', 'c'];
     final url = urlTemplate
         .replaceAll('{s}', subdomains[tile.x % 3])
@@ -240,7 +251,12 @@ class TileDownloadService {
           tile.y,
           response.bodyBytes,
         );
-        return TileDownloaded();
+        return TileDownloaded(
+          north: bounds.north,
+          south: bounds.south,
+          east: bounds.east,
+          west: bounds.west,
+        );
       } catch (e) {
         if (attempt < maxRetries - 1) {
           await Future.delayed(Duration(seconds: 1 << attempt));

@@ -23,10 +23,29 @@ void main() {
       );
     });
 
+    test('resolves overlay layers through the worker proxy', () {
+      final template = MapLayer.sestoji.resolveUrlTemplate(
+        MapPreferencesService.defaultWorkerUrl,
+      );
+
+      expect(
+        template,
+        '${MapPreferencesService.defaultWorkerUrl}/tiles/sestoji/{z}/{x}/{y}.png',
+      );
+    });
+
     test('returns null for proxy-only layers without a worker url', () {
       final template = MapLayer.kataster.resolveUrlTemplate(null);
 
       expect(template, isNull);
+    });
+
+    test('caps native and download zoom at 19 while keeping app zoom at 22', () {
+      expect(MapLayer.appMaxZoom, 22);
+      expect(MapLayer.esriWorldImagery.nativeMaxZoom, 19);
+      expect(MapLayer.esriWorldImagery.downloadMaxZoom, 19);
+      expect(MapLayer.openTopoMap.nativeMaxZoom, 17);
+      expect(MapLayer.openTopoMap.downloadMaxZoom, 17);
     });
   });
 }

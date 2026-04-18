@@ -12,13 +12,13 @@ import '../services/tile_sharing_service.dart';
 /// Dialog for downloading map tiles for offline use.
 /// Includes peer sharing UI from the MeshCore flow.
 class TileDownloadDialog extends StatefulWidget {
-  final MapLayer currentLayer;
+  final List<MapLayer> layers;
   final LatLngBounds bounds;
   final int currentZoom;
 
   const TileDownloadDialog({
     super.key,
-    required this.currentLayer,
+    required this.layers,
     required this.bounds,
     required this.currentZoom,
   });
@@ -32,6 +32,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
   final TileSharingService _tileSharingService = TileSharingService.instance;
   StreamSubscription<Set<TilePeer>>? _peersSubscription;
   StreamSubscription<PeerSyncEvent>? _syncSubscription;
+  late final VoidCallback _downloadVisualStateListener;
 
   bool _isDownloading = false;
   double _downloadProgress = 0;
@@ -47,13 +48,43 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
   List<StyleInfo> _localStyles = [];
   final String _workerUrl = MapPreferencesService.defaultWorkerUrl;
 
-  int get _minZoom => widget.currentZoom.clamp(1, widget.currentLayer.maxZoom).toInt();
-  int get _maxZoom => widget.currentLayer.maxZoom.toInt();
+  List<MapLayer> get _downloadableLayers => widget.layers
+      .where((layer) => layer.resolveUrlTemplate(_workerUrl) != null)
+      .toList();
+
+  int get _minZoom {
+    if (_downloadableLayers.isEmpty) {
+      return widget.currentZoom.clamp(1, 1).toInt();
+    }
+    final minLayerZoom = _downloadableLayers
+        .map((layer) => layer.downloadMaxZoom)
+        .reduce((a, b) => a < b ? a : b);
+    return widget.currentZoom.clamp(1, minLayerZoom).toInt();
+  }
+
+  int get _maxZoom {
+    if (_downloadableLayers.isEmpty) {
+      return widget.currentZoom;
+    }
+    return _downloadableLayers
+        .map((layer) => layer.downloadMaxZoom)
+        .reduce((a, b) => a > b ? a : b);
+  }
 
   @override
   void initState() {
     super.initState();
     _isServerRunning = _tileSharingService.isRunning;
+    _syncDownloadStateFromService();
+    _downloadVisualStateListener = () {
+      if (!mounted) {
+        return;
+      }
+      setState(_syncDownloadStateFromService);
+    };
+    _tileCacheService.downloadVisualStateListenable.addListener(
+      _downloadVisualStateListener,
+    );
     _peersSubscription = _tileSharingService.peersStream.listen((peers) {
       if (mounted) {
         setState(() {
@@ -70,8 +101,17 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
   void dispose() {
     _syncSubscription?.cancel();
     _peersSubscription?.cancel();
+    _tileCacheService.downloadVisualStateListenable.removeListener(
+      _downloadVisualStateListener,
+    );
     _tileSharingService.stopPeerDiscovery();
     super.dispose();
+  }
+
+  void _syncDownloadStateFromService() {
+    final downloadState = _tileCacheService.currentDownloadVisualState;
+    _isDownloading = downloadState.isDownloading;
+    _downloadProgress = downloadState.percent * 100;
   }
 
   Future<void> _loadCacheStats() async {
@@ -106,22 +146,20 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
   }
 
   int get _estimatedTileCount {
-    return _tileCacheService.estimateTileCount(
-      bounds: widget.bounds,
-      minZoom: _minZoom,
-      maxZoom: _maxZoom,
+    return _downloadableLayers.fold<int>(
+      0,
+      (sum, layer) => sum + _tileCacheService.estimateTileCount(
+        bounds: widget.bounds,
+        minZoom: widget.currentZoom.clamp(1, layer.downloadMaxZoom).toInt(),
+        maxZoom: layer.downloadMaxZoom,
+      ),
     );
   }
 
-  bool get _canDownload => _urlTemplate != null;
-
-  String? get _urlTemplate {
-    return widget.currentLayer.resolveUrlTemplate(_workerUrl);
-  }
+  bool get _canDownload => _downloadableLayers.isNotEmpty;
 
   Future<void> _startDownload() async {
-    final urlTemplate = _urlTemplate;
-    if (urlTemplate == null) {
+    if (_downloadableLayers.isEmpty) {
       setState(() {
         _errorMessage = 'URL predloge ni na voljo';
       });
@@ -135,12 +173,19 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     });
 
     try {
-      await _tileCacheService.downloadRegion(
-        isSlovenian: widget.currentLayer.isSlovenian,
-        urlTemplate: urlTemplate,
+      await _tileCacheService.downloadLayersForRegion(
+        requests: _downloadableLayers
+            .map(
+              (layer) => TileDownloadRequest(
+                isSlovenian: layer.isSlovenian,
+                urlTemplate: layer.resolveUrlTemplate(_workerUrl)!,
+                minZoom: widget.currentZoom.clamp(1, layer.downloadMaxZoom).toInt(),
+                maxZoom: layer.downloadMaxZoom,
+                layerName: layer.name,
+              ),
+            )
+            .toList(),
         bounds: widget.bounds,
-        minZoom: _minZoom,
-        maxZoom: _maxZoom,
         onProgress: (progress) {
           if (mounted) {
             setState(() {
@@ -178,6 +223,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     if (mounted) {
       setState(() {
         _isDownloading = false;
+        _downloadProgress = 0;
       });
     }
   }
@@ -725,16 +771,20 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
 
   Widget _buildLayerInfo() {
     final colorScheme = Theme.of(context).colorScheme;
+    final layerNames = widget.layers.map((layer) => layer.name).toList();
     return Card(
       color: colorScheme.surfaceContainerHighest,
       child: ListTile(
         leading: Icon(
-          widget.currentLayer.isSlovenian ? Icons.layers : Icons.map,
+          widget.layers.length > 1 ? Icons.layers : Icons.map,
           color: colorScheme.primary,
         ),
-        title: Text('Podlaga', style: TextStyle(color: colorScheme.onSurface)),
+        title: Text(
+          widget.layers.length > 1 ? 'Sloji' : 'Podlaga',
+          style: TextStyle(color: colorScheme.onSurface),
+        ),
         subtitle: Text(
-          widget.currentLayer.name,
+          layerNames.join(', '),
           style: TextStyle(color: colorScheme.onSurfaceVariant),
         ),
       ),
@@ -802,6 +852,13 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
           style: const TextStyle(fontWeight: FontWeight.w500),
           textAlign: TextAlign.center,
         ),
+        if (_tileCacheService.currentDownloadVisualState.currentLayerName != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            _tileCacheService.currentDownloadVisualState.currentLayerName!,
+            textAlign: TextAlign.center,
+          ),
+        ],
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: _downloadProgress / 100,

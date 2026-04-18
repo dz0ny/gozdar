@@ -72,7 +72,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
       if (permission == LocationPermission.deniedForever) return;
 
       final position = await Geolocator.getCurrentPosition();
-      final targetZoom = _defaultZoom.clamp(7.0, _currentBaseLayer.maxZoom);
+      final targetZoom = _defaultZoom.clamp(7.0, MapLayer.appMaxZoom);
       _mapController.move(
         LatLng(position.latitude, position.longitude),
         targetZoom,
@@ -183,7 +183,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
   void _switchBaseLayer(MapLayer newLayer) {
     final currentCenter = _mapController.camera.center;
     final currentZoom = _mapController.camera.zoom;
-    final newZoom = currentZoom.clamp(7.0, newLayer.maxZoom);
+    final newZoom = currentZoom.clamp(7.0, MapLayer.appMaxZoom);
 
     setState(() {
       _currentBaseLayer = newLayer;
@@ -282,7 +282,8 @@ class _ParcelEditorState extends State<ParcelEditor> {
 
     return TileLayer(
       urlTemplate: urlTemplate,
-      maxZoom: layer.maxZoom,
+      maxZoom: MapLayer.appMaxZoom,
+      maxNativeZoom: layer.nativeMaxZoom,
       tileProvider: _tileCacheService.getGeneralTileProvider(),
       userAgentPackageName: 'dev.dz0ny.gozdar',
     );
@@ -411,7 +412,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
                     initialCenter: widget.parcel?.center ?? _defaultCenter,
                     initialZoom: _defaultZoom,
                     minZoom: 7.0,
-                    maxZoom: _currentBaseLayer.maxZoom,
+                    maxZoom: MapLayer.appMaxZoom,
                     onTap: (tapPosition, point) => _addPoint(point),
                   ),
                   children: [
@@ -549,7 +550,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
                               onTap: () {
                                 final camera = _mapController.camera;
                                 final newZoom = camera.zoom + 1;
-                                if (newZoom <= _currentBaseLayer.maxZoom) {
+                                if (newZoom <= MapLayer.appMaxZoom) {
                                   _mapController.moveAndRotate(
                                     camera.center,
                                     newZoom,

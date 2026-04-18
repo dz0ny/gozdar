@@ -121,7 +121,7 @@ class MapTabState extends State<MapTab> {
     final currentRotation = _mapController.camera.rotation;
     final currentZoom = _mapController.camera.zoom;
     final targetZoom = zoomIn
-        ? 17.0.clamp(7.0, mapProvider.currentBaseLayer.maxZoom)
+        ? 17.0.clamp(7.0, MapLayer.appMaxZoom)
         : currentZoom;
     _mapController.moveAndRotate(target.location, targetZoom, currentRotation);
   }
@@ -155,7 +155,10 @@ class MapTabState extends State<MapTab> {
   /// Show tile download dialog (triggered by triple-tap on Karta tab)
   void showTileDownloadDialog() {
     final bounds = _mapController.camera.visibleBounds;
-    final currentLayer = context.read<MapProvider>().currentBaseLayer;
+    final mapProvider = context.read<MapProvider>();
+    final activeOverlayLayers = MapLayer.overlayLayers
+        .where((layer) => mapProvider.activeOverlays.contains(layer.type))
+        .toList();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -166,7 +169,7 @@ class MapTabState extends State<MapTab> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: TileDownloadDialog(
-          currentLayer: currentLayer,
+          layers: [mapProvider.currentBaseLayer, ...activeOverlayLayers],
           bounds: bounds,
           currentZoom: _currentZoom.toInt(),
         ),
@@ -369,7 +372,7 @@ class MapTabState extends State<MapTab> {
 
       // Animate map to current location (respect maxZoom), reset rotation to north
       final currentLayer = mapProvider.currentBaseLayer;
-      final targetZoom = 15.0.clamp(7.0, currentLayer.maxZoom);
+      final targetZoom = 15.0.clamp(7.0, MapLayer.appMaxZoom);
       _mapController.moveAndRotate(
         LatLng(position.latitude, position.longitude),
         targetZoom,
@@ -732,7 +735,7 @@ class MapTabState extends State<MapTab> {
     final currentZoom = _mapController.camera.zoom;
 
     // Clamp zoom to new layer's max zoom
-    final newZoom = currentZoom.clamp(7.0, newLayer.maxZoom);
+    final newZoom = currentZoom.clamp(7.0, MapLayer.appMaxZoom);
 
     // Update provider
     context.read<MapProvider>().setBaseLayer(newLayer);
@@ -1160,67 +1163,87 @@ class MapTabState extends State<MapTab> {
       body: Stack(
         children: [
           // Map widget
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              crs: const Epsg3857(),
-              initialCenter: mapProvider.center,
-              initialZoom: mapProvider.zoom,
-              initialRotation: mapProvider.rotation,
-              minZoom: 7.0,
-              maxZoom: mapProvider.currentBaseLayer.maxZoom,
-              // Move to saved position when map is ready
-              onMapReady: () {
-                _mapController.moveAndRotate(
-                  mapProvider.center,
-                  mapProvider.zoom,
-                  mapProvider.rotation,
-                );
-              },
-              // Handle tap to dismiss long press menu
-              onTap: (tapPosition, point) {
-                if (_measurement.isActive && !_measurement.isFinished) {
-                  _addMeasurementPoint(point);
-                  return;
-                }
-                if (_longPressScreenPosition != null) {
+          ValueListenableBuilder<TileDownloadVisualState>(
+            valueListenable: _tileCacheService.downloadVisualStateListenable,
+            builder: (context, downloadState, _) => FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                crs: const Epsg3857(),
+                initialCenter: mapProvider.center,
+                initialZoom: mapProvider.zoom,
+                initialRotation: mapProvider.rotation,
+                minZoom: 7.0,
+                maxZoom: MapLayer.appMaxZoom,
+                // Move to saved position when map is ready
+                onMapReady: () {
+                  _mapController.moveAndRotate(
+                    mapProvider.center,
+                    mapProvider.zoom,
+                    mapProvider.rotation,
+                  );
+                },
+                // Handle tap to dismiss long press menu
+                onTap: (tapPosition, point) {
+                  if (_measurement.isActive && !_measurement.isFinished) {
+                    _addMeasurementPoint(point);
+                    return;
+                  }
+                  if (_longPressScreenPosition != null) {
+                    setState(() {
+                      _longPressScreenPosition = null;
+                      _longPressMapPosition = null;
+                    });
+                  }
+                },
+                // Handle long press to show action menu
+                onLongPress: (tapPosition, point) {
+                  if (_measurement.isActive) return;
                   setState(() {
-                    _longPressScreenPosition = null;
-                    _longPressMapPosition = null;
+                    _longPressScreenPosition = tapPosition.global;
+                    _longPressMapPosition = point;
                   });
-                }
-              },
-              // Handle long press to show action menu
-              onLongPress: (tapPosition, point) {
-                if (_measurement.isActive) return;
-                setState(() {
-                  _longPressScreenPosition = tapPosition.global;
-                  _longPressMapPosition = point;
-                });
-              },
-              // Save map state when position/zoom/rotation changes
-              onMapEvent: (event) {
-                if (event is MapEventMoveEnd || event is MapEventRotateEnd) {
-                  _saveMapState();
-                }
-                // Track zoom level for dynamic marker sizing
-                if (event.camera.zoom != _currentZoom) {
-                  setState(() {
-                    _currentZoom = event.camera.zoom;
-                  });
-                }
-                // Dismiss menu on map move
-                if (event is MapEventMoveStart &&
-                    _longPressScreenPosition != null) {
-                  setState(() {
-                    _longPressScreenPosition = null;
-                    _longPressMapPosition = null;
-                  });
-                }
-              },
-            ),
-            children: [
-              ...layerRenderer.getAllTileLayers(),
+                },
+                // Save map state when position/zoom/rotation changes
+                onMapEvent: (event) {
+                  if (event is MapEventMoveEnd || event is MapEventRotateEnd) {
+                    _saveMapState();
+                  }
+                  // Track zoom level for dynamic marker sizing
+                  if (event.camera.zoom != _currentZoom) {
+                    setState(() {
+                      _currentZoom = event.camera.zoom;
+                    });
+                  }
+                  // Dismiss menu on map move
+                  if (event is MapEventMoveStart &&
+                      _longPressScreenPosition != null) {
+                    setState(() {
+                      _longPressScreenPosition = null;
+                      _longPressMapPosition = null;
+                    });
+                  }
+                },
+              ),
+              children: [
+                ...layerRenderer.getAllTileLayers(),
+                if (downloadState.overlays.isNotEmpty)
+                  PolygonLayer(
+                    polygons: downloadState.overlays
+                        .map(
+                          (overlay) => Polygon(
+                            points: [
+                              LatLng(overlay.north, overlay.west),
+                              LatLng(overlay.north, overlay.east),
+                              LatLng(overlay.south, overlay.east),
+                              LatLng(overlay.south, overlay.west),
+                            ],
+                            color: Colors.cyan.withValues(alpha: 0.22),
+                            borderColor: Colors.cyan,
+                            borderStrokeWidth: 1.0,
+                          ),
+                        )
+                        .toList(),
+                  ),
               // Saved parcels as polygons
               if (mapProvider.parcels.isNotEmpty)
                 PolygonLayer(
@@ -1352,7 +1375,55 @@ class MapTabState extends State<MapTab> {
                     );
                   },
                 ),
-            ],
+              ],
+            ),
+          ),
+          ValueListenableBuilder<TileDownloadVisualState>(
+            valueListenable: _tileCacheService.downloadVisualStateListenable,
+            builder: (context, downloadState, _) {
+              if (!downloadState.isDownloading && downloadState.overlays.isEmpty) {
+                return const SizedBox.shrink();
+              }
+
+              return Positioned(
+                top: 16,
+                left: 16,
+                child: Container(
+                  width: 210,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Prenos kart ${(downloadState.percent * 100).toStringAsFixed(1)}%',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      LinearProgressIndicator(
+                        value: downloadState.total == 0 ? null : downloadState.percent,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Preneseno ${downloadState.downloaded}, v predpomnilniku ${downloadState.skipped}, napake ${downloadState.failed} / ${downloadState.total}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
 
           // Navigation target info banner

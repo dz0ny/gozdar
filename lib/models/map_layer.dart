@@ -91,6 +91,9 @@ enum MapLayerType {
 }
 
 class MapLayer {
+  static const double appMaxZoom = 22.0;
+  static const double tileSourceMaxZoom = 19.0;
+
   final MapLayerType type;
   final String name;
   final String? urlTemplate;
@@ -139,16 +142,35 @@ class MapLayer {
       )
       .toLowerCase();
 
+  int get nativeMaxZoom {
+    final cappedMaxZoom = maxZoom < tileSourceMaxZoom ? maxZoom : tileSourceMaxZoom;
+    return cappedMaxZoom.toInt();
+  }
+
+  int get downloadMaxZoom => nativeMaxZoom;
+
   /// Resolve the layer to an XYZ template.
-  /// Direct tile sources keep their own template, Slovenian layers use the proxy.
+  /// Direct tile sources keep their own template, Slovenian layers use the proxy,
+  /// with a direct WMS fallback when no proxy is configured.
   String? resolveUrlTemplate(String? workerUrl) {
     if (urlTemplate != null && urlTemplate!.isNotEmpty) {
       return urlTemplate;
     }
-    if (workerUrl == null || workerUrl.isEmpty) {
+    if (workerUrl != null && workerUrl.isNotEmpty) {
+      return '$workerUrl/tiles/$proxySlug/{z}/{x}/{y}.png';
+    }
+    return _buildDirectWmsTemplate();
+  }
+
+  String? _buildDirectWmsTemplate() {
+    if (!isWms || wmsBaseUrl == null || wmsLayers == null || wmsLayers!.isEmpty) {
       return null;
     }
-    return '$workerUrl/tiles/$proxySlug/{z}/{x}/{y}.png';
+    final layers = wmsLayers!.join(',');
+    final format = wmsFormat ?? 'image/jpeg';
+    return '${wmsBaseUrl}SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap'
+        '&LAYERS=$layers&FORMAT=$format'
+        '&WIDTH=256&HEIGHT=256&SRS=EPSG:3857&BBOX={bbox-epsg-3857}';
   }
 
   // ============ BASE LAYERS ============
