@@ -8,6 +8,7 @@ class MapControls extends StatelessWidget {
   final MapLayer currentBaseLayer;
   final int locationsCount;
   final VoidCallback onLayerSelectorPressed;
+  final VoidCallback onMeasurePressed;
   final VoidCallback onGpsPressed;
   final VoidCallback? onLocationsPressed;
   final VoidCallback onSearchPressed;
@@ -18,6 +19,7 @@ class MapControls extends StatelessWidget {
     required this.currentBaseLayer,
     required this.locationsCount,
     required this.onLayerSelectorPressed,
+    required this.onMeasurePressed,
     required this.onGpsPressed,
     required this.onSearchPressed,
     this.onLocationsPressed,
@@ -48,6 +50,14 @@ class MapControls extends StatelessWidget {
                 onPressed: onSearchPressed,
                 tooltip: 'Išči parcelo po KO',
                 child: const Icon(Icons.search),
+              ),
+              const SizedBox(height: 8),
+              FloatingActionButton(
+                heroTag: 'map_measure',
+                mini: true,
+                onPressed: onMeasurePressed,
+                tooltip: 'Merjenje na karti',
+                child: const Icon(Icons.square_foot),
               ),
               const SizedBox(height: 8),
               FloatingActionButton(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -35,6 +36,45 @@ import '../widgets/parcel_found_sheet.dart';
 import 'parcel_detail_screen.dart';
 import '../providers/map_provider.dart';
 
+enum _MeasurementTool { distance, area }
+
+class _MeasurementState {
+  final _MeasurementTool? tool;
+  final List<LatLng> points;
+  final bool isFinished;
+
+  const _MeasurementState({
+    this.tool,
+    this.points = const [],
+    this.isFinished = false,
+  });
+
+  bool get isActive => tool != null;
+
+  bool get hasEnoughPoints {
+    if (tool == _MeasurementTool.distance) {
+      return points.length >= 2;
+    }
+    if (tool == _MeasurementTool.area) {
+      return points.length >= 3;
+    }
+    return false;
+  }
+
+  _MeasurementState copyWith({
+    _MeasurementTool? tool,
+    List<LatLng>? points,
+    bool? isFinished,
+    bool clearTool = false,
+  }) {
+    return _MeasurementState(
+      tool: clearTool ? null : (tool ?? this.tool),
+      points: points ?? this.points,
+      isFinished: isFinished ?? this.isFinished,
+    );
+  }
+}
+
 /// Map Tab screen for the Gozdar app
 /// Displays an interactive map with support for multiple layers,
 /// saved locations, and GPS functionality
@@ -63,6 +103,7 @@ class MapTabState extends State<MapTab> {
 
   // Searched parcel from WFS query
   WfsParcel? _searchedParcel;
+  _MeasurementState _measurement = const _MeasurementState();
 
   /// Calculate marker size based on zoom level
   /// Returns smaller sizes at lower zoom levels
@@ -128,6 +169,93 @@ class MapTabState extends State<MapTab> {
           currentLayer: currentLayer,
           bounds: bounds,
           currentZoom: _currentZoom.toInt(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showMeasurementSelector() async {
+    if (!mounted) return;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(ctx).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        ctx,
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Merjenje na karti',
+                  style: Theme.of(
+                    ctx,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Izberite orodje, nato tapnite na karto za dodajanje tock.',
+                  style: Theme.of(ctx).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 20),
+                _buildMeasurementOption(
+                  context: ctx,
+                  icon: Icons.route,
+                  title: 'Izmeri razdaljo',
+                  subtitle: 'Polilinija z dolzino v metrih ali kilometrih',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _startMeasurement(_MeasurementTool.distance);
+                  },
+                ),
+                const SizedBox(height: 12),
+                _buildMeasurementOption(
+                  context: ctx,
+                  icon: Icons.square_foot,
+                  title: 'Izmeri povrsino',
+                  subtitle: 'Pokritost iz poligona v m2 ali ha',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _startMeasurement(_MeasurementTool.area);
+                  },
+                ),
+                if (_measurement.isActive) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _closeMeasurement();
+                    },
+                    icon: const Icon(Icons.close),
+                    label: const Text('Zapri merjenje'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -639,6 +767,330 @@ class MapTabState extends State<MapTab> {
     );
   }
 
+  Widget _buildMeasurementOption({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _startMeasurement(_MeasurementTool tool) {
+    setState(() {
+      _longPressScreenPosition = null;
+      _longPressMapPosition = null;
+      _measurement = _MeasurementState(tool: tool);
+    });
+  }
+
+  void _addMeasurementPoint(LatLng point) {
+    if (!_measurement.isActive || _measurement.isFinished) return;
+
+    setState(() {
+      _measurement = _measurement.copyWith(
+        points: [..._measurement.points, point],
+      );
+    });
+  }
+
+  void _undoMeasurementPoint() {
+    if (_measurement.points.isEmpty) return;
+
+    setState(() {
+      _measurement = _measurement.copyWith(
+        points: _measurement.points.sublist(0, _measurement.points.length - 1),
+        isFinished: false,
+      );
+    });
+  }
+
+  void _clearMeasurement() {
+    if (!_measurement.isActive) return;
+
+    setState(() {
+      _measurement = _measurement.copyWith(points: const [], isFinished: false);
+    });
+  }
+
+  void _finishMeasurement() {
+    if (!_measurement.hasEnoughPoints) return;
+
+    setState(() {
+      _measurement = _measurement.copyWith(isFinished: true);
+    });
+  }
+
+  void _closeMeasurement() {
+    setState(() {
+      _measurement = const _MeasurementState();
+    });
+  }
+
+  double _measurementDistanceMeters(List<LatLng> points) {
+    if (points.length < 2) return 0;
+
+    double total = 0;
+    for (int i = 1; i < points.length; i++) {
+      total += Geolocator.distanceBetween(
+        points[i - 1].latitude,
+        points[i - 1].longitude,
+        points[i].latitude,
+        points[i].longitude,
+      );
+    }
+
+    return total;
+  }
+
+  double _measurementAreaM2(List<LatLng> points) {
+    if (points.length < 3) return 0;
+
+    final centerLat = points
+            .map((p) => p.latitude)
+            .reduce((a, b) => a + b) /
+        points.length;
+
+    final metersPerDegreeLat = 111132.92 -
+        559.82 * math.cos(2 * centerLat * math.pi / 180) +
+        1.175 * math.cos(4 * centerLat * math.pi / 180);
+    final metersPerDegreeLon = 111412.84 * math.cos(centerLat * math.pi / 180) -
+        93.5 * math.cos(3 * centerLat * math.pi / 180);
+
+    double area = 0;
+    for (int i = 0; i < points.length; i++) {
+      final j = (i + 1) % points.length;
+      final x1 = points[i].longitude * metersPerDegreeLon;
+      final y1 = points[i].latitude * metersPerDegreeLat;
+      final x2 = points[j].longitude * metersPerDegreeLon;
+      final y2 = points[j].latitude * metersPerDegreeLat;
+
+      area += x1 * y2 - x2 * y1;
+    }
+
+    return area.abs() / 2;
+  }
+
+  String _measurementValueLabel() {
+    if (!_measurement.isActive) {
+      return 'Ni aktivnega merjenja';
+    }
+
+    if (_measurement.tool == _MeasurementTool.distance) {
+      final meters = _measurementDistanceMeters(_measurement.points);
+      if (meters >= 1000) {
+        return '${(meters / 1000).toStringAsFixed(2)} km';
+      }
+      return '${meters.toStringAsFixed(0)} m';
+    }
+
+    final area = _measurementAreaM2(_measurement.points);
+    if (area >= 10000) {
+      return '${(area / 10000).toStringAsFixed(2)} ha';
+    }
+    return '${area.toStringAsFixed(0)} m2';
+  }
+
+  String _measurementHintLabel() {
+    if (!_measurement.isActive) {
+      return 'Odprite Sloji karte za zacetek merjenja.';
+    }
+    if (_measurement.isFinished) {
+      return 'Merjenje je zakljuceno.';
+    }
+    if (_measurement.tool == _MeasurementTool.distance) {
+      if (_measurement.points.length < 2) {
+        return 'Tapnite na karto za dodajanje tock razdalje.';
+      }
+      return 'Dodajte naslednjo tocko ali zakljucite merjenje.';
+    }
+    if (_measurement.points.length < 3) {
+      return 'Za povrsino potrebujete vsaj 3 tocke.';
+    }
+    return 'Dodajte naslednjo tocko ali zakljucite poligon.';
+  }
+
+  List<Marker> _measurementMarkers() {
+    return _measurement.points.asMap().entries.map((entry) {
+      final index = entry.key;
+      final point = entry.value;
+
+      return Marker(
+        point: point,
+        width: 34,
+        height: 34,
+        child: Container(
+          decoration: BoxDecoration(
+            color: _measurement.tool == _MeasurementTool.area
+                ? Colors.deepPurple
+                : Colors.teal,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              '${index + 1}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  Widget _buildMeasurementPanel(BuildContext context, MapProvider mapProvider) {
+    final topOffset = MediaQuery.of(context).padding.top +
+        (mapProvider.navigationTarget != null ? 90 : 16) +
+        (mapProvider.isLoadingLocations || mapProvider.isQueryingParcel ? 72 : 0);
+    final canFinish = _measurement.hasEnoughPoints && !_measurement.isFinished;
+
+    return Positioned(
+      top: topOffset,
+      left: 16,
+      right: 72,
+      child: Material(
+        elevation: 6,
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        color: Theme.of(context).colorScheme.surface,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    _measurement.tool == _MeasurementTool.area
+                        ? Icons.square_foot
+                        : Icons.route,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _measurement.tool == _MeasurementTool.area
+                          ? 'Merjenje povrsine'
+                          : 'Merjenje razdalje',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _closeMeasurement,
+                    child: const Text('Zapri'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _measurementValueLabel(),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _measurementHintLabel(),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _measurement.points.isEmpty
+                        ? null
+                        : _undoMeasurementPoint,
+                    icon: const Icon(Icons.undo, size: 18),
+                    label: const Text('Nazaj'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _measurement.points.isEmpty ? null : _clearMeasurement,
+                    icon: const Icon(Icons.clear, size: 18),
+                    label: const Text('Pocisti'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: canFinish ? _finishMeasurement : null,
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text('Zakljuci'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Build tile layer for a specific layer
   /// All layers are cached for up to 1 year
 
@@ -727,6 +1179,10 @@ class MapTabState extends State<MapTab> {
               },
               // Handle tap to dismiss long press menu
               onTap: (tapPosition, point) {
+                if (_measurement.isActive && !_measurement.isFinished) {
+                  _addMeasurementPoint(point);
+                  return;
+                }
                 if (_longPressScreenPosition != null) {
                   setState(() {
                     _longPressScreenPosition = null;
@@ -736,6 +1192,7 @@ class MapTabState extends State<MapTab> {
               },
               // Handle long press to show action menu
               onLongPress: (tapPosition, point) {
+                if (_measurement.isActive) return;
                 setState(() {
                   _longPressScreenPosition = tapPosition.global;
                   _longPressMapPosition = point;
@@ -805,8 +1262,34 @@ class MapTabState extends State<MapTab> {
                     ),
                   ],
                 ),
+              if (_measurement.tool == _MeasurementTool.area &&
+                  _measurement.points.length >= 3)
+                PolygonLayer(
+                  polygons: [
+                    Polygon(
+                      points: _measurement.points,
+                      color: Colors.deepPurple.withValues(alpha: 0.18),
+                      borderColor: Colors.deepPurple,
+                      borderStrokeWidth: 3,
+                    ),
+                  ],
+                ),
+              if (_measurement.points.length >= 2)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: _measurement.points,
+                      color: _measurement.tool == _MeasurementTool.area
+                          ? Colors.deepPurple
+                          : Colors.teal,
+                      strokeWidth: 3,
+                    ),
+                  ],
+                ),
               // All markers using the unified renderer
               MarkerLayer(markers: markerRenderer.getAllMarkers()),
+              if (_measurement.points.isNotEmpty)
+                MarkerLayer(markers: _measurementMarkers()),
               // Navigation target line (from user to target)
               if (mapProvider.navigationTarget != null &&
                   _locationTracker.userPosition != null)
@@ -939,6 +1422,9 @@ class MapTabState extends State<MapTab> {
               ),
             ),
 
+          if (_measurement.isActive)
+            _buildMeasurementPanel(context, mapProvider),
+
           // Long press action menu
           if (_longPressScreenPosition != null && _longPressMapPosition != null)
             Builder(
@@ -1012,6 +1498,7 @@ class MapTabState extends State<MapTab> {
         currentBaseLayer: mapProvider.currentBaseLayer,
         locationsCount: mapProvider.locations.length,
         onLayerSelectorPressed: _showLayerSelector,
+        onMeasurePressed: _showMeasurementSelector,
         onSearchPressed: showParcelSearchDialog,
         onGpsPressed: _centerOnGpsLocation,
         onLocationsPressed: mapProvider.locations.isNotEmpty ? _showLocationsSheet : null,
