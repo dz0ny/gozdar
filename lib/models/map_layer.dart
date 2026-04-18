@@ -131,6 +131,26 @@ class MapLayer {
   bool get isSlovenian =>
       isWms && (wmsBaseUrl?.contains('prostor.zgs.gov.si') ?? false);
 
+  /// Kebab-case slug used by the worker tile proxy.
+  String get proxySlug => type.name
+      .replaceAllMapped(
+        RegExp(r'(?<!^)(?=[A-Z])|(?<=[a-z])(?=[0-9])'),
+        (match) => '-',
+      )
+      .toLowerCase();
+
+  /// Resolve the layer to an XYZ template.
+  /// Direct tile sources keep their own template, Slovenian layers use the proxy.
+  String? resolveUrlTemplate(String? workerUrl) {
+    if (urlTemplate != null && urlTemplate!.isNotEmpty) {
+      return urlTemplate;
+    }
+    if (workerUrl == null || workerUrl.isEmpty) {
+      return null;
+    }
+    return '$workerUrl/tiles/$proxySlug/{z}/{x}/{y}.png';
+  }
+
   // ============ BASE LAYERS ============
 
   static const openStreetMap = MapLayer(

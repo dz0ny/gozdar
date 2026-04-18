@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/map_location.dart';
 import '../services/database_service.dart';
-import '../services/analytics_service.dart';
 
 /// Manages dialog operations for the map
 class MapDialogManager {
@@ -40,7 +39,6 @@ class MapDialogManager {
     if (confirmed == true) {
       await DatabaseService().deleteLocation(location.id);
       onDeleteLocation(location);
-      AnalyticsService().logLocationDeleted();
     }
   }
 

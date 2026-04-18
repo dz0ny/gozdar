@@ -5,8 +5,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/parcel.dart';
 import '../models/map_layer.dart';
-import '../utils/slovenian_crs.dart';
 import '../services/tile_cache_service.dart';
+import '../services/map_preferences_service.dart';
 
 class ParcelEditor extends StatefulWidget {
   final Parcel? parcel;
@@ -22,6 +22,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
   final MapController _mapController = MapController();
   final TextEditingController _nameController = TextEditingController();
   final TileCacheService _tileCacheService = TileCacheService();
+  final String _workerUrl = MapPreferencesService.defaultWorkerUrl;
 
   List<LatLng> _polygon = [];
   MapLayer _currentBaseLayer = MapLayer.esriWorldImagery;
@@ -274,33 +275,17 @@ class _ParcelEditorState extends State<ParcelEditor> {
   }
 
   Widget _buildTileLayerForLayer(MapLayer layer) {
-    if (layer.isWms) {
-      // Use cached tile provider for prostor.zgs.gov.si WMS layers
-      final isCacheable =
-          layer.wmsBaseUrl?.contains('prostor.zgs.gov.si') ?? false;
-
-      return TileLayer(
-        wmsOptions: WMSTileLayerOptions(
-          baseUrl: layer.wmsBaseUrl!,
-          layers: layer.wmsLayers!,
-          styles: layer.wmsStyles != null ? [layer.wmsStyles!] : const [''],
-          format: layer.wmsFormat ?? 'image/jpeg',
-          transparent: layer.isTransparent,
-          crs: slovenianCrs,
-        ),
-        tileProvider: isCacheable
-            ? _tileCacheService.getTileProvider()
-            : NetworkTileProvider(),
-        userAgentPackageName: 'dev.dz0ny.gozdar',
-        maxZoom: layer.maxZoom,
-      );
-    } else {
-      return TileLayer(
-        urlTemplate: layer.urlTemplate!,
-        maxZoom: layer.maxZoom,
-        userAgentPackageName: 'dev.dz0ny.gozdar',
-      );
+    final urlTemplate = layer.resolveUrlTemplate(_workerUrl);
+    if (urlTemplate == null) {
+      throw StateError('Layer ${layer.type.name} requires a worker URL');
     }
+
+    return TileLayer(
+      urlTemplate: urlTemplate,
+      maxZoom: layer.maxZoom,
+      tileProvider: _tileCacheService.getGeneralTileProvider(),
+      userAgentPackageName: 'dev.dz0ny.gozdar',
+    );
   }
 
   List<Widget> _buildOverlayLayers() {
@@ -422,10 +407,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
                 FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    // Use Slovenian CRS for WMS layers (EPSG:3794), otherwise default Web Mercator
-                    crs: _currentBaseLayer.isWms
-                        ? slovenianCrs
-                        : const Epsg3857(),
+                    crs: const Epsg3857(),
                     initialCenter: widget.parcel?.center ?? _defaultCenter,
                     initialZoom: _defaultZoom,
                     minZoom: 7.0,

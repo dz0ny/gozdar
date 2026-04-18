@@ -6,7 +6,6 @@ import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
 import '../router/app_router.dart';
 import '../router/route_names.dart';
-import '../services/analytics_service.dart';
 import '../widgets/log_card.dart';
 import '../widgets/add_log_sheet.dart';
 import '../widgets/conversion_settings_sheet.dart';
@@ -38,7 +37,6 @@ class LogsTab extends StatelessWidget {
           nmFactor: provider.conversionFactors.nm,
           onChanged: (prm, nm) {
             provider.setConversionFactors(prm, nm);
-            AnalyticsService().logConversionSettingsChanged();
           },
         ),
       ),
@@ -64,10 +62,6 @@ class LogsTab extends StatelessWidget {
         child: AddLogSheet(
           onAdd: (entry) async {
             await provider.addLogEntry(entry);
-            AnalyticsService().logLogAdded(
-              volumeM3: entry.volume,
-              hasLocation: entry.hasLocation,
-            );
             // Refresh map markers if log has location
             if (entry.hasLocation) {
               mapProvider.loadGeolocatedLogs();
@@ -90,7 +84,6 @@ class LogsTab extends StatelessWidget {
         onSave: (result) async {
           final success = await provider.updateLogEntry(result);
           if (success && context.mounted) {
-            AnalyticsService().logLogEdited();
             // Refresh map markers if location changed
             if (hadLocation || result.hasLocation) {
               mapProvider.loadGeolocatedLogs();
@@ -114,7 +107,6 @@ class LogsTab extends StatelessWidget {
     final success = await provider.deleteLogEntry(entry);
 
     if (success && context.mounted) {
-      AnalyticsService().logLogDeleted();
       // Refresh map markers if log had location
       if (entry.hasLocation) {
         mapProvider.loadGeolocatedLogs();
@@ -175,10 +167,6 @@ class LogsTab extends StatelessWidget {
 
       if (context.mounted) {
         if (success) {
-          AnalyticsService().logLogsExported(
-            format: result,
-            count: provider.entryCount,
-          );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Izvoz uspešen')),
           );
@@ -227,11 +215,9 @@ class LogsTab extends StatelessWidget {
     );
 
     if (confirmed == true && context.mounted) {
-      final count = provider.entryCount;
       final success = await provider.deleteAllLogEntries();
       if (context.mounted) {
         if (success) {
-          AnalyticsService().logLogsAllDeleted(count: count);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Vsi vnosi odstranjeni')),
           );
@@ -264,10 +250,6 @@ class LogsTab extends StatelessWidget {
           final success = await provider.saveBatch(batch);
           if (context.mounted) {
             if (success) {
-              AnalyticsService().logBatchSaved(
-                logCount: provider.entryCount,
-                totalVolume: provider.totalVolume,
-              );
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Shranjeno')),
               );
@@ -279,7 +261,6 @@ class LogsTab extends StatelessWidget {
   }
 
   Future<void> _showSavedBatches(BuildContext context) async {
-    AnalyticsService().logBatchViewed();
     await SavedBatchesSheet.show(context);
   }
 

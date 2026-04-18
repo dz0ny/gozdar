@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../router/app_router.dart';
 import '../router/navigation_notifier.dart';
 import '../screens/about_screen.dart';
-import '../services/analytics_service.dart';
 import '../services/onboarding_service.dart';
 import '../services/update_service.dart';
 import 'update_banner.dart';
@@ -22,7 +21,6 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   int _tabTapCount = 0;
-  final _analyticsService = AnalyticsService();
   NavigationNotifier? _navNotifier;
 
   @override
@@ -110,16 +108,6 @@ class _MainScaffoldState extends State<MainScaffold> {
       index,
       initialLocation: index == widget.navigationShell.currentIndex,
     );
-
-    // Track tab switch in analytics
-    final tabNames = [
-      AnalyticsService.screenMap,
-      AnalyticsService.screenForest,
-      AnalyticsService.screenLogs,
-    ];
-    _analyticsService.logTabSwitched(tabName: tabNames[index]);
-    _analyticsService.logScreenView(tabNames[index]);
-
     // Refresh ForestTab when selected
     if (index == 1) {
       forestTabKey.currentState?.refresh();
@@ -128,7 +116,6 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   Future<void> _resetOnboarding() async {
     await OnboardingService.instance.resetOnboarding();
-    _analyticsService.logOnboardingReset();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

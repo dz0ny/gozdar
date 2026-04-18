@@ -1,0 +1,311 @@
+import 'dart:async';
+
+import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
+
+import 'offline_tile_cache_service.dart';
+import 'tile_math_service.dart';
+
+sealed class TileDownloadEvent {}
+
+class TileDownloadStarted extends TileDownloadEvent {
+  final int totalTiles;
+
+  TileDownloadStarted(this.totalTiles);
+}
+
+class TileDownloaded extends TileDownloadEvent {
+  TileDownloaded();
+}
+
+class TileFailed extends TileDownloadEvent {
+  final TileCoord coord;
+  final String error;
+
+  TileFailed(this.coord, this.error);
+}
+
+class TileBatchSkipped extends TileDownloadEvent {
+  final int count;
+
+  TileBatchSkipped(this.count);
+}
+
+class TileDownloadComplete extends TileDownloadEvent {
+  final int downloaded;
+  final int skipped;
+  final int failed;
+  final int total;
+
+  TileDownloadComplete({
+    required this.downloaded,
+    required this.skipped,
+    required this.failed,
+    required this.total,
+  });
+}
+
+class TileDownloadCancelled extends TileDownloadEvent {}
+
+class TileDownloadService {
+  final OfflineTileCacheService _cache = OfflineTileCacheService.instance;
+  final http.Client _httpClient = http.Client();
+
+  bool _cancelled = false;
+
+  void cancel() {
+    _cancelled = true;
+  }
+
+  Stream<TileDownloadEvent> downloadTiles({
+    required List<List<LatLng>> polygons,
+    required int minZoom,
+    required int maxZoom,
+    required String urlTemplate,
+    String? displayName,
+    int maxConcurrency = 6,
+    int rateLimit = 30,
+  }) {
+    final controller = StreamController<TileDownloadEvent>();
+
+    _runDownload(
+      controller: controller,
+      polygons: polygons,
+      minZoom: minZoom,
+      maxZoom: maxZoom,
+      urlTemplate: urlTemplate,
+      displayName: displayName,
+      maxConcurrency: maxConcurrency,
+      rateLimit: rateLimit,
+    );
+
+    return controller.stream;
+  }
+
+  Future<void> _runDownload({
+    required StreamController<TileDownloadEvent> controller,
+    required List<List<LatLng>> polygons,
+    required int minZoom,
+    required int maxZoom,
+    required String urlTemplate,
+    String? displayName,
+    required int maxConcurrency,
+    required int rateLimit,
+  }) async {
+    _cancelled = false;
+
+    final styleHash = _cache.styleHashFromUrl(urlTemplate);
+    final region = DownloadRegion(
+      polygons: polygons
+          .map(
+            (polygon) => polygon
+                .map((point) => [point.latitude, point.longitude])
+                .toList(),
+          )
+          .toList(),
+      minZoom: minZoom,
+      maxZoom: maxZoom,
+    );
+    await _cache.saveStyleMeta(
+      styleHash,
+      displayName: displayName ?? urlTemplate,
+      urlTemplate: urlTemplate,
+      region: region,
+    );
+
+    final allTiles =
+        TileMathService.getTilesForPolygons(polygons, minZoom, maxZoom);
+    final manifest = await _cache.loadManifest(styleHash);
+    final tilesToDownload = <TileCoord>[];
+    var skipped = 0;
+
+    for (final tile in allTiles) {
+      final key = '${tile.z}/${tile.x}/${tile.y}';
+      if (manifest.contains(key)) {
+        skipped++;
+      } else {
+        tilesToDownload.add(tile);
+      }
+    }
+
+    final total = allTiles.length;
+    controller.add(TileDownloadStarted(total));
+
+    if (skipped > 0) {
+      controller.add(TileBatchSkipped(skipped));
+    }
+
+    if (tilesToDownload.isEmpty) {
+      controller.add(
+        TileDownloadComplete(
+          downloaded: 0,
+          skipped: skipped,
+          failed: 0,
+          total: total,
+        ),
+      );
+      await controller.close();
+      return;
+    }
+
+    var downloaded = 0;
+    var failed = 0;
+
+    final semaphore = _Semaphore(maxConcurrency);
+    final rateLimiter = _RateLimiter(rateLimit);
+    final futures = <Future<void>>[];
+
+    for (final tile in tilesToDownload) {
+      if (_cancelled) break;
+
+      await rateLimiter.wait();
+      if (_cancelled) break;
+
+      await semaphore.acquire();
+      if (_cancelled) {
+        semaphore.release();
+        break;
+      }
+
+      final future = _downloadSingleTile(tile, urlTemplate, styleHash).then((
+        event,
+      ) {
+        if (!controller.isClosed) {
+          controller.add(event);
+          if (event is TileDownloaded) {
+            downloaded++;
+          } else if (event is TileFailed) {
+            failed++;
+          }
+        }
+        semaphore.release();
+      });
+      futures.add(future);
+    }
+
+    await Future.wait(futures);
+
+    if (_cancelled) {
+      controller.add(TileDownloadCancelled());
+    } else {
+      controller.add(
+        TileDownloadComplete(
+          downloaded: downloaded,
+          skipped: skipped,
+          failed: failed,
+          total: total,
+        ),
+      );
+    }
+
+    await controller.close();
+  }
+
+  Future<TileDownloadEvent> _downloadSingleTile(
+    TileCoord tile,
+    String urlTemplate,
+    String styleHash,
+  ) async {
+    final subdomains = ['a', 'b', 'c'];
+    final url = urlTemplate
+        .replaceAll('{s}', subdomains[tile.x % 3])
+        .replaceAll('{z}', '${tile.z}')
+        .replaceAll('{x}', '${tile.x}')
+        .replaceAll('{y}', '${tile.y}');
+
+    const maxRetries = 3;
+    for (var attempt = 0; attempt < maxRetries; attempt++) {
+      if (_cancelled) {
+        return TileFailed(tile, 'Cancelled');
+      }
+
+      try {
+        final response = await _httpClient.get(
+          Uri.parse(url),
+          headers: {'User-Agent': 'Gozdar/1.0'},
+        );
+
+        if (response.statusCode != 200) {
+          if (attempt < maxRetries - 1) {
+            await Future.delayed(Duration(seconds: 1 << attempt));
+            continue;
+          }
+          return TileFailed(tile, 'HTTP ${response.statusCode}');
+        }
+
+        await _cache.putTile(
+          styleHash,
+          tile.z,
+          tile.x,
+          tile.y,
+          response.bodyBytes,
+        );
+        return TileDownloaded();
+      } catch (e) {
+        if (attempt < maxRetries - 1) {
+          await Future.delayed(Duration(seconds: 1 << attempt));
+          continue;
+        }
+        return TileFailed(tile, e.toString());
+      }
+    }
+
+    return TileFailed(tile, 'Max retries exceeded');
+  }
+
+  void dispose() {
+    _cancelled = true;
+    _httpClient.close();
+  }
+}
+
+class _Semaphore {
+  final int maxCount;
+  int _currentCount = 0;
+  final _waitQueue = <Completer<void>>[];
+
+  _Semaphore(this.maxCount);
+
+  Future<void> acquire() async {
+    if (_currentCount < maxCount) {
+      _currentCount++;
+      return;
+    }
+    final completer = Completer<void>();
+    _waitQueue.add(completer);
+    await completer.future;
+  }
+
+  void release() {
+    if (_waitQueue.isNotEmpty) {
+      _waitQueue.removeAt(0).complete();
+    } else {
+      _currentCount--;
+    }
+  }
+}
+
+class _RateLimiter {
+  final int maxPerSecond;
+  final _timestamps = <DateTime>[];
+
+  _RateLimiter(this.maxPerSecond);
+
+  Future<void> wait() async {
+    final now = DateTime.now();
+    _timestamps.removeWhere(
+      (timestamp) => now.difference(timestamp) > const Duration(seconds: 1),
+    );
+
+    if (_timestamps.length >= maxPerSecond) {
+      final oldest = _timestamps.first;
+      final waitTime = const Duration(seconds: 1) - now.difference(oldest);
+      if (waitTime > Duration.zero) {
+        await Future.delayed(waitTime);
+      }
+      _timestamps.removeAt(0);
+    }
+
+    _timestamps.add(DateTime.now());
+  }
+}

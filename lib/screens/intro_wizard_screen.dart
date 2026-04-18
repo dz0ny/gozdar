@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../router/route_names.dart';
 import '../services/onboarding_service.dart';
-import '../services/analytics_service.dart';
 
 class IntroWizardScreen extends StatefulWidget {
   const IntroWizardScreen({super.key});
@@ -46,11 +45,6 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
 
   Future<void> _completeOnboarding({bool skipped = true}) async {
     await OnboardingService.instance.setOnboardingCompleted();
-    if (skipped) {
-      AnalyticsService().logOnboardingSkipped(pageIndex: _currentPage);
-    } else {
-      AnalyticsService().logOnboardingCompleted();
-    }
     if (mounted) {
       context.go(AppRoutes.forest);
     }

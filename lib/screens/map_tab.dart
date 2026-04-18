@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -15,12 +14,9 @@ import '../models/map_layer.dart';
 import '../models/parcel.dart';
 import '../models/navigation_target.dart';
 import '../models/log_entry.dart';
-import '../utils/slovenian_crs.dart';
 import '../services/database_service.dart';
-import '../services/analytics_service.dart';
 import '../widgets/log_entry_form.dart';
 import '../services/cadastral_service.dart';
-import '../services/geopackage_service.dart';
 import '../services/tile_cache_service.dart';
 import '../widgets/navigation_compass_dialog.dart';
 import '../widgets/tile_download_dialog.dart';
@@ -71,12 +67,6 @@ class MapTabState extends State<MapTab> {
   /// Calculate marker size based on zoom level
   /// Returns smaller sizes at lower zoom levels
   double _getMarkerSize(double baseSize, MapProvider mapProvider) {
-    if (mapProvider.currentBaseLayer.isWms && mapProvider.workerUrl == null) {
-      // Slovenian CRS: scale 0.4-1.0 for zoom 11-15
-      final scale = ((_currentZoom - 11) / 4).clamp(0.4, 1.0);
-      return baseSize * scale;
-    }
-    // Standard Web Mercator: scale 0.5-1.0 for zoom 15-17
     final scale = ((_currentZoom - 15) / 2).clamp(0.5, 1.0);
     return baseSize * scale;
   }
@@ -85,7 +75,6 @@ class MapTabState extends State<MapTab> {
   void setNavigationTarget(NavigationTarget target, {bool zoomIn = true}) {
     final mapProvider = context.read<MapProvider>();
     mapProvider.setNavigationTarget(target);
-    AnalyticsService().logNavigationStarted();
 
     // Center map on target location
     final currentRotation = _mapController.camera.rotation;
@@ -105,7 +94,6 @@ class MapTabState extends State<MapTab> {
   void _showCompassForTarget() {
     final navigationTarget = context.read<MapProvider>().navigationTarget;
     if (navigationTarget == null) return;
-    AnalyticsService().logCompassOpened();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -259,7 +247,6 @@ class MapTabState extends State<MapTab> {
         targetZoom,
         0, // Reset rotation to north
       );
-      AnalyticsService().logGpsCentered();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -290,7 +277,6 @@ class MapTabState extends State<MapTab> {
 
       if (mounted) {
         if (success) {
-          AnalyticsService().logLocationAdded();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Dodano "$name"')),
           );
@@ -336,7 +322,6 @@ class MapTabState extends State<MapTab> {
 
       if (mounted) {
         if (success) {
-          AnalyticsService().logSecnjaAdded();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Sečnja "$name" označena')),
           );
@@ -425,7 +410,6 @@ class MapTabState extends State<MapTab> {
 
         if (mounted) {
           if (success) {
-            AnalyticsService().logLocationDeleted();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Izbrisano "${location.name}"')),
             );
@@ -533,7 +517,6 @@ class MapTabState extends State<MapTab> {
 
       if (mounted) {
         if (success) {
-          AnalyticsService().logParcelImportedCadastral();
           // Download tiles for offline use in the background
           _downloadTilesForParcel(cadastralParcel.polygon);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -558,88 +541,15 @@ class MapTabState extends State<MapTab> {
     }
   }
 
-  /// Import geodata from file (KML, KMZ, or GeoPackage)
+  /// Import geodata from file (KML or KMZ)
   Future<void> _importGeoFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['kml', 'kmz', 'gpkg'],
+        allowedExtensions: ['kml', 'kmz'],
       );
 
       if (result == null || result.files.isEmpty) return;
-
-      final file = File(result.files.first.path!);
-      final ext = result.files.first.extension?.toLowerCase();
-
-      // Handle GeoPackage import
-      if (ext == 'gpkg') {
-        final importResult = await GeoPackageService.importFromGeoPackage(
-          file.path,
-        );
-
-        if (importResult.totalCount == 0) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('V datoteki ni veljavnih podatkov')),
-            );
-          }
-          return;
-        }
-
-        // Confirm import
-        if (!mounted) return;
-        final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Uvozi podatke'),
-            content: Text(
-              'Najdenih ${importResult.totalCount} objektov v datoteki "${importResult.layerName}". Jih uvozim?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Prekliči'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Uvozi'),
-              ),
-            ],
-          ),
-        );
-
-        if (confirmed == true) {
-          // Insert all data
-          final dbService = DatabaseService();
-          for (final parcel in importResult.parcels) {
-            await dbService.insertParcel(parcel);
-          }
-          for (final location in importResult.locations) {
-            await dbService.insertLocation(location);
-          }
-          for (final overlay in importResult.overlays) {
-            await dbService.insertOverlay(overlay);
-          }
-
-          // Reload data via provider
-          if (mounted) {
-            final mapProvider = context.read<MapProvider>();
-            await Future.wait([
-              mapProvider.loadParcels(),
-              mapProvider.loadLocations(),
-            ]);
-
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Uvoženih ${importResult.totalCount} objektov'),
-                ),
-              );
-            }
-          }
-        }
-        return;
-      }
 
       // TODO: Handle KML/KMZ import
       if (mounted) {
@@ -699,9 +609,6 @@ class MapTabState extends State<MapTab> {
     // Update provider
     context.read<MapProvider>().setBaseLayer(newLayer);
 
-    // Track layer change
-    AnalyticsService().logMapLayerChanged(layerName: newLayer.type.name);
-
     // Move to same position with adjusted zoom if needed, preserving rotation
     if (newZoom != currentZoom) {
       final currentRotation = _mapController.camera.rotation;
@@ -725,12 +632,7 @@ class MapTabState extends State<MapTab> {
         _switchBaseLayer(layer);
       },
       onOverlayToggled: (type) {
-        final wasEnabled = mapProvider.activeOverlays.contains(type);
         mapProvider.toggleOverlay(type);
-        AnalyticsService().logMapOverlayToggled(
-          overlayName: type.name,
-          enabled: !wasEnabled,
-        );
       },
       onImportFile: _importGeoFile,
       onDownloadTiles: showTileDownloadDialog,
@@ -809,13 +711,7 @@ class MapTabState extends State<MapTab> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              // Use Slovenian CRS for WMS layers (EPSG:3794), otherwise default Web Mercator
-              // If proxy is active (workerUrl != null), always use Web Mercator (EPSG:3857)
-              crs:
-                  (mapProvider.currentBaseLayer.isWms &&
-                      mapProvider.workerUrl == null)
-                  ? slovenianCrs
-                  : const Epsg3857(),
+              crs: const Epsg3857(),
               initialCenter: mapProvider.center,
               initialZoom: mapProvider.zoom,
               initialRotation: mapProvider.rotation,
@@ -1296,9 +1192,6 @@ class MapTabState extends State<MapTab> {
           ),
         );
       }
-
-      // Log analytics event
-      await AnalyticsService().logParcelImportedWfs();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,23 +1,20 @@
-import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
+import 'package:latlong2/latlong.dart';
 
-/// Service for managing map tile caching
-/// Uses flutter_map_tile_caching with ObjectBox backend
+import 'offline_map_caching_provider.dart';
+import 'offline_tile_cache_service.dart';
+import 'tile_download_service.dart';
+import 'tile_math_service.dart';
+
+/// MeshCore-style offline tile cache wrapper for browsing + predownload.
 class TileCacheService {
   static final TileCacheService _instance = TileCacheService._internal();
   static bool _initialized = false;
   static bool _isDownloading = false;
+  static TileDownloadService? _downloadService;
+  static NetworkTileProvider? _tileProvider;
 
-  // Store name for Slovenian government map tiles (prostor.zgs.gov.si)
-  static const String _slovenianStore = 'prostor_zgs';
-
-  // Store name for general map tiles (OSM, ESRI, Google, etc.)
-  static const String _generalStore = 'general_tiles';
-
-  // Cache tiles for 1 year (365 days)
-  static const Duration _maxAge = Duration(days: 365);
+  final OfflineTileCacheService _offlineCache = OfflineTileCacheService.instance;
 
   factory TileCacheService() {
     return _instance;
@@ -25,154 +22,76 @@ class TileCacheService {
 
   TileCacheService._internal();
 
-  /// Initialize the tile caching backend
-  /// Must be called before using any tile caching features
   static Future<void> initialize() async {
     if (_initialized) return;
 
-    await FMTCObjectBoxBackend().initialise();
+    _tileProvider = NetworkTileProvider(
+      cachingProvider: OfflineMapCachingProvider(
+        BuiltInMapCachingProvider.getOrCreateInstance(
+          maxCacheSize: 10_000_000_000,
+          overrideFreshAge: const Duration(days: 365),
+        ),
+      ),
+    );
     _initialized = true;
-
-    // Create stores if they don't exist
-    final slovenianStore = FMTCStore(_slovenianStore);
-    await slovenianStore.manage.create();
-
-    final generalStore = FMTCStore(_generalStore);
-    await generalStore.manage.create();
   }
 
-  /// Get the tile provider for Slovenian prostor.zgs.gov.si tiles
-  FMTCTileProvider getTileProvider() {
+  NetworkTileProvider getTileProvider() {
     if (!_initialized) {
       throw StateError(
         'TileCacheService not initialized. Call TileCacheService.initialize() first.',
       );
     }
 
-    return FMTCTileProvider(
-      stores: const {_slovenianStore: BrowseStoreStrategy.readUpdateCreate},
-      loadingStrategy: BrowseLoadingStrategy.cacheFirst,
-      cachedValidDuration: _maxAge,
-    );
+    return _tileProvider!;
   }
 
-  /// Get the tile provider for general map tiles (OSM, ESRI, Google, etc.)
-  FMTCTileProvider getGeneralTileProvider() {
-    if (!_initialized) {
-      throw StateError(
-        'TileCacheService not initialized. Call TileCacheService.initialize() first.',
-      );
-    }
-
-    return FMTCTileProvider(
-      stores: const {_generalStore: BrowseStoreStrategy.readUpdateCreate},
-      loadingStrategy: BrowseLoadingStrategy.cacheFirst,
-      cachedValidDuration: _maxAge,
-    );
+  NetworkTileProvider getGeneralTileProvider() {
+    return getTileProvider();
   }
 
-  /// Get cache statistics for all stores
   Future<Map<String, dynamic>> getStats() async {
     if (!_initialized) {
       return {'initialized': false};
     }
 
     try {
-      final slovenianStore = FMTCStore(_slovenianStore);
-      final slovenianStats = await slovenianStore.stats.all;
-
-      final generalStore = FMTCStore(_generalStore);
-      final generalStats = await generalStore.stats.all;
+      final styles = await _offlineCache.listStylesDetailed();
+      final totalTiles = styles.fold<int>(0, (sum, style) => sum + style.tileCount);
+      final totalBytes = styles.fold<int>(0, (sum, style) => sum + style.sizeBytes);
 
       return {
         'initialized': true,
-        'slovenian': {
-          'storeName': _slovenianStore,
-          'tileCount': slovenianStats.length,
-          'sizeKB': slovenianStats.size,
-          'sizeMB': (slovenianStats.size / 1024).toStringAsFixed(2),
-          'hits': slovenianStats.hits,
-          'misses': slovenianStats.misses,
-        },
-        'general': {
-          'storeName': _generalStore,
-          'tileCount': generalStats.length,
-          'sizeKB': generalStats.size,
-          'sizeMB': (generalStats.size / 1024).toStringAsFixed(2),
-          'hits': generalStats.hits,
-          'misses': generalStats.misses,
-        },
-        'totalTiles': slovenianStats.length + generalStats.length,
-        'totalSizeMB': ((slovenianStats.size + generalStats.size) / 1024)
-            .toStringAsFixed(2),
+        'styles': styles.length,
+        'totalTiles': totalTiles,
+        'totalSizeMB': (totalBytes / (1024 * 1024)).toStringAsFixed(2),
       };
-    } catch (e, stackTrace) {
-      debugPrint('TileCacheService.getStats error: $e\n$stackTrace');
+    } catch (e) {
       return {'initialized': true, 'error': e.toString()};
     }
   }
 
-  /// Clear all cached tiles from all stores
   Future<void> clearCache() async {
-    if (!_initialized) return;
-
-    try {
-      final slovenianStore = FMTCStore(_slovenianStore);
-      await slovenianStore.manage.reset();
-
-      final generalStore = FMTCStore(_generalStore);
-      await generalStore.manage.reset();
-    } catch (e, stackTrace) {
-      debugPrint('TileCacheService.clearCache error: $e\n$stackTrace');
-    }
+    await _offlineCache.clearCache();
   }
 
-  /// Check if a download is currently in progress
   bool get isDownloading => _isDownloading;
 
-  /// Estimate the number of tiles for a given region and zoom range
   int estimateTileCount({
     required LatLngBounds bounds,
     required int minZoom,
     required int maxZoom,
   }) {
-    int totalTiles = 0;
-    for (int z = minZoom; z <= maxZoom; z++) {
-      final n = math.pow(2, z).toInt();
+    final polygon = [
+      LatLng(bounds.north, bounds.west),
+      LatLng(bounds.north, bounds.east),
+      LatLng(bounds.south, bounds.east),
+      LatLng(bounds.south, bounds.west),
+    ];
 
-      // Convert lat/lng to tile coordinates
-      final minX = _lngToTileX(bounds.west, z);
-      final maxX = _lngToTileX(bounds.east, z);
-      final minY = _latToTileY(bounds.north, z); // north has smaller Y
-      final maxY = _latToTileY(bounds.south, z); // south has larger Y
-
-      final tilesX = (maxX - minX + 1).clamp(1, n);
-      final tilesY = (maxY - minY + 1).clamp(1, n);
-
-      totalTiles += tilesX * tilesY;
-    }
-    return totalTiles;
+    return TileMathService.estimateTileCount([polygon], minZoom, maxZoom);
   }
 
-  int _lngToTileX(double lng, int zoom) {
-    return ((lng + 180) / 360 * math.pow(2, zoom)).floor();
-  }
-
-  int _latToTileY(double lat, int zoom) {
-    final latRad = lat * math.pi / 180;
-    return ((1 - math.log(math.tan(latRad) + 1 / math.cos(latRad)) / math.pi) /
-            2 *
-            math.pow(2, zoom))
-        .floor();
-  }
-
-  /// Download tiles for a region
-  /// [isSlovenian] - true for prostor.zgs.gov.si tiles, false for general tiles
-  /// [urlTemplate] - URL template for tile fetching
-  /// [bounds] - geographic bounds to download
-  /// [minZoom] - minimum zoom level
-  /// [maxZoom] - maximum zoom level
-  /// [onProgress] - callback for download progress (0-100)
   Future<void> downloadRegion({
     required bool isSlovenian,
     required String urlTemplate,
@@ -192,108 +111,71 @@ class TileCacheService {
     }
 
     _isDownloading = true;
+    _downloadService = TileDownloadService();
 
     try {
-      final storeName = isSlovenian ? _slovenianStore : _generalStore;
-      final store = FMTCStore(storeName);
-      final region = RectangleRegion(bounds);
+      final polygon = [
+        LatLng(bounds.north, bounds.west),
+        LatLng(bounds.north, bounds.east),
+        LatLng(bounds.south, bounds.east),
+        LatLng(bounds.south, bounds.west),
+      ];
 
-      final downloadable = region.toDownloadable(
+      await for (final event in _downloadService!.downloadTiles(
+        polygons: [polygon],
         minZoom: minZoom,
         maxZoom: maxZoom,
-        options: TileLayer(urlTemplate: urlTemplate),
-      );
-
-      final download = store.download.startForeground(region: downloadable);
-
-      await for (final progress in download.downloadProgress) {
-        if (onProgress != null && progress.maxTilesCount > 0) {
-          onProgress(progress.percentageProgress);
+        urlTemplate: urlTemplate,
+      )) {
+        if (onProgress == null) {
+          continue;
+        }
+        if (event is TileDownloadStarted && event.totalTiles == 0) {
+          onProgress(100.0);
+        }
+        if (event is TileDownloadComplete) {
+          final processed = event.downloaded + event.skipped + event.failed;
+          final progress = event.total == 0
+              ? 100.0
+              : ((processed / event.total) * 100).toDouble();
+          onProgress(progress);
         }
       }
     } finally {
+      _downloadService?.dispose();
+      _downloadService = null;
       _isDownloading = false;
     }
   }
 
-  /// Cancel the current download
   Future<void> cancelDownload() async {
-    if (!_initialized || !_isDownloading) return;
-
-    try {
-      final slovenianStore = FMTCStore(_slovenianStore);
-      await slovenianStore.download.cancel();
-
-      final generalStore = FMTCStore(_generalStore);
-      await generalStore.download.cancel();
-    } catch (e, stackTrace) {
-      debugPrint('TileCacheService.cancelDownload error: $e\n$stackTrace');
-    } finally {
-      _isDownloading = false;
-    }
+    _downloadService?.cancel();
   }
 
-  /// Download tiles for a parcel's bounding box in the background
-  /// Downloads ESRI satellite imagery at zoom levels 14-17 for field use
-  /// This is non-blocking and will not show progress to the user
   Future<void> downloadForParcelBounds(LatLngBounds bounds) async {
-    if (!_initialized) return;
-    if (_isDownloading) return; // Skip if another download is in progress
+    if (!_initialized || _isDownloading) return;
 
-    // ESRI World Imagery - best for field navigation
     const urlTemplate =
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-
-    // Download at field-useful zoom levels (14-17)
-    // 14: ~1km view, 15: ~500m, 16: ~250m, 17: ~125m (detail for walking)
     const minZoom = 14;
     const maxZoom = 17;
 
-    // Estimate tile count - skip if too many tiles
     final tileCount = estimateTileCount(
       bounds: bounds,
       minZoom: minZoom,
       maxZoom: maxZoom,
     );
 
-    // Don't download if more than 500 tiles (avoid excessive downloads)
     if (tileCount > 500) {
-      debugPrint(
-        'TileCacheService: Skipping parcel download - too many tiles ($tileCount)',
-      );
       return;
     }
 
-    debugPrint(
-      'TileCacheService: Starting background download for parcel ($tileCount tiles)',
+    await downloadRegion(
+      isSlovenian: false,
+      urlTemplate: urlTemplate,
+      bounds: bounds,
+      minZoom: minZoom,
+      maxZoom: maxZoom,
     );
-
-    _isDownloading = true;
-
-    try {
-      final store = FMTCStore(_generalStore);
-      final region = RectangleRegion(bounds);
-
-      final downloadable = region.toDownloadable(
-        minZoom: minZoom,
-        maxZoom: maxZoom,
-        options: TileLayer(urlTemplate: urlTemplate),
-      );
-
-      final download = store.download.startForeground(region: downloadable);
-
-      await for (final progress in download.downloadProgress) {
-        // Silent progress - no callback
-        if (progress.percentageProgress >= 100) break;
-      }
-
-      debugPrint('TileCacheService: Parcel tiles downloaded successfully');
-    } catch (e, stackTrace) {
-      debugPrint(
-        'TileCacheService.downloadForParcelBounds error: $e\n$stackTrace',
-      );
-    } finally {
-      _isDownloading = false;
-    }
   }
 }

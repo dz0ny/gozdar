@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2026.0125.1+53
+version: 2026.0322.2+55
 
 environment:
   sdk: ^3.9.2
@@ -31,52 +31,41 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
-
   # Map
-  flutter_map: ^8.2.2
-  latlong2: ^0.9.1
-  proj4dart: ^2.1.0
-  flutter_map_tile_caching: ^11.0.0-dev.2
+  flutter_map: any
+  latlong2: any
+  proj4dart: any
 
   # Database & Storage
-  objectbox: any
-  objectbox_flutter_libs: any
+  drift: ^2.32.1
+  drift_flutter: ^0.3.0
+  flutter_avif: any
   path_provider: ^2.1.5
-  path: ^1.9.0
 
   # Location & Compass
-  geolocator: ^14.0.0
-  permission_handler: ^12.0.1
-  flutter_compass: ^0.8.0
+  geolocator: any
+  flutter_compass: any
 
   # Export & Share
-  share_plus: ^12.0.1
-  file_picker: ^10.3.7
-  excel: ^4.0.6
-
-  # GeoPackage Import
-  flutter_geokit: ^0.1.5  # GeoPackage, GeoJSON, Shapefile support
-  geobase: ^1.5.0  # WKB/WKT geometry parsing (if needed)
+  share_plus: any
+  file_picker: ^11.0.0
+  excel: any
 
   # Routing
-  go_router: ^17.0.0
+  go_router: any
 
   # Utilities
-  intl: ^0.20.2
-  provider: ^6.1.2
-  shared_preferences: ^2.3.5
-  http: ^1.2.2
-  crypto: ^3.0.6
+  intl: any
+  provider: any
+  shared_preferences: any
+  http: any
+  crypto: any
+  nsd: any
 
   # App Updates
-  ota_update: ^7.0.1
-  package_info_plus: ^8.0.0
-  url_launcher: ^6.3.2
-  aptabase_flutter: ^0.4.1
-
+  ota_update: any
+  package_info_plus: any
+  url_launcher: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -86,17 +75,15 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^6.0.0
+  flutter_lints: any
 
   # App icon generation
-  flutter_launcher_icons: ^0.14.4
+  flutter_launcher_icons: any
 
-  # ObjectBox code generation
-  objectbox_generator: ^4.0.3
-  build_runner: any
+  # Drift code generation
+  drift_dev: ^2.32.1
+  build_runner: ^2.13.1
 
-dependency_overrides:
-  source_gen: ^4.0.0
 
 flutter_launcher_icons:
   android: "launcher_icon"

@@ -2,7 +2,6 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:aptabase_flutter/aptabase_flutter.dart';
 import 'router/app_router.dart';
 import 'router/navigation_notifier.dart';
 import 'services/database_service.dart';
@@ -16,9 +15,6 @@ import 'theme/app_theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Aptabase analytics
-  await Aptabase.init('A-EU-0504687602');
-
   await DatabaseService().initialize();
   await TileCacheService.initialize();
   await OnboardingService.initialize();
@@ -27,9 +23,6 @@ void main() async {
   if (Platform.isAndroid) {
     await UpdateService().init();
   }
-
-  // Track app start
-  Aptabase.instance.trackEvent('app_start');
 
   runApp(const GozdarApp());
 }

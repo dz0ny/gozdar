@@ -10,7 +10,6 @@ import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
 import '../services/database_service.dart';
 import '../services/kml_service.dart';
-import '../services/analytics_service.dart';
 import '../widgets/parcel_silhouette.dart';
 
 /// Get icon and color for forest type
@@ -96,7 +95,6 @@ class ForestTabState extends State<ForestTab> {
           try {
             await _databaseService.insertParcel(parcel);
             await _loadData();
-            AnalyticsService().logParcelAdded(areaMSquared: parcel.areaM2);
             if (mounted) {
               ScaffoldMessenger.of(
                 context,
@@ -120,7 +118,6 @@ class ForestTabState extends State<ForestTab> {
   }
 
   Future<void> _openParcelDetail(Parcel parcel) async {
-    AnalyticsService().logParcelViewed();
     context.push(
       AppRoutes.parcelDetail(parcel.id),
       extra: parcel,
@@ -158,7 +155,6 @@ class ForestTabState extends State<ForestTab> {
           parcel.id,
         );
         await _loadData();
-        AnalyticsService().logParcelDeleted();
         // Notify map provider to refresh parcels, logs, and locations on map
         if (mounted) {
           final mapProvider = context.read<MapProvider>();
@@ -198,7 +194,6 @@ class ForestTabState extends State<ForestTab> {
 
     try {
       await KmlService.exportToKml(_parcels);
-      AnalyticsService().logParcelExportedKml(count: _parcels.length);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -215,7 +210,7 @@ class ForestTabState extends State<ForestTab> {
 
   Future<void> _importKml() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['kml', 'kmz'],
       );
@@ -271,7 +266,6 @@ class ForestTabState extends State<ForestTab> {
           await _databaseService.insertParcel(parcel);
         }
         await _loadData();
-        AnalyticsService().logParcelImportedKml(count: parcels.length);
         if (mounted) {
           final totalArea = parcels.fold(
             0.0,
@@ -376,7 +370,6 @@ class ForestTabState extends State<ForestTab> {
       }
 
       await _loadData();
-      AnalyticsService().logParcelImportedKml(count: 1);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -438,7 +431,6 @@ class ForestTabState extends State<ForestTab> {
               selected: _selectedOwnerFilter == null,
               onTap: () {
                 setState(() => _selectedOwnerFilter = null);
-                AnalyticsService().logOwnerFilterApplied(hasFilter: false);
                 Navigator.of(context).pop();
               },
             ),
@@ -467,7 +459,6 @@ class ForestTabState extends State<ForestTab> {
                     selected: isSelected,
                     onTap: () {
                       setState(() => _selectedOwnerFilter = owner);
-                      AnalyticsService().logOwnerFilterApplied(hasFilter: true);
                       Navigator.of(context).pop();
                     },
                   );

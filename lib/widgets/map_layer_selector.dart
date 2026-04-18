@@ -369,39 +369,6 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
   Widget _buildOverlaysTab() {
     return Column(
       children: [
-        // Hint for Slovenian layers
-        if (!_selectedBaseLayer.isSlovenian && widget.workerUrl == null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.tertiaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Theme.of(context).colorScheme.onTertiaryContainer,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Slovenski sloji so na voljo le z Ortofoto ali DMR podlago.',
-                      style: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onTertiaryContainer,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         // Import button
         if (widget.onImportFile != null)
           Padding(
@@ -412,7 +379,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                 widget.onImportFile!();
               },
               icon: const Icon(Icons.file_upload, size: 20),
-              label: const Text('Uvozi geodatke (KML, KMZ, GeoPackage)'),
+              label: const Text('Uvozi geodatke (KML, KMZ)'),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
@@ -441,9 +408,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
             !layer.name.toLowerCase().contains(_searchQuery)) {
           return false;
         }
-        // Filter by Slovenian availability
-        if (!layer.isSlovenian) return true;
-        return _selectedBaseLayer.isSlovenian || widget.workerUrl != null;
+        return layer.resolveUrlTemplate(widget.workerUrl) != null;
       }).toList();
       return layers.isNotEmpty;
     }).toList();
@@ -487,9 +452,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
           !layer.name.toLowerCase().contains(_searchQuery)) {
         return false;
       }
-      // Filter by Slovenian availability
-      if (!layer.isSlovenian) return true;
-      return _selectedBaseLayer.isSlovenian || widget.workerUrl != null;
+      return layer.resolveUrlTemplate(widget.workerUrl) != null;
     }).toList();
 
     if (filteredLayers.isEmpty) return const SizedBox.shrink();

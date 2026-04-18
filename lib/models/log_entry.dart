@@ -1,27 +1,17 @@
 import 'dart:math' as math;
-import 'package:objectbox/objectbox.dart';
-import 'log_batch.dart';
-import 'parcel.dart';
 
-@Entity()
 class LogEntry {
-  @Id()
   int id;
-
-  double? diameter; // cm
-  double? length; // m
-  double volume; // m³
+  double? diameter;
+  double? length;
+  double volume;
   double? latitude;
   double? longitude;
   String? notes;
-  String? species; // drevesna vrsta
-
-  @Property(type: PropertyType.date)
+  String? species;
   DateTime createdAt;
-
-  // Relations
-  final batch = ToOne<LogBatch>();
-  final parcel = ToOne<Parcel>();
+  int? batchId;
+  int? parcelId;
 
   LogEntry({
     this.id = 0,
@@ -32,34 +22,17 @@ class LogEntry {
     this.longitude,
     this.notes,
     this.species,
-    int? batchId,
-    int? parcelId,
+    this.batchId,
+    this.parcelId,
     DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now() {
-    if (batchId != null && batchId != 0) {
-      batch.targetId = batchId;
-    }
-    if (parcelId != null && parcelId != 0) {
-      parcel.targetId = parcelId;
-    }
-  }
+  }) : createdAt = createdAt ?? DateTime.now();
 
-  /// Calculate volume from diameter (cm) and length (m)
-  /// Formula: V = π × (d/200)² × L
-  /// where d/200 converts cm diameter to m radius
   static double calculateVolume(double diameterCm, double lengthM) {
-    final radiusM = diameterCm / 200.0; // cm to m, diameter to radius
+    final radiusM = diameterCm / 200.0;
     return math.pi * radiusM * radiusM * lengthM;
   }
 
   bool get hasLocation => latitude != null && longitude != null;
-
-  // Convenience getters for relation IDs
-  @Transient()
-  int? get batchId => batch.targetId == 0 ? null : batch.targetId;
-
-  @Transient()
-  int? get parcelId => parcel.targetId == 0 ? null : parcel.targetId;
 
   LogEntry copyWith({
     int? id,
@@ -73,29 +46,46 @@ class LogEntry {
     int? batchId,
     int? parcelId,
     DateTime? createdAt,
-  }) {
-    final entry = LogEntry(
-      id: id ?? this.id,
-      diameter: diameter ?? this.diameter,
-      length: length ?? this.length,
-      volume: volume ?? this.volume,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      notes: notes ?? this.notes,
-      species: species ?? this.species,
-      createdAt: createdAt ?? this.createdAt,
-    );
-    // Copy relations
-    if (batchId != null) {
-      entry.batch.targetId = batchId;
-    } else {
-      entry.batch.targetId = batch.targetId;
-    }
-    if (parcelId != null) {
-      entry.parcel.targetId = parcelId;
-    } else {
-      entry.parcel.targetId = parcel.targetId;
-    }
-    return entry;
-  }
+  }) =>
+      LogEntry(
+        id: id ?? this.id,
+        diameter: diameter ?? this.diameter,
+        length: length ?? this.length,
+        volume: volume ?? this.volume,
+        latitude: latitude ?? this.latitude,
+        longitude: longitude ?? this.longitude,
+        notes: notes ?? this.notes,
+        species: species ?? this.species,
+        batchId: batchId ?? this.batchId,
+        parcelId: parcelId ?? this.parcelId,
+        createdAt: createdAt ?? this.createdAt,
+      );
+
+  Map<String, dynamic> toMap() => {
+        'id': id == 0 ? null : id,
+        'diameter': diameter,
+        'length': length,
+        'volume': volume,
+        'latitude': latitude,
+        'longitude': longitude,
+        'notes': notes,
+        'species': species,
+        'created_at': createdAt.millisecondsSinceEpoch,
+        'batch_id': batchId,
+        'parcel_id': parcelId,
+      };
+
+  factory LogEntry.fromMap(Map<String, dynamic> map) => LogEntry(
+        id: map['id'] as int,
+        diameter: (map['diameter'] as num?)?.toDouble(),
+        length: (map['length'] as num?)?.toDouble(),
+        volume: (map['volume'] as num).toDouble(),
+        latitude: (map['latitude'] as num?)?.toDouble(),
+        longitude: (map['longitude'] as num?)?.toDouble(),
+        notes: map['notes'] as String?,
+        species: map['species'] as String?,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
+        batchId: map['batch_id'] as int?,
+        parcelId: map['parcel_id'] as int?,
+      );
 }

@@ -1,210 +1,266 @@
+import 'package:drift/drift.dart';
 import 'package:latlong2/latlong.dart';
-import '../objectbox.g.dart';
+import '../db/app_database.dart';
 import '../models/log_batch.dart';
 import '../models/log_entry.dart';
 import '../models/map_location.dart';
 import '../models/parcel.dart';
 import '../models/imported_overlay.dart';
 
+// ---------------------------------------------------------------------------
+// Conversion helpers: drift row → app model
+// ---------------------------------------------------------------------------
+
+Parcel _parcelFromDb(DbParcel r) => Parcel(
+      id: r.id,
+      name: r.name,
+      polygonJson: r.polygonJson,
+      createdAt: r.createdAt,
+      cadastralMunicipality: r.cadastralMunicipality,
+      parcelNumber: r.parcelNumber,
+      owner: r.owner,
+      notes: r.notes,
+      forestType: ForestType.values[r.forestTypeIndex],
+      woodAllowance: r.woodAllowance,
+      woodCut: r.woodCut,
+      treesCut: r.treesCut,
+    );
+
+LogEntry _logFromDb(DbLogEntry r) => LogEntry(
+      id: r.id,
+      diameter: r.diameter,
+      length: r.length,
+      volume: r.volume,
+      latitude: r.latitude,
+      longitude: r.longitude,
+      notes: r.notes,
+      species: r.species,
+      createdAt: r.createdAt,
+      batchId: r.batchId,
+      parcelId: r.parcelId,
+    );
+
+LogBatch _batchFromDb(DbLogBatch r) => LogBatch(
+      id: r.id,
+      owner: r.owner,
+      notes: r.notes,
+      latitude: r.latitude,
+      longitude: r.longitude,
+      totalVolume: r.totalVolume,
+      logCount: r.logCount,
+      createdAt: r.createdAt,
+    );
+
+MapLocation _locationFromDb(DbMapLocation r) => MapLocation(
+      id: r.id,
+      name: r.name,
+      latitude: r.latitude,
+      longitude: r.longitude,
+      type: LocationType.values[r.typeIndex],
+      createdAt: r.createdAt,
+    );
+
+ImportedOverlay _overlayFromDb(DbImportedOverlay r) => ImportedOverlay(
+      id: r.id,
+      name: r.name,
+      layerName: r.layerName,
+      geometryType: r.geometryType,
+      geometryJson: r.geometryJson,
+      properties: r.properties,
+      colorValue: r.colorValue,
+      visible: r.visible,
+      createdAt: r.createdAt,
+    );
+
+// ---------------------------------------------------------------------------
+// Conversion helpers: app model → drift companion
+// ---------------------------------------------------------------------------
+
+ParcelsCompanion _parcelToCompanion(Parcel p) => ParcelsCompanion(
+      id: p.id == 0 ? const Value.absent() : Value(p.id),
+      name: Value(p.name),
+      polygonJson: Value(p.polygonJson),
+      createdAt: Value(p.createdAt),
+      cadastralMunicipality: Value(p.cadastralMunicipality),
+      parcelNumber: Value(p.parcelNumber),
+      owner: Value(p.owner),
+      notes: Value(p.notes),
+      forestTypeIndex: Value(p.forestTypeIndex),
+      woodAllowance: Value(p.woodAllowance),
+      woodCut: Value(p.woodCut),
+      treesCut: Value(p.treesCut),
+    );
+
+LogEntriesCompanion _logToCompanion(LogEntry e) => LogEntriesCompanion(
+      id: e.id == 0 ? const Value.absent() : Value(e.id),
+      diameter: Value(e.diameter),
+      length: Value(e.length),
+      volume: Value(e.volume),
+      latitude: Value(e.latitude),
+      longitude: Value(e.longitude),
+      notes: Value(e.notes),
+      species: Value(e.species),
+      createdAt: Value(e.createdAt),
+      batchId: Value(e.batchId),
+      parcelId: Value(e.parcelId),
+    );
+
+LogBatchesCompanion _batchToCompanion(LogBatch b) => LogBatchesCompanion(
+      id: b.id == 0 ? const Value.absent() : Value(b.id),
+      owner: Value(b.owner),
+      notes: Value(b.notes),
+      latitude: Value(b.latitude),
+      longitude: Value(b.longitude),
+      totalVolume: Value(b.totalVolume),
+      logCount: Value(b.logCount),
+      createdAt: Value(b.createdAt),
+    );
+
+MapLocationsCompanion _locationToCompanion(MapLocation l) => MapLocationsCompanion(
+      id: l.id == 0 ? const Value.absent() : Value(l.id),
+      name: Value(l.name),
+      latitude: Value(l.latitude),
+      longitude: Value(l.longitude),
+      typeIndex: Value(l.typeIndex),
+      createdAt: Value(l.createdAt),
+    );
+
+ImportedOverlaysCompanion _overlayToCompanion(ImportedOverlay o) => ImportedOverlaysCompanion(
+      id: o.id == 0 ? const Value.absent() : Value(o.id),
+      name: Value(o.name),
+      layerName: Value(o.layerName),
+      geometryType: Value(o.geometryType),
+      geometryJson: Value(o.geometryJson),
+      properties: Value(o.properties),
+      colorValue: Value(o.colorValue),
+      visible: Value(o.visible),
+      createdAt: Value(o.createdAt),
+    );
+
+// ---------------------------------------------------------------------------
+// Service
+// ---------------------------------------------------------------------------
+
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
-  static Store? _store;
+  static AppDatabase? _db;
 
-  factory DatabaseService() {
-    return _instance;
-  }
-
+  factory DatabaseService() => _instance;
   DatabaseService._internal();
 
-  Store get store {
-    if (_store == null) {
-      throw StateError('DatabaseService not initialized. Call initialize() first.');
-    }
-    return _store!;
+  AppDatabase get db {
+    if (_db == null) throw StateError('DatabaseService not initialized. Call initialize() first.');
+    return _db!;
   }
 
-  Box<LogEntry> get _logBox => store.box<LogEntry>();
-  Box<LogBatch> get _batchBox => store.box<LogBatch>();
-  Box<MapLocation> get _locationBox => store.box<MapLocation>();
-  Box<Parcel> get _parcelBox => store.box<Parcel>();
-  Box<ImportedOverlay> get _overlayBox => store.box<ImportedOverlay>();
-
   Future<void> initialize() async {
-    if (_store != null) return;
-    _store = await openStore();
+    if (_db != null) return;
+    _db = AppDatabase();
   }
 
   // ==================== LOG OPERATIONS ====================
 
-  /// Insert a log entry, automatically assigning it to a parcel if it has location
   Future<int> insertLog(LogEntry log) async {
-    // Auto-assign parcel if log has location and no parcel assigned
-    if (log.latitude != null && log.longitude != null && log.parcel.targetId == 0) {
-      final containingParcel = await findContainingParcel(
-        log.latitude!,
-        log.longitude!,
-      );
-      if (containingParcel != null && containingParcel.id != 0) {
-        log.parcel.targetId = containingParcel.id;
-      }
+    if (log.latitude != null && log.longitude != null && log.parcelId == null) {
+      final parcel = await findContainingParcel(log.latitude!, log.longitude!);
+      if (parcel != null) log = log.copyWith(parcelId: parcel.id);
     }
-    return _logBox.put(log);
+    return db.into(db.logEntries).insert(_logToCompanion(log));
   }
 
   Future<void> updateLog(LogEntry log) async {
-    _logBox.put(log);
+    await db.update(db.logEntries).replace(_logToCompanion(log));
   }
 
   Future<void> deleteLog(int id) async {
-    _logBox.remove(id);
+    await (db.delete(db.logEntries)..where((t) => t.id.equals(id))).go();
   }
 
   Future<void> deleteAllLogs() async {
-    _logBox.removeAll();
+    await db.delete(db.logEntries).go();
   }
 
   Future<List<LogEntry>> getAllLogs() async {
-    final query = _logBox.query()
-      ..order(LogEntry_.createdAt, flags: Order.descending);
-    final built = query.build();
-    try {
-      return built.find();
-    } finally {
-      built.close();
-    }
+    final rows = await (db.select(db.logEntries)
+          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
+        .get();
+    return rows.map(_logFromDb).toList();
   }
 
   Future<double> getTotalVolume() async {
-    // Get logs where batch is not assigned (targetId == 0)
-    final query = _logBox.query(LogEntry_.batch.equals(0)).build();
-    final logs = query.find();
-    query.close();
-    double total = 0.0;
-    for (final log in logs) {
-      total += log.volume;
-    }
-    return total;
+    final rows = await (db.select(db.logEntries)..where((t) => t.batchId.isNull())).get();
+    return rows.fold<double>(0.0, (sum, r) => sum + r.volume);
   }
 
-  /// Get logs that are not assigned to any batch
   Future<List<LogEntry>> getUnassignedLogs() async {
-    final query = _logBox.query(LogEntry_.batch.equals(0))
-      ..order(LogEntry_.createdAt, flags: Order.descending);
-    final built = query.build();
-    final result = built.find();
-    built.close();
-    return result;
+    final rows = await (db.select(db.logEntries)
+          ..where((t) => t.batchId.isNull())
+          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
+        .get();
+    return rows.map(_logFromDb).toList();
   }
 
-  /// Get logs for a specific batch
   Future<List<LogEntry>> getLogsByBatch(int batchId) async {
-    final query = _logBox.query(LogEntry_.batch.equals(batchId))
-      ..order(LogEntry_.createdAt, flags: Order.descending);
-    final built = query.build();
-    final result = built.find();
-    built.close();
-    return result;
+    final rows = await (db.select(db.logEntries)
+          ..where((t) => t.batchId.equals(batchId))
+          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
+        .get();
+    return rows.map(_logFromDb).toList();
   }
 
-  /// Assign a log to a batch
   Future<void> assignLogToBatch(int logId, int batchId) async {
-    final log = _logBox.get(logId);
-    if (log != null) {
-      log.batch.targetId = batchId;
-      _logBox.put(log);
-    }
+    await (db.update(db.logEntries)..where((t) => t.id.equals(logId)))
+        .write(LogEntriesCompanion(batchId: Value(batchId)));
   }
 
-  /// Unassign a log from its batch
   Future<void> unassignLogFromBatch(int logId) async {
-    final log = _logBox.get(logId);
-    if (log != null) {
-      log.batch.targetId = 0;
-      _logBox.put(log);
-    }
+    await (db.update(db.logEntries)..where((t) => t.id.equals(logId)))
+        .write(const LogEntriesCompanion(batchId: Value(null)));
   }
 
-  /// Get total volume for a batch
   Future<double> getBatchTotalVolume(int batchId) async {
-    final query = _logBox.query(LogEntry_.batch.equals(batchId)).build();
-    final logs = query.find();
-    query.close();
-    double total = 0.0;
-    for (final log in logs) {
-      total += log.volume;
-    }
-    return total;
+    final rows =
+        await (db.select(db.logEntries)..where((t) => t.batchId.equals(batchId))).get();
+    return rows.fold<double>(0.0, (sum, r) => sum + r.volume);
   }
 
-  /// Get log count for a batch
   Future<int> getBatchLogCount(int batchId) async {
-    final query = _logBox.query(LogEntry_.batch.equals(batchId)).build();
-    final count = query.count();
-    query.close();
-    return count;
+    return db.logEntries.count(where: (t) => t.batchId.equals(batchId)).getSingle();
   }
 
-  /// Get logs for a specific parcel
   Future<List<LogEntry>> getLogsByParcel(int parcelId) async {
-    final query = _logBox.query(LogEntry_.parcel.equals(parcelId))
-      ..order(LogEntry_.createdAt, flags: Order.descending);
-    final built = query.build();
-    final result = built.find();
-    built.close();
-    return result;
+    final rows = await (db.select(db.logEntries)
+          ..where((t) => t.parcelId.equals(parcelId))
+          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
+        .get();
+    return rows.map(_logFromDb).toList();
   }
 
-  /// Get total volume for a specific parcel
   Future<double> getParcelTotalVolume(int parcelId) async {
-    final query = _logBox.query(LogEntry_.parcel.equals(parcelId)).build();
-    final logs = query.find();
-    query.close();
-    double total = 0.0;
-    for (final log in logs) {
-      total += log.volume;
-    }
-    return total;
+    final rows =
+        await (db.select(db.logEntries)..where((t) => t.parcelId.equals(parcelId))).get();
+    return rows.fold<double>(0.0, (sum, r) => sum + r.volume);
   }
 
-  /// Get log count for a specific parcel
   Future<int> getParcelLogCount(int parcelId) async {
-    final query = _logBox.query(LogEntry_.parcel.equals(parcelId)).build();
-    final count = query.count();
-    query.close();
-    return count;
+    return db.logEntries.count(where: (t) => t.parcelId.equals(parcelId)).getSingle();
   }
 
-  /// Assign a log to a parcel
   Future<void> assignLogToParcel(int logId, int parcelId) async {
-    final log = _logBox.get(logId);
-    if (log != null) {
-      log.parcel.targetId = parcelId;
-      _logBox.put(log);
-    }
+    await (db.update(db.logEntries)..where((t) => t.id.equals(logId)))
+        .write(LogEntriesCompanion(parcelId: Value(parcelId)));
   }
 
-  /// Unassign a log from its parcel
   Future<void> unassignLogFromParcel(int logId) async {
-    final log = _logBox.get(logId);
-    if (log != null) {
-      log.parcel.targetId = 0;
-      _logBox.put(log);
-    }
+    await (db.update(db.logEntries)..where((t) => t.id.equals(logId)))
+        .write(const LogEntriesCompanion(parcelId: Value(null)));
   }
 
-  /// Find the parcel that contains a given point (lat/lng)
-  /// Returns the parcel if found, null otherwise
-  Future<Parcel?> findContainingParcel(
-    double latitude,
-    double longitude,
-  ) async {
+  Future<Parcel?> findContainingParcel(double latitude, double longitude) async {
     final parcels = await getAllParcels();
     final point = LatLng(latitude, longitude);
-
     for (final parcel in parcels) {
-      if (parcel.containsPoint(point)) {
-        return parcel;
-      }
+      if (parcel.containsPoint(point)) return parcel;
     }
     return null;
   }
@@ -212,226 +268,170 @@ class DatabaseService {
   // ==================== LOG BATCH OPERATIONS ====================
 
   Future<int> insertLogBatch(LogBatch batch) async {
-    return _batchBox.put(batch);
+    return db.into(db.logBatches).insert(_batchToCompanion(batch));
   }
 
   Future<void> updateLogBatch(LogBatch batch) async {
-    _batchBox.put(batch);
+    await db.update(db.logBatches).replace(_batchToCompanion(batch));
   }
 
   Future<void> deleteLogBatch(int id) async {
-    _batchBox.remove(id);
+    await (db.delete(db.logBatches)..where((t) => t.id.equals(id))).go();
   }
 
   Future<List<LogBatch>> getAllLogBatches() async {
-    final query = _batchBox.query()
-      ..order(LogBatch_.createdAt, flags: Order.descending);
-    final built = query.build();
-    try {
-      return built.find();
-    } finally {
-      built.close();
-    }
+    final rows = await (db.select(db.logBatches)
+          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
+        .get();
+    return rows.map(_batchFromDb).toList();
   }
 
   // ==================== LOCATION OPERATIONS ====================
 
   Future<int> insertLocation(MapLocation location) async {
-    return _locationBox.put(location);
+    return db.into(db.mapLocations).insert(_locationToCompanion(location));
   }
 
   Future<void> updateLocation(MapLocation location) async {
-    _locationBox.put(location);
+    await db.update(db.mapLocations).replace(_locationToCompanion(location));
   }
 
   Future<void> deleteLocation(int id) async {
-    _locationBox.remove(id);
+    await (db.delete(db.mapLocations)..where((t) => t.id.equals(id))).go();
   }
 
   Future<void> updateLocationName(int id, String name) async {
-    final location = _locationBox.get(id);
-    if (location != null) {
-      location.name = name;
-      _locationBox.put(location);
-    }
+    await (db.update(db.mapLocations)..where((t) => t.id.equals(id)))
+        .write(MapLocationsCompanion(name: Value(name)));
   }
 
   Future<List<MapLocation>> getAllLocations() async {
-    final query = _locationBox.query()
-      ..order(MapLocation_.createdAt, flags: Order.descending);
-    final built = query.build();
-    try {
-      return built.find();
-    } finally {
-      built.close();
-    }
+    final rows = await (db.select(db.mapLocations)
+          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
+        .get();
+    return rows.map(_locationFromDb).toList();
   }
 
   // ==================== PARCEL OPERATIONS ====================
 
-  /// Check if a parcel with the same KO and parcel number already exists
   Future<Parcel?> findParcelByKoAndNumber(int? koNumber, String? parcelNumber) async {
     if (koNumber == null || parcelNumber == null) return null;
-
-    final query = _parcelBox.query(
-      Parcel_.cadastralMunicipality.equals(koNumber) &
-      Parcel_.parcelNumber.equals(parcelNumber)
-    ).build();
-
-    final result = query.findFirst();
-    query.close();
-    return result;
+    final row = await (db.select(db.parcels)
+          ..where((t) =>
+              t.cadastralMunicipality.equals(koNumber) & t.parcelNumber.equals(parcelNumber)))
+        .getSingleOrNull();
+    return row == null ? null : _parcelFromDb(row);
   }
 
   Future<int> insertParcel(Parcel parcel) async {
-    return _parcelBox.put(parcel);
+    return db.into(db.parcels).insert(_parcelToCompanion(parcel));
   }
 
   Future<void> updateParcel(Parcel parcel) async {
-    _parcelBox.put(parcel);
+    await db.update(db.parcels).replace(_parcelToCompanion(parcel));
   }
 
   Future<void> deleteParcel(int id) async {
-    _parcelBox.remove(id);
+    await (db.delete(db.parcels)..where((t) => t.id.equals(id))).go();
   }
 
-  /// Delete a parcel and all points (logs and locations) inside it
-  /// Returns counts of deleted items: {'logs': n, 'locations': n}
   Future<Map<String, int>> deleteParcelWithContents(int id) async {
-    final parcel = _parcelBox.get(id);
-    if (parcel == null) {
-      return {'logs': 0, 'locations': 0};
-    }
+    final row = await (db.select(db.parcels)..where((t) => t.id.equals(id))).getSingleOrNull();
+    if (row == null) return {'logs': 0, 'locations': 0};
+    final parcel = _parcelFromDb(row);
 
-    // Delete logs assigned to this parcel
-    final logsQuery = _logBox.query(LogEntry_.parcel.equals(id)).build();
-    final logsDeleted = logsQuery.remove();
-    logsQuery.close();
+    final logsDeleted =
+        await (db.delete(db.logEntries)..where((t) => t.parcelId.equals(id))).go();
 
-    // Find and delete locations inside the parcel polygon
     final allLocations = await getAllLocations();
     int locationsDeleted = 0;
-    for (final location in allLocations) {
-      final point = LatLng(location.latitude, location.longitude);
-      if (parcel.containsPoint(point)) {
-        _locationBox.remove(location.id);
+    for (final loc in allLocations) {
+      if (parcel.containsPoint(LatLng(loc.latitude, loc.longitude))) {
+        await (db.delete(db.mapLocations)..where((t) => t.id.equals(loc.id))).go();
         locationsDeleted++;
       }
     }
 
-    // Finally delete the parcel itself
-    _parcelBox.remove(id);
-
+    await (db.delete(db.parcels)..where((t) => t.id.equals(id))).go();
     return {'logs': logsDeleted, 'locations': locationsDeleted};
   }
 
   Future<List<Parcel>> getAllParcels() async {
-    final query = _parcelBox.query()
-      ..order(Parcel_.createdAt, flags: Order.descending);
-    final built = query.build();
-    try {
-      return built.find();
-    } finally {
-      built.close();
-    }
+    final rows = await (db.select(db.parcels)
+          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
+        .get();
+    return rows.map(_parcelFromDb).toList();
   }
 
   Future<double> getTotalParcelArea() async {
     final parcels = await getAllParcels();
-    double total = 0.0;
-    for (final parcel in parcels) {
-      total += parcel.areaM2;
-    }
-    return total;
+    return parcels.fold<double>(0.0, (sum, p) => sum + p.areaM2);
   }
 
-  /// Check if a cadastral parcel with given KO and parcel number already exists
-  Future<bool> cadastralParcelExists(
-    int cadastralMunicipality,
-    String parcelNumber,
-  ) async {
-    final query = _parcelBox
-        .query(Parcel_.cadastralMunicipality.equals(cadastralMunicipality) &
-            Parcel_.parcelNumber.equals(parcelNumber))
-        .build();
-    final count = query.count();
-    query.close();
+  Future<bool> cadastralParcelExists(int cadastralMunicipality, String parcelNumber) async {
+    final count = await db.parcels
+        .count(
+            where: (t) =>
+                t.cadastralMunicipality.equals(cadastralMunicipality) &
+                t.parcelNumber.equals(parcelNumber))
+        .getSingle();
     return count > 0;
   }
 
-  /// Get existing cadastral parcel by KO and parcel number
-  Future<Parcel?> getCadastralParcel(
-    int cadastralMunicipality,
-    String parcelNumber,
-  ) async {
-    final query = _parcelBox
-        .query(Parcel_.cadastralMunicipality.equals(cadastralMunicipality) &
-            Parcel_.parcelNumber.equals(parcelNumber))
-        .build();
-    final result = query.findFirst();
-    query.close();
-    return result;
+  Future<Parcel?> getCadastralParcel(int cadastralMunicipality, String parcelNumber) async {
+    final row = await (db.select(db.parcels)
+          ..where((t) =>
+              t.cadastralMunicipality.equals(cadastralMunicipality) &
+              t.parcelNumber.equals(parcelNumber)))
+        .getSingleOrNull();
+    return row == null ? null : _parcelFromDb(row);
   }
 
   // ==================== IMPORTED OVERLAY OPERATIONS ====================
 
   Future<int> insertOverlay(ImportedOverlay overlay) async {
-    return _overlayBox.put(overlay);
+    return db.into(db.importedOverlays).insert(_overlayToCompanion(overlay));
   }
 
   Future<void> updateOverlay(ImportedOverlay overlay) async {
-    _overlayBox.put(overlay);
+    await db.update(db.importedOverlays).replace(_overlayToCompanion(overlay));
   }
 
   Future<void> deleteOverlay(int id) async {
-    _overlayBox.remove(id);
+    await (db.delete(db.importedOverlays)..where((t) => t.id.equals(id))).go();
   }
 
   Future<List<ImportedOverlay>> getAllOverlays() async {
-    final query = _overlayBox.query()
-      ..order(ImportedOverlay_.createdAt, flags: Order.descending);
-    final built = query.build();
-    try {
-      return built.find();
-    } finally {
-      built.close();
-    }
+    final rows = await (db.select(db.importedOverlays)
+          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
+        .get();
+    return rows.map(_overlayFromDb).toList();
   }
 
   Future<List<ImportedOverlay>> getVisibleOverlays() async {
-    final query = _overlayBox.query(ImportedOverlay_.visible.equals(true))
-      ..order(ImportedOverlay_.createdAt, flags: Order.descending);
-    final built = query.build();
-    try {
-      return built.find();
-    } finally {
-      built.close();
-    }
+    final rows = await (db.select(db.importedOverlays)
+          ..where((t) => t.visible.equals(true))
+          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
+        .get();
+    return rows.map(_overlayFromDb).toList();
   }
 
   Future<void> toggleOverlayVisibility(int id) async {
-    final overlay = _overlayBox.get(id);
-    if (overlay != null) {
-      overlay.visible = !overlay.visible;
-      _overlayBox.put(overlay);
-    }
+    final row = await (db.select(db.importedOverlays)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+    if (row == null) return;
+    await (db.update(db.importedOverlays)..where((t) => t.id.equals(id)))
+        .write(ImportedOverlaysCompanion(visible: Value(!row.visible)));
   }
 
   Future<void> deleteAllOverlays() async {
-    _overlayBox.removeAll();
+    await db.delete(db.importedOverlays).go();
   }
 
-  // ==================== UTILITY METHODS ====================
+  // ==================== UTILITY ====================
 
   Future<void> close() async {
-    _store?.close();
-    _store = null;
-  }
-
-  Future<void> deleteDatabase() async {
-    _store?.close();
-    _store = null;
-    // ObjectBox doesn't have a direct delete method, but the store directory
-    // can be deleted if needed
+    await _db?.close();
+    _db = null;
   }
 }
