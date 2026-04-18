@@ -185,13 +185,15 @@ class TileCacheService {
       _downloadService?.dispose();
       _downloadService = null;
       _isDownloading = false;
-      _downloadVisualState.value = _downloadVisualState.value.copyWith(
-        isDownloading: false,
-        currentLayerName: wasCancelled
-            ? _downloadVisualState.value.currentLayerName
-            : '',
-        layersCompleted: _downloadVisualState.value.layerCount,
-      );
+      if (wasCancelled) {
+        _downloadVisualState.value = _downloadVisualState.value.copyWith(
+          isDownloading: false,
+          currentLayerName: _downloadVisualState.value.currentLayerName,
+          layersCompleted: _downloadVisualState.value.layerCount,
+        );
+      } else {
+        clearDownloadVisuals();
+      }
     }
   }
 

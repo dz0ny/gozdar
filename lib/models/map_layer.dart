@@ -28,7 +28,6 @@ enum MapLayerType {
   openTopoMap,
   esriWorldImagery,
   esriTopoMap,
-  googleHybrid,
   ortofoto,
   ortofoto2023,
   ortofoto2022,
@@ -150,27 +149,15 @@ class MapLayer {
   int get downloadMaxZoom => nativeMaxZoom;
 
   /// Resolve the layer to an XYZ template.
-  /// Direct tile sources keep their own template, Slovenian layers use the proxy,
-  /// with a direct WMS fallback when no proxy is configured.
+  /// Direct tile sources keep their own template, Slovenian layers use the proxy.
   String? resolveUrlTemplate(String? workerUrl) {
     if (urlTemplate != null && urlTemplate!.isNotEmpty) {
       return urlTemplate;
     }
-    if (workerUrl != null && workerUrl.isNotEmpty) {
-      return '$workerUrl/tiles/$proxySlug/{z}/{x}/{y}.png';
-    }
-    return _buildDirectWmsTemplate();
-  }
-
-  String? _buildDirectWmsTemplate() {
-    if (!isWms || wmsBaseUrl == null || wmsLayers == null || wmsLayers!.isEmpty) {
+    if (workerUrl == null || workerUrl.isEmpty) {
       return null;
     }
-    final layers = wmsLayers!.join(',');
-    final format = wmsFormat ?? 'image/jpeg';
-    return '${wmsBaseUrl}SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap'
-        '&LAYERS=$layers&FORMAT=$format'
-        '&WIDTH=256&HEIGHT=256&SRS=EPSG:3857&BBOX={bbox-epsg-3857}';
+    return '$workerUrl/tiles/$proxySlug/{z}/{x}/{y}.png';
   }
 
   // ============ BASE LAYERS ============
@@ -212,16 +199,7 @@ class MapLayer {
     maxZoom: 21,
   );
 
-  /// Google Hybrid - Satellite with labels
-  static const googleHybrid = MapLayer(
-    type: MapLayerType.googleHybrid,
-    name: 'Google Hibrid',
-    urlTemplate: 'http://mt0.google.com/vt/lyrs=y&hl=sl&x={x}&y={y}&z={z}',
-    attribution: '© Google',
-    maxZoom: 20,
-  );
-
-  /// Ortofoto 2024 - Aerial imagery (Slovenia)
+/// Ortofoto 2024 - Aerial imagery (Slovenia)
   static const ortofoto = MapLayer(
     type: MapLayerType.ortofoto,
     name: 'Ortofoto 2024',
@@ -229,7 +207,7 @@ class MapLayer {
     maxZoom: 21,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
-    wmsLayers: ['pregledovalnik:DOF_2024'],
+    wmsLayers: ['pregledovalnik:DOF25'],
     wmsFormat: 'image/jpeg',
   );
 
@@ -241,7 +219,7 @@ class MapLayer {
     maxZoom: 21,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
-    wmsLayers: ['pregledovalnik:DOF25_2023'],
+    wmsLayers: ['pregledovalnik:DOF_2023'],
     wmsFormat: 'image/jpeg',
   );
 
@@ -253,7 +231,7 @@ class MapLayer {
     maxZoom: 21,
     isWms: true,
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
-    wmsLayers: ['pregledovalnik:DOF25_2022'],
+    wmsLayers: ['pregledovalnik:DOF_2022'],
     wmsFormat: 'image/jpeg',
   );
 
@@ -933,7 +911,6 @@ class MapLayer {
     openTopoMap,
     esriWorldImagery,
     esriTopoMap,
-    googleHybrid,
     ortofoto,
     ortofoto2023,
     ortofoto2022,

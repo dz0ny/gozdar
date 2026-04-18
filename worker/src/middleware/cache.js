@@ -17,7 +17,7 @@ export const cache = () => {
 
     // Create versioned cache key
     const cacheUrl = new URL(c.req.url);
-    cacheUrl.searchParams.set('_v', 'v2');
+    cacheUrl.searchParams.set('_v', 'v3');
     const cacheKey = new Request(cacheUrl.toString(), c.req.raw);
 
     // Try cache first
@@ -31,8 +31,10 @@ export const cache = () => {
     // Call next handler
     await next();
 
-    // Cache successful responses
-    if (c.res && c.res.ok && c.res.status < 400) {
+    // Cache only valid image responses (not XML errors or small tiles)
+    const contentType = c.res?.headers?.get('content-type') ?? '';
+    const isImage = contentType.startsWith('image/');
+    if (c.res && c.res.ok && c.res.status < 400 && isImage) {
       c.executionCtx.waitUntil(cache.put(cacheKey, c.res.clone()));
     }
   };

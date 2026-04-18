@@ -19,6 +19,7 @@ android {
     namespace = "dev.dz0ny.gozdar"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    flavorDimensions += "distribution"
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
@@ -39,6 +40,15 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    productFlavors {
+        create("direct") {
+            dimension = "distribution"
+        }
+        create("play") {
+            dimension = "distribution"
+        }
     }
 
     signingConfigs {

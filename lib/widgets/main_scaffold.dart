@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../config/distribution.dart';
 import '../router/app_router.dart';
 import '../router/navigation_notifier.dart';
 import '../screens/about_screen.dart';
@@ -147,7 +148,8 @@ class _MainScaffoldState extends State<MainScaffold> {
         children: [
           widget.navigationShell,
           // Update banner overlay (Android only)
-          if (Platform.isAndroid) UpdateBanner(updateService: UpdateService()),
+          if (Platform.isAndroid && !isPlayDistribution)
+            UpdateBanner(updateService: UpdateService()),
         ],
       ),
       bottomNavigationBar: NavigationBar(

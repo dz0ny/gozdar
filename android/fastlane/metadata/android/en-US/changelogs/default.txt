@@ -1,0 +1,3 @@
+- Internal testing build
+- Play-safe Android release path
+- OTA updater disabled for Play distribution

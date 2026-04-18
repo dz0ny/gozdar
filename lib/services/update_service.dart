@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:ota_update/ota_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../config/distribution.dart';
 
 /// Update status enum
 enum UpdateStatus {
@@ -65,11 +66,19 @@ class UpdateService extends ChangeNotifier {
 
   /// Initialize the service
   Future<void> init() async {
+    if (isPlayDistribution) {
+      return;
+    }
+
     _packageInfo = await PackageInfo.fromPlatform();
   }
 
   /// Check for updates from GitHub Releases
   Future<bool> checkForUpdate() async {
+    if (isPlayDistribution) {
+      return false;
+    }
+
     if (_status == UpdateStatus.checking || _status == UpdateStatus.downloading) {
       return false;
     }
@@ -190,6 +199,10 @@ class UpdateService extends ChangeNotifier {
 
   /// Download and install the update
   Future<void> downloadAndInstall() async {
+    if (isPlayDistribution) {
+      return;
+    }
+
     if (_latestRelease == null || _status == UpdateStatus.downloading) {
       return;
     }

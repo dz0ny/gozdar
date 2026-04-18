@@ -46,3 +46,10 @@ The `worker/` directory contains a Cloudflare Worker that proxies and caches til
 flutter pub get
 flutter run
 ```
+
+## Android Releases
+
+- Direct APK and GitHub release flow: `make release-android`
+- Google Play internal testing flow: `make release-play-internal`
+- Google Play production flow: `make release-play-production`
+- Full Play release runbook: [docs/google-play-release.md](/Users/dz0ny/gozdar/docs/google-play-release.md)

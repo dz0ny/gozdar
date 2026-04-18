@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'config/distribution.dart';
 import 'router/app_router.dart';
 import 'router/navigation_notifier.dart';
 import 'services/database_service.dart';
@@ -20,7 +21,7 @@ void main() async {
   await OnboardingService.initialize();
 
   // Initialize update service (Android only)
-  if (Platform.isAndroid) {
+  if (Platform.isAndroid && !isPlayDistribution) {
     await UpdateService().init();
   }
 
@@ -47,7 +48,7 @@ class _GozdarAppState extends State<GozdarApp> {
     );
 
     // Check for updates on startup (Android only)
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && !isPlayDistribution) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         UpdateService().checkForUpdate();
       });
@@ -73,7 +74,7 @@ class _GozdarAppState extends State<GozdarApp> {
             ..loadGeolocatedLogs(),
         ),
         ChangeNotifierProvider.value(value: _navigationNotifier),
-        if (Platform.isAndroid)
+        if (Platform.isAndroid && !isPlayDistribution)
           ChangeNotifierProvider.value(value: UpdateService()),
       ],
       child: MaterialApp.router(

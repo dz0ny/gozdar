@@ -1837,14 +1837,6 @@ class MapTabState extends State<MapTab> {
                           'uporabo. Za komercialno uporabo je potrebna licenca.',
                       'https://www.esri.com/en-us/legal/terms/full-master-agreement',
                     ),
-                    _buildUsageRightsSection(
-                      context,
-                      'Google',
-                      'Google',
-                      'Google Maps podatki so na voljo pod pogoji Google Maps Platform. '
-                          'Uporaba je dovoljena za osebne namene v skladu s pogoji uporabe.',
-                      'https://cloud.google.com/maps-platform/terms',
-                    ),
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(12),

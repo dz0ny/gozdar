@@ -16,43 +16,53 @@
 default_platform(:android)
 
 platform :android do
+  def project_root
+    File.expand_path("../..", __dir__)
+  end
+
+  def play_build_command
+    "cd #{project_root} && flutter build appbundle --release --flavor play --dart-define=GOZDAR_PLAY_DISTRIBUTION=true"
+  end
+
+  def play_aab_path
+    File.join(project_root, "build/app/outputs/bundle/playRelease/app-play-release.aab")
+  end
+
+  def direct_apk_build_command
+    "cd #{project_root} && flutter build apk --release --flavor direct"
+  end
+
   desc "Runs all the tests"
   lane :test do
     gradle(task: "test")
   end
 
-  desc "Build release APK"
-  lane :beta do
-    # Get the project root directory (two levels up from fastlane/)
-    project_root = File.expand_path("../..", __dir__)
+  desc "Build direct-distribution release APK"
+  lane :direct_apk do
+    sh(direct_apk_build_command)
 
-    # For Flutter projects, use flutter build instead of gradle directly
-    sh("cd #{project_root} && flutter build apk --release")
-
-    apk_path = File.join(project_root, "build/app/outputs/flutter-apk/app-release.apk")
-
-    # Uncomment to distribute via Firebase App Distribution:
-    # firebase_app_distribution(
-    #   app: "YOUR_FIREBASE_APP_ID",
-    #   apk_path: apk_path,
-    #   groups: "testers"
-    # )
+    apk_path = File.join(project_root, "build/app/outputs/flutter-apk/app-direct-release.apk")
 
     UI.success("APK built successfully at: #{apk_path}")
   end
 
-  desc "Deploy a new version to the Google Play"
-  lane :deploy do
-    # Get the project root directory (two levels up from fastlane/)
-    project_root = File.expand_path("../..", __dir__)
-
-    sh("cd #{project_root} && flutter build appbundle --release")
-
-    aab_path = File.join(project_root, "build/app/outputs/bundle/release/app-release.aab")
+  desc "Build Play release AAB and upload to internal testing"
+  lane :internal do
+    sh(play_build_command)
 
     upload_to_play_store(
-      aab: aab_path,
+      aab: play_aab_path,
       track: "internal"
+    )
+  end
+
+  desc "Build Play release AAB and upload to production"
+  lane :production do
+    sh(play_build_command)
+
+    upload_to_play_store(
+      aab: play_aab_path,
+      track: "production"
     )
   end
 end

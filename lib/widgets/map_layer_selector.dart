@@ -220,7 +220,6 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
           MapLayer.openTopoMap,
           MapLayer.esriWorldImagery,
           MapLayer.esriTopoMap,
-          MapLayer.googleHybrid,
         ]),
         const SizedBox(height: 16),
         // Slovenian base layers
@@ -617,7 +616,6 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       case MapLayerType.esriTopoMap:
         return Icons.terrain;
       case MapLayerType.esriWorldImagery:
-      case MapLayerType.googleHybrid:
         return Icons.satellite_alt;
       case MapLayerType.ortofoto:
       case MapLayerType.ortofoto2023:

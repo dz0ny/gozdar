@@ -1,6 +1,22 @@
 import proj4 from 'proj4';
 import { LAYERS } from './layers.js';
 
+// 1x1 transparent PNG — returned for tiles outside range or Slovenia bounds
+const EMPTY_TILE = Uint8Array.from(atob(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjE+ibYAAAAASUVORK5CYII='
+), c => c.charCodeAt(0));
+
+function emptyTileResponse() {
+  return new Response(EMPTY_TILE, {
+    status: 200,
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=86400',
+      'Access-Control-Allow-Origin': '*',
+    },
+  });
+}
+
 // Define Projections
 proj4.defs('EPSG:3794', '+proj=tmerc +lat_0=0 +lon_0=15 +k=0.9999 +x_0=500000 +y_0=-5000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs');
 proj4.defs('EPSG:3857', '+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs +type=crs');
@@ -124,7 +140,7 @@ function createTileResponse(buffer, contentType, layerSlug, z, x, y) {
     'Expires': new Date(now.getTime() + 86400000).toUTCString(),
     'Cache-Control': 'public, max-age=86400',
     'Access-Control-Allow-Origin': '*',
-    'ETag': `"v2-${layerSlug}-${z}-${x}-${y}"`
+    'ETag': `"v3-${layerSlug}-${z}-${x}-${y}"`
   });
 
   return new Response(buffer, {
@@ -160,9 +176,8 @@ export async function handleTileRequest(c) {
     return c.json({ error: 'Invalid tile coordinates' }, 400);
   }
 
-  // Return 404 for zoom levels below 15
   if (z < 15) {
-    return c.json({ error: 'Zoom level too low. Minimum zoom: 15' }, 404);
+    return emptyTileResponse();
   }
 
   const layerConfig = LAYERS[layerSlug];
@@ -180,7 +195,7 @@ export async function handleTileRequest(c) {
   if (!Number.isFinite(bbox3857.minX) || !Number.isFinite(bbox3857.minY) ||
       !Number.isFinite(bbox3857.maxX) || !Number.isFinite(bbox3857.maxY)) {
     console.error(`Invalid bbox3857: ${JSON.stringify(bbox3857)}, coords: z=${z}, x=${x}, y=${y}`);
-    return c.json({ error: 'Invalid bounding box' }, 500);
+    return emptyTileResponse();
   }
 
   let bbox3794;
@@ -188,12 +203,11 @@ export async function handleTileRequest(c) {
     bbox3794 = reprojectBbox(bbox3857, 'EPSG:3857', 'EPSG:3794');
   } catch (e) {
     console.error(`Reprojection error: ${e.message}`, { bbox3857, z, x, y });
-    return c.json({ error: `Reprojection failed: ${e.message}` }, 500);
+    return emptyTileResponse();
   }
 
-  // Return 404 if outside Slovenia bounds
   if (!isWithinSlovenia(bbox3794)) {
-    return c.json({ error: 'Tile outside Slovenia bounds' }, 404);
+    return emptyTileResponse();
   }
 
   // Build R2 key
@@ -227,7 +241,7 @@ export async function handleTileRequest(c) {
 
         // Re-populate Edge Cache with versioned key
         const cacheUrl = new URL(c.req.url);
-        cacheUrl.searchParams.set('_v', 'v2');
+        cacheUrl.searchParams.set('_v', 'v3');
         const cacheKey = new Request(cacheUrl.toString(), c.req.raw);
         c.executionCtx.waitUntil(caches.default.put(cacheKey, response.clone()));
 
@@ -269,7 +283,7 @@ export async function handleTileRequest(c) {
     // Store in edge cache (background) with versioned key - only valid tiles
     if (shouldCache) {
       const cacheUrl = new URL(c.req.url);
-      cacheUrl.searchParams.set('_v', 'v2');
+      cacheUrl.searchParams.set('_v', 'v3');
       const cacheKey = new Request(cacheUrl.toString(), c.req.raw);
       c.executionCtx.waitUntil(caches.default.put(cacheKey, response.clone()));
     }

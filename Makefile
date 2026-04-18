@@ -6,6 +6,7 @@
 APP_NAME := gozdar
 PUBSPEC := pubspec.yaml
 BUILD_DIR := build/app/outputs/flutter-apk
+PLAY_BUNDLE_DIR := build/app/outputs/bundle/playRelease
 
 # Get current date parts
 YEAR := $(shell date +%Y)
@@ -35,7 +36,7 @@ DAILY_BUILD := $(shell \
 # DAILY resets each day (for readability), BUILD always increments (for Android)
 NEW_VERSION := $(YEAR).$(MMDD).$(DAILY_BUILD)+$(NEW_BUILD_NUMBER)
 
-.PHONY: help version bump build release release-android release-ios clean deps analyze test icon
+.PHONY: help version bump build build-direct build-play build-play-no-bump release release-android release-play-internal release-play-production release-ios clean deps analyze test icon
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -63,15 +64,27 @@ test: ## Run tests
 icon: ## Generate app icons from icon.png
 	dart run flutter_launcher_icons
 
-build: bump ## Build release APK (auto-bumps version)
+build: bump ## Build direct-distribution release APK (auto-bumps version)
 	@echo "Building release APK..."
-	flutter build apk --release
-	@echo "APK built: $(BUILD_DIR)/app-release.apk"
-	@ls -lh $(BUILD_DIR)/app-release.apk
+	flutter build apk --release --flavor direct
+	@echo "APK built: $(BUILD_DIR)/app-direct-release.apk"
+	@ls -lh $(BUILD_DIR)/app-direct-release.apk
 
 build-no-bump: ## Build release APK without bumping version
-	flutter build apk --release
-	@ls -lh $(BUILD_DIR)/app-release.apk
+	flutter build apk --release --flavor direct
+	@ls -lh $(BUILD_DIR)/app-direct-release.apk
+
+build-direct: build ## Alias for direct-distribution APK build
+
+build-play: bump ## Build Play release AAB (auto-bumps version)
+	@echo "Building Play release AAB..."
+	flutter build appbundle --release --flavor play --dart-define=GOZDAR_PLAY_DISTRIBUTION=true
+	@echo "AAB built: $(PLAY_BUNDLE_DIR)/app-play-release.aab"
+	@ls -lh $(PLAY_BUNDLE_DIR)/app-play-release.aab
+
+build-play-no-bump: ## Build Play release AAB without bumping version
+	flutter build appbundle --release --flavor play --dart-define=GOZDAR_PLAY_DISTRIBUTION=true
+	@ls -lh $(PLAY_BUNDLE_DIR)/app-play-release.aab
 
 release: build release-ios ## Build APK, create GitHub release, and upload iOS to TestFlight
 	$(eval VERSION := $(shell grep '^version:' $(PUBSPEC) | sed 's/version: //' | cut -d'+' -f1))
@@ -80,7 +93,7 @@ release: build release-ios ## Build APK, create GitHub release, and upload iOS t
 		echo "Error: GitHub CLI (gh) not installed. Install with: brew install gh"; \
 		exit 1; \
 	fi
-	@cp $(BUILD_DIR)/app-release.apk $(BUILD_DIR)/gozdar-$(VERSION).apk
+	@cp $(BUILD_DIR)/app-direct-release.apk $(BUILD_DIR)/gozdar-$(VERSION).apk
 	gh release create "v$(VERSION)" \
 		"$(BUILD_DIR)/gozdar-$(VERSION).apk#Gozdar $(VERSION) APK" \
 		--title "Gozdar v$(VERSION)" \
@@ -96,7 +109,7 @@ release-android: build ## Build APK and create GitHub release (Android only)
 		echo "Error: GitHub CLI (gh) not installed. Install with: brew install gh"; \
 		exit 1; \
 	fi
-	@cp $(BUILD_DIR)/app-release.apk $(BUILD_DIR)/gozdar-$(VERSION).apk
+	@cp $(BUILD_DIR)/app-direct-release.apk $(BUILD_DIR)/gozdar-$(VERSION).apk
 	gh release create "v$(VERSION)" \
 		"$(BUILD_DIR)/gozdar-$(VERSION).apk#Gozdar $(VERSION) APK" \
 		--title "Gozdar v$(VERSION)" \
@@ -104,6 +117,12 @@ release-android: build ## Build APK and create GitHub release (Android only)
 		--latest
 	@echo "Release v$(VERSION) created!"
 	@echo "URL: https://github.com/dz0ny/gozdar/releases/tag/v$(VERSION)"
+
+release-play-internal: build-play ## Build Play AAB and upload to internal testing
+	cd android && bundle exec fastlane android internal
+
+release-play-production: build-play-no-bump ## Build Play AAB and upload to production
+	cd android && bundle exec fastlane android production
 
 release-ios: ## Build iOS and upload to TestFlight
 	@echo "Building iOS and uploading to TestFlight..."
@@ -120,5 +139,5 @@ run: ## Run app in development mode
 
 # Build for all platforms
 build-all: bump ## Build for Android and iOS
-	flutter build apk --release
+	flutter build apk --release --flavor direct
 	flutter build ios --release --no-codesign
