@@ -1,0 +1,13 @@
+Gozdar je terenska aplikacija za lastnike gozdov, izvajalce del in gozdarske strokovnjake v Sloveniji.
+
+Delo lahko načrtujete in vodite neposredno na telefonu:
+
+- pregledujete gozdne parcele na interaktivnem zemljevidu
+- za orientacijo na terenu uporabljate katastrske in ortofoto sloje
+- beležite hlode z merami, prostornino, drevesno vrsto in opombami
+- shranjujete pomembne lokacije za poznejšo navigacijo
+- hranite podatke o parcelah in hlodovini na enem mestu
+
+Aplikacija je zasnovana za praktično uporabo na terenu, z hitrim dostopom do zemljevida, podatkov o parcelah in evidence hlodovine med delom.
+
+Ne glede na to, ali pregledujete parcele, načrtujete posek ali vodite natančno evidenco lesa na lokaciji, vam Gozdar pomaga ostati organiziran v gozdu in na poti.

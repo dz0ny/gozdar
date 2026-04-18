@@ -1,5 +1,13 @@
-Gozdar helps forestry work in the field with parcel mapping, log tracking, cadastral overlays, and navigation tools built for Slovenia.
+Gozdar is a field app for forest owners, contractors, and forestry professionals working in Slovenia.
 
-Use it to inspect parcels, record logs, save locations, and work with forest data directly on your device.
+Plan and manage work directly on your phone:
 
-Before production launch, replace this draft with store-reviewed marketing copy and published support/privacy URLs.
+- view forest parcels on an interactive map
+- use cadastral and aerial layers for orientation in the field
+- record logs with dimensions, volume, species, and notes
+- save important locations for later navigation
+- keep parcel and logging data together in one place
+
+The app is designed for practical outdoor use, with fast access to map tools, parcel data, and log tracking while you work.
+
+Whether you are checking parcels, planning cuts, or keeping a clear record of timber on site, Gozdar helps you stay organized in the forest and on the move.

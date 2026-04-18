@@ -1,0 +1,3 @@
+- Gradnja za interno testiranje
+- Varna Android izdaja za Google Play
+- OTA posodabljanje je v distribuciji Play onemogočeno
