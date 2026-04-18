@@ -50,7 +50,7 @@ Current code does not indicate ad SDKs or Play billing SDKs.
 - Run all phone screenshots: `./scripts/capture_android_phone_screenshots.sh`
 - Run one screen only: `./scripts/capture_android_phone_screenshots.sh 01-map`
 
-The script builds the normal Android app once, clears app data, marks onboarding as completed, and uses Maestro to navigate the real UI routes before saving screenshots into:
+The script builds the normal Android app once per screenshot target, sets `GOZDAR_INITIAL_ROUTE` to a real route (`/map`, `/forest`, `/logs`, `/about`), clears app data, marks onboarding as completed, and uses Maestro to capture the live UI before saving screenshots into:
 
 - `android/fastlane/metadata/android/en-US/images/phoneScreenshots`
 - `android/fastlane/metadata/android/sl/images/phoneScreenshots`

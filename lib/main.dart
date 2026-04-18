@@ -36,6 +36,9 @@ class GozdarApp extends StatefulWidget {
 }
 
 class _GozdarAppState extends State<GozdarApp> {
+  static const _initialRouteDefine = String.fromEnvironment(
+    'GOZDAR_INITIAL_ROUTE',
+  );
   late final NavigationNotifier _navigationNotifier;
   late final GoRouter _router;
 
@@ -43,8 +46,10 @@ class _GozdarAppState extends State<GozdarApp> {
   void initState() {
     super.initState();
     _navigationNotifier = NavigationNotifier();
+    final initialRoute = _initialRouteDefine.isEmpty ? null : _initialRouteDefine;
     _router = createRouter(
       showOnboarding: !OnboardingService.instance.isOnboardingCompleted,
+      initialLocation: initialRoute,
     );
 
     // Check for updates on startup (Android only)

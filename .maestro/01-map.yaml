@@ -1,7 +1,5 @@
 appId: dev.dz0ny.gozdar
 ---
 - launchApp
-- tapOn:
-    point: 15%,94%
-- waitForAnimationToEnd
+- assertVisible: Izberi sloj
 - takeScreenshot: 01-map

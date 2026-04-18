@@ -44,10 +44,15 @@ class LogEntryFormParams {
 }
 
 /// Create the GoRouter configuration
-GoRouter createRouter({required bool showOnboarding}) {
+GoRouter createRouter({
+  required bool showOnboarding,
+  String? initialLocation,
+}) {
   return GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: showOnboarding ? AppRoutes.onboarding : AppRoutes.forest,
+    initialLocation:
+        initialLocation ??
+        (showOnboarding ? AppRoutes.onboarding : AppRoutes.forest),
     debugLogDiagnostics: false,
     routes: [
       // Onboarding (outside shell, shown before main app)

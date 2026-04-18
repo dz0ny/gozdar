@@ -49,17 +49,6 @@ if [[ "$boot_completed" != "1" ]]; then
   exit 1
 fi
 
-echo "Building app..."
-(
-  cd "$ROOT_DIR"
-  flutter build apk --debug --flavor direct \
-    --dart-define=GOZDAR_PLAY_DISTRIBUTION=true
-)
-
-echo "Installing APK..."
-adb -s "$DEVICE_ID" install -r "$ROOT_DIR/build/app/outputs/flutter-apk/app-direct-debug.apk" >/dev/null
-adb -s "$DEVICE_ID" shell pm clear "$APP_ID" >/dev/null
-adb -s "$DEVICE_ID" shell "run-as $APP_ID sh -c 'mkdir -p shared_prefs && printf \"%s\n\" \"<?xml version=\\\"1.0\\\" encoding=\\\"utf-8\\\" standalone=\\\"yes\\\" ?>\" \"<map>\" \"    <int name=\\\"flutter.onboarding_version\\\" value=\\\"3\\\" />\" \"</map>\" > shared_prefs/FlutterSharedPreferences.xml'"
 adb -s "$DEVICE_ID" shell settings put system accelerometer_rotation 0 >/dev/null
 adb -s "$DEVICE_ID" shell settings put system user_rotation 0 >/dev/null
 adb -s "$DEVICE_ID" shell input keyevent KEYCODE_WAKEUP >/dev/null || true
@@ -71,6 +60,35 @@ export MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true
 for flow in "${flows[@]}"; do
   file="$flow"
   flow_file="$ROOT_DIR/.maestro/$flow.yaml"
+  initial_route=""
+  case "$flow" in
+    01-map)
+      initial_route="/map"
+      ;;
+    02-parcel)
+      initial_route="/forest"
+      ;;
+    03-logs)
+      initial_route="/logs"
+      ;;
+    04-navigation)
+      initial_route="/about"
+      ;;
+  esac
+
+  echo "Building app for $initial_route..."
+  (
+    cd "$ROOT_DIR"
+    flutter build apk --debug --flavor direct \
+      --dart-define=GOZDAR_PLAY_DISTRIBUTION=true \
+      --dart-define=GOZDAR_INITIAL_ROUTE="$initial_route"
+  )
+
+  echo "Installing APK..."
+  adb -s "$DEVICE_ID" install -r "$ROOT_DIR/build/app/outputs/flutter-apk/app-direct-debug.apk" >/dev/null
+  adb -s "$DEVICE_ID" shell pm clear "$APP_ID" >/dev/null
+  adb -s "$DEVICE_ID" shell "run-as $APP_ID sh -c 'mkdir -p shared_prefs && printf \"%s\n\" \"<?xml version=\\\"1.0\\\" encoding=\\\"utf-8\\\" standalone=\\\"yes\\\" ?>\" \"<map>\" \"    <int name=\\\"flutter.onboarding_version\\\" value=\\\"3\\\" />\" \"</map>\" > shared_prefs/FlutterSharedPreferences.xml'"
+
   rm -f "$EN_OUTPUT_DIR/$file.png" "$SL_OUTPUT_DIR/$file.png"
   rm -rf "$RUN_OUTPUT_BASE/$file"
 

@@ -1,7 +1,5 @@
 appId: dev.dz0ny.gozdar
 ---
 - launchApp
-- tapOn:
-    point: 86%,94%
 - assertVisible: Ni še hlodov
 - takeScreenshot: 03-logs
