@@ -88,11 +88,24 @@ for flow in "${flows[@]}"; do
   adb -s "$DEVICE_ID" install -r "$ROOT_DIR/build/app/outputs/flutter-apk/app-direct-debug.apk" >/dev/null
   adb -s "$DEVICE_ID" shell pm clear "$APP_ID" >/dev/null
   adb -s "$DEVICE_ID" shell "run-as $APP_ID sh -c 'mkdir -p shared_prefs && printf \"%s\n\" \"<?xml version=\\\"1.0\\\" encoding=\\\"utf-8\\\" standalone=\\\"yes\\\" ?>\" \"<map>\" \"    <int name=\\\"flutter.onboarding_version\\\" value=\\\"3\\\" />\" \"</map>\" > shared_prefs/FlutterSharedPreferences.xml'"
+  adb -s "$DEVICE_ID" shell pm grant "$APP_ID" android.permission.ACCESS_FINE_LOCATION >/dev/null
+  adb -s "$DEVICE_ID" shell pm grant "$APP_ID" android.permission.ACCESS_COARSE_LOCATION >/dev/null
 
   rm -f "$EN_OUTPUT_DIR/$file.png" "$SL_OUTPUT_DIR/$file.png"
   rm -rf "$RUN_OUTPUT_BASE/$file"
 
   echo "Capturing $file.png..."
+  if [[ "$flow" == "01-map" ]]; then
+    generated_png="$RUN_OUTPUT_BASE/$file.png"
+    adb -s "$DEVICE_ID" shell am force-stop "$APP_ID" >/dev/null
+    adb -s "$DEVICE_ID" shell am start -n "$APP_ID/.MainActivity" >/dev/null
+    sleep 12
+    adb -s "$DEVICE_ID" exec-out screencap -p > "$generated_png"
+    cp "$generated_png" "$EN_OUTPUT_DIR/$file.png"
+    cp "$generated_png" "$SL_OUTPUT_DIR/$file.png"
+    continue
+  fi
+
   "$MAESTRO_BIN" test \
     --device "$DEVICE_ID" \
     --test-output-dir "$RUN_OUTPUT_BASE/$file" \
