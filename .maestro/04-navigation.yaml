@@ -1,0 +1,11 @@
+appId: dev.dz0ny.gozdar
+---
+- launchApp
+- tapOn:
+    point: 50%,94%
+- tapOn:
+    point: 50%,94%
+- tapOn:
+    point: 50%,94%
+- assertVisible: O aplikaciji
+- takeScreenshot: 04-navigation

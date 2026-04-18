@@ -1,0 +1,5 @@
+appId: dev.dz0ny.gozdar
+---
+- launchApp
+- assertVisible: Ni še parcel
+- takeScreenshot: 02-parcel

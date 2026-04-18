@@ -1,0 +1,7 @@
+appId: dev.dz0ny.gozdar
+---
+- launchApp
+- tapOn:
+    point: 15%,94%
+- waitForAnimationToEnd
+- takeScreenshot: 01-map

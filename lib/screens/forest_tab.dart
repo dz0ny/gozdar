@@ -507,6 +507,7 @@ class ForestTabState extends State<ForestTab> {
             onPressed: _showOwnerFilterDialog,
           ),
           PopupMenuButton<String>(
+            tooltip: 'Več možnosti gozda',
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
               if (value == 'import') {
@@ -641,13 +642,16 @@ class ForestTabState extends State<ForestTab> {
                                         textAlign: TextAlign.center,
                                       ),
                                       const SizedBox(height: 24),
-                                      FilledButton.icon(
-                                        onPressed: () {
-                                          context.read<NavigationNotifier>().navigateToMapWithSearch();
-                                          context.go(AppRoutes.map);
-                                        },
-                                        icon: const Icon(Icons.search),
-                                        label: const Text('Išči parcelo'),
+                                      Tooltip(
+                                        message: 'Išči parcelo',
+                                        child: FilledButton.icon(
+                                          onPressed: () {
+                                            context.read<NavigationNotifier>().navigateToMapWithSearch();
+                                            context.go(AppRoutes.map);
+                                          },
+                                          icon: const Icon(Icons.search),
+                                          label: const Text('Išči parcelo'),
+                                        ),
                                       ),
                                       const SizedBox(height: 12),
                                       OutlinedButton.icon(

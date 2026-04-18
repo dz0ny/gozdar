@@ -24,6 +24,35 @@ class _MainScaffoldState extends State<MainScaffold> {
   int _tabTapCount = 0;
   NavigationNotifier? _navNotifier;
 
+  NavigationDestination _buildNavigationDestination({
+    required String semanticLabel,
+    required String label,
+    required IconData icon,
+    required IconData selectedIcon,
+    required bool selected,
+  }) {
+    return NavigationDestination(
+      icon: Semantics(
+        button: true,
+        selected: selected,
+        label: semanticLabel,
+        child: ExcludeSemantics(
+          child: Icon(icon),
+        ),
+      ),
+      selectedIcon: Semantics(
+        button: true,
+        selected: selected,
+        label: semanticLabel,
+        child: ExcludeSemantics(
+          child: Icon(selectedIcon),
+        ),
+      ),
+      label: label,
+      tooltip: semanticLabel,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -155,21 +184,27 @@ class _MainScaffoldState extends State<MainScaffold> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: widget.navigationShell.currentIndex,
         onDestinationSelected: _handleTabTap,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map),
+        destinations: [
+          _buildNavigationDestination(
+            semanticLabel: 'Tab Karta',
             label: 'Karta',
+            icon: Icons.map_outlined,
+            selectedIcon: Icons.map,
+            selected: widget.navigationShell.currentIndex == 0,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.park_outlined),
-            selectedIcon: Icon(Icons.park),
+          _buildNavigationDestination(
+            semanticLabel: 'Tab Gozd',
             label: 'Gozd',
+            icon: Icons.park_outlined,
+            selectedIcon: Icons.park,
+            selected: widget.navigationShell.currentIndex == 1,
           ),
-          NavigationDestination(
-            icon: Icon(Icons.forest_outlined),
-            selectedIcon: Icon(Icons.forest),
+          _buildNavigationDestination(
+            semanticLabel: 'Tab Hlodi',
             label: 'Hlodi',
+            icon: Icons.forest_outlined,
+            selectedIcon: Icons.forest,
+            selected: widget.navigationShell.currentIndex == 2,
           ),
         ],
       ),

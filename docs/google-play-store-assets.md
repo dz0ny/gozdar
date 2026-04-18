@@ -42,3 +42,22 @@ Current code does not indicate ad SDKs or Play billing SDKs.
 3. Log tracking and grouped species totals
 4. Navigation or compass workflow
 5. Offline map or export workflow
+
+## Maestro Capture Flow
+
+- Install Maestro CLI once: `curl -fsSL "https://get.maestro.mobile.dev" | bash`
+- Start an Android emulator and wait until it finishes booting
+- Run all phone screenshots: `./scripts/capture_android_phone_screenshots.sh`
+- Run one screen only: `./scripts/capture_android_phone_screenshots.sh 01-map`
+
+The script builds the normal Android app once, clears app data, marks onboarding as completed, and uses Maestro to navigate the real UI routes before saving screenshots into:
+
+- `android/fastlane/metadata/android/en-US/images/phoneScreenshots`
+- `android/fastlane/metadata/android/sl/images/phoneScreenshots`
+
+Current flows capture:
+
+- `01-map`: map tab
+- `02-parcel`: forest tab empty state
+- `03-logs`: logs tab empty state
+- `04-navigation`: about screen opened from the real app shell

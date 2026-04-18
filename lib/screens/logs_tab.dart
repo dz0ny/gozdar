@@ -291,6 +291,7 @@ class LogsTab extends StatelessWidget {
             onPressed: () => _showSavedBatches(context),
           ),
           PopupMenuButton<String>(
+            tooltip: 'Več možnosti hlodov',
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
               if (value == 'export') {
@@ -401,6 +402,7 @@ class LogsTab extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'logs_add',
+        tooltip: 'Dodaj hlod',
         onPressed: () => _addLogEntry(context),
         child: const Icon(Icons.add),
       ),
