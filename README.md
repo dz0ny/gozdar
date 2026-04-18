@@ -52,4 +52,5 @@ flutter run
 - Direct APK and GitHub release flow: `make release-android`
 - Google Play internal testing flow: `make release-play-internal`
 - Google Play production flow: `make release-play-production`
+- GitHub release automation: publishing a GitHub release triggers `.github/workflows/android-release.yml` to build and attach the Android APK and Play AAB
 - Full Play release runbook: [docs/google-play-release.md](/Users/dz0ny/gozdar/docs/google-play-release.md)

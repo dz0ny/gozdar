@@ -20,6 +20,10 @@ platform :android do
     File.expand_path("../..", __dir__)
   end
 
+  def play_service_account_json
+    ENV.fetch("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")
+  end
+
   def play_build_command
     "cd #{project_root} && flutter build appbundle --release --flavor play --dart-define=GOZDAR_PLAY_DISTRIBUTION=true"
   end
@@ -30,6 +34,10 @@ platform :android do
 
   def direct_apk_build_command
     "cd #{project_root} && flutter build apk --release --flavor direct"
+  end
+
+  def skip_android_build?
+    ENV["SKIP_ANDROID_BUILD"] == "1"
   end
 
   desc "Runs all the tests"
@@ -48,21 +56,23 @@ platform :android do
 
   desc "Build Play release AAB and upload to internal testing"
   lane :internal do
-    sh(play_build_command)
+    sh(play_build_command) unless skip_android_build?
 
     upload_to_play_store(
       aab: play_aab_path,
-      track: "internal"
+      track: "internal",
+      json_key_data: play_service_account_json
     )
   end
 
   desc "Build Play release AAB and upload to production"
   lane :production do
-    sh(play_build_command)
+    sh(play_build_command) unless skip_android_build?
 
     upload_to_play_store(
       aab: play_aab_path,
-      track: "production"
+      track: "production",
+      json_key_data: play_service_account_json
     )
   end
 end
