@@ -32,6 +32,16 @@ class PeerCatalog {
   const PeerCatalog({required this.peer, required this.styles});
 }
 
+class PeerTileResponse {
+  final Uint8List bytes;
+  final String? contentType;
+
+  const PeerTileResponse({
+    required this.bytes,
+    required this.contentType,
+  });
+}
+
 sealed class PeerSyncEvent {}
 
 class PeerSyncStarted extends PeerSyncEvent {
@@ -199,7 +209,7 @@ class TileSharingService {
     }
   }
 
-  Future<Uint8List?> fetchTileFromPeer(
+  Future<PeerTileResponse?> fetchTileFromPeer(
     TilePeer peer,
     String styleHash,
     int z,
@@ -207,9 +217,14 @@ class TileSharingService {
     int y,
   ) async {
     try {
-      final uri = Uri.parse('${peer.baseUrl}/tiles/$styleHash/$z/$x/$y.avif');
+      final uri = Uri.parse('${peer.baseUrl}/tiles/$styleHash/$z/$x/$y');
       final response = await _httpClient.get(uri).timeout(const Duration(seconds: 5));
-      if (response.statusCode == 200) return response.bodyBytes;
+      if (response.statusCode == 200) {
+        return PeerTileResponse(
+          bytes: response.bodyBytes,
+          contentType: response.headers['content-type'],
+        );
+      }
     } catch (_) {}
     return null;
   }
@@ -300,23 +315,36 @@ class TileSharingService {
             return;
           }
 
-          Uint8List? bytes = await fetchTileFromPeer(peer, styleHash, tile.z, tile.x, tile.y);
-          if (bytes == null) {
+          PeerTileResponse? tileResponse = await fetchTileFromPeer(
+            peer,
+            styleHash,
+            tile.z,
+            tile.x,
+            tile.y,
+          );
+          if (tileResponse == null) {
             for (final fallback in peers) {
               if (fallback == peer) continue;
-              bytes = await fetchTileFromPeer(
+              tileResponse = await fetchTileFromPeer(
                 fallback,
                 styleHash,
                 tile.z,
                 tile.x,
                 tile.y,
               );
-              if (bytes != null) break;
+              if (tileResponse != null) break;
             }
           }
 
-          if (bytes != null) {
-            await _cache.putRawTile(styleHash, tile.z, tile.x, tile.y, bytes);
+          if (tileResponse != null) {
+            await _cache.putRawTile(
+              styleHash,
+              tile.z,
+              tile.x,
+              tile.y,
+              tileResponse.bytes,
+              contentType: tileResponse.contentType,
+            );
             downloaded++;
             controller.add(PeerSyncTileDownloaded(downloaded: downloaded, total: total));
           } else {
@@ -394,7 +422,7 @@ class TileSharingService {
       return;
     }
 
-    final tilePattern = RegExp(r'^/tiles/([a-f0-9]+)/(\d+)/(\d+)/(\d+)\.avif$');
+    final tilePattern = RegExp(r'^/tiles/([a-f0-9]+)/(\d+)/(\d+)/(\d+)$');
     final tileMatch = tilePattern.firstMatch(path);
     if (tileMatch != null) {
       final styleHash = tileMatch.group(1)!;
@@ -402,12 +430,14 @@ class TileSharingService {
       final x = int.parse(tileMatch.group(3)!);
       final y = int.parse(tileMatch.group(4)!);
 
-      final bytes = await _cache.getRawTile(styleHash, z, x, y);
-      if (bytes != null) {
+      final tile = await _cache.getTileData(styleHash, z, x, y);
+      if (tile != null) {
         request.response
           ..statusCode = HttpStatus.ok
-          ..headers.contentType = ContentType('image', 'avif')
-          ..add(bytes);
+          ..headers.contentType = tile.contentType == null
+              ? ContentType.binary
+              : ContentType.parse(tile.contentType!)
+          ..add(tile.bytes);
         await request.response.close();
         return;
       }

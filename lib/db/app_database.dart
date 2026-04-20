@@ -84,16 +84,76 @@ class HttpCache extends Table {
   DateTimeColumn get cachedAt => dateTime()();
 }
 
+@DataClassName('DbOfflineTileStyle')
+class OfflineTileStyles extends Table {
+  TextColumn get styleHash => text()();
+  TextColumn get displayName => text()();
+  TextColumn get urlTemplate => text()();
+  TextColumn get regionJson => text().nullable()();
+  IntColumn get tileCount => integer().withDefault(const Constant(0))();
+  IntColumn get sizeBytes => integer().withDefault(const Constant(0))();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {styleHash};
+}
+
+@DataClassName('DbOfflineTileEntry')
+class OfflineTileEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get styleHash => text().references(OfflineTileStyles, #styleHash)();
+  IntColumn get z => integer()();
+  IntColumn get x => integer()();
+  IntColumn get y => integer()();
+  TextColumn get relativePath => text().nullable()();
+  TextColumn get contentType => text().nullable()();
+  IntColumn get sizeBytes => integer()();
+  DateTimeColumn get cachedAt => dateTime()();
+
+  @override
+  List<Set<Column<Object>>> get uniqueKeys => [
+    {styleHash, z, x, y},
+  ];
+}
+
 // ---------------------------------------------------------------------------
 // Database
 // ---------------------------------------------------------------------------
 
-@DriftDatabase(tables: [Parcels, LogBatches, LogEntries, MapLocations, ImportedOverlays, HttpCache])
+@DriftDatabase(
+  tables: [
+    Parcels,
+    LogBatches,
+    LogEntries,
+    MapLocations,
+    ImportedOverlays,
+    HttpCache,
+    OfflineTileStyles,
+    OfflineTileEntries,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) async {
+      await m.createAll();
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(offlineTileStyles);
+        await m.createTable(offlineTileEntries);
+      }
+      if (from >= 2 && from < 3) {
+        await m.addColumn(offlineTileEntries, offlineTileEntries.relativePath);
+        await m.addColumn(offlineTileEntries, offlineTileEntries.contentType);
+      }
+    },
+  );
 
   static QueryExecutor _openConnection() {
     return driftDatabase(

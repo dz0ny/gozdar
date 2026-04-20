@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import '../db/app_database.dart';
 import '../models/log_batch.dart';
@@ -156,6 +157,17 @@ class DatabaseService {
   Future<void> initialize() async {
     if (_db != null) return;
     _db = AppDatabase();
+  }
+
+  @visibleForTesting
+  void setDatabaseForTesting(AppDatabase database) {
+    _db = database;
+  }
+
+  @visibleForTesting
+  Future<void> resetForTesting() async {
+    await _db?.close();
+    _db = null;
   }
 
   // ==================== LOG OPERATIONS ====================

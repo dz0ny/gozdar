@@ -250,6 +250,8 @@ class TileDownloadService {
           tile.x,
           tile.y,
           response.bodyBytes,
+          contentType: response.headers['content-type'],
+          sourceUrl: url,
         );
         return TileDownloaded(
           north: bounds.north,

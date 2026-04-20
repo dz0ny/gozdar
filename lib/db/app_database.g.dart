@@ -3247,6 +3247,1040 @@ class HttpCacheCompanion extends UpdateCompanion<DbHttpCacheEntry> {
   }
 }
 
+class $OfflineTileStylesTable extends OfflineTileStyles
+    with TableInfo<$OfflineTileStylesTable, DbOfflineTileStyle> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OfflineTileStylesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _styleHashMeta = const VerificationMeta(
+    'styleHash',
+  );
+  @override
+  late final GeneratedColumn<String> styleHash = GeneratedColumn<String>(
+    'style_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _displayNameMeta = const VerificationMeta(
+    'displayName',
+  );
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+    'display_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _urlTemplateMeta = const VerificationMeta(
+    'urlTemplate',
+  );
+  @override
+  late final GeneratedColumn<String> urlTemplate = GeneratedColumn<String>(
+    'url_template',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _regionJsonMeta = const VerificationMeta(
+    'regionJson',
+  );
+  @override
+  late final GeneratedColumn<String> regionJson = GeneratedColumn<String>(
+    'region_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tileCountMeta = const VerificationMeta(
+    'tileCount',
+  );
+  @override
+  late final GeneratedColumn<int> tileCount = GeneratedColumn<int>(
+    'tile_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
+  @override
+  late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
+    'size_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    styleHash,
+    displayName,
+    urlTemplate,
+    regionJson,
+    tileCount,
+    sizeBytes,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'offline_tile_styles';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DbOfflineTileStyle> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('style_hash')) {
+      context.handle(
+        _styleHashMeta,
+        styleHash.isAcceptableOrUnknown(data['style_hash']!, _styleHashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_styleHashMeta);
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+        _displayNameMeta,
+        displayName.isAcceptableOrUnknown(
+          data['display_name']!,
+          _displayNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_displayNameMeta);
+    }
+    if (data.containsKey('url_template')) {
+      context.handle(
+        _urlTemplateMeta,
+        urlTemplate.isAcceptableOrUnknown(
+          data['url_template']!,
+          _urlTemplateMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_urlTemplateMeta);
+    }
+    if (data.containsKey('region_json')) {
+      context.handle(
+        _regionJsonMeta,
+        regionJson.isAcceptableOrUnknown(data['region_json']!, _regionJsonMeta),
+      );
+    }
+    if (data.containsKey('tile_count')) {
+      context.handle(
+        _tileCountMeta,
+        tileCount.isAcceptableOrUnknown(data['tile_count']!, _tileCountMeta),
+      );
+    }
+    if (data.containsKey('size_bytes')) {
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {styleHash};
+  @override
+  DbOfflineTileStyle map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DbOfflineTileStyle(
+      styleHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}style_hash'],
+      )!,
+      displayName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}display_name'],
+      )!,
+      urlTemplate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}url_template'],
+      )!,
+      regionJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}region_json'],
+      ),
+      tileCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}tile_count'],
+      )!,
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}size_bytes'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $OfflineTileStylesTable createAlias(String alias) {
+    return $OfflineTileStylesTable(attachedDatabase, alias);
+  }
+}
+
+class DbOfflineTileStyle extends DataClass
+    implements Insertable<DbOfflineTileStyle> {
+  final String styleHash;
+  final String displayName;
+  final String urlTemplate;
+  final String? regionJson;
+  final int tileCount;
+  final int sizeBytes;
+  final DateTime updatedAt;
+  const DbOfflineTileStyle({
+    required this.styleHash,
+    required this.displayName,
+    required this.urlTemplate,
+    this.regionJson,
+    required this.tileCount,
+    required this.sizeBytes,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['style_hash'] = Variable<String>(styleHash);
+    map['display_name'] = Variable<String>(displayName);
+    map['url_template'] = Variable<String>(urlTemplate);
+    if (!nullToAbsent || regionJson != null) {
+      map['region_json'] = Variable<String>(regionJson);
+    }
+    map['tile_count'] = Variable<int>(tileCount);
+    map['size_bytes'] = Variable<int>(sizeBytes);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  OfflineTileStylesCompanion toCompanion(bool nullToAbsent) {
+    return OfflineTileStylesCompanion(
+      styleHash: Value(styleHash),
+      displayName: Value(displayName),
+      urlTemplate: Value(urlTemplate),
+      regionJson: regionJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(regionJson),
+      tileCount: Value(tileCount),
+      sizeBytes: Value(sizeBytes),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory DbOfflineTileStyle.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DbOfflineTileStyle(
+      styleHash: serializer.fromJson<String>(json['styleHash']),
+      displayName: serializer.fromJson<String>(json['displayName']),
+      urlTemplate: serializer.fromJson<String>(json['urlTemplate']),
+      regionJson: serializer.fromJson<String?>(json['regionJson']),
+      tileCount: serializer.fromJson<int>(json['tileCount']),
+      sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'styleHash': serializer.toJson<String>(styleHash),
+      'displayName': serializer.toJson<String>(displayName),
+      'urlTemplate': serializer.toJson<String>(urlTemplate),
+      'regionJson': serializer.toJson<String?>(regionJson),
+      'tileCount': serializer.toJson<int>(tileCount),
+      'sizeBytes': serializer.toJson<int>(sizeBytes),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  DbOfflineTileStyle copyWith({
+    String? styleHash,
+    String? displayName,
+    String? urlTemplate,
+    Value<String?> regionJson = const Value.absent(),
+    int? tileCount,
+    int? sizeBytes,
+    DateTime? updatedAt,
+  }) => DbOfflineTileStyle(
+    styleHash: styleHash ?? this.styleHash,
+    displayName: displayName ?? this.displayName,
+    urlTemplate: urlTemplate ?? this.urlTemplate,
+    regionJson: regionJson.present ? regionJson.value : this.regionJson,
+    tileCount: tileCount ?? this.tileCount,
+    sizeBytes: sizeBytes ?? this.sizeBytes,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  DbOfflineTileStyle copyWithCompanion(OfflineTileStylesCompanion data) {
+    return DbOfflineTileStyle(
+      styleHash: data.styleHash.present ? data.styleHash.value : this.styleHash,
+      displayName: data.displayName.present
+          ? data.displayName.value
+          : this.displayName,
+      urlTemplate: data.urlTemplate.present
+          ? data.urlTemplate.value
+          : this.urlTemplate,
+      regionJson: data.regionJson.present
+          ? data.regionJson.value
+          : this.regionJson,
+      tileCount: data.tileCount.present ? data.tileCount.value : this.tileCount,
+      sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DbOfflineTileStyle(')
+          ..write('styleHash: $styleHash, ')
+          ..write('displayName: $displayName, ')
+          ..write('urlTemplate: $urlTemplate, ')
+          ..write('regionJson: $regionJson, ')
+          ..write('tileCount: $tileCount, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    styleHash,
+    displayName,
+    urlTemplate,
+    regionJson,
+    tileCount,
+    sizeBytes,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DbOfflineTileStyle &&
+          other.styleHash == this.styleHash &&
+          other.displayName == this.displayName &&
+          other.urlTemplate == this.urlTemplate &&
+          other.regionJson == this.regionJson &&
+          other.tileCount == this.tileCount &&
+          other.sizeBytes == this.sizeBytes &&
+          other.updatedAt == this.updatedAt);
+}
+
+class OfflineTileStylesCompanion extends UpdateCompanion<DbOfflineTileStyle> {
+  final Value<String> styleHash;
+  final Value<String> displayName;
+  final Value<String> urlTemplate;
+  final Value<String?> regionJson;
+  final Value<int> tileCount;
+  final Value<int> sizeBytes;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const OfflineTileStylesCompanion({
+    this.styleHash = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.urlTemplate = const Value.absent(),
+    this.regionJson = const Value.absent(),
+    this.tileCount = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  OfflineTileStylesCompanion.insert({
+    required String styleHash,
+    required String displayName,
+    required String urlTemplate,
+    this.regionJson = const Value.absent(),
+    this.tileCount = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : styleHash = Value(styleHash),
+       displayName = Value(displayName),
+       urlTemplate = Value(urlTemplate),
+       updatedAt = Value(updatedAt);
+  static Insertable<DbOfflineTileStyle> custom({
+    Expression<String>? styleHash,
+    Expression<String>? displayName,
+    Expression<String>? urlTemplate,
+    Expression<String>? regionJson,
+    Expression<int>? tileCount,
+    Expression<int>? sizeBytes,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (styleHash != null) 'style_hash': styleHash,
+      if (displayName != null) 'display_name': displayName,
+      if (urlTemplate != null) 'url_template': urlTemplate,
+      if (regionJson != null) 'region_json': regionJson,
+      if (tileCount != null) 'tile_count': tileCount,
+      if (sizeBytes != null) 'size_bytes': sizeBytes,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  OfflineTileStylesCompanion copyWith({
+    Value<String>? styleHash,
+    Value<String>? displayName,
+    Value<String>? urlTemplate,
+    Value<String?>? regionJson,
+    Value<int>? tileCount,
+    Value<int>? sizeBytes,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return OfflineTileStylesCompanion(
+      styleHash: styleHash ?? this.styleHash,
+      displayName: displayName ?? this.displayName,
+      urlTemplate: urlTemplate ?? this.urlTemplate,
+      regionJson: regionJson ?? this.regionJson,
+      tileCount: tileCount ?? this.tileCount,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (styleHash.present) {
+      map['style_hash'] = Variable<String>(styleHash.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (urlTemplate.present) {
+      map['url_template'] = Variable<String>(urlTemplate.value);
+    }
+    if (regionJson.present) {
+      map['region_json'] = Variable<String>(regionJson.value);
+    }
+    if (tileCount.present) {
+      map['tile_count'] = Variable<int>(tileCount.value);
+    }
+    if (sizeBytes.present) {
+      map['size_bytes'] = Variable<int>(sizeBytes.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OfflineTileStylesCompanion(')
+          ..write('styleHash: $styleHash, ')
+          ..write('displayName: $displayName, ')
+          ..write('urlTemplate: $urlTemplate, ')
+          ..write('regionJson: $regionJson, ')
+          ..write('tileCount: $tileCount, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $OfflineTileEntriesTable extends OfflineTileEntries
+    with TableInfo<$OfflineTileEntriesTable, DbOfflineTileEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OfflineTileEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _styleHashMeta = const VerificationMeta(
+    'styleHash',
+  );
+  @override
+  late final GeneratedColumn<String> styleHash = GeneratedColumn<String>(
+    'style_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES offline_tile_styles (style_hash)',
+    ),
+  );
+  static const VerificationMeta _zMeta = const VerificationMeta('z');
+  @override
+  late final GeneratedColumn<int> z = GeneratedColumn<int>(
+    'z',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _xMeta = const VerificationMeta('x');
+  @override
+  late final GeneratedColumn<int> x = GeneratedColumn<int>(
+    'x',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _yMeta = const VerificationMeta('y');
+  @override
+  late final GeneratedColumn<int> y = GeneratedColumn<int>(
+    'y',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _relativePathMeta = const VerificationMeta(
+    'relativePath',
+  );
+  @override
+  late final GeneratedColumn<String> relativePath = GeneratedColumn<String>(
+    'relative_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _contentTypeMeta = const VerificationMeta(
+    'contentType',
+  );
+  @override
+  late final GeneratedColumn<String> contentType = GeneratedColumn<String>(
+    'content_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
+  @override
+  late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
+    'size_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    styleHash,
+    z,
+    x,
+    y,
+    relativePath,
+    contentType,
+    sizeBytes,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'offline_tile_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DbOfflineTileEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('style_hash')) {
+      context.handle(
+        _styleHashMeta,
+        styleHash.isAcceptableOrUnknown(data['style_hash']!, _styleHashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_styleHashMeta);
+    }
+    if (data.containsKey('z')) {
+      context.handle(_zMeta, z.isAcceptableOrUnknown(data['z']!, _zMeta));
+    } else if (isInserting) {
+      context.missing(_zMeta);
+    }
+    if (data.containsKey('x')) {
+      context.handle(_xMeta, x.isAcceptableOrUnknown(data['x']!, _xMeta));
+    } else if (isInserting) {
+      context.missing(_xMeta);
+    }
+    if (data.containsKey('y')) {
+      context.handle(_yMeta, y.isAcceptableOrUnknown(data['y']!, _yMeta));
+    } else if (isInserting) {
+      context.missing(_yMeta);
+    }
+    if (data.containsKey('relative_path')) {
+      context.handle(
+        _relativePathMeta,
+        relativePath.isAcceptableOrUnknown(
+          data['relative_path']!,
+          _relativePathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('content_type')) {
+      context.handle(
+        _contentTypeMeta,
+        contentType.isAcceptableOrUnknown(
+          data['content_type']!,
+          _contentTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('size_bytes')) {
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sizeBytesMeta);
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {styleHash, z, x, y},
+  ];
+  @override
+  DbOfflineTileEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DbOfflineTileEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      styleHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}style_hash'],
+      )!,
+      z: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}z'],
+      )!,
+      x: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}x'],
+      )!,
+      y: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}y'],
+      )!,
+      relativePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}relative_path'],
+      ),
+      contentType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_type'],
+      ),
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}size_bytes'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $OfflineTileEntriesTable createAlias(String alias) {
+    return $OfflineTileEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class DbOfflineTileEntry extends DataClass
+    implements Insertable<DbOfflineTileEntry> {
+  final int id;
+  final String styleHash;
+  final int z;
+  final int x;
+  final int y;
+  final String? relativePath;
+  final String? contentType;
+  final int sizeBytes;
+  final DateTime cachedAt;
+  const DbOfflineTileEntry({
+    required this.id,
+    required this.styleHash,
+    required this.z,
+    required this.x,
+    required this.y,
+    this.relativePath,
+    this.contentType,
+    required this.sizeBytes,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['style_hash'] = Variable<String>(styleHash);
+    map['z'] = Variable<int>(z);
+    map['x'] = Variable<int>(x);
+    map['y'] = Variable<int>(y);
+    if (!nullToAbsent || relativePath != null) {
+      map['relative_path'] = Variable<String>(relativePath);
+    }
+    if (!nullToAbsent || contentType != null) {
+      map['content_type'] = Variable<String>(contentType);
+    }
+    map['size_bytes'] = Variable<int>(sizeBytes);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  OfflineTileEntriesCompanion toCompanion(bool nullToAbsent) {
+    return OfflineTileEntriesCompanion(
+      id: Value(id),
+      styleHash: Value(styleHash),
+      z: Value(z),
+      x: Value(x),
+      y: Value(y),
+      relativePath: relativePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(relativePath),
+      contentType: contentType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contentType),
+      sizeBytes: Value(sizeBytes),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory DbOfflineTileEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DbOfflineTileEntry(
+      id: serializer.fromJson<int>(json['id']),
+      styleHash: serializer.fromJson<String>(json['styleHash']),
+      z: serializer.fromJson<int>(json['z']),
+      x: serializer.fromJson<int>(json['x']),
+      y: serializer.fromJson<int>(json['y']),
+      relativePath: serializer.fromJson<String?>(json['relativePath']),
+      contentType: serializer.fromJson<String?>(json['contentType']),
+      sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'styleHash': serializer.toJson<String>(styleHash),
+      'z': serializer.toJson<int>(z),
+      'x': serializer.toJson<int>(x),
+      'y': serializer.toJson<int>(y),
+      'relativePath': serializer.toJson<String?>(relativePath),
+      'contentType': serializer.toJson<String?>(contentType),
+      'sizeBytes': serializer.toJson<int>(sizeBytes),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  DbOfflineTileEntry copyWith({
+    int? id,
+    String? styleHash,
+    int? z,
+    int? x,
+    int? y,
+    Value<String?> relativePath = const Value.absent(),
+    Value<String?> contentType = const Value.absent(),
+    int? sizeBytes,
+    DateTime? cachedAt,
+  }) => DbOfflineTileEntry(
+    id: id ?? this.id,
+    styleHash: styleHash ?? this.styleHash,
+    z: z ?? this.z,
+    x: x ?? this.x,
+    y: y ?? this.y,
+    relativePath: relativePath.present ? relativePath.value : this.relativePath,
+    contentType: contentType.present ? contentType.value : this.contentType,
+    sizeBytes: sizeBytes ?? this.sizeBytes,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  DbOfflineTileEntry copyWithCompanion(OfflineTileEntriesCompanion data) {
+    return DbOfflineTileEntry(
+      id: data.id.present ? data.id.value : this.id,
+      styleHash: data.styleHash.present ? data.styleHash.value : this.styleHash,
+      z: data.z.present ? data.z.value : this.z,
+      x: data.x.present ? data.x.value : this.x,
+      y: data.y.present ? data.y.value : this.y,
+      relativePath: data.relativePath.present
+          ? data.relativePath.value
+          : this.relativePath,
+      contentType: data.contentType.present
+          ? data.contentType.value
+          : this.contentType,
+      sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DbOfflineTileEntry(')
+          ..write('id: $id, ')
+          ..write('styleHash: $styleHash, ')
+          ..write('z: $z, ')
+          ..write('x: $x, ')
+          ..write('y: $y, ')
+          ..write('relativePath: $relativePath, ')
+          ..write('contentType: $contentType, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    styleHash,
+    z,
+    x,
+    y,
+    relativePath,
+    contentType,
+    sizeBytes,
+    cachedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DbOfflineTileEntry &&
+          other.id == this.id &&
+          other.styleHash == this.styleHash &&
+          other.z == this.z &&
+          other.x == this.x &&
+          other.y == this.y &&
+          other.relativePath == this.relativePath &&
+          other.contentType == this.contentType &&
+          other.sizeBytes == this.sizeBytes &&
+          other.cachedAt == this.cachedAt);
+}
+
+class OfflineTileEntriesCompanion extends UpdateCompanion<DbOfflineTileEntry> {
+  final Value<int> id;
+  final Value<String> styleHash;
+  final Value<int> z;
+  final Value<int> x;
+  final Value<int> y;
+  final Value<String?> relativePath;
+  final Value<String?> contentType;
+  final Value<int> sizeBytes;
+  final Value<DateTime> cachedAt;
+  const OfflineTileEntriesCompanion({
+    this.id = const Value.absent(),
+    this.styleHash = const Value.absent(),
+    this.z = const Value.absent(),
+    this.x = const Value.absent(),
+    this.y = const Value.absent(),
+    this.relativePath = const Value.absent(),
+    this.contentType = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+  });
+  OfflineTileEntriesCompanion.insert({
+    this.id = const Value.absent(),
+    required String styleHash,
+    required int z,
+    required int x,
+    required int y,
+    this.relativePath = const Value.absent(),
+    this.contentType = const Value.absent(),
+    required int sizeBytes,
+    required DateTime cachedAt,
+  }) : styleHash = Value(styleHash),
+       z = Value(z),
+       x = Value(x),
+       y = Value(y),
+       sizeBytes = Value(sizeBytes),
+       cachedAt = Value(cachedAt);
+  static Insertable<DbOfflineTileEntry> custom({
+    Expression<int>? id,
+    Expression<String>? styleHash,
+    Expression<int>? z,
+    Expression<int>? x,
+    Expression<int>? y,
+    Expression<String>? relativePath,
+    Expression<String>? contentType,
+    Expression<int>? sizeBytes,
+    Expression<DateTime>? cachedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (styleHash != null) 'style_hash': styleHash,
+      if (z != null) 'z': z,
+      if (x != null) 'x': x,
+      if (y != null) 'y': y,
+      if (relativePath != null) 'relative_path': relativePath,
+      if (contentType != null) 'content_type': contentType,
+      if (sizeBytes != null) 'size_bytes': sizeBytes,
+      if (cachedAt != null) 'cached_at': cachedAt,
+    });
+  }
+
+  OfflineTileEntriesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? styleHash,
+    Value<int>? z,
+    Value<int>? x,
+    Value<int>? y,
+    Value<String?>? relativePath,
+    Value<String?>? contentType,
+    Value<int>? sizeBytes,
+    Value<DateTime>? cachedAt,
+  }) {
+    return OfflineTileEntriesCompanion(
+      id: id ?? this.id,
+      styleHash: styleHash ?? this.styleHash,
+      z: z ?? this.z,
+      x: x ?? this.x,
+      y: y ?? this.y,
+      relativePath: relativePath ?? this.relativePath,
+      contentType: contentType ?? this.contentType,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      cachedAt: cachedAt ?? this.cachedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (styleHash.present) {
+      map['style_hash'] = Variable<String>(styleHash.value);
+    }
+    if (z.present) {
+      map['z'] = Variable<int>(z.value);
+    }
+    if (x.present) {
+      map['x'] = Variable<int>(x.value);
+    }
+    if (y.present) {
+      map['y'] = Variable<int>(y.value);
+    }
+    if (relativePath.present) {
+      map['relative_path'] = Variable<String>(relativePath.value);
+    }
+    if (contentType.present) {
+      map['content_type'] = Variable<String>(contentType.value);
+    }
+    if (sizeBytes.present) {
+      map['size_bytes'] = Variable<int>(sizeBytes.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OfflineTileEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('styleHash: $styleHash, ')
+          ..write('z: $z, ')
+          ..write('x: $x, ')
+          ..write('y: $y, ')
+          ..write('relativePath: $relativePath, ')
+          ..write('contentType: $contentType, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3258,6 +4292,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $HttpCacheTable httpCache = $HttpCacheTable(this);
+  late final $OfflineTileStylesTable offlineTileStyles =
+      $OfflineTileStylesTable(this);
+  late final $OfflineTileEntriesTable offlineTileEntries =
+      $OfflineTileEntriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3269,6 +4307,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     mapLocations,
     importedOverlays,
     httpCache,
+    offlineTileStyles,
+    offlineTileEntries,
   ];
 }
 
@@ -5294,6 +6334,794 @@ typedef $$HttpCacheTableProcessedTableManager =
       DbHttpCacheEntry,
       PrefetchHooks Function()
     >;
+typedef $$OfflineTileStylesTableCreateCompanionBuilder =
+    OfflineTileStylesCompanion Function({
+      required String styleHash,
+      required String displayName,
+      required String urlTemplate,
+      Value<String?> regionJson,
+      Value<int> tileCount,
+      Value<int> sizeBytes,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$OfflineTileStylesTableUpdateCompanionBuilder =
+    OfflineTileStylesCompanion Function({
+      Value<String> styleHash,
+      Value<String> displayName,
+      Value<String> urlTemplate,
+      Value<String?> regionJson,
+      Value<int> tileCount,
+      Value<int> sizeBytes,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$OfflineTileStylesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $OfflineTileStylesTable,
+          DbOfflineTileStyle
+        > {
+  $$OfflineTileStylesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$OfflineTileEntriesTable, List<DbOfflineTileEntry>>
+  _offlineTileEntriesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.offlineTileEntries,
+        aliasName: $_aliasNameGenerator(
+          db.offlineTileStyles.styleHash,
+          db.offlineTileEntries.styleHash,
+        ),
+      );
+
+  $$OfflineTileEntriesTableProcessedTableManager get offlineTileEntriesRefs {
+    final manager =
+        $$OfflineTileEntriesTableTableManager(
+          $_db,
+          $_db.offlineTileEntries,
+        ).filter(
+          (f) => f.styleHash.styleHash.sqlEquals(
+            $_itemColumn<String>('style_hash')!,
+          ),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _offlineTileEntriesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$OfflineTileStylesTableFilterComposer
+    extends Composer<_$AppDatabase, $OfflineTileStylesTable> {
+  $$OfflineTileStylesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get styleHash => $composableBuilder(
+    column: $table.styleHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get urlTemplate => $composableBuilder(
+    column: $table.urlTemplate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get regionJson => $composableBuilder(
+    column: $table.regionJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get tileCount => $composableBuilder(
+    column: $table.tileCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> offlineTileEntriesRefs(
+    Expression<bool> Function($$OfflineTileEntriesTableFilterComposer f) f,
+  ) {
+    final $$OfflineTileEntriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.styleHash,
+      referencedTable: $db.offlineTileEntries,
+      getReferencedColumn: (t) => t.styleHash,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OfflineTileEntriesTableFilterComposer(
+            $db: $db,
+            $table: $db.offlineTileEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$OfflineTileStylesTableOrderingComposer
+    extends Composer<_$AppDatabase, $OfflineTileStylesTable> {
+  $$OfflineTileStylesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get styleHash => $composableBuilder(
+    column: $table.styleHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get urlTemplate => $composableBuilder(
+    column: $table.urlTemplate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get regionJson => $composableBuilder(
+    column: $table.regionJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get tileCount => $composableBuilder(
+    column: $table.tileCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$OfflineTileStylesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $OfflineTileStylesTable> {
+  $$OfflineTileStylesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get styleHash =>
+      $composableBuilder(column: $table.styleHash, builder: (column) => column);
+
+  GeneratedColumn<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get urlTemplate => $composableBuilder(
+    column: $table.urlTemplate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get regionJson => $composableBuilder(
+    column: $table.regionJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get tileCount =>
+      $composableBuilder(column: $table.tileCount, builder: (column) => column);
+
+  GeneratedColumn<int> get sizeBytes =>
+      $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> offlineTileEntriesRefs<T extends Object>(
+    Expression<T> Function($$OfflineTileEntriesTableAnnotationComposer a) f,
+  ) {
+    final $$OfflineTileEntriesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.styleHash,
+          referencedTable: $db.offlineTileEntries,
+          getReferencedColumn: (t) => t.styleHash,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$OfflineTileEntriesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.offlineTileEntries,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$OfflineTileStylesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $OfflineTileStylesTable,
+          DbOfflineTileStyle,
+          $$OfflineTileStylesTableFilterComposer,
+          $$OfflineTileStylesTableOrderingComposer,
+          $$OfflineTileStylesTableAnnotationComposer,
+          $$OfflineTileStylesTableCreateCompanionBuilder,
+          $$OfflineTileStylesTableUpdateCompanionBuilder,
+          (DbOfflineTileStyle, $$OfflineTileStylesTableReferences),
+          DbOfflineTileStyle,
+          PrefetchHooks Function({bool offlineTileEntriesRefs})
+        > {
+  $$OfflineTileStylesTableTableManager(
+    _$AppDatabase db,
+    $OfflineTileStylesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OfflineTileStylesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$OfflineTileStylesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$OfflineTileStylesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> styleHash = const Value.absent(),
+                Value<String> displayName = const Value.absent(),
+                Value<String> urlTemplate = const Value.absent(),
+                Value<String?> regionJson = const Value.absent(),
+                Value<int> tileCount = const Value.absent(),
+                Value<int> sizeBytes = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => OfflineTileStylesCompanion(
+                styleHash: styleHash,
+                displayName: displayName,
+                urlTemplate: urlTemplate,
+                regionJson: regionJson,
+                tileCount: tileCount,
+                sizeBytes: sizeBytes,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String styleHash,
+                required String displayName,
+                required String urlTemplate,
+                Value<String?> regionJson = const Value.absent(),
+                Value<int> tileCount = const Value.absent(),
+                Value<int> sizeBytes = const Value.absent(),
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => OfflineTileStylesCompanion.insert(
+                styleHash: styleHash,
+                displayName: displayName,
+                urlTemplate: urlTemplate,
+                regionJson: regionJson,
+                tileCount: tileCount,
+                sizeBytes: sizeBytes,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$OfflineTileStylesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({offlineTileEntriesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (offlineTileEntriesRefs) db.offlineTileEntries,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (offlineTileEntriesRefs)
+                    await $_getPrefetchedData<
+                      DbOfflineTileStyle,
+                      $OfflineTileStylesTable,
+                      DbOfflineTileEntry
+                    >(
+                      currentTable: table,
+                      referencedTable: $$OfflineTileStylesTableReferences
+                          ._offlineTileEntriesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$OfflineTileStylesTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).offlineTileEntriesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.styleHash == item.styleHash,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$OfflineTileStylesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $OfflineTileStylesTable,
+      DbOfflineTileStyle,
+      $$OfflineTileStylesTableFilterComposer,
+      $$OfflineTileStylesTableOrderingComposer,
+      $$OfflineTileStylesTableAnnotationComposer,
+      $$OfflineTileStylesTableCreateCompanionBuilder,
+      $$OfflineTileStylesTableUpdateCompanionBuilder,
+      (DbOfflineTileStyle, $$OfflineTileStylesTableReferences),
+      DbOfflineTileStyle,
+      PrefetchHooks Function({bool offlineTileEntriesRefs})
+    >;
+typedef $$OfflineTileEntriesTableCreateCompanionBuilder =
+    OfflineTileEntriesCompanion Function({
+      Value<int> id,
+      required String styleHash,
+      required int z,
+      required int x,
+      required int y,
+      Value<String?> relativePath,
+      Value<String?> contentType,
+      required int sizeBytes,
+      required DateTime cachedAt,
+    });
+typedef $$OfflineTileEntriesTableUpdateCompanionBuilder =
+    OfflineTileEntriesCompanion Function({
+      Value<int> id,
+      Value<String> styleHash,
+      Value<int> z,
+      Value<int> x,
+      Value<int> y,
+      Value<String?> relativePath,
+      Value<String?> contentType,
+      Value<int> sizeBytes,
+      Value<DateTime> cachedAt,
+    });
+
+final class $$OfflineTileEntriesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $OfflineTileEntriesTable,
+          DbOfflineTileEntry
+        > {
+  $$OfflineTileEntriesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $OfflineTileStylesTable _styleHashTable(_$AppDatabase db) =>
+      db.offlineTileStyles.createAlias(
+        $_aliasNameGenerator(
+          db.offlineTileEntries.styleHash,
+          db.offlineTileStyles.styleHash,
+        ),
+      );
+
+  $$OfflineTileStylesTableProcessedTableManager get styleHash {
+    final $_column = $_itemColumn<String>('style_hash')!;
+
+    final manager = $$OfflineTileStylesTableTableManager(
+      $_db,
+      $_db.offlineTileStyles,
+    ).filter((f) => f.styleHash.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_styleHashTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$OfflineTileEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $OfflineTileEntriesTable> {
+  $$OfflineTileEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get z => $composableBuilder(
+    column: $table.z,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get x => $composableBuilder(
+    column: $table.x,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get y => $composableBuilder(
+    column: $table.y,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get relativePath => $composableBuilder(
+    column: $table.relativePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$OfflineTileStylesTableFilterComposer get styleHash {
+    final $$OfflineTileStylesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.styleHash,
+      referencedTable: $db.offlineTileStyles,
+      getReferencedColumn: (t) => t.styleHash,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OfflineTileStylesTableFilterComposer(
+            $db: $db,
+            $table: $db.offlineTileStyles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$OfflineTileEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $OfflineTileEntriesTable> {
+  $$OfflineTileEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get z => $composableBuilder(
+    column: $table.z,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get x => $composableBuilder(
+    column: $table.x,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get y => $composableBuilder(
+    column: $table.y,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get relativePath => $composableBuilder(
+    column: $table.relativePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$OfflineTileStylesTableOrderingComposer get styleHash {
+    final $$OfflineTileStylesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.styleHash,
+      referencedTable: $db.offlineTileStyles,
+      getReferencedColumn: (t) => t.styleHash,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OfflineTileStylesTableOrderingComposer(
+            $db: $db,
+            $table: $db.offlineTileStyles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$OfflineTileEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $OfflineTileEntriesTable> {
+  $$OfflineTileEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get z =>
+      $composableBuilder(column: $table.z, builder: (column) => column);
+
+  GeneratedColumn<int> get x =>
+      $composableBuilder(column: $table.x, builder: (column) => column);
+
+  GeneratedColumn<int> get y =>
+      $composableBuilder(column: $table.y, builder: (column) => column);
+
+  GeneratedColumn<String> get relativePath => $composableBuilder(
+    column: $table.relativePath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sizeBytes =>
+      $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+
+  $$OfflineTileStylesTableAnnotationComposer get styleHash {
+    final $$OfflineTileStylesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.styleHash,
+          referencedTable: $db.offlineTileStyles,
+          getReferencedColumn: (t) => t.styleHash,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$OfflineTileStylesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.offlineTileStyles,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$OfflineTileEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $OfflineTileEntriesTable,
+          DbOfflineTileEntry,
+          $$OfflineTileEntriesTableFilterComposer,
+          $$OfflineTileEntriesTableOrderingComposer,
+          $$OfflineTileEntriesTableAnnotationComposer,
+          $$OfflineTileEntriesTableCreateCompanionBuilder,
+          $$OfflineTileEntriesTableUpdateCompanionBuilder,
+          (DbOfflineTileEntry, $$OfflineTileEntriesTableReferences),
+          DbOfflineTileEntry,
+          PrefetchHooks Function({bool styleHash})
+        > {
+  $$OfflineTileEntriesTableTableManager(
+    _$AppDatabase db,
+    $OfflineTileEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OfflineTileEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$OfflineTileEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$OfflineTileEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> styleHash = const Value.absent(),
+                Value<int> z = const Value.absent(),
+                Value<int> x = const Value.absent(),
+                Value<int> y = const Value.absent(),
+                Value<String?> relativePath = const Value.absent(),
+                Value<String?> contentType = const Value.absent(),
+                Value<int> sizeBytes = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+              }) => OfflineTileEntriesCompanion(
+                id: id,
+                styleHash: styleHash,
+                z: z,
+                x: x,
+                y: y,
+                relativePath: relativePath,
+                contentType: contentType,
+                sizeBytes: sizeBytes,
+                cachedAt: cachedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String styleHash,
+                required int z,
+                required int x,
+                required int y,
+                Value<String?> relativePath = const Value.absent(),
+                Value<String?> contentType = const Value.absent(),
+                required int sizeBytes,
+                required DateTime cachedAt,
+              }) => OfflineTileEntriesCompanion.insert(
+                id: id,
+                styleHash: styleHash,
+                z: z,
+                x: x,
+                y: y,
+                relativePath: relativePath,
+                contentType: contentType,
+                sizeBytes: sizeBytes,
+                cachedAt: cachedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$OfflineTileEntriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({styleHash = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (styleHash) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.styleHash,
+                                referencedTable:
+                                    $$OfflineTileEntriesTableReferences
+                                        ._styleHashTable(db),
+                                referencedColumn:
+                                    $$OfflineTileEntriesTableReferences
+                                        ._styleHashTable(db)
+                                        .styleHash,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$OfflineTileEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $OfflineTileEntriesTable,
+      DbOfflineTileEntry,
+      $$OfflineTileEntriesTableFilterComposer,
+      $$OfflineTileEntriesTableOrderingComposer,
+      $$OfflineTileEntriesTableAnnotationComposer,
+      $$OfflineTileEntriesTableCreateCompanionBuilder,
+      $$OfflineTileEntriesTableUpdateCompanionBuilder,
+      (DbOfflineTileEntry, $$OfflineTileEntriesTableReferences),
+      DbOfflineTileEntry,
+      PrefetchHooks Function({bool styleHash})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5310,4 +7138,8 @@ class $AppDatabaseManager {
       $$ImportedOverlaysTableTableManager(_db, _db.importedOverlays);
   $$HttpCacheTableTableManager get httpCache =>
       $$HttpCacheTableTableManager(_db, _db.httpCache);
+  $$OfflineTileStylesTableTableManager get offlineTileStyles =>
+      $$OfflineTileStylesTableTableManager(_db, _db.offlineTileStyles);
+  $$OfflineTileEntriesTableTableManager get offlineTileEntries =>
+      $$OfflineTileEntriesTableTableManager(_db, _db.offlineTileEntries);
 }

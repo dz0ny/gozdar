@@ -18,15 +18,15 @@ class OfflineMapCachingProvider implements MapCachingProvider {
     final coords = _parseTileUrl(url);
     if (coords != null) {
       final styleHash = _cache.styleHashFromUrl(_extractUrlTemplate(url));
-      final pngBytes = await _cache.getTileAsPng(
+      final cachedTile = await _cache.getTileData(
         styleHash,
         coords.z,
         coords.x,
         coords.y,
       );
-      if (pngBytes != null) {
+      if (cachedTile != null) {
         return (
-          bytes: pngBytes,
+          bytes: cachedTile.bytes,
           metadata: CachedMapTileMetadata(
             staleAt: DateTime.now().add(const Duration(days: 365)),
             lastModified: null,
