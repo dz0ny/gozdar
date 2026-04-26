@@ -131,5 +131,34 @@ void main() {
       expect(tile!.bytes, orderedEquals(bytes));
       expect(tile.contentType, 'image/webp');
     });
+
+    test('drops stale sqlite rows when tile file is missing', () async {
+      const styleHash = 'style04';
+      final bytes = Uint8List.fromList(List<int>.generate(16, (i) => i + 1));
+
+      await cache.saveStyleMeta(
+        styleHash,
+        displayName: 'Stale layer',
+        urlTemplate: 'https://tiles.example.com/{z}/{x}/{y}.png',
+      );
+      await cache.putTile(
+        styleHash,
+        7,
+        8,
+        9,
+        bytes,
+        contentType: 'image/png',
+        sourceUrl: 'https://tiles.example.com/7/8/9.png',
+      );
+
+      cache.clearMemoryCacheForTesting();
+      await File('${tempDir.path}/$styleHash/7/8/9.png').delete();
+
+      final tile = await cache.getTileData(styleHash, 7, 8, 9);
+
+      expect(tile, isNull);
+      expect(await cache.hasTile(styleHash, 7, 8, 9), isFalse);
+      expect(await cache.getCacheSize(), 0);
+    });
   });
 }

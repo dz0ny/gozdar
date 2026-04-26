@@ -129,6 +129,7 @@ class OfflineTileCacheService {
   static const int _memoryCacheMaxBytes = 64 * 1024 * 1024;
 
   final Map<String, Set<String>> _manifests = {};
+  final Map<String, Future<void>> _styleHydrations = {};
   final Map<String, _CachedTileLocation> _tileLocationCache =
       <String, _CachedTileLocation>{};
   final LinkedHashMap<String, CachedTileData> _tileMemoryCache =
@@ -155,6 +156,7 @@ class OfflineTileCacheService {
   void resetForTesting() {
     _baseDir = null;
     _manifests.clear();
+    _styleHydrations.clear();
     clearMemoryCacheForTesting();
   }
 
@@ -228,8 +230,15 @@ class OfflineTileCacheService {
       return null;
     }
 
+    final Uint8List bytes;
+    try {
+      bytes = await file.readAsBytes();
+    } on FileSystemException {
+      await _deleteTileEntry(styleHash, z, x, y);
+      return null;
+    }
     final data = CachedTileData(
-      bytes: await file.readAsBytes(),
+      bytes: bytes,
       contentType: location.contentType,
     );
     _rememberTile(cacheKey, data);
@@ -414,6 +423,7 @@ class OfflineTileCacheService {
 
   Future<void> deleteStyle(String styleHash) async {
     _manifests.remove(styleHash);
+    _styleHydrations.remove(styleHash);
     _removeStyleFromMemory(styleHash);
     final base = await baseDir;
     final dir = Directory('$base/$styleHash');
@@ -433,6 +443,7 @@ class OfflineTileCacheService {
 
   Future<void> clearCache() async {
     _manifests.clear();
+    _styleHydrations.clear();
     _tileMemoryCache.clear();
     _tileMemoryBytes = 0;
     final base = await baseDir;
@@ -471,7 +482,18 @@ class OfflineTileCacheService {
     }
   }
 
-  Future<void> _hydrateStyleFromDisk(String styleHash) async {
+  Future<void> _hydrateStyleFromDisk(String styleHash) {
+    final existing = _styleHydrations[styleHash];
+    if (existing != null) return existing;
+
+    final hydration = _hydrateStyleFromDiskLocked(styleHash);
+    _styleHydrations[styleHash] = hydration;
+    return hydration.whenComplete(() {
+      _styleHydrations.remove(styleHash);
+    });
+  }
+
+  Future<void> _hydrateStyleFromDiskLocked(String styleHash) async {
     final base = await baseDir;
     final styleDir = Directory('$base/$styleHash');
     if (!await styleDir.exists()) return;
@@ -505,13 +527,21 @@ class OfflineTileCacheService {
       final y = int.tryParse(ySegment);
       if (z == null || x == null || y == null) continue;
 
+      final int sizeBytes;
+      try {
+        if (!await entity.exists()) continue;
+        sizeBytes = await entity.length();
+      } on FileSystemException {
+        continue;
+      }
+
       entries.add((
         z: z,
         x: x,
         y: y,
         relativePath: relativePath,
         contentType: _contentTypeFromPath(relativePath),
-        sizeBytes: await entity.length(),
+        sizeBytes: sizeBytes,
       ));
     }
 
