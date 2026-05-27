@@ -47,5 +47,8 @@ app.*.map.json
 # Local settings
 .claude/settings.local.json
 .osgrep/
+.rtk/
+ios/.bundle/
+ios/vendor/bundle/
 worker/.wrangler*
 worker/node_modules*

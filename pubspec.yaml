@@ -43,8 +43,10 @@ dependencies:
   path_provider: ^2.1.5
 
   # Location & Compass
-  geolocator: any
   flutter_compass: any
+  flutter_blue_plus: any
+  flutter_blue_plus_winrt: any
+  geolocator: any
 
   # Export & Share
   share_plus: any
@@ -68,6 +70,10 @@ dependencies:
   url_launcher: any
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  flutter_driver:
+    sdk: flutter
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to

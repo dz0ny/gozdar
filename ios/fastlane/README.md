@@ -31,6 +31,22 @@ Push a new beta build to TestFlight
 
 Push a new release build to the App Store
 
+### ios screenshots
+
+```sh
+[bundle exec] fastlane ios screenshots
+```
+
+Capture iOS screenshots for App Store Connect
+
+### ios store_assets
+
+```sh
+[bundle exec] fastlane ios store_assets
+```
+
+Upload App Store screenshots
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.

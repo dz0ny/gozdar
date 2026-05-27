@@ -41,6 +41,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.13.1"
+  bluez:
+    dependency: transitive
+    description:
+      name: bluez
+      sha256: "61a7204381925896a374301498f2f5399e59827c6498ae1e924aaa598751b545"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.8.3"
   boolean_selector:
     dependency: transitive
     description:
@@ -374,6 +382,62 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.0"
+  flutter_blue_plus:
+    dependency: "direct main"
+    description:
+      name: flutter_blue_plus
+      sha256: b33e74090d752fae75b9df8d227cb09b0da75b8d3e6a24108d1bfc884ed00ba8
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.1"
+  flutter_blue_plus_android:
+    dependency: transitive
+    description:
+      name: flutter_blue_plus_android
+      sha256: fd49046d16bdff7609f7f099fcd5d51e4ea70d699bbcb1b2c6c88b732697d2fc
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.0.0"
+  flutter_blue_plus_darwin:
+    dependency: transitive
+    description:
+      name: flutter_blue_plus_darwin
+      sha256: "8150fccf3e013c8e47069d4943fae7d4f200b0faa1b3ebd93a507ee7a715fa62"
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.0.0"
+  flutter_blue_plus_linux:
+    dependency: transitive
+    description:
+      name: flutter_blue_plus_linux
+      sha256: a31038d7b1239d15a349dfd96ccd87dca3374abe32be7220906ea22b715b5dd7
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.0.0"
+  flutter_blue_plus_platform_interface:
+    dependency: transitive
+    description:
+      name: flutter_blue_plus_platform_interface
+      sha256: "75384f8e97dfb8395dbfd647b729cd3889586e5efa4324d5581f0c34379b7f18"
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.0.0"
+  flutter_blue_plus_web:
+    dependency: transitive
+    description:
+      name: flutter_blue_plus_web
+      sha256: "78b17fe414361048d26ae5f2ef02af3f13b5c567a6f3594851a81e6025166dfe"
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.0.0"
+  flutter_blue_plus_winrt:
+    dependency: "direct main"
+    description:
+      name: flutter_blue_plus_winrt
+      sha256: "0000b2d818e6f79ad07764206fdd8afb69426fd44453c6254c35828fd16aa09f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.20"
   flutter_cache_manager:
     dependency: transitive
     description:
@@ -390,6 +454,11 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.8.1"
+  flutter_driver:
+    dependency: "direct dev"
+    description: flutter
+    source: sdk
+    version: "0.0.0"
   flutter_launcher_icons:
     dependency: "direct dev"
     description:
@@ -428,6 +497,11 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_web_plugins:
+    dependency: transitive
+    description: flutter
+    source: sdk
+    version: "0.0.0"
+  fuchsia_remote_debug_protocol:
     dependency: transitive
     description: flutter
     source: sdk
@@ -544,6 +618,11 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.3.0"
+  integration_test:
+    dependency: "direct dev"
+    description: flutter
+    source: sdk
+    version: "0.0.0"
   intl:
     dependency: "direct main"
     description:
@@ -872,6 +951,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.2"
+  process:
+    dependency: transitive
+    description:
+      name: process
+      sha256: c6248e4526673988586e8c00bb22a49210c258dc91df5227d5da9748ecf79744
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.5"
   proj4dart:
     dependency: "direct main"
     description:
@@ -1149,6 +1236,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  sync_http:
+    dependency: transitive
+    description:
+      name: sync_http
+      sha256: "7f0cd72eca000d2e026bcd6f990b81d0ca06022ef4e32fb257b30d3d1014a961"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.1"
   synchronized:
     dependency: transitive
     description:
@@ -1309,6 +1404,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.3"
+  webdriver:
+    dependency: transitive
+    description:
+      name: webdriver
+      sha256: "2f3a14ca026957870cfd9c635b83507e0e51d8091568e90129fbf805aba7cade"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0"
   win32:
     dependency: transitive
     description:

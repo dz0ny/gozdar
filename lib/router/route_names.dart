@@ -5,6 +5,7 @@ class AppRoutes {
   // Root routes
   static const onboarding = '/onboarding';
   static const about = '/about';
+  static const rtkBridge = '/rtk-bridge';
 
   // Tab routes (StatefulShellRoute branches)
   static const map = '/map';

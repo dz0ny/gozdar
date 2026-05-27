@@ -1,0 +1,12 @@
+Gozdar pomaga lastnikom gozdov in izvajalcem terenskega dela urejati gozdne parcele, lokacije in hlodovino na enem mestu.
+
+Z aplikacijo lahko shranjujete podatke o parcelah, spremljate zalogo in posek, izračunate prostornino hlodov ter hitro odprete zemljevid za orientacijo na terenu.
+
+Ključne možnosti:
+- pregled gozdnih parcel in osnovnih podatkov
+- beleženje hlodov z izračunom prostornine
+- zemljevidi in GPS navigacija za delo na terenu
+- lokacije skladišč, sečišč in drugih pomembnih točk
+- urejeni zapiski za vsakodnevno delo v gozdu
+
+Gozdar je zasnovan za praktično uporabo v Sloveniji, kjer so pomembni parcelni podatki, terenska orientacija in hiter vnos meritev.

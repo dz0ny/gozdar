@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:latlong2/latlong.dart';
+import '../services/location_settings.dart';
 import 'compass_painter.dart';
 
 /// Compass-only navigation dialog (no map)
@@ -55,10 +56,7 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
     // Subscribe to position updates
     _positionSubscription =
         Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.best,
-            distanceFilter: 1,
-          ),
+          locationSettings: GozdarLocationSettings.stream,
         ).listen(
           (position) {
             if (mounted) {
@@ -79,9 +77,7 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
   Future<void> _getCurrentPosition() async {
     try {
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.best,
-        ),
+        locationSettings: GozdarLocationSettings.currentPosition,
       );
       if (mounted) {
         setState(() {

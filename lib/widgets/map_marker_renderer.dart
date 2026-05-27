@@ -193,7 +193,11 @@ class MapMarkerRenderer {
       point: userPosition!,
       width: userSize,
       height: userSize,
-      child: LocationPointer(heading: userHeading, color: primaryColor),
+      child: LocationPointer(
+        heading: userHeading,
+        color: primaryColor,
+        size: userSize,
+      ),
     );
   }
 

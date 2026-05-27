@@ -6,6 +6,7 @@ import 'config/distribution.dart';
 import 'router/app_router.dart';
 import 'router/navigation_notifier.dart';
 import 'services/database_service.dart';
+import 'services/rtk_bridge_settings.dart';
 import 'services/tile_cache_service.dart';
 import 'services/onboarding_service.dart';
 import 'services/update_service.dart';
@@ -19,6 +20,7 @@ void main() async {
   await DatabaseService().initialize();
   await TileCacheService.initialize();
   await OnboardingService.initialize();
+  await RtkBridgeSettings.instance.load();
 
   // Initialize update service (Android only)
   if (Platform.isAndroid && !isPlayDistribution) {
@@ -79,6 +81,7 @@ class _GozdarAppState extends State<GozdarApp> {
             ..loadGeolocatedLogs(),
         ),
         ChangeNotifierProvider.value(value: _navigationNotifier),
+        ChangeNotifierProvider.value(value: RtkBridgeSettings.instance),
         if (Platform.isAndroid && !isPlayDistribution)
           ChangeNotifierProvider.value(value: UpdateService()),
       ],

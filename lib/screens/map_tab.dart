@@ -19,6 +19,8 @@ import '../services/database_service.dart';
 import '../widgets/log_entry_form.dart';
 import '../services/cadastral_service.dart';
 import '../services/tile_cache_service.dart';
+import '../services/rtk_position_service.dart';
+import '../services/rtk_bridge_settings.dart';
 import '../widgets/navigation_compass_dialog.dart';
 import '../widgets/tile_download_dialog.dart';
 import '../widgets/map_long_press_menu.dart';
@@ -35,6 +37,7 @@ import '../widgets/map_dialog_manager.dart';
 import '../widgets/parcel_found_sheet.dart';
 import 'parcel_detail_screen.dart';
 import '../providers/map_provider.dart';
+import '../services/location_settings.dart';
 
 enum _MeasurementTool { distance, area }
 
@@ -282,6 +285,7 @@ class MapTabState extends State<MapTab> {
       onShowTileDownloadDialog: showTileDownloadDialog,
       onResetOnboarding: null, // TODO: Implement onboarding reset
     );
+    rtkPositionService.addListener(_handleRtkPositionUpdate);
     _initializeData();
     _initializeLocationTracking();
   }
@@ -311,9 +315,16 @@ class MapTabState extends State<MapTab> {
 
   @override
   void dispose() {
+    rtkPositionService.removeListener(_handleRtkPositionUpdate);
     _locationTracker.dispose();
     _mapController.dispose();
     super.dispose();
+  }
+
+  void _handleRtkPositionUpdate() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   /// Initialize real-time location and compass tracking
@@ -323,9 +334,6 @@ class MapTabState extends State<MapTab> {
 
   /// Center map on user's current GPS location
   Future<void> _centerOnGpsLocation() async {
-    // Capture provider before async operations
-    final mapProvider = context.read<MapProvider>();
-
     try {
       // Check location service status
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -363,18 +371,22 @@ class MapTabState extends State<MapTab> {
         return;
       }
 
-      // Get current position
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
+      final externalPosition = rtkPositionService.position;
+      LatLng target;
+      if (externalPosition != null) {
+        target = externalPosition.point;
+      } else {
+        // Get current position
+        final position = await Geolocator.getCurrentPosition(
+          locationSettings: GozdarLocationSettings.currentPosition,
+        );
+        target = LatLng(position.latitude, position.longitude);
+      }
 
       // Animate map to current location (respect maxZoom), reset rotation to north
-      final currentLayer = mapProvider.currentBaseLayer;
       final targetZoom = 15.0.clamp(7.0, MapLayer.appMaxZoom);
       _mapController.moveAndRotate(
-        LatLng(position.latitude, position.longitude),
+        target,
         targetZoom,
         0, // Reset rotation to north
       );
@@ -1003,6 +1015,73 @@ class MapTabState extends State<MapTab> {
     }).toList();
   }
 
+  String _rtkFixLabel(int? fixQuality) {
+    switch (fixQuality) {
+      case 4:
+        return 'RTK fixed';
+      case 5:
+        return 'RTK float';
+      case 2:
+        return 'DGPS';
+      case 1:
+        return 'GPS';
+      default:
+        return '-';
+    }
+  }
+
+  String _rtkAccuracyLabel(double? accuracyMeters) {
+    if (accuracyMeters == null) return '-';
+    if (accuracyMeters < 1) return '${(accuracyMeters * 100).round()} cm';
+    return '${accuracyMeters.toStringAsFixed(1)} m';
+  }
+
+  Color _rtkStatusColor(int? fixQuality, ColorScheme colorScheme) {
+    if (fixQuality == 4) return Colors.green;
+    if (fixQuality == 5) return Colors.orange;
+    if (fixQuality == 2) return Colors.amber;
+    return colorScheme.primary;
+  }
+
+  Widget _buildRtkAccuracyBadge(BuildContext context, RtkPosition position) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final statusColor = _rtkStatusColor(position.fixQuality, colorScheme);
+
+    return Material(
+      elevation: 5,
+      borderRadius: const BorderRadius.all(Radius.circular(8)),
+      color: colorScheme.surface.withValues(alpha: 0.94),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.gps_fixed, size: 18, color: statusColor),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${_rtkFixLabel(position.fixQuality)}  ${_rtkAccuracyLabel(position.accuracyMeters)}',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
+                  ),
+                ),
+                Text(
+                  'Sat ${position.satellites ?? '-'}  HDOP ${position.hdop?.toStringAsFixed(1) ?? '-'}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMeasurementPanel(BuildContext context, MapProvider mapProvider) {
     final topOffset = MediaQuery.of(context).padding.top +
         (mapProvider.navigationTarget != null ? 90 : 16) +
@@ -1101,6 +1180,15 @@ class MapTabState extends State<MapTab> {
   Widget build(BuildContext context) {
     // Watch provider for changes (including worker URL, parcels, locations)
     final mapProvider = context.watch<MapProvider>();
+    final rtkBridgeSettings = context.watch<RtkBridgeSettings>();
+    final externalPosition = rtkPositionService.position;
+    final activeUserPosition = externalPosition?.point ??
+        (_locationTracker.userPosition != null
+            ? LatLng(
+                _locationTracker.userPosition!.latitude,
+                _locationTracker.userPosition!.longitude,
+              )
+            : null);
 
     // Create marker renderer using provider data directly
     final markerRenderer = MapMarkerRenderer(
@@ -1108,12 +1196,7 @@ class MapTabState extends State<MapTab> {
       locations: mapProvider.locations,
       parcels: mapProvider.parcels,
       geolocatedLogs: mapProvider.geolocatedLogs,
-      userPosition: _locationTracker.userPosition != null
-          ? LatLng(
-              _locationTracker.userPosition!.latitude,
-              _locationTracker.userPosition!.longitude,
-            )
-          : null,
+      userPosition: activeUserPosition,
       userHeading: _locationTracker.userHeading,
       primaryColor: Theme.of(context).colorScheme.primary,
       onLocationTap: (point, name) => setNavigationTarget(
@@ -1309,21 +1392,31 @@ class MapTabState extends State<MapTab> {
                     ),
                   ],
                 ),
+              if (externalPosition != null && externalPosition.accuracyMeters != null)
+                CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: externalPosition.point,
+                      radius: externalPosition.accuracyMeters!,
+                      useRadiusInMeter: true,
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.16),
+                      borderColor: Theme.of(context).colorScheme.primary,
+                      borderStrokeWidth: 2,
+                    ),
+                  ],
+                ),
               // All markers using the unified renderer
               MarkerLayer(markers: markerRenderer.getAllMarkers()),
               if (_measurement.points.isNotEmpty)
                 MarkerLayer(markers: _measurementMarkers()),
               // Navigation target line (from user to target)
               if (mapProvider.navigationTarget != null &&
-                  _locationTracker.userPosition != null)
+                  activeUserPosition != null)
                 PolylineLayer(
                   polylines: [
                     Polyline(
                       points: [
-                        LatLng(
-                          _locationTracker.userPosition!.latitude,
-                          _locationTracker.userPosition!.longitude,
-                        ),
+                        activeUserPosition,
                         mapProvider.navigationTarget!.location,
                       ],
                       color: Colors.orange.withValues(alpha: 0.6),
@@ -1425,6 +1518,17 @@ class MapTabState extends State<MapTab> {
               );
             },
           ),
+          if (externalPosition != null)
+            Positioned(
+              top: 16 +
+                  MediaQuery.of(context).padding.top +
+                  (_tileCacheService.downloadVisualStateListenable.value.isDownloading ||
+                          _tileCacheService.downloadVisualStateListenable.value.overlays.isNotEmpty
+                      ? 104
+                      : 0),
+              left: 16,
+              child: _buildRtkAccuracyBadge(context, externalPosition),
+            ),
 
           // Navigation target info banner
           if (mapProvider.navigationTarget != null)
@@ -1571,6 +1675,7 @@ class MapTabState extends State<MapTab> {
         onLayerSelectorPressed: _showLayerSelector,
         onMeasurePressed: _showMeasurementSelector,
         onSearchPressed: showParcelSearchDialog,
+        onRtkPressed: rtkBridgeSettings.enabled ? () => context.push(AppRoutes.rtkBridge) : null,
         onGpsPressed: _centerOnGpsLocation,
         onLocationsPressed: mapProvider.locations.isNotEmpty ? _showLocationsSheet : null,
       ),

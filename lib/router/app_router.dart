@@ -11,6 +11,7 @@ import '../screens/logs_tab.dart';
 import '../screens/map_tab.dart';
 import '../screens/parcel_detail_screen.dart';
 import '../screens/parcel_editor.dart';
+import '../screens/rtk_bridge_screen.dart';
 import '../widgets/log_entry_form.dart';
 import '../widgets/main_scaffold.dart';
 import 'route_names.dart';
@@ -66,6 +67,12 @@ GoRouter createRouter({
         path: AppRoutes.about,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const AboutScreen(),
+      ),
+
+      GoRoute(
+        path: AppRoutes.rtkBridge,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const RtkBridgeScreen(),
       ),
 
       // Main shell with tabs

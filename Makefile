@@ -126,7 +126,7 @@ release-play-production: build-play-no-bump ## Build Play AAB and upload to prod
 
 release-ios: ## Build iOS and upload to TestFlight
 	@echo "Building iOS and uploading to TestFlight..."
-	cd ios && fastlane release
+	cd ios && bundle exec fastlane release
 	@echo "iOS release uploaded!"
 
 clean: ## Clean build artifacts

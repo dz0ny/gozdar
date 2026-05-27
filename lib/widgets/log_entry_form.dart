@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/log_entry.dart';
+import '../services/location_settings.dart';
 import '../services/species_service.dart';
 
 class LogEntryForm extends StatefulWidget {
@@ -122,7 +123,9 @@ class _LogEntryFormState extends State<LogEntryForm> {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: GozdarLocationSettings.currentPosition,
+      );
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;

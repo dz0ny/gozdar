@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/log_batch.dart';
+import '../services/location_settings.dart';
 
 /// Bottom sheet for saving logs as a batch/project
 class SaveBatchSheet extends StatefulWidget {
@@ -53,7 +54,9 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: GozdarLocationSettings.currentPosition,
+      );
       if (!mounted) return;
       setState(() {
         _latitude = position.latitude;

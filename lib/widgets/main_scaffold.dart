@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 import '../config/distribution.dart';
 import '../router/app_router.dart';
 import '../router/navigation_notifier.dart';
+import '../router/route_names.dart';
 import '../screens/about_screen.dart';
 import '../services/onboarding_service.dart';
+import '../services/rtk_bridge_settings.dart';
 import '../services/update_service.dart';
 import 'update_banner.dart';
 
@@ -115,6 +117,12 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   void _handleTabTap(int index) {
+    final rtkBridgeSettings = context.read<RtkBridgeSettings>();
+    if (rtkBridgeSettings.enabled && index == 3) {
+      context.push(AppRoutes.rtkBridge);
+      return;
+    }
+
     // Track consecutive taps on the same tab for easter eggs
     // Only count taps on already-selected tab
     if (index == widget.navigationShell.currentIndex) {
@@ -171,6 +179,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget build(BuildContext context) {
     // Listen to navigation notifier changes
     context.watch<NavigationNotifier>();
+    final rtkBridgeSettings = context.watch<RtkBridgeSettings>();
 
     return Scaffold(
       body: Stack(
@@ -206,6 +215,14 @@ class _MainScaffoldState extends State<MainScaffold> {
             selectedIcon: Icons.forest,
             selected: widget.navigationShell.currentIndex == 2,
           ),
+          if (rtkBridgeSettings.enabled)
+            _buildNavigationDestination(
+              semanticLabel: 'RTK GNSS',
+              label: 'RTK',
+              icon: Icons.gps_fixed_outlined,
+              selectedIcon: Icons.gps_fixed,
+              selected: false,
+            ),
         ],
       ),
     );

@@ -1,0 +1,5 @@
+Gozdar helps forest owners and field workers manage forest parcels, timber logs, and saved map locations.
+
+Use the map to review parcels, cadastral context, offline layers, and field markers. Track timber entries with diameter, length, species, and calculated volume. Group logs into batches, monitor parcel cutting allowances, and export field data for later use.
+
+Designed for forestry work in Slovenia, Gozdar keeps the main workflows close at hand: parcels, maps, logs, GPS navigation, and offline-friendly field records.

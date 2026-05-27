@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/parcel.dart';
 import '../models/map_layer.dart';
+import '../services/location_settings.dart';
 import '../services/tile_cache_service.dart';
 import '../services/map_preferences_service.dart';
 
@@ -71,7 +72,9 @@ class _ParcelEditorState extends State<ParcelEditor> {
 
       if (permission == LocationPermission.deniedForever) return;
 
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: GozdarLocationSettings.currentPosition,
+      );
       final targetZoom = _defaultZoom.clamp(7.0, MapLayer.appMaxZoom);
       _mapController.move(
         LatLng(position.latitude, position.longitude),

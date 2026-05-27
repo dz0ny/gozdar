@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/rtk_bridge_settings.dart';
 
 /// Full-featured About screen with app info, map sources, and legal information
 class AboutScreen extends StatefulWidget {
@@ -51,6 +53,11 @@ class _AboutScreenState extends State<AboutScreen> {
 
           // Version info
           _buildVersionCard(context, colorScheme),
+          const SizedBox(height: 16),
+
+          // Settings
+          _buildSectionTitle(context, 'Nastavitve'),
+          _buildSettingsCard(context, colorScheme),
           const SizedBox(height: 16),
 
           // Map sources
@@ -151,6 +158,20 @@ class _AboutScreenState extends State<AboutScreen> {
             _buildInfoRow('Paket', _packageInfo?.packageName ?? '...'),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsCard(BuildContext context, ColorScheme colorScheme) {
+    final rtkBridgeSettings = context.watch<RtkBridgeSettings>();
+
+    return Card(
+      child: SwitchListTile(
+        secondary: Icon(Icons.gps_fixed, color: colorScheme.primary),
+        title: const Text('RTK GNSS'),
+        subtitle: const Text('Prikazi RTK most v navigaciji in na karti'),
+        value: rtkBridgeSettings.enabled,
+        onChanged: rtkBridgeSettings.setEnabled,
       ),
     );
   }

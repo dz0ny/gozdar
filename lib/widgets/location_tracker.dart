@@ -2,9 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
+import '../services/location_settings.dart';
 
 /// Manages user location tracking and compass functionality
 class LocationTracker {
+  static const bool _isScreenshotRun = bool.fromEnvironment(
+    'GOZDAR_SCREENSHOTS',
+  );
   Position? _userPosition;
   double? _userHeading;
   StreamSubscription<Position>? _positionSubscription;
@@ -21,6 +25,8 @@ class LocationTracker {
 
   /// Initialize location tracking
   Future<void> initialize() async {
+    if (_isScreenshotRun) return;
+
     // Check location permission first
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
@@ -36,9 +42,7 @@ class LocationTracker {
     // Get initial position
     try {
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
+        locationSettings: GozdarLocationSettings.currentPosition,
       );
       _userPosition = position;
       onLocationUpdate?.call(_userPosition, _userHeading);
@@ -49,10 +53,7 @@ class LocationTracker {
     // Start location updates
     _positionSubscription =
         Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 5, // Update every 5 meters
-          ),
+          locationSettings: GozdarLocationSettings.stream,
         ).listen(
           (Position position) {
             _userPosition = position;

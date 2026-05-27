@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/log_entry.dart';
+import '../services/location_settings.dart';
 import '../services/species_service.dart';
 
 /// Bottom sheet for adding a new log entry
@@ -92,7 +93,9 @@ class _AddLogSheetState extends State<AddLogSheet> {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: GozdarLocationSettings.currentPosition,
+      );
       if (!mounted) return;
       setState(() {
         _latitude = position.latitude;

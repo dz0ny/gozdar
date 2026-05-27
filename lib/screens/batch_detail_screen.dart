@@ -9,6 +9,7 @@ import '../models/log_entry.dart';
 import '../providers/logs_provider.dart';
 import '../services/database_service.dart';
 import '../services/export_service.dart';
+import '../services/location_settings.dart';
 import '../widgets/conversion_settings_sheet.dart';
 import '../widgets/log_card.dart';
 
@@ -456,7 +457,9 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
         await Geolocator.requestPermission();
       }
 
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: GozdarLocationSettings.currentPosition,
+      );
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;
@@ -691,7 +694,9 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
         await Geolocator.requestPermission();
       }
 
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: GozdarLocationSettings.currentPosition,
+      );
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;

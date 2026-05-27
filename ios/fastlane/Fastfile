@@ -13,19 +13,83 @@
 # Uncomment the line if you want fastlane to automatically update itself
 # update_fastlane
 
+require "deliver/languages"
+require "fastlane_core/languages"
+
+Deliver::Languages::ALL_LANGUAGES << "sl-SI" unless Deliver::Languages::ALL_LANGUAGES.include?("sl-SI")
+FastlaneCore::Languages::ALL_LANGUAGES << "sl-SI" unless FastlaneCore::Languages::ALL_LANGUAGES.include?("sl-SI")
+
 default_platform(:ios)
 
 platform :ios do
+  def project_root
+    File.expand_path("../..", __dir__)
+  end
+
+  def beta_app_info
+    {
+      "en-US" => {
+        description: "Forestry field management for Slovenian forest parcels, timber logs, cadastral maps, and GPS navigation.",
+        feedback_email: "hey@dz0ny.dev",
+        marketing_url: "https://github.com/dz0ny/gozdar",
+        privacy_policy_url: "https://github.com/dz0ny/gozdar"
+      },
+      "sl-SI" => {
+        description: "Terensko upravljanje gozdnih parcel, hlodovine, katastrskih kart in GPS navigacije.",
+        feedback_email: "hey@dz0ny.dev",
+        marketing_url: "https://github.com/dz0ny/gozdar",
+        privacy_policy_url: "https://github.com/dz0ny/gozdar"
+      }
+    }
+  end
+
+  def beta_build_info
+    {
+      "en-US" => {
+        whats_new: "Test Gozdar forestry workflows: forest parcels, timber log volume tracking, offline maps, and GPS navigation."
+      },
+      "sl-SI" => {
+        whats_new: "Preizkusite Gozdar za gozdne parcele, izmero hlodovine, zemljevide brez povezave in GPS navigacijo."
+      }
+    }
+  end
+
   desc "Push a new beta build to TestFlight"
   lane :beta do
     build_app(workspace: "Runner.xcworkspace", scheme: "Runner")
-    upload_to_testflight(skip_waiting_for_build_processing: true)
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      localized_app_info: beta_app_info,
+      localized_build_info: beta_build_info,
+      changelog: "Test Gozdar forestry workflows: forest parcels, timber log volume tracking, offline maps, and GPS navigation."
+    )
   end
 
   desc "Push a new release build to the App Store"
   lane :release do
     increment_build_number(xcodeproj: "Runner.xcodeproj")
     build_app(workspace: "Runner.xcworkspace", scheme: "Runner")
-    upload_to_app_store(skip_metadata: true, skip_screenshots: true)
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      localized_app_info: beta_app_info,
+      localized_build_info: beta_build_info,
+      changelog: "Test Gozdar forestry workflows: forest parcels, timber log volume tracking, offline maps, and GPS navigation."
+    )
+  end
+
+  desc "Capture iOS screenshots for App Store Connect"
+  lane :screenshots do
+    sh("cd #{project_root} && scripts/take_ios_screenshots.sh")
+  end
+
+  desc "Upload App Store screenshots"
+  lane :store_assets do
+    upload_to_app_store(
+      skip_binary_upload: true,
+      skip_metadata: false,
+      skip_screenshots: false,
+      submit_for_review: false,
+      force: true
+    )
   end
 end
