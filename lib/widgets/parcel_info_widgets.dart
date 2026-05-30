@@ -153,15 +153,62 @@ class ParcelOwnerCard extends StatelessWidget {
   final String? owner;
   final VoidCallback onEdit;
 
-  const ParcelOwnerCard({super.key, required this.owner, required this.onEdit});
+  /// Owner name(s) looked up from the imported cadastral owners database.
+  /// Shown (read-only, labelled "iz katastra") only when the manual [owner]
+  /// field is empty.
+  final String? lookedUpOwner;
+  final String? lookedUpAddress;
+
+  const ParcelOwnerCard({
+    super.key,
+    required this.owner,
+    required this.onEdit,
+    this.lookedUpOwner,
+    this.lookedUpAddress,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasManual = owner != null && owner!.isNotEmpty;
+    final hasLookup =
+        !hasManual && lookedUpOwner != null && lookedUpOwner!.isNotEmpty;
+
+    Widget subtitle;
+    if (hasManual) {
+      subtitle = Text(owner!);
+    } else if (hasLookup) {
+      subtitle = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(lookedUpOwner!),
+          if (lookedUpAddress != null && lookedUpAddress!.isNotEmpty)
+            Text(
+              lookedUpAddress!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          Text(
+            'iz katastra (GURS)',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      );
+    } else {
+      subtitle = const Text('Ni dolocen');
+    }
+
     return Card(
       child: ListTile(
         leading: const Icon(Icons.person),
         title: const Text('Lastnik'),
-        subtitle: Text(owner ?? 'Ni dolocen'),
+        subtitle: subtitle,
+        isThreeLine: hasLookup,
         trailing: const Icon(Icons.edit),
         onTap: onEdit,
       ),

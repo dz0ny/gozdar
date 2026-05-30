@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/parcel.dart';
 import '../services/cadastral_service.dart';
+import '../services/owner_lookup_service.dart';
 import 'parcel_silhouette.dart';
 
 /// Bottom sheet displayed when a parcel is found from search
@@ -41,6 +42,10 @@ class ParcelFoundSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ownerInfo = OwnerLookupService.instance.lookup(
+      int.tryParse(wfsParcel.koNumber),
+      wfsParcel.parcelNumber,
+    );
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -167,6 +172,33 @@ class ParcelFoundSheet extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (ownerInfo != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.person,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              ownerInfo.address != null
+                                  ? '${ownerInfo.displayOwners} • ${ownerInfo.address}'
+                                  : ownerInfo.displayOwners,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

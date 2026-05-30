@@ -21,10 +21,11 @@ import '../services/cadastral_service.dart';
 import '../services/tile_cache_service.dart';
 import '../services/rtk_position_service.dart';
 import '../services/rtk_bridge_settings.dart';
+import '../services/vlake_service.dart';
+import '../services/vlake_settings.dart';
 import '../widgets/navigation_compass_dialog.dart';
 import '../widgets/tile_download_dialog.dart';
 import '../widgets/map_long_press_menu.dart';
-import '../widgets/navigation_target_banner.dart';
 import '../widgets/map_controls.dart';
 import '../widgets/map_layer_selector.dart';
 import '../widgets/map_dialogs.dart';
@@ -40,6 +41,10 @@ import '../providers/map_provider.dart';
 import '../services/location_settings.dart';
 
 enum _MeasurementTool { distance, area }
+
+enum _DistanceUnit { meters, kilometers }
+
+enum _AreaUnit { squareMeters, hectares }
 
 class _MeasurementState {
   final _MeasurementTool? tool;
@@ -104,15 +109,44 @@ class MapTabState extends State<MapTab> {
   // Current zoom level for dynamic marker sizing
   double _currentZoom = 13.0;
 
+  // Visible map bounds, used to cull the Vlake overlay to the viewport.
+  LatLngBounds? _visibleBounds;
+
+  /// Minimum zoom at which the Vlake (skid-road) overlay is drawn.
+  static const double _vlakeMinZoom = 13.0;
+
   // Searched parcel from WFS query
   WfsParcel? _searchedParcel;
   _MeasurementState _measurement = const _MeasurementState();
+  _DistanceUnit _distanceUnit = _DistanceUnit.meters;
+  _AreaUnit _areaUnit = _AreaUnit.hectares;
 
   /// Calculate marker size based on zoom level
   /// Returns smaller sizes at lower zoom levels
   double _getMarkerSize(double baseSize, MapProvider mapProvider) {
     final scale = ((_currentZoom - 15) / 2).clamp(0.5, 1.0);
     return baseSize * scale;
+  }
+
+  /// Build Vlake polylines for the current viewport (culled by bounding box).
+  List<Polyline> _buildVlakePolylines() {
+    final bounds = _visibleBounds;
+    if (bounds == null) return const [];
+    final lines = VlakeService.instance.linesInBounds(
+      bounds.south,
+      bounds.west,
+      bounds.north,
+      bounds.east,
+    );
+    return lines
+        .map(
+          (l) => Polyline(
+            points: l.points,
+            color: const Color(0xFFFF6D00), // orange skid-road
+            strokeWidth: 2.0,
+          ),
+        )
+        .toList();
   }
 
   /// Set navigation target and center map on it
@@ -944,17 +978,49 @@ class MapTabState extends State<MapTab> {
 
     if (_measurement.tool == _MeasurementTool.distance) {
       final meters = _measurementDistanceMeters(_measurement.points);
-      if (meters >= 1000) {
+      if (_distanceUnit == _DistanceUnit.kilometers) {
         return '${(meters / 1000).toStringAsFixed(2)} km';
       }
       return '${meters.toStringAsFixed(0)} m';
     }
 
     final area = _measurementAreaM2(_measurement.points);
-    if (area >= 10000) {
+    if (_areaUnit == _AreaUnit.hectares) {
       return '${(area / 10000).toStringAsFixed(2)} ha';
     }
-    return '${area.toStringAsFixed(0)} m2';
+    return '${area.toStringAsFixed(0)} m²';
+  }
+
+  /// Compact segmented control to switch measurement display units.
+  Widget _measurementUnitSelector() {
+    final style = SegmentedButton.styleFrom(
+      visualDensity: VisualDensity.compact,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      textStyle: Theme.of(context).textTheme.labelMedium,
+    );
+    if (_measurement.tool == _MeasurementTool.distance) {
+      return SegmentedButton<_DistanceUnit>(
+        style: style,
+        showSelectedIcon: false,
+        segments: const [
+          ButtonSegment(value: _DistanceUnit.meters, label: Text('m')),
+          ButtonSegment(value: _DistanceUnit.kilometers, label: Text('km')),
+        ],
+        selected: {_distanceUnit},
+        onSelectionChanged: (s) => setState(() => _distanceUnit = s.first),
+      );
+    }
+    return SegmentedButton<_AreaUnit>(
+      style: style,
+      showSelectedIcon: false,
+      segments: const [
+        ButtonSegment(value: _AreaUnit.squareMeters, label: Text('m²')),
+        ButtonSegment(value: _AreaUnit.hectares, label: Text('ha')),
+      ],
+      selected: {_areaUnit},
+      onSelectionChanged: (s) => setState(() => _areaUnit = s.first),
+    );
   }
 
   String _measurementHintLabel() {
@@ -1082,26 +1148,39 @@ class MapTabState extends State<MapTab> {
     );
   }
 
-  Widget _buildMeasurementPanel(BuildContext context, MapProvider mapProvider) {
-    final topOffset = MediaQuery.of(context).padding.top +
-        (mapProvider.navigationTarget != null ? 90 : 16) +
-        (mapProvider.isLoadingLocations || mapProvider.isQueryingParcel ? 72 : 0);
+  Widget _buildMeasurementPanel(BuildContext context) {
     final canFinish = _measurement.hasEnoughPoints && !_measurement.isFinished;
 
+    final cs = Theme.of(context).colorScheme;
     return Positioned(
-      top: topOffset,
-      left: 16,
-      right: 72,
+      left: 0,
+      right: 0,
+      bottom: 0,
       child: Material(
-        elevation: 6,
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
-        color: Theme.of(context).colorScheme.surface,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+        elevation: 12,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: cs.surfaceContainerHighest,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border(top: BorderSide(color: cs.primary, width: 2)),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               Row(
                 children: [
                   Icon(
@@ -1128,12 +1207,20 @@ class MapTabState extends State<MapTab> {
                 ],
               ),
               const SizedBox(height: 4),
-              Text(
-                _measurementValueLabel(),
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      _measurementValueLabel(),
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  _measurementUnitSelector(),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -1181,6 +1268,13 @@ class MapTabState extends State<MapTab> {
     // Watch provider for changes (including worker URL, parcels, locations)
     final mapProvider = context.watch<MapProvider>();
     final rtkBridgeSettings = context.watch<RtkBridgeSettings>();
+    final vlakeEnabled = context.watch<VlakeSettings>().enabled;
+    // Lazily load the embedded Vlake data the first time the overlay is on.
+    if (vlakeEnabled && !VlakeService.instance.isLoaded) {
+      VlakeService.instance.ensureLoaded().then((_) {
+        if (mounted) setState(() {});
+      });
+    }
     final externalPosition = rtkPositionService.position;
     final activeUserPosition = externalPosition?.point ??
         (_locationTracker.userPosition != null
@@ -1208,10 +1302,16 @@ class MapTabState extends State<MapTab> {
         NavigationTarget(location: point, name: name),
         zoomIn: false,
       ),
-      onParcelVertexTap: (point, name) => setNavigationTarget(
-        NavigationTarget(location: point, name: name),
-        zoomIn: false,
-      ),
+      onParcelVertexTap: (point, name) {
+        // Open the compass immediately when a parcel boundary marker
+        // (parcelni mejnik) is tapped, instead of requiring a second tap
+        // on the banner.
+        setNavigationTarget(
+          NavigationTarget(location: point, name: name),
+          zoomIn: false,
+        );
+        _showCompassForTarget();
+      },
     );
 
     // Create layer renderer using provider data
@@ -1264,6 +1364,11 @@ class MapTabState extends State<MapTab> {
                     mapProvider.zoom,
                     mapProvider.rotation,
                   );
+                  if (mounted) {
+                    setState(() {
+                      _visibleBounds = _mapController.camera.visibleBounds;
+                    });
+                  }
                 },
                 // Handle tap to dismiss long press menu
                 onTap: (tapPosition, point) {
@@ -1290,11 +1395,17 @@ class MapTabState extends State<MapTab> {
                 onMapEvent: (event) {
                   if (event is MapEventMoveEnd || event is MapEventRotateEnd) {
                     _saveMapState();
+                    _visibleBounds = event.camera.visibleBounds;
+                    // Re-cull the Vlake overlay once movement settles.
+                    if (VlakeSettings.instance.enabled && mounted) {
+                      setState(() {});
+                    }
                   }
                   // Track zoom level for dynamic marker sizing
                   if (event.camera.zoom != _currentZoom) {
                     setState(() {
                       _currentZoom = event.camera.zoom;
+                      _visibleBounds = event.camera.visibleBounds;
                     });
                   }
                   // Dismiss menu on map move
@@ -1309,6 +1420,12 @@ class MapTabState extends State<MapTab> {
               ),
               children: [
                 ...layerRenderer.getAllTileLayers(),
+                // Embedded Vlake (forest skid-road) overlay, viewport-culled.
+                if (vlakeEnabled &&
+                    _currentZoom >= _vlakeMinZoom &&
+                    VlakeService.instance.isLoaded &&
+                    _visibleBounds != null)
+                  PolylineLayer(polylines: _buildVlakePolylines()),
                 if (downloadState.overlays.isNotEmpty)
                   PolygonLayer(
                     polygons: downloadState.overlays
@@ -1429,9 +1546,9 @@ class MapTabState extends State<MapTab> {
               if (mapProvider.navigationTarget != null)
                 Builder(
                   builder: (ctx) {
-                    final navSize = _getMarkerSize(50, mapProvider);
-                    final navIconSize = _getMarkerSize(28, mapProvider);
-                    final navBorderWidth = _getMarkerSize(3, mapProvider);
+                    final navSize = _getMarkerSize(34, mapProvider);
+                    final navIconSize = _getMarkerSize(20, mapProvider);
+                    final navBorderWidth = _getMarkerSize(2, mapProvider);
                     return MarkerLayer(
                       markers: [
                         Marker(
@@ -1530,19 +1647,10 @@ class MapTabState extends State<MapTab> {
               child: _buildRtkAccuracyBadge(context, externalPosition),
             ),
 
-          // Navigation target info banner
-          if (mapProvider.navigationTarget != null)
-            NavigationTargetBanner(
-              target: mapProvider.navigationTarget!,
-              onTap: _showCompassForTarget,
-              onClose: clearNavigationTarget,
-            ),
-
           // Loading indicator for locations
           if (mapProvider.isLoadingLocations)
             Positioned(
-              top: MediaQuery.of(context).padding.top +
-                  (mapProvider.navigationTarget != null ? 90 : 16),
+              top: MediaQuery.of(context).padding.top + 16,
               left: 16,
               child: Material(
                 elevation: 4,
@@ -1560,8 +1668,7 @@ class MapTabState extends State<MapTab> {
           // Loading indicator for parcel query
           if (mapProvider.isQueryingParcel)
             Positioned(
-              top: MediaQuery.of(context).padding.top +
-                  (mapProvider.navigationTarget != null ? 90 : 16),
+              top: MediaQuery.of(context).padding.top + 16,
               left: 0,
               right: 0,
               child: Center(
@@ -1598,7 +1705,7 @@ class MapTabState extends State<MapTab> {
             ),
 
           if (_measurement.isActive)
-            _buildMeasurementPanel(context, mapProvider),
+            _buildMeasurementPanel(context),
 
           // Long press action menu
           if (_longPressScreenPosition != null && _longPressMapPosition != null)

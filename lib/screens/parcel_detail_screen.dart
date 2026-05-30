@@ -11,6 +11,7 @@ import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
 import '../services/database_service.dart';
 import '../services/kml_service.dart';
+import '../services/owner_lookup_service.dart';
 import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
 import '../widgets/notes_editor_sheet.dart';
@@ -36,6 +37,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   List<LogEntry> _logsInParcel = [];
   double _logsVolume = 0.0;
   LogsProvider? _logsProvider;
+  OwnerInfo? _lookedUpOwner;
 
   @override
   void initState() {
@@ -43,6 +45,21 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     _parcel = widget.parcel;
     _loadLocationsInParcel();
     _loadLogsInParcel();
+    _lookUpOwner();
+  }
+
+  /// Look up the owner from the imported cadastral database when the parcel has
+  /// no manually-entered owner. Read-only; never modifies the parcel.
+  void _lookUpOwner() {
+    if (_parcel.owner != null && _parcel.owner!.isNotEmpty) return;
+    if (!_parcel.isCadastral || !OwnerLookupService.instance.isAvailable) return;
+    final info = OwnerLookupService.instance.lookup(
+      _parcel.cadastralMunicipality,
+      _parcel.parcelNumber,
+    );
+    if (info != null && mounted) {
+      setState(() => _lookedUpOwner = info);
+    }
   }
 
   @override
@@ -606,7 +623,12 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                   const SizedBox(height: 16),
 
                   // Owner Card
-                  ParcelOwnerCard(owner: _parcel.owner, onEdit: _editOwner),
+                  ParcelOwnerCard(
+                    owner: _parcel.owner,
+                    onEdit: _editOwner,
+                    lookedUpOwner: _lookedUpOwner?.displayOwners,
+                    lookedUpAddress: _lookedUpOwner?.address,
+                  ),
 
                   const SizedBox(height: 16),
 

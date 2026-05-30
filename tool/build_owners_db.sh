@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+#
+# Build a compact, indexed SQLite database of cadastral parcel owners from the
+# GURS extract CSV, for import into the Gozdar app (hidden "Uvozi bazo lastnikov"
+# option in the About screen).
+#
+# The CSV is a dev-machine artifact (~106 MB, 1.6M rows); the resulting
+# owners.sqlite (~30-60 MB) is what you transfer to the device and import.
+#
+# Usage:
+#   tool/build_owners_db.sh [input.csv] [output.sqlite]
+#
+# Defaults match the current extract on /Volumes/Disk.
+set -euo pipefail
+
+CSV="${1:-/Volumes/Disk/kataster_lastniki_SLO_owners_only.csv}"
+OUT="${2:-owners.sqlite}"
+
+if [[ ! -f "$CSV" ]]; then
+  echo "error: input CSV not found: $CSV" >&2
+  exit 1
+fi
+
+echo "Building $OUT from $CSV ..."
+rm -f "$OUT"
+
+# .import --csv understands RFC-4180 quoting, so owner names containing commas
+# (which are quoted in the source) import into a single column correctly.
+sqlite3 "$OUT" <<SQL
+.mode csv
+CREATE TABLE _raw(objectid,sifko,obcina,imeko,parcela,povrsina,naslov,lastnik);
+.import --csv --skip 1 "$CSV" _raw
+
+CREATE TABLE owners AS
+  SELECT DISTINCT
+    CAST(sifko AS INTEGER) AS sifko,
+    parcela,
+    lastnik,
+    naslov,
+    obcina          -- owner's municipality (only ~7% filled); used to build a
+                    -- fuller address "NASLOV, OBCINA" when present
+  FROM _raw
+  WHERE TRIM(lastnik) <> '';
+DROP TABLE _raw;
+
+CREATE INDEX idx_owners ON owners(sifko, parcela);
+
+CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT);
+INSERT INTO meta(k, v) VALUES
+  ('rows', (SELECT COUNT(*) FROM owners)),
+  ('built', datetime('now'));
+
+VACUUM;
+SQL
+
+ROWS=$(sqlite3 "$OUT" "SELECT v FROM meta WHERE k='rows'")
+SIZE=$(du -h "$OUT" | cut -f1)
+echo "Done: $OUT  ($ROWS owner rows, $SIZE)"
+echo "Spot check (KO 1640, parcela 1799/89):"
+sqlite3 "$OUT" "SELECT sifko, parcela, lastnik, naslov FROM owners WHERE sifko=1640 AND parcela='1799/89'"

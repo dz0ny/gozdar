@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/map_location.dart';
 import '../services/cadastral_service.dart';
+import '../services/owner_lookup_service.dart';
 
 /// Helper class for map-related dialogs
 class MapDialogs {
@@ -422,6 +423,10 @@ class MapDialogs {
     required BuildContext context,
     required CadastralParcel cadastralParcel,
   }) async {
+    final owner = OwnerLookupService.instance.lookup(
+      cadastralParcel.cadastralMunicipality,
+      cadastralParcel.parcelNumber,
+    );
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -464,6 +469,17 @@ class MapDialogs {
                       'Povrsina',
                       cadastralParcel.formattedArea,
                     ),
+                    if (owner != null) ...[
+                      const SizedBox(height: 8),
+                      _buildInfoRow(
+                        context,
+                        Icons.person,
+                        'Lastnik',
+                        owner.address != null
+                            ? '${owner.displayOwners}\n${owner.address}'
+                            : owner.displayOwners,
+                      ),
+                    ],
                   ],
                 ),
               ),

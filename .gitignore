@@ -3,6 +3,8 @@
 *.log
 *.pyc
 *.swp
+*.backup
+.cachebro/
 .DS_Store
 .atom/
 .build/
@@ -52,3 +54,8 @@ ios/.bundle/
 ios/vendor/bundle/
 worker/.wrangler*
 worker/node_modules*
+
+# Cadastral owners lookup DB (built by tool/build_owners_db.sh from the GURS
+# extract; large, not distributed in the repo)
+*.sqlite
+owners.sqlite

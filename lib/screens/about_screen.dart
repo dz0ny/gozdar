@@ -1,8 +1,12 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/owner_lookup_service.dart';
 import '../services/rtk_bridge_settings.dart';
+import '../services/vlake_service.dart';
+import '../services/vlake_settings.dart';
 
 /// Full-featured About screen with app info, map sources, and legal information
 class AboutScreen extends StatefulWidget {
@@ -134,7 +138,10 @@ class _AboutScreenState extends State<AboutScreen> {
     final version = _packageInfo?.version ?? '...';
     final buildNumber = _packageInfo?.buildNumber ?? '...';
 
-    return Card(
+    return GestureDetector(
+      // Hidden developer options: long-press the version card.
+      onLongPress: () => _showDeveloperSheet(context),
+      child: Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -159,7 +166,178 @@ class _AboutScreenState extends State<AboutScreen> {
           ],
         ),
       ),
+      ),
     );
+  }
+
+  /// Hidden developer options sheet (owners database import).
+  void _showDeveloperSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            final service = OwnerLookupService.instance;
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.developer_mode,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Razvijalske moznosti',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    Text(
+                      'Baza lastnikov (kataster)',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    FutureBuilder<int?>(
+                      future: service.fileSizeBytes(),
+                      builder: (context, snapshot) {
+                        if (!service.isAvailable) {
+                          return Text(
+                            'Ni uvozena.',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          );
+                        }
+                        final size = snapshot.data;
+                        final sizeLabel = size != null
+                            ? ' • ${(size / (1024 * 1024)).toStringAsFixed(1)} MB'
+                            : '';
+                        return Text(
+                          '${_formatCount(service.rowCount)} lastnikov$sizeLabel',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () =>
+                                _importOwners(sheetContext, setSheetState),
+                            icon: const Icon(Icons.file_open),
+                            label: Text(
+                              service.isAvailable
+                                  ? 'Zamenjaj (.sqlite)'
+                                  : 'Uvozi bazo (.sqlite)',
+                            ),
+                          ),
+                        ),
+                        if (service.isAvailable) ...[
+                          const SizedBox(width: 12),
+                          OutlinedButton.icon(
+                            onPressed: () =>
+                                _removeOwners(sheetContext, setSheetState),
+                            icon: const Icon(Icons.delete_outline),
+                            label: const Text('Odstrani'),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: Icon(
+                        Icons.forest,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      title: const Text('Vlake (gozdne vlake)'),
+                      subtitle: const Text(
+                        'Prikaži vlake na karti (pri večji povečavi)',
+                      ),
+                      value: VlakeSettings.instance.enabled,
+                      onChanged: (v) async {
+                        await VlakeSettings.instance.setEnabled(v);
+                        if (v) VlakeService.instance.ensureLoaded();
+                        setSheetState(() {});
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _importOwners(
+    BuildContext sheetContext,
+    void Function(void Function()) setSheetState,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await FilePicker.pickFiles(type: FileType.any);
+    final path = result?.files.single.path;
+    if (path == null) return;
+
+    final lower = path.toLowerCase();
+    if (!lower.endsWith('.sqlite') && !lower.endsWith('.db')) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Izberi datoteko .sqlite.')),
+      );
+      return;
+    }
+
+    try {
+      final imported = await OwnerLookupService.instance.importFromFile(path);
+      setSheetState(() {});
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Uvozenih ${_formatCount(imported.rows)} lastnikov.'),
+        ),
+      );
+    } catch (e) {
+      final message = e is FormatException ? e.message : 'Uvoz ni uspel: $e';
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  Future<void> _removeOwners(
+    BuildContext sheetContext,
+    void Function(void Function()) setSheetState,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await OwnerLookupService.instance.remove();
+    setSheetState(() {});
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Baza lastnikov odstranjena.')),
+    );
+  }
+
+  /// Group digits with dots, e.g. 1354039 -> "1.354.039".
+  String _formatCount(int n) {
+    final s = n.toString();
+    final buffer = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buffer.write('.');
+      buffer.write(s[i]);
+    }
+    return buffer.toString();
   }
 
   Widget _buildSettingsCard(BuildContext context, ColorScheme colorScheme) {
