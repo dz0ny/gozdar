@@ -86,37 +86,27 @@ build-play-no-bump: ## Build Play release AAB without bumping version
 	flutter build appbundle --release --flavor play --dart-define=GOZDAR_PLAY_DISTRIBUTION=true
 	@ls -lh $(PLAY_BUNDLE_DIR)/app-play-release.aab
 
-release: build release-ios ## Build APK, create GitHub release, and upload iOS to TestFlight
-	$(eval VERSION := $(shell grep '^version:' $(PUBSPEC) | sed 's/version: //' | cut -d'+' -f1))
-	@echo "Creating GitHub release v$(VERSION)..."
-	@if ! command -v gh &> /dev/null; then \
-		echo "Error: GitHub CLI (gh) not installed. Install with: brew install gh"; \
-		exit 1; \
-	fi
-	@cp $(BUILD_DIR)/app-direct-release.apk $(BUILD_DIR)/gozdar-$(VERSION).apk
-	gh release create "v$(VERSION)" \
-		"$(BUILD_DIR)/gozdar-$(VERSION).apk#Gozdar $(VERSION) APK" \
-		--title "Gozdar v$(VERSION)" \
-		--notes "Release $(VERSION)" \
-		--latest
-	@echo "Release v$(VERSION) created!"
-	@echo "URL: https://github.com/dz0ny/gozdar/releases/tag/v$(VERSION)"
+release: release-android release-ios ## Bump+push, build Android in CI, upload iOS to TestFlight
+	@echo "Release done: Android built & published by CI; iOS uploaded to TestFlight."
 
-release-android: build ## Build APK and create GitHub release (Android only)
+release-android: bump ## Bump+push and create GitHub release (CI builds & uploads APK + AAB)
 	$(eval VERSION := $(shell grep '^version:' $(PUBSPEC) | sed 's/version: //' | cut -d'+' -f1))
-	@echo "Creating GitHub release v$(VERSION)..."
 	@if ! command -v gh &> /dev/null; then \
 		echo "Error: GitHub CLI (gh) not installed. Install with: brew install gh"; \
 		exit 1; \
 	fi
-	@cp $(BUILD_DIR)/app-direct-release.apk $(BUILD_DIR)/gozdar-$(VERSION).apk
+	@echo "Committing version bump v$(VERSION) and pushing (CI builds from this commit)..."
+	git add $(PUBSPEC)
+	git commit -m "chore: Release v$(VERSION)"
+	git push
+	@echo "Creating GitHub release v$(VERSION) (triggers Android CI build + upload)..."
 	gh release create "v$(VERSION)" \
-		"$(BUILD_DIR)/gozdar-$(VERSION).apk#Gozdar $(VERSION) APK" \
 		--title "Gozdar v$(VERSION)" \
 		--notes "Release $(VERSION)" \
 		--latest
-	@echo "Release v$(VERSION) created!"
-	@echo "URL: https://github.com/dz0ny/gozdar/releases/tag/v$(VERSION)"
+	@echo "Release v$(VERSION) created - CI is building APK + AAB."
+	@echo "Release: https://github.com/dz0ny/gozdar/releases/tag/v$(VERSION)"
+	@echo "Actions: https://github.com/dz0ny/gozdar/actions"
 
 release-play-internal: build-play ## Build Play AAB and upload to internal testing
 	cd android && bundle exec fastlane android internal
