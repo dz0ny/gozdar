@@ -14,6 +14,10 @@ class MapControls extends StatelessWidget {
   final VoidCallback onSearchPressed;
   final VoidCallback? onRtkPressed;
 
+  /// Hide the bottom-anchored controls (GPS + saved locations) so they don't
+  /// overlap the measurement panel docked at the bottom of the map.
+  final bool hideBottomControls;
+
   const MapControls({
     super.key,
     required this.mapController,
@@ -25,6 +29,7 @@ class MapControls extends StatelessWidget {
     this.onRtkPressed,
     required this.onSearchPressed,
     this.onLocationsPressed,
+    this.hideBottomControls = false,
   });
 
   @override
@@ -90,19 +95,22 @@ class MapControls extends StatelessWidget {
             ],
           ),
         ),
-        // Bottom right: GPS
-        Positioned(
-          bottom: 8,
-          right: 4,
-          child: FloatingActionButton(
-            heroTag: 'map_gps',
-            onPressed: onGpsPressed,
-            tooltip: 'Centriraj na GPS lokacijo',
-            child: const Icon(Icons.my_location),
+        // Bottom right: GPS (hidden while measuring to avoid overlap)
+        if (!hideBottomControls)
+          Positioned(
+            bottom: 8,
+            right: 4,
+            child: FloatingActionButton(
+              heroTag: 'map_gps',
+              onPressed: onGpsPressed,
+              tooltip: 'Centriraj na GPS lokacijo',
+              child: const Icon(Icons.my_location),
+            ),
           ),
-        ),
         // Bottom left: Saved locations (only show if there are locations)
-        if (locationsCount > 0 && onLocationsPressed != null)
+        if (!hideBottomControls &&
+            locationsCount > 0 &&
+            onLocationsPressed != null)
           Positioned(
             bottom: 8,
             left: 4,

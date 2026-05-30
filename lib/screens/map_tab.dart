@@ -884,6 +884,16 @@ class MapTabState extends State<MapTab> {
     });
   }
 
+  /// Start a measurement seeded with a first point (used from the long-press
+  /// menu, where the long-press location becomes the first point).
+  void _startMeasurementAt(_MeasurementTool tool, LatLng point) {
+    setState(() {
+      _longPressScreenPosition = null;
+      _longPressMapPosition = null;
+      _measurement = _MeasurementState(tool: tool, points: [point]);
+    });
+  }
+
   void _addMeasurementPoint(LatLng point) {
     if (!_measurement.isActive || _measurement.isFinished) return;
 
@@ -891,33 +901,6 @@ class MapTabState extends State<MapTab> {
       _measurement = _measurement.copyWith(
         points: [..._measurement.points, point],
       );
-    });
-  }
-
-  void _undoMeasurementPoint() {
-    if (_measurement.points.isEmpty) return;
-
-    setState(() {
-      _measurement = _measurement.copyWith(
-        points: _measurement.points.sublist(0, _measurement.points.length - 1),
-        isFinished: false,
-      );
-    });
-  }
-
-  void _clearMeasurement() {
-    if (!_measurement.isActive) return;
-
-    setState(() {
-      _measurement = _measurement.copyWith(points: const [], isFinished: false);
-    });
-  }
-
-  void _finishMeasurement() {
-    if (!_measurement.hasEnoughPoints) return;
-
-    setState(() {
-      _measurement = _measurement.copyWith(isFinished: true);
     });
   }
 
@@ -1149,8 +1132,6 @@ class MapTabState extends State<MapTab> {
   }
 
   Widget _buildMeasurementPanel(BuildContext context) {
-    final canFinish = _measurement.hasEnoughPoints && !_measurement.isFinished;
-
     final cs = Theme.of(context).colorScheme;
     return Positioned(
       left: 0,
@@ -1228,30 +1209,6 @@ class MapTabState extends State<MapTab> {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: _measurement.points.isEmpty
-                        ? null
-                        : _undoMeasurementPoint,
-                    icon: const Icon(Icons.undo, size: 18),
-                    label: const Text('Nazaj'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _measurement.points.isEmpty ? null : _clearMeasurement,
-                    icon: const Icon(Icons.clear, size: 18),
-                    label: const Text('Pocisti'),
-                  ),
-                  FilledButton.icon(
-                    onPressed: canFinish ? _finishMeasurement : null,
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Zakljuci'),
-                  ),
-                ],
               ),
             ],
           ),
@@ -1729,6 +1686,10 @@ class MapTabState extends State<MapTab> {
                   onAddLocation: () => _showAddLocationDialog(position),
                   onAddLog: () => _showAddLogDialog(position),
                   onAddSecnja: () => _showAddSecnjaDialog(position),
+                  onMeasureDistance: () =>
+                      _startMeasurementAt(_MeasurementTool.distance, position),
+                  onMeasureArea: () =>
+                      _startMeasurementAt(_MeasurementTool.area, position),
                   onImportParcel: () => _queryParcelAtLocation(position),
                   onViewParcel: parcelAtPosition != null
                       ? () => _navigateToParcelDetail(parcelAtPosition!)
@@ -1741,12 +1702,14 @@ class MapTabState extends State<MapTab> {
               },
             ),
 
-          // Attribution overlay (bottom left) - tap to see usage rights
-          Positioned(
-            bottom: 4,
-            left: 4,
-            child: GestureDetector(
-              onTap: _showUsageRightsDialog,
+          // Attribution overlay (bottom left) - tap to see usage rights.
+          // Hidden while measuring so it doesn't overlap the measurement panel.
+          if (!_measurement.isActive)
+            Positioned(
+              bottom: 4,
+              left: 4,
+              child: GestureDetector(
+                onTap: _showUsageRightsDialog,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -1785,6 +1748,7 @@ class MapTabState extends State<MapTab> {
         onRtkPressed: rtkBridgeSettings.enabled ? () => context.push(AppRoutes.rtkBridge) : null,
         onGpsPressed: _centerOnGpsLocation,
         onLocationsPressed: mapProvider.locations.isNotEmpty ? _showLocationsSheet : null,
+        hideBottomControls: _measurement.isActive,
       ),
     );
   }

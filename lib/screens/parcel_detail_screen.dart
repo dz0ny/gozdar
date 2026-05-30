@@ -48,10 +48,11 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     _lookUpOwner();
   }
 
-  /// Look up the owner from the imported cadastral database when the parcel has
-  /// no manually-entered owner. Read-only; never modifies the parcel.
+  /// Look up the owner/address (with občina) from the imported cadastral
+  /// database. Runs for any cadastral parcel so the full address can be shown
+  /// even when an owner name is already stored. Read-only; never modifies the
+  /// parcel.
   void _lookUpOwner() {
-    if (_parcel.owner != null && _parcel.owner!.isNotEmpty) return;
     if (!_parcel.isCadastral || !OwnerLookupService.instance.isAvailable) return;
     final info = OwnerLookupService.instance.lookup(
       _parcel.cadastralMunicipality,

@@ -9,6 +9,8 @@ class MapLongPressMenu extends StatelessWidget {
   final VoidCallback onAddLocation;
   final VoidCallback onAddLog;
   final VoidCallback onAddSecnja;
+  final VoidCallback onMeasureDistance;
+  final VoidCallback onMeasureArea;
   final VoidCallback onImportParcel;
   final VoidCallback? onViewParcel;
   final VoidCallback onDismiss;
@@ -21,6 +23,8 @@ class MapLongPressMenu extends StatelessWidget {
     required this.onAddLocation,
     required this.onAddLog,
     required this.onAddSecnja,
+    required this.onMeasureDistance,
+    required this.onMeasureArea,
     required this.onImportParcel,
     this.onViewParcel,
     required this.onDismiss,
@@ -101,6 +105,28 @@ class MapLongPressMenu extends StatelessWidget {
                 onTap: () {
                   onDismiss();
                   onAddSecnja();
+                },
+              ),
+              const Divider(height: 8),
+              // Measure distance
+              _buildMenuItem(
+                icon: Icons.route,
+                label: 'Merjenje razdalje',
+                color: Colors.teal,
+                onTap: () {
+                  onDismiss();
+                  onMeasureDistance();
+                },
+              ),
+              const Divider(height: 8),
+              // Measure area
+              _buildMenuItem(
+                icon: Icons.square_foot,
+                label: 'Merjenje povrsine',
+                color: Colors.deepPurple,
+                onTap: () {
+                  onDismiss();
+                  onMeasureArea();
                 },
               ),
               const Divider(height: 8),

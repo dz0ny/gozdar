@@ -10,7 +10,9 @@ import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
 import '../services/database_service.dart';
 import '../services/kml_service.dart';
+import '../services/owner_lookup_service.dart';
 import '../widgets/parcel_silhouette.dart';
+import 'owner_import_search_screen.dart';
 
 /// Get icon and color for forest type
 (IconData, Color) getForestTypeIcon(ForestType type) {
@@ -389,6 +391,20 @@ class ForestTabState extends State<ForestTab> {
     }
   }
 
+  /// Person-icon action: when the GURS owners DB is imported, open the
+  /// search-and-import-by-owner screen; otherwise filter own parcels by owner.
+  Future<void> _onOwnerButtonPressed() async {
+    if (OwnerLookupService.instance.isAvailable) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const OwnerImportSearchScreen()),
+      );
+      // Refresh in case parcels were imported.
+      await _loadData();
+      return;
+    }
+    await _showOwnerFilterDialog();
+  }
+
   Future<void> _showOwnerFilterDialog() async {
     final owners = _uniqueOwners;
 
@@ -497,14 +513,17 @@ class ForestTabState extends State<ForestTab> {
       appBar: AppBar(
         title: const Text('Moj Gozd'),
         actions: [
-          // Owner filter button
+          // Owner button: search-and-import from the GURS owners DB when it's
+          // imported, otherwise filter own parcels by owner.
           IconButton(
             icon: Badge(
               isLabelVisible: _selectedOwnerFilter != null,
               child: const Icon(Icons.person),
             ),
-            tooltip: 'Filtriraj po lastniku',
-            onPressed: _showOwnerFilterDialog,
+            tooltip: OwnerLookupService.instance.isAvailable
+                ? 'Uvoz po lastniku'
+                : 'Filtriraj po lastniku',
+            onPressed: _onOwnerButtonPressed,
           ),
           PopupMenuButton<String>(
             tooltip: 'Več možnosti gozda',

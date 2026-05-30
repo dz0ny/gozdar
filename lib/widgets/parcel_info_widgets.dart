@@ -171,36 +171,42 @@ class ParcelOwnerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasManual = owner != null && owner!.isNotEmpty;
-    final hasLookup =
-        !hasManual && lookedUpOwner != null && lookedUpOwner!.isNotEmpty;
+    final hasLookupOwner = lookedUpOwner != null && lookedUpOwner!.isNotEmpty;
+    final hasLookupAddress =
+        lookedUpAddress != null && lookedUpAddress!.isNotEmpty;
+
+    // Owner name: manual takes priority, otherwise the looked-up name.
+    final name = hasManual ? owner : (hasLookupOwner ? lookedUpOwner : null);
+    // Show the looked-up address (NASLOV, OBČINA) whenever available; show the
+    // GURS caption whenever any data comes from the cadastre.
+    final showsCadastre = hasLookupAddress || (!hasManual && hasLookupOwner);
 
     Widget subtitle;
-    if (hasManual) {
-      subtitle = Text(owner!);
-    } else if (hasLookup) {
+    if (name == null) {
+      subtitle = const Text('Ni dolocen');
+    } else {
       subtitle = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(lookedUpOwner!),
-          if (lookedUpAddress != null && lookedUpAddress!.isNotEmpty)
+          Text(name),
+          if (hasLookupAddress)
             Text(
               lookedUpAddress!,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-          Text(
-            'iz katastra (GURS)',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.primary,
-              fontStyle: FontStyle.italic,
+          if (showsCadastre)
+            Text(
+              'iz katastra (GURS)',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontStyle: FontStyle.italic,
+              ),
             ),
-          ),
         ],
       );
-    } else {
-      subtitle = const Text('Ni dolocen');
     }
 
     return Card(
@@ -208,7 +214,7 @@ class ParcelOwnerCard extends StatelessWidget {
         leading: const Icon(Icons.person),
         title: const Text('Lastnik'),
         subtitle: subtitle,
-        isThreeLine: hasLookup,
+        isThreeLine: name != null && (hasLookupAddress || showsCadastre),
         trailing: const Icon(Icons.edit),
         onTap: onEdit,
       ),

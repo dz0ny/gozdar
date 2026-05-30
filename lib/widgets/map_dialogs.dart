@@ -436,52 +436,88 @@ class MapDialogs {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Parcel info card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.landscape, color: Colors.green),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Parcela ${cadastralParcel.parcelNumber}',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline.withValues(
+                    alpha: 0.3,
+                  ),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header: parcel number
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildInfoRow(
-                      context,
-                      Icons.location_city,
-                      'Katastrska obcina',
-                      cadastralParcel.cadastralMunicipality.toString(),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildInfoRow(
-                      context,
-                      Icons.straighten,
-                      'Povrsina',
-                      cadastralParcel.formattedArea,
-                    ),
-                    if (owner != null) ...[
-                      const SizedBox(height: 8),
-                      _buildInfoRow(
-                        context,
-                        Icons.person,
-                        'Lastnik',
-                        owner.address != null
-                            ? '${owner.displayOwners}\n${owner.address}'
-                            : owner.displayOwners,
+                        child: Icon(
+                          Icons.landscape,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Parcela ${cadastralParcel.parcelNumber}',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Katastrska parcela',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  ],
-                ),
+                  ),
+                  Divider(
+                    height: 24,
+                    color: Theme.of(context).colorScheme.outline.withValues(
+                      alpha: 0.2,
+                    ),
+                  ),
+                  _detailRow(
+                    context,
+                    Icons.location_city,
+                    'Katastrska obcina',
+                    owner?.koName != null
+                        ? '${owner!.koName} (${cadastralParcel.cadastralMunicipality})'
+                        : cadastralParcel.cadastralMunicipality.toString(),
+                  ),
+                  _detailRow(
+                    context,
+                    Icons.straighten,
+                    'Povrsina',
+                    cadastralParcel.formattedArea,
+                  ),
+                  if (owner != null)
+                    _detailRow(
+                      context,
+                      Icons.person,
+                      'Lastnik',
+                      owner.displayOwners,
+                      secondary: owner.address,
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -508,28 +544,56 @@ class MapDialogs {
     return result ?? false;
   }
 
-  static Widget _buildInfoRow(
+  /// One attribute row: leading icon, with a muted label above the value
+  /// (and an optional muted secondary line below, e.g. owner address). The
+  /// value gets full width so long names/KO labels don't wrap awkwardly.
+  static Widget _detailRow(
     BuildContext context,
     IconData icon,
     String label,
-    String value,
-  ) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
-        const SizedBox(width: 8),
-        Text('$label: ', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: colorScheme.onSurface,
+    String value, {
+    String? secondary,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: cs.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (secondary != null && secondary.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    secondary,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

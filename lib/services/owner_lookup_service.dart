@@ -9,10 +9,21 @@ class OwnerInfo {
   /// Distinct owner names (co-owners), already de-duplicated.
   final List<String> owners;
 
-  /// First non-empty address found for the parcel, if any.
+  /// First non-empty owner address found for the parcel, if any.
   final String? address;
 
-  const OwnerInfo({required this.owners, this.address});
+  /// Cadastral municipality (katastrska občina) name, e.g. "BABNO POLJE".
+  final String? koName;
+
+  /// Administrative municipality (občina), often null in the source data.
+  final String? municipality;
+
+  const OwnerInfo({
+    required this.owners,
+    this.address,
+    this.koName,
+    this.municipality,
+  });
 
   /// Owner names joined for display, e.g. "NOVAK JANEZ • KOVAC ANA".
   String get displayOwners => owners.join(' • ');
@@ -167,18 +178,18 @@ class OwnerLookupService {
 
     try {
       final rows = db.select(
-        'SELECT DISTINCT lastnik, naslov, obcina FROM owners '
+        'SELECT DISTINCT lastnik, naslov, imeko, obcina FROM owners '
         'WHERE sifko = ? AND parcela = ?',
         [sifko, key],
       );
       if (rows.isEmpty) return null;
 
       final owners = <String>[];
-      // Občina is the owner's municipality but only ~7% of rows have it, and the
-      // same owner/parcel can appear both with and without it. Take the first
-      // non-empty value of each part so the fuller "NASLOV, OBCINA" is shown
-      // whenever the data has it anywhere.
+      // Take the first non-empty value of each field. naslov is the owner's
+      // residence; imeko is the cadastral municipality (KO) name; obcina is the
+      // administrative municipality (sparse in the source).
       String? naslov;
+      String? imeko;
       String? obcina;
       for (final row in rows) {
         final name = _repairEncoding((row['lastnik'] as String?)?.trim());
@@ -189,6 +200,10 @@ class OwnerLookupService {
           final v = (row['naslov'] as String?)?.trim();
           if (v != null && v.isNotEmpty) naslov = v;
         }
+        if (imeko == null) {
+          final v = (row['imeko'] as String?)?.trim();
+          if (v != null && v.isNotEmpty) imeko = v;
+        }
         if (obcina == null) {
           final v = (row['obcina'] as String?)?.trim();
           if (v != null && v.isNotEmpty) obcina = v;
@@ -197,10 +212,96 @@ class OwnerLookupService {
       if (owners.isEmpty) return null;
       final addressParts = [?naslov, ?obcina];
       final address = addressParts.isEmpty ? null : addressParts.join(', ');
-      return OwnerInfo(owners: owners, address: address);
+      return OwnerInfo(
+        owners: owners,
+        address: address,
+        koName: imeko,
+        municipality: obcina,
+      );
     } catch (e) {
       debugPrint('OwnerLookupService.lookup failed: $e');
       return null;
     }
   }
+
+  /// Search owned parcels by owner [name] and/or [address] (both optional,
+  /// AND-combined). Returns parcels (KO + parcela) with full owner info, for
+  /// the owner-import flow. Returns empty when no database, or when both terms
+  /// are blank (to avoid dumping the whole table). Capped at [limit].
+  List<OwnerSearchHit> searchOwners({
+    String? name,
+    String? address,
+    int limit = 300,
+  }) {
+    final db = _db;
+    if (db == null) return const [];
+    // Data is stored uppercase; uppercase the query so caron letters match.
+    final n = (name ?? '').trim().toUpperCase();
+    final a = (address ?? '').trim().toUpperCase();
+    if (n.isEmpty && a.isEmpty) return const [];
+
+    final where = <String>[];
+    final args = <Object?>[];
+    if (n.isNotEmpty) {
+      where.add('lastnik LIKE ?');
+      args.add('%$n%');
+    }
+    if (a.isNotEmpty) {
+      where.add('naslov LIKE ?');
+      args.add('%$a%');
+    }
+    args.add(limit);
+
+    try {
+      final rows = db.select(
+        'SELECT DISTINCT sifko, parcela, lastnik, naslov, imeko, obcina '
+        'FROM owners WHERE ${where.join(' AND ')} '
+        'ORDER BY lastnik, sifko, parcela LIMIT ?',
+        args,
+      );
+      return rows.map((r) {
+        final owner = _repairEncoding((r['lastnik'] as String?)?.trim()) ?? '';
+        final naslov = (r['naslov'] as String?)?.trim() ?? '';
+        final obcina = (r['obcina'] as String?)?.trim() ?? '';
+        final imeko = (r['imeko'] as String?)?.trim() ?? '';
+        final addr = [
+          if (naslov.isNotEmpty) naslov,
+          if (obcina.isNotEmpty) obcina,
+        ].join(', ');
+        return OwnerSearchHit(
+          sifko: r['sifko'] as int,
+          parcela: r['parcela'] as String,
+          owner: owner,
+          address: addr.isEmpty ? null : addr,
+          koName: imeko.isEmpty ? null : imeko,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('OwnerLookupService.searchOwners failed: $e');
+      return const [];
+    }
+  }
+}
+
+/// One parcel result from an owner search: the cadastral key (KO + parcela)
+/// plus the owner's repaired name and full address.
+class OwnerSearchHit {
+  final int sifko;
+  final String parcela;
+  final String owner;
+  final String? address;
+
+  /// Cadastral municipality (katastrska občina) name, e.g. "BABNO POLJE".
+  final String? koName;
+
+  const OwnerSearchHit({
+    required this.sifko,
+    required this.parcela,
+    required this.owner,
+    this.address,
+    this.koName,
+  });
+
+  /// "BABNO POLJE (1651)" when the KO name is known, else "1651".
+  String get koLabel => koName != null ? '$koName ($sifko)' : '$sifko';
 }

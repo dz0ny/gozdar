@@ -31,17 +31,28 @@ sqlite3 "$OUT" <<SQL
 CREATE TABLE _raw(objectid,sifko,obcina,imeko,parcela,povrsina,naslov,lastnik);
 .import --csv --skip 1 "$CSV" _raw
 
+-- OBCINA (administrative municipality) is constant per cadastral municipality
+-- (SIFKO) but only filled on ~7% of source rows. Build a per-KO map so it can
+-- be backfilled onto every row.
+CREATE TABLE _ko_obcina AS
+  SELECT CAST(sifko AS INTEGER) AS sifko, MAX(TRIM(obcina)) AS obcina
+  FROM _raw
+  WHERE TRIM(obcina) <> ''
+  GROUP BY CAST(sifko AS INTEGER);
+
 CREATE TABLE owners AS
   SELECT DISTINCT
-    CAST(sifko AS INTEGER) AS sifko,
-    parcela,
-    lastnik,
-    naslov,
-    obcina          -- owner's municipality (only ~7% filled); used to build a
-                    -- fuller address "NASLOV, OBCINA" when present
-  FROM _raw
-  WHERE TRIM(lastnik) <> '';
+    CAST(r.sifko AS INTEGER) AS sifko,
+    r.parcela,
+    r.lastnik,
+    r.naslov,
+    r.imeko AS imeko,                                    -- cadastral KO name
+    COALESCE(NULLIF(TRIM(r.obcina), ''), k.obcina) AS obcina  -- municipality
+  FROM _raw r
+  LEFT JOIN _ko_obcina k ON CAST(r.sifko AS INTEGER) = k.sifko
+  WHERE TRIM(r.lastnik) <> '';
 DROP TABLE _raw;
+DROP TABLE _ko_obcina;
 
 CREATE INDEX idx_owners ON owners(sifko, parcela);
 
