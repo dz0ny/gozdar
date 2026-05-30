@@ -39,7 +39,6 @@ dependencies:
   # Database & Storage
   drift: ^2.32.1
   drift_flutter: ^0.3.0
-  flutter_avif: any
   path_provider: ^2.1.5
   # Read-only lookup DB for imported cadastral owners (owners.sqlite).
   # Already resolved transitively via drift_flutter; promoted to direct deps.

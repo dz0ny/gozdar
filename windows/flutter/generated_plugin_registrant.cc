@@ -6,7 +6,6 @@
 
 #include "generated_plugin_registrant.h"
 
-#include <flutter_avif_windows/flutter_avif_windows_plugin.h>
 #include <flutter_blue_plus_winrt/flutter_blue_plus_plugin.h>
 #include <geolocator_windows/geolocator_windows.h>
 #include <nsd_windows/nsd_windows_plugin_c_api.h>
@@ -14,8 +13,6 @@
 #include <url_launcher_windows/url_launcher_windows.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
-  FlutterAvifWindowsPluginRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("FlutterAvifWindowsPlugin"));
   FlutterBluePlusPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("FlutterBluePlusPlugin"));
   GeolocatorWindowsRegisterWithRegistrar(

@@ -3,7 +3,6 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  flutter_avif_windows
   flutter_blue_plus_winrt
   geolocator_windows
   nsd_windows
