@@ -170,7 +170,7 @@ class _RtkBridgeScreenState extends State<RtkBridgeScreen> {
 
     try {
       await device.connect(
-        license: License.free,
+        license: License.nonprofit,
         timeout: const Duration(seconds: 15),
       );
     } catch (e) {
