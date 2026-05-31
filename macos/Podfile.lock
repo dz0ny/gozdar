@@ -1,20 +1,14 @@
 PODS:
-  - flutter_avif_macos (0.0.1):
-    - FlutterMacOS
   - FlutterMacOS (1.0.0)
 
 DEPENDENCIES:
-  - flutter_avif_macos (from `Flutter/ephemeral/.symlinks/plugins/flutter_avif_macos/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
 
 EXTERNAL SOURCES:
-  flutter_avif_macos:
-    :path: Flutter/ephemeral/.symlinks/plugins/flutter_avif_macos/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
 
 SPEC CHECKSUMS:
-  flutter_avif_macos: 9ed61d67adfbd6964eccb59971020fb55c31fc11
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
 
 PODFILE CHECKSUM: 2b4b3989493f1a66e1d09f6ee73b0635bbf7b22e

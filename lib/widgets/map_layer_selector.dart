@@ -11,6 +11,16 @@ class MapLayerSelector extends StatefulWidget {
   final VoidCallback? onImportFile;
   final VoidCallback? onDownloadTiles;
 
+  /// Whether the developer-unlocked Vlake (forest skid-road) layer is available.
+  /// When true, a toggle appears under the Infrastruktura section.
+  final bool vlakeAvailable;
+
+  /// Current visibility of the Vlake overlay.
+  final bool vlakeVisible;
+
+  /// Called when the Vlake overlay is toggled from the selector.
+  final ValueChanged<bool>? onVlakeToggled;
+
   const MapLayerSelector({
     super.key,
     required this.currentBaseLayer,
@@ -20,6 +30,9 @@ class MapLayerSelector extends StatefulWidget {
     required this.onOverlayToggled,
     this.onImportFile,
     this.onDownloadTiles,
+    this.vlakeAvailable = false,
+    this.vlakeVisible = false,
+    this.onVlakeToggled,
   });
 
   /// Show the layer selector as a modal bottom sheet
@@ -32,6 +45,9 @@ class MapLayerSelector extends StatefulWidget {
     required ValueChanged<MapLayerType> onOverlayToggled,
     VoidCallback? onImportFile,
     VoidCallback? onDownloadTiles,
+    bool vlakeAvailable = false,
+    bool vlakeVisible = false,
+    ValueChanged<bool>? onVlakeToggled,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -54,6 +70,9 @@ class MapLayerSelector extends StatefulWidget {
             onOverlayToggled: onOverlayToggled,
             onImportFile: onImportFile,
             onDownloadTiles: onDownloadTiles,
+            vlakeAvailable: vlakeAvailable,
+            vlakeVisible: vlakeVisible,
+            onVlakeToggled: onVlakeToggled,
           ),
         ),
       ),
@@ -74,6 +93,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
   // Local state for selections
   late MapLayer _selectedBaseLayer;
   late Set<MapLayerType> _selectedOverlays;
+  late bool _vlakeVisible;
 
   @override
   void initState() {
@@ -83,6 +103,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     // Initialize local state from widget
     _selectedBaseLayer = widget.currentBaseLayer;
     _selectedOverlays = Set.from(widget.activeOverlays);
+    _vlakeVisible = widget.vlakeVisible;
 
     // Expand categories that have active overlays
     for (final category in OverlayCategory.values) {
@@ -92,6 +113,11 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
           ) ??
           false;
       _expandedCategories[category] = hasActiveOverlay;
+    }
+    // Expand Infrastruktura when the Vlake layer is available and shown, so the
+    // user can see its toggle right away.
+    if (widget.vlakeAvailable && _vlakeVisible) {
+      _expandedCategories[OverlayCategory.infrastruktura] = true;
     }
   }
 
@@ -454,12 +480,20 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       return layer.resolveUrlTemplate(widget.workerUrl) != null;
     }).toList();
 
-    if (filteredLayers.isEmpty) return const SizedBox.shrink();
+    // The Vlake (forest skid-road) overlay is not a WMS/tile MapLayer; it is a
+    // developer-unlocked embedded layer surfaced here under Infrastruktura.
+    final showVlakeTile =
+        category == OverlayCategory.infrastruktura && widget.vlakeAvailable;
+
+    if (filteredLayers.isEmpty && !showVlakeTile) {
+      return const SizedBox.shrink();
+    }
 
     final isExpanded = _expandedCategories[category] ?? false;
     final activeCount = filteredLayers
-        .where((layer) => _selectedOverlays.contains(layer.type))
-        .length;
+            .where((layer) => _selectedOverlays.contains(layer.type))
+            .length +
+        (showVlakeTile && _vlakeVisible ? 1 : 0);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -528,11 +562,64 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
           // Layers list
           if (isExpanded)
             Column(
-              children: filteredLayers
-                  .map((layer) => _buildOverlayTile(layer))
-                  .toList(),
+              children: [
+                ...filteredLayers.map((layer) => _buildOverlayTile(layer)),
+                if (showVlakeTile) _buildVlakeTile(),
+              ],
             ),
         ],
+      ),
+    );
+  }
+
+  /// Special overlay tile for the developer-unlocked Vlake layer.
+  Widget _buildVlakeTile() {
+    void toggle() {
+      setState(() => _vlakeVisible = !_vlakeVisible);
+      widget.onVlakeToggled?.call(_vlakeVisible);
+    }
+
+    return InkWell(
+      onTap: toggle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: Checkbox(
+                value: _vlakeVisible,
+                onChanged: (_) => toggle(),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Gozdne vlake',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight:
+                          _vlakeVisible ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Vlake (pri večji povečavi)',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

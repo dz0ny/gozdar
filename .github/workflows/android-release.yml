@@ -98,10 +98,3 @@ jobs:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           SKIP_ANDROID_BUILD: "1"
         run: cd android && bundle exec fastlane android internal
-
-      - name: Upload Play release to production
-        if: ${{ !github.event.release.prerelease }}
-        env:
-          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-          SKIP_ANDROID_BUILD: "1"
-        run: cd android && bundle exec fastlane android production

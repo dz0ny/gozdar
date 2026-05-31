@@ -16,8 +16,10 @@ import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
 import '../widgets/notes_editor_sheet.dart';
 import '../widgets/parcel_info_widgets.dart';
+import '../widgets/parcel_map_preview.dart';
 import '../widgets/parcel_wood_tracking_card.dart';
 import '../widgets/parcel_data_cards.dart';
+import 'forest_tab.dart' show getForestTypeIcon;
 
 class ParcelDetailScreen extends StatefulWidget {
   final Parcel parcel;
@@ -615,6 +617,26 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Embedded map preview (uses the main map's current layers)
+                  if (_parcel.polygon.isNotEmpty) ...[
+                    Builder(
+                      builder: (context) {
+                        final mapProvider = context.watch<MapProvider>();
+                        return ParcelMapPreview(
+                          polygon: _parcel.polygon,
+                          baseLayer: mapProvider.currentBaseLayer,
+                          activeOverlays: mapProvider.activeOverlays,
+                          workerUrl: mapProvider.workerUrl,
+                          outlineColor:
+                              getForestTypeIcon(_parcel.forestType).$2,
+                          onTap: () =>
+                              _navigateToPoint(_parcel.center, _parcel.name),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   // Parcel Info Card
                   ParcelInfoCard(
                     parcel: _parcel,

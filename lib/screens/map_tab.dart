@@ -18,6 +18,8 @@ import '../models/log_entry.dart';
 import '../services/database_service.dart';
 import '../widgets/log_entry_form.dart';
 import '../services/cadastral_service.dart';
+import '../services/owner_lookup_service.dart';
+import '../services/owner_offline_settings_service.dart';
 import '../services/tile_cache_service.dart';
 import '../services/rtk_position_service.dart';
 import '../services/rtk_bridge_settings.dart';
@@ -617,6 +619,9 @@ class MapTabState extends State<MapTab> {
       if (!mounted) return;
 
       if (parcel == null) {
+        // Online lookup found nothing — try the offline owner fallback before
+        // giving up (e.g. no connectivity, or the WMS returned no feature).
+        if (_showOfflineOwnerFallback(location)) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Na tej lokaciji ni najdene parcele')),
         );
@@ -626,12 +631,144 @@ class MapTabState extends State<MapTab> {
       // Show import dialog
       await _showImportParcelDialog(parcel);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri iskanju parcele: $e')),
-        );
-      }
+      if (!mounted) return;
+      // Online lookup failed (timeout/connectivity) — try the offline fallback.
+      if (_showOfflineOwnerFallback(location)) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Napaka pri iskanju parcele: $e')),
+      );
     }
+  }
+
+  /// Offline fallback: when the online cadastral lookup yields nothing, resolve
+  /// the owner from the local parcel bounding boxes (if the toggle is on and the
+  /// imported database carries bbox geometry). Shows the top candidate in a
+  /// sheet clearly marked as approximate. Returns true when a candidate was
+  /// shown, false when the fallback is unavailable or found nothing.
+  bool _showOfflineOwnerFallback(LatLng location) {
+    if (!OwnerOfflineSettingsService.instance.enabled) return false;
+    final service = OwnerLookupService.instance;
+    if (!service.isAvailable || !service.hasGeometry) return false;
+
+    final hits = service.findOwnersAt(
+      location.latitude,
+      location.longitude,
+    );
+    if (hits.isEmpty) return false;
+
+    // Show the first (smallest bounding box) candidate.
+    final hit = hits.first;
+    final owner = hit.owner.isNotEmpty ? hit.owner : 'Neznan lastnik';
+    final details = [
+      'Parcela ${hit.parcela} (KO ${hit.koLabel})',
+      if (hit.address != null) hit.address!,
+    ].join('\n');
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        final colorScheme = Theme.of(sheetContext).colorScheme;
+        return Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.tertiaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.location_searching,
+                      color: colorScheme.tertiary,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Lastnik (offline)',
+                          style: Theme.of(sheetContext)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                color: colorScheme.tertiary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        Text(
+                          '≈ približno (brez povezave)',
+                          style: Theme.of(sheetContext)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: colorScheme.outline.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: Icon(Icons.person, color: colorScheme.tertiary),
+                  title: Text(
+                    owner,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      details,
+                      style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(sheetContext).pop(),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.close),
+                label: const Text('Zapri'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    return true;
   }
 
   /// Show dialog to import a cadastral parcel or view it if already imported
@@ -800,6 +937,7 @@ class MapTabState extends State<MapTab> {
   /// Show layer selection bottom sheet
   Future<void> _showLayerSelector() async {
     final mapProvider = context.read<MapProvider>();
+    final vlakeSettings = VlakeSettings.instance;
     await MapLayerSelector.show(
       context: context,
       currentBaseLayer: mapProvider.currentBaseLayer,
@@ -813,6 +951,9 @@ class MapTabState extends State<MapTab> {
       },
       onImportFile: _importGeoFile,
       onDownloadTiles: showTileDownloadDialog,
+      vlakeAvailable: vlakeSettings.enabled,
+      vlakeVisible: vlakeSettings.visible,
+      onVlakeToggled: (visible) => vlakeSettings.setVisible(visible),
     );
   }
 
@@ -1225,7 +1366,7 @@ class MapTabState extends State<MapTab> {
     // Watch provider for changes (including worker URL, parcels, locations)
     final mapProvider = context.watch<MapProvider>();
     final rtkBridgeSettings = context.watch<RtkBridgeSettings>();
-    final vlakeEnabled = context.watch<VlakeSettings>().enabled;
+    final vlakeEnabled = context.watch<VlakeSettings>().showOnMap;
     // Lazily load the embedded Vlake data the first time the overlay is on.
     if (vlakeEnabled && !VlakeService.instance.isLoaded) {
       VlakeService.instance.ensureLoaded().then((_) {
@@ -1354,7 +1495,7 @@ class MapTabState extends State<MapTab> {
                     _saveMapState();
                     _visibleBounds = event.camera.visibleBounds;
                     // Re-cull the Vlake overlay once movement settles.
-                    if (VlakeSettings.instance.enabled && mounted) {
+                    if (VlakeSettings.instance.showOnMap && mounted) {
                       setState(() {});
                     }
                   }

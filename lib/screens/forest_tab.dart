@@ -727,6 +727,11 @@ class ForestTabState extends State<ForestTab> {
       itemBuilder: (context, groupIndex) {
         final ko = sortedKOs[groupIndex];
         final groupParcels = groupedParcels[ko]!;
+        // When the owners DB is imported, label the group with the cadastral
+        // municipality (KO) name, e.g. "STARI TRG (1650)" instead of "KO 1650".
+        final sifko = groupParcels.first.cadastralMunicipality;
+        final koName = OwnerLookupService.instance.koName(sifko);
+        final koLabel = koName != null ? '$koName ($sifko)' : ko;
         final count = groupParcels.length;
         final totalArea = groupParcels.fold<double>(
           0,
@@ -757,7 +762,7 @@ class ForestTabState extends State<ForestTab> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      ko,
+                      koLabel,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.primary,

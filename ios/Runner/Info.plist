@@ -24,14 +24,18 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>19</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Aplikacija uporablja Bluetooth za povezavo z GNSS sprejemnikom in pošiljanje RTK popravkov.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app may use the camera to capture photos when selecting or importing files.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Aplikacija potrebuje dostop do lokacije za navigacijo do točk v gozdu.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Aplikacija potrebuje dostop do lokacije za prikaz vaše pozicije na zemljevidu in označevanje lokacij hlodov.</string>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Aplikacija uporablja Bluetooth za povezavo z GNSS sprejemnikom in pošiljanje RTK popravkov.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Aplikacija uporablja senzorje gibanja za prikaz smeri kompasa.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -76,7 +80,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 </dict>
 </plist>

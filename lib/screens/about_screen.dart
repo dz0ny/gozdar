@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/owner_lookup_service.dart';
+import '../services/owner_offline_settings_service.dart';
 import '../services/rtk_bridge_settings.dart';
 import '../services/vlake_service.dart';
 import '../services/vlake_settings.dart';
@@ -18,6 +19,10 @@ class AboutScreen extends StatefulWidget {
 
 class _AboutScreenState extends State<AboutScreen> {
   PackageInfo? _packageInfo;
+
+  /// Hidden developer options, revealed by long-pressing the version card.
+  /// Rendered inline under the RTK setting rather than in a separate sheet.
+  bool _showDeveloperOptions = false;
 
   @override
   void initState() {
@@ -139,8 +144,10 @@ class _AboutScreenState extends State<AboutScreen> {
     final buildNumber = _packageInfo?.buildNumber ?? '...';
 
     return GestureDetector(
-      // Hidden developer options: long-press the version card.
-      onLongPress: () => _showDeveloperSheet(context),
+      // Hidden developer options: long-press the version card to reveal them
+      // inline under the RTK setting below.
+      onLongPress: () =>
+          setState(() => _showDeveloperOptions = !_showDeveloperOptions),
       child: Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -170,126 +177,119 @@ class _AboutScreenState extends State<AboutScreen> {
     );
   }
 
-  /// Hidden developer options sheet (owners database import).
-  void _showDeveloperSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (sheetContext, setSheetState) {
-            final service = OwnerLookupService.instance;
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.developer_mode,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Razvijalske moznosti',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 24),
-                    Text(
-                      'Baza lastnikov (kataster)',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 4),
-                    FutureBuilder<int?>(
-                      future: service.fileSizeBytes(),
-                      builder: (context, snapshot) {
-                        if (!service.isAvailable) {
-                          return Text(
-                            'Ni uvozena.',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
-                          );
-                        }
-                        final size = snapshot.data;
-                        final sizeLabel = size != null
-                            ? ' • ${(size / (1024 * 1024)).toStringAsFixed(1)} MB'
-                            : '';
-                        return Text(
-                          '${_formatCount(service.rowCount)} lastnikov$sizeLabel',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: () =>
-                                _importOwners(sheetContext, setSheetState),
-                            icon: const Icon(Icons.file_open),
-                            label: Text(
-                              service.isAvailable
-                                  ? 'Zamenjaj (.sqlite)'
-                                  : 'Uvozi bazo (.sqlite)',
-                            ),
-                          ),
-                        ),
-                        if (service.isAvailable) ...[
-                          const SizedBox(width: 12),
-                          OutlinedButton.icon(
-                            onPressed: () =>
-                                _removeOwners(sheetContext, setSheetState),
-                            icon: const Icon(Icons.delete_outline),
-                            label: const Text('Odstrani'),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const Divider(height: 24),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      secondary: Icon(
-                        Icons.forest,
-                        color: Theme.of(context).colorScheme.primary,
+  /// Inline developer options (owners database import + Vlake), revealed under
+  /// the RTK setting by long-pressing the version card.
+  Widget _buildDeveloperOptions(
+    BuildContext context,
+    ColorScheme colorScheme,
+  ) {
+    final service = OwnerLookupService.instance;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.developer_mode, color: colorScheme.primary),
+              const SizedBox(width: 12),
+              Text(
+                'Razvijalske moznosti',
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Baza lastnikov (kataster)',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 4),
+          FutureBuilder<int?>(
+            future: service.fileSizeBytes(),
+            builder: (context, snapshot) {
+              if (!service.isAvailable) {
+                return Text(
+                  'Ni uvozena.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
-                      title: const Text('Vlake (gozdne vlake)'),
-                      subtitle: const Text(
-                        'Prikaži vlake na karti (pri večji povečavi)',
-                      ),
-                      value: VlakeSettings.instance.enabled,
-                      onChanged: (v) async {
-                        await VlakeSettings.instance.setEnabled(v);
-                        if (v) VlakeService.instance.ensureLoaded();
-                        setSheetState(() {});
-                      },
+                );
+              }
+              final size = snapshot.data;
+              final sizeLabel = size != null
+                  ? ' • ${(size / (1024 * 1024)).toStringAsFixed(1)} MB'
+                  : '';
+              return Text(
+                '${_formatCount(service.rowCount)} lastnikov$sizeLabel',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
                     ),
-                  ],
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _importOwners,
+                  icon: const Icon(Icons.file_open),
+                  label: Text(
+                    service.isAvailable
+                        ? 'Zamenjaj (.sqlite)'
+                        : 'Uvozi bazo (.sqlite)',
+                  ),
                 ),
               ),
-            );
-          },
-        );
-      },
+              if (service.isAvailable) ...[
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: _removeOwners,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Odstrani'),
+                ),
+              ],
+            ],
+          ),
+          if (service.isAvailable && service.hasGeometry) ...[
+            const Divider(height: 24),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(Icons.location_searching, color: colorScheme.primary),
+              title: const Text('Iskanje lastnika brez povezave'),
+              subtitle: const Text(
+                'Ko ni povezave, določi lastnika iz približnih mej parcel (lokalna baza).',
+              ),
+              value: OwnerOfflineSettingsService.instance.enabled,
+              onChanged: (v) async {
+                await OwnerOfflineSettingsService.instance.setEnabled(v);
+                if (mounted) setState(() {});
+              },
+            ),
+          ],
+          const Divider(height: 24),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: Icon(Icons.forest, color: colorScheme.primary),
+            title: const Text('Vlake (gozdne vlake)'),
+            subtitle: const Text(
+              'Omogoči sloj — prikaže se v izbiri slojev (Infrastruktura)',
+            ),
+            value: VlakeSettings.instance.enabled,
+            onChanged: (v) async {
+              await VlakeSettings.instance.setEnabled(v);
+              if (v) VlakeService.instance.ensureLoaded();
+              if (mounted) setState(() {});
+            },
+          ),
+        ],
+      ),
     );
   }
 
-  Future<void> _importOwners(
-    BuildContext sheetContext,
-    void Function(void Function()) setSheetState,
-  ) async {
+  Future<void> _importOwners() async {
     final messenger = ScaffoldMessenger.of(context);
     final result = await FilePicker.pickFiles(type: FileType.any);
     final path = result?.files.single.path;
@@ -305,7 +305,7 @@ class _AboutScreenState extends State<AboutScreen> {
 
     try {
       final imported = await OwnerLookupService.instance.importFromFile(path);
-      setSheetState(() {});
+      if (mounted) setState(() {});
       messenger.showSnackBar(
         SnackBar(
           content: Text('Uvozenih ${_formatCount(imported.rows)} lastnikov.'),
@@ -317,13 +317,10 @@ class _AboutScreenState extends State<AboutScreen> {
     }
   }
 
-  Future<void> _removeOwners(
-    BuildContext sheetContext,
-    void Function(void Function()) setSheetState,
-  ) async {
+  Future<void> _removeOwners() async {
     final messenger = ScaffoldMessenger.of(context);
     await OwnerLookupService.instance.remove();
-    setSheetState(() {});
+    if (mounted) setState(() {});
     messenger.showSnackBar(
       const SnackBar(content: Text('Baza lastnikov odstranjena.')),
     );
@@ -344,12 +341,20 @@ class _AboutScreenState extends State<AboutScreen> {
     final rtkBridgeSettings = context.watch<RtkBridgeSettings>();
 
     return Card(
-      child: SwitchListTile(
-        secondary: Icon(Icons.gps_fixed, color: colorScheme.primary),
-        title: const Text('RTK GNSS'),
-        subtitle: const Text('Prikazi RTK most v navigaciji in na karti'),
-        value: rtkBridgeSettings.enabled,
-        onChanged: rtkBridgeSettings.setEnabled,
+      child: Column(
+        children: [
+          SwitchListTile(
+            secondary: Icon(Icons.gps_fixed, color: colorScheme.primary),
+            title: const Text('RTK GNSS'),
+            subtitle: const Text('Prikazi RTK most v navigaciji in na karti'),
+            value: rtkBridgeSettings.enabled,
+            onChanged: rtkBridgeSettings.setEnabled,
+          ),
+          if (_showDeveloperOptions) ...[
+            const Divider(height: 1),
+            _buildDeveloperOptions(context, colorScheme),
+          ],
+        ],
       ),
     );
   }

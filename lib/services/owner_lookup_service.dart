@@ -53,11 +53,25 @@ class OwnerLookupService {
   String? _path;
   int _rowCount = 0;
 
+  /// Whether the open database carries the per-parcel bounding-box columns
+  /// (`min_lon`/`max_lon`/`min_lat`/`max_lat`) needed for offline reverse
+  /// lookup. Detected once at [_open]; old imported databases may lack them.
+  bool _hasGeometry = false;
+
+  /// Cache of cadastral municipality (KO) names keyed by [sifko]. Null values
+  /// are cached too (negative lookups). Cleared when the database changes.
+  final Map<int, String?> _koNameCache = {};
+
   /// Whether an owners database has been imported and opened successfully.
   bool get isAvailable => _db != null;
 
   /// Number of owner rows in the imported database (0 when unavailable).
   int get rowCount => _rowCount;
+
+  /// Whether the open database has per-parcel bounding boxes (and can therefore
+  /// answer offline reverse lookups via [findOwnersAt]). False when no database
+  /// is imported or when an older database without bbox columns was imported.
+  bool get hasGeometry => _hasGeometry;
 
   Future<String> _targetPath() async {
     final dir = await getApplicationSupportDirectory();
@@ -84,7 +98,10 @@ class OwnerLookupService {
   }
 
   void _open(String path) {
-    final db = sqlite3.open(path, mode: OpenMode.readOnly);
+    // Open read-write (the file lives in our writable app-support dir). A
+    // read-only open fails with SQLITE_CANTOPEN(14) for WAL-mode databases,
+    // because SQLite cannot create the required -wal/-shm sidecar files.
+    final db = sqlite3.open(path);
     // Validate it is actually an owners database.
     final hasTable = db.select(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='owners'",
@@ -94,7 +111,20 @@ class OwnerLookupService {
       throw const FormatException('Datoteka ni veljavna baza lastnikov.');
     }
     _rowCount = _readRowCount(db);
+    _hasGeometry = _detectGeometry(db);
     _db = db;
+  }
+
+  /// Detect whether the database carries per-parcel bounding-box columns. Be
+  /// defensive: an old database simply lacks them and the feature stays off.
+  bool _detectGeometry(Database db) {
+    try {
+      final cols = db.select('PRAGMA table_info(owners)');
+      return cols.any((c) => c['name'] == 'min_lat');
+    } catch (e) {
+      debugPrint('OwnerLookupService._detectGeometry failed: $e');
+      return false;
+    }
   }
 
   int _readRowCount(Database db) {
@@ -114,30 +144,37 @@ class OwnerLookupService {
     _db?.close();
     _db = null;
     _rowCount = 0;
+    _hasGeometry = false;
+    _koNameCache.clear();
   }
 
   /// Import (copy) a picked `.sqlite` file into the app and open it. Replaces any
   /// previously imported database. Throws [FormatException] with a Slovenian
   /// message when the file is not a valid owners database.
+  ///
+  /// The file is copied into our writable app-support dir *before* it is opened.
+  /// The picker hands back a path in a temporary / security-scoped location that
+  /// the native SQLite library often cannot open directly (SQLITE_CANTOPEN), and
+  /// WAL-mode databases need a writable directory for their -wal/-shm sidecars.
   Future<OwnerImportResult> importFromFile(String sourcePath) async {
     final target = await _targetPath();
-    // Validate the source before replacing the current DB.
-    final probe = sqlite3.open(sourcePath, mode: OpenMode.readOnly);
-    try {
-      final ok = probe.select(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='owners'",
-      );
-      if (ok.isEmpty) {
-        throw const FormatException('Izbrana datoteka ni baza lastnikov.');
-      }
-    } finally {
-      probe.close();
-    }
 
     _close();
+    await _deleteDbFiles(target);
     await File(sourcePath).copy(target);
     _path = target;
-    _open(target);
+    try {
+      // Opens read-write and validates that the 'owners' table exists.
+      _open(target);
+    } on FormatException {
+      await _deleteDbFiles(target);
+      _path = null;
+      throw const FormatException('Izbrana datoteka ni baza lastnikov.');
+    } catch (e) {
+      await _deleteDbFiles(target);
+      _path = null;
+      rethrow;
+    }
     return OwnerImportResult(_rowCount);
   }
 
@@ -145,9 +182,20 @@ class OwnerLookupService {
   Future<void> remove() async {
     _close();
     final path = _path ?? await _targetPath();
-    final file = File(path);
-    if (await file.exists()) {
-      await file.delete();
+    await _deleteDbFiles(path);
+  }
+
+  /// Delete the database file together with its WAL/SHM/journal sidecars.
+  Future<void> _deleteDbFiles(String path) async {
+    for (final suffix in ['', '-wal', '-shm', '-journal']) {
+      final file = File('$path$suffix');
+      if (await file.exists()) {
+        try {
+          await file.delete();
+        } catch (e) {
+          debugPrint('OwnerLookupService._deleteDbFiles($suffix) failed: $e');
+        }
+      }
     }
   }
 
@@ -224,6 +272,32 @@ class OwnerLookupService {
     }
   }
 
+  /// Cadastral municipality (katastrska občina) name for a [sifko] code, e.g.
+  /// 1650 -> "STARI TRG". Returns null when no database is imported or no name
+  /// is found. Fast (indexed) and cached, including negative lookups.
+  String? koName(int? sifko) {
+    final db = _db;
+    if (db == null || sifko == null) return null;
+    if (_koNameCache.containsKey(sifko)) return _koNameCache[sifko];
+
+    String? name;
+    try {
+      final rows = db.select(
+        "SELECT imeko FROM owners "
+        "WHERE sifko = ? AND imeko IS NOT NULL AND imeko != '' LIMIT 1",
+        [sifko],
+      );
+      if (rows.isNotEmpty) {
+        final v = (rows.first['imeko'] as String?)?.trim();
+        if (v != null && v.isNotEmpty) name = v;
+      }
+    } catch (e) {
+      debugPrint('OwnerLookupService.koName failed: $e');
+    }
+    _koNameCache[sifko] = name;
+    return name;
+  }
+
   /// Search owned parcels by owner [name] and/or [address] (both optional,
   /// AND-combined). Returns parcels (KO + parcela) with full owner info, for
   /// the owner-import flow. Returns empty when no database, or when both terms
@@ -278,6 +352,64 @@ class OwnerLookupService {
       }).toList();
     } catch (e) {
       debugPrint('OwnerLookupService.searchOwners failed: $e');
+      return const [];
+    }
+  }
+
+  /// Reverse lookup: candidate parcels whose (rough) bounding box contains the
+  /// WGS84 point [lat]/[lon]. Used as an offline fallback when the online
+  /// cadastral lookup is unavailable. Results are ordered by bounding-box area
+  /// ascending, so the smallest (most specific) parcel comes first. Returns
+  /// empty when no database is imported or it lacks bbox geometry.
+  List<OwnerSearchHit> findOwnersAt(double lat, double lon, {int limit = 8}) {
+    final db = _db;
+    if (db == null || !_hasGeometry) return const [];
+
+    try {
+      ResultSet rows;
+      try {
+        // Prefer the rtree spatial index.
+        rows = db.select(
+          'SELECT o.sifko, o.parcela, o.lastnik, o.naslov, o.imeko, o.obcina, '
+          '(o.max_lon - o.min_lon) * (o.max_lat - o.min_lat) AS area '
+          'FROM owners_bbox b JOIN owners o ON o.rowid = b.id '
+          'WHERE b.min_lon <= ? AND b.max_lon >= ? '
+          'AND b.min_lat <= ? AND b.max_lat >= ? '
+          'ORDER BY area ASC LIMIT ?',
+          [lon, lon, lat, lat, limit],
+        );
+      } catch (_) {
+        // rtree module/table missing — fall back to the plain bbox columns.
+        rows = db.select(
+          'SELECT sifko, parcela, lastnik, naslov, imeko, obcina, '
+          '(max_lon - min_lon) * (max_lat - min_lat) AS area '
+          'FROM owners '
+          'WHERE min_lon <= ? AND max_lon >= ? '
+          'AND min_lat <= ? AND max_lat >= ? '
+          'ORDER BY area ASC LIMIT ?',
+          [lon, lon, lat, lat, limit],
+        );
+      }
+
+      return rows.map((r) {
+        final owner = _repairEncoding((r['lastnik'] as String?)?.trim()) ?? '';
+        final naslov = (r['naslov'] as String?)?.trim() ?? '';
+        final obcina = (r['obcina'] as String?)?.trim() ?? '';
+        final imeko = (r['imeko'] as String?)?.trim() ?? '';
+        final addr = [
+          if (naslov.isNotEmpty) naslov,
+          if (obcina.isNotEmpty) obcina,
+        ].join(', ');
+        return OwnerSearchHit(
+          sifko: r['sifko'] as int,
+          parcela: r['parcela'] as String,
+          owner: owner,
+          address: addr.isEmpty ? null : addr,
+          koName: imeko.isEmpty ? null : imeko,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('OwnerLookupService.findOwnersAt failed: $e');
       return const [];
     }
   }

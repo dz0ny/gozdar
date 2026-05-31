@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/parcel.dart';
-import '../widgets/parcel_silhouette.dart';
+import '../services/owner_lookup_service.dart';
 import '../screens/forest_tab.dart';
 
 /// Info row widget for displaying label-value pairs
@@ -58,6 +58,13 @@ class ParcelInfoCard extends StatelessWidget {
     required this.onEditForestType,
   });
 
+  /// KO code, enriched with the cadastral municipality name when the owners
+  /// DB is imported, e.g. "STARI TRG (1650)" instead of "1650".
+  String _koValue(int? sifko) {
+    final name = OwnerLookupService.instance.koName(sifko);
+    return name != null ? '$name ($sifko)' : sifko.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('d. M. yyyy');
@@ -72,30 +79,20 @@ class ParcelInfoCard extends StatelessWidget {
               children: [
                 GestureDetector(
                   onTap: onEditForestType,
-                  child: parcel.polygon.isNotEmpty
-                      ? ParcelSilhouette(
-                          polygon: parcel.polygon,
-                          size: 72,
-                          fillColor: getForestTypeIcon(
-                            parcel.forestType,
-                          ).$2.withValues(alpha: 0.3),
-                          strokeColor: getForestTypeIcon(parcel.forestType).$2,
-                          strokeWidth: 2,
-                        )
-                      : Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: getForestTypeIcon(
-                              parcel.forestType,
-                            ).$2.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            getForestTypeIcon(parcel.forestType).$1,
-                            size: 32,
-                            color: getForestTypeIcon(parcel.forestType).$2,
-                          ),
-                        ),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: getForestTypeIcon(
+                        parcel.forestType,
+                      ).$2.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      getForestTypeIcon(parcel.forestType).$1,
+                      size: 32,
+                      color: getForestTypeIcon(parcel.forestType).$2,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -132,7 +129,7 @@ class ParcelInfoCard extends StatelessWidget {
               _InfoRow(
                 icon: Icons.location_city,
                 label: 'KO',
-                value: parcel.cadastralMunicipality.toString(),
+                value: _koValue(parcel.cadastralMunicipality),
               ),
               const SizedBox(height: 8),
               _InfoRow(

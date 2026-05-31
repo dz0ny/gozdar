@@ -69,3 +69,19 @@ SIZE=$(du -h "$OUT" | cut -f1)
 echo "Done: $OUT  ($ROWS owner rows, $SIZE)"
 echo "Spot check (KO 1640, parcela 1799/89):"
 sqlite3 "$OUT" "SELECT sifko, parcela, lastnik, naslov FROM owners WHERE sifko=1640 AND parcela='1799/89'"
+
+# Optional: enrich with a rough per-parcel bounding box (WGS84) + R-tree so the
+# app can resolve a tapped point -> owner OFFLINE. The CSV has no geometry, so
+# this reads the Esri mobile geodatabase's R-tree spatial index. Needs python3
+# (stdlib sqlite3 with the RTREE module) + `pip install pyproj`, and the
+# extracted geodatabase. Skipped automatically when prerequisites are missing.
+#   GDB=/Volumes/Disk/karta_slo.geodatabase   (override via env)
+GDB="${GDB:-/Volumes/Disk/karta_slo.geodatabase}"
+if [[ -f "$GDB" ]] && command -v python3 >/dev/null \
+   && python3 -c 'import pyproj' >/dev/null 2>&1; then
+  echo "Adding per-parcel bounding boxes from $GDB ..."
+  python3 "$(dirname "$0")/add_owner_bbox.py" "$OUT" "$GDB"
+else
+  echo "Skipping bbox enrichment (need \$GDB geodatabase + python3 + pyproj)." >&2
+  echo "  -> run later: python3 tool/add_owner_bbox.py $OUT <geodatabase>" >&2
+fi

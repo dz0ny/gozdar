@@ -8,6 +8,7 @@ import '../providers/map_provider.dart';
 import '../services/cadastral_service.dart';
 import '../services/database_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../widgets/parcel_map_preview.dart';
 
 enum _ImportState { idle, importing, imported, exists, notFound, error }
 
@@ -31,6 +32,9 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
   List<OwnerSearchHit> _hits = const [];
   bool _truncated = false;
   final Map<String, _ImportState> _status = {};
+
+  /// Key of the hit whose geometry is currently being fetched for preview.
+  String? _previewingKey;
 
   static const _limit = 300;
 
@@ -61,7 +65,7 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
     });
   }
 
-  Future<void> _import(OwnerSearchHit hit) async {
+  Future<void> _import(OwnerSearchHit hit, {WfsParcel? prefetched}) async {
     final key = _key(hit);
     setState(() => _status[key] = _ImportState.importing);
     final messenger = ScaffoldMessenger.of(context);
@@ -81,11 +85,14 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
         return;
       }
 
-      // Fetch geometry from the cadastral WFS (owners DB has no geometry).
-      final wfs = await _cadastralService.queryParcelByKoAndNumber(
-        hit.sifko.toString(),
-        hit.parcela,
-      );
+      // Fetch geometry from the cadastral WFS (owners DB has no geometry),
+      // unless the preview already fetched it.
+      final wfs =
+          prefetched ??
+          await _cadastralService.queryParcelByKoAndNumber(
+            hit.sifko.toString(),
+            hit.parcela,
+          );
       if (wfs == null || wfs.polygon.isEmpty) {
         if (!mounted) return;
         setState(() => _status[key] = _ImportState.notFound);
@@ -118,10 +125,100 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _status[key] = _ImportState.error);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Uvoz ni uspel: $e')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text('Uvoz ni uspel: $e')));
     }
+  }
+
+  /// Fetch the parcel geometry from the cadastral WFS and show a map preview
+  /// of its outline, from which the parcel can be imported.
+  Future<void> _previewHit(OwnerSearchHit hit) async {
+    setState(() => _previewingKey = _key(hit));
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final wfs = await _cadastralService.queryParcelByKoAndNumber(
+        hit.sifko.toString(),
+        hit.parcela,
+      );
+      if (!mounted) return;
+      setState(() => _previewingKey = null);
+      if (wfs == null || wfs.polygon.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Geometrije za ${hit.parcela} ni bilo mogoče najti.'),
+          ),
+        );
+        return;
+      }
+      await _showPreviewSheet(hit, wfs);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _previewingKey = null);
+      messenger.showSnackBar(SnackBar(content: Text('Napaka pri iskanju: $e')));
+    }
+  }
+
+  Future<void> _showPreviewSheet(OwnerSearchHit hit, WfsParcel wfs) {
+    final mapProvider = context.read<MapProvider>();
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: false,
+      builder: (sheetContext) {
+        final cs = Theme.of(sheetContext).colorScheme;
+        final imported = _status[_key(hit)] == _ImportState.imported;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'KO ${hit.koLabel} • Parcela ${hit.parcela}',
+                  style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(hit.owner),
+                if (hit.address != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    hit.address!,
+                    style: Theme.of(
+                      sheetContext,
+                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                ParcelMapPreview(
+                  polygon: wfs.polygon,
+                  baseLayer: mapProvider.currentBaseLayer,
+                  activeOverlays: mapProvider.activeOverlays,
+                  workerUrl: mapProvider.workerUrl,
+                  outlineColor: cs.primary,
+                  aspectRatio: 1.4,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: imported
+                        ? null
+                        : () {
+                            Navigator.of(sheetContext).pop();
+                            _import(hit, prefetched: wfs);
+                          },
+                    icon: Icon(imported ? Icons.check : Icons.download),
+                    label: Text(imported ? 'Že uvožena' : 'Uvozi v Moj gozd'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _trailingFor(OwnerSearchHit hit) {
@@ -136,8 +233,10 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
       case _ImportState.imported:
         return const Icon(Icons.check_circle, color: Colors.green);
       case _ImportState.exists:
-        return Icon(Icons.library_add_check,
-            color: Theme.of(context).colorScheme.onSurfaceVariant);
+        return Icon(
+          Icons.library_add_check,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        );
       case _ImportState.notFound:
       case _ImportState.error:
         return IconButton(
@@ -194,14 +293,18 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: cs.onSurfaceVariant),
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: cs.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Prikazanih prvih $_limit zadetkov — natančneje določi iskanje.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],
@@ -216,7 +319,8 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
 
   Widget _buildResults(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final hasQuery = _nameController.text.trim().isNotEmpty ||
+    final hasQuery =
+        _nameController.text.trim().isNotEmpty ||
         _addressController.text.trim().isNotEmpty;
     if (!hasQuery) {
       return _hint(
@@ -232,10 +336,20 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
       separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, i) {
         final hit = _hits[i];
+        final previewing = _previewingKey == _key(hit);
         return ListTile(
           leading: CircleAvatar(
             backgroundColor: cs.primaryContainer,
-            child: Icon(Icons.landscape, color: cs.onPrimaryContainer),
+            child: previewing
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: cs.onPrimaryContainer,
+                    ),
+                  )
+                : Icon(Icons.landscape, color: cs.onPrimaryContainer),
           ),
           title: Text(
             'KO ${hit.koLabel} • Parcela ${hit.parcela}',
@@ -248,14 +362,16 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
               if (hit.address != null)
                 Text(
                   hit.address!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
             ],
           ),
           isThreeLine: hit.address != null,
           trailing: _trailingFor(hit),
+          // Tap a result to fetch its geometry and preview the parcel outline.
+          onTap: _previewingKey != null ? null : () => _previewHit(hit),
         );
       },
     );
@@ -274,9 +390,9 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
             Text(
               text,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
           ],
         ),
