@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../models/parcel.dart';
 import '../models/map_location.dart';
@@ -9,9 +13,12 @@ import '../models/navigation_target.dart';
 import '../router/app_router.dart';
 import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
+import '../services/cadastral_service.dart';
 import '../services/database_service.dart';
 import '../services/kml_service.dart';
+import '../services/map_preferences_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../services/parcel_pdf_service.dart';
 import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
 import '../widgets/notes_editor_sheet.dart';
@@ -136,6 +143,47 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Napaka pri posodabljanju: $e')));
+      }
+    }
+  }
+
+  /// Generate a PDF of this parcel (map snapshot + attributes) and open it.
+  Future<void> _printParcel() async {
+    final mapProvider = context.read<MapProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final cadastral = CadastralParcel(
+      id: _parcel.cadastralId ?? '',
+      cadastralMunicipality: _parcel.cadastralMunicipality ?? 0,
+      parcelNumber: _parcel.parcelNumber ?? _parcel.name,
+      area: _parcel.areaM2,
+      polygon: _parcel.polygon,
+    );
+    try {
+      final bytes = await ParcelPdfService.instance.buildParcelPdf(
+        parcel: cadastral,
+        baseLayer: mapProvider.currentBaseLayer,
+        activeOverlays: mapProvider.activeOverlays,
+        workerUrl:
+            mapProvider.workerUrl ?? MapPreferencesService.defaultWorkerUrl,
+      );
+      final safeName = (cadastral.parcelNumber.isNotEmpty
+              ? cadastral.parcelNumber
+              : _parcel.name)
+          .replaceAll(RegExp(r'[^0-9A-Za-z]+'), '-');
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/parcela-$safeName.pdf');
+      await file.writeAsBytes(bytes, flush: true);
+      final result = await OpenFilex.open(file.path);
+      if (result.type != ResultType.done && mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('PDF ni mogoče odpreti: ${result.message}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Napaka pri pripravi PDF: $e')),
+        );
       }
     }
   }
@@ -579,13 +627,25 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
-              if (value == 'export') {
+              if (value == 'print') {
+                _printParcel();
+              } else if (value == 'export') {
                 _exportParcel();
               } else if (value == 'delete') {
                 _deleteParcel();
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'print',
+                child: Row(
+                  children: [
+                    Icon(Icons.print),
+                    SizedBox(width: 8),
+                    Text('Natisni'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'export',
                 child: Row(

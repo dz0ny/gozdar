@@ -925,7 +925,12 @@ class MapTabState extends State<MapTab> {
         alignment: Alignment.bottomCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
-          child: Material(
+          child: Dismissible(
+            key: const ValueKey('import-parcel-panel'),
+            direction: DismissDirection.down,
+            confirmDismiss: (_) async => !_printingParcel,
+            onDismissed: (_) => _dismissImportPanel(),
+            child: Material(
             elevation: 8,
             color: cs.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -937,7 +942,7 @@ class MapTabState extends State<MapTab> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Drag handle (visual affordance; tap Preklici to close).
+                    // Drag handle — swipe the panel down to dismiss.
                     Center(
                       child: Container(
                         width: 36,
@@ -966,11 +971,6 @@ class MapTabState extends State<MapTab> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        TextButton(
-                          onPressed: _printingParcel ? null : _dismissImportPanel,
-                          child: const Text('Preklici'),
-                        ),
-                        const SizedBox(width: 8),
                         TextButton.icon(
                           onPressed: _printingParcel ? null : _printPendingParcel,
                           icon: _printingParcel
@@ -996,6 +996,7 @@ class MapTabState extends State<MapTab> {
                 ),
               ),
             ),
+          ),
           ),
         ),
       ),
