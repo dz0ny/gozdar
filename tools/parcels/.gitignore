@@ -1,0 +1,29 @@
+# Build / download workspace — all heavy + generated artifacts live here.
+work/
+
+# Generated databases and their sidecars (in case built outside work/).
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.sqlite.part
+*.src
+
+# Source GURS shapefiles / downloads (large, fetched per release).
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.cst
+*.zip
+
+# Logs and generated manifests.
+*.log
+regions.json
+
+# uv / python scratch.
+.venv/
+__pycache__/
+
+# Tracked on purpose: convert.py, README.md, regije.geojson (region boundaries).

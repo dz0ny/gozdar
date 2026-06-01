@@ -10,6 +10,7 @@ import 'services/rtk_bridge_settings.dart';
 import 'services/tile_cache_service.dart';
 import 'services/onboarding_service.dart';
 import 'services/owner_lookup_service.dart';
+import 'services/parcel_lookup_service.dart';
 import 'services/owner_offline_settings_service.dart';
 import 'services/update_service.dart';
 import 'services/vlake_settings.dart';
@@ -25,6 +26,7 @@ void main() async {
   await OnboardingService.initialize();
   await RtkBridgeSettings.instance.load();
   await OwnerLookupService.instance.init();
+  await ParcelLookupService.instance.init();
   await OwnerOfflineSettingsService.instance.init();
   await VlakeSettings.instance.load();
 

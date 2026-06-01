@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +22,8 @@ import '../services/database_service.dart';
 import '../widgets/log_entry_form.dart';
 import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../services/parcel_lookup_service.dart';
+import '../services/parcel_pdf_service.dart';
 import '../services/owner_offline_settings_service.dart';
 import '../services/tile_cache_service.dart';
 import '../services/rtk_position_service.dart';
@@ -41,6 +46,7 @@ import '../widgets/parcel_found_sheet.dart';
 import 'parcel_detail_screen.dart';
 import '../providers/map_provider.dart';
 import '../services/location_settings.dart';
+import '../services/map_preferences_service.dart';
 
 enum _MeasurementTool { distance, area }
 
@@ -104,10 +110,6 @@ class MapTabState extends State<MapTab> {
   late final LocationTracker _locationTracker;
   late final MapDialogManager _dialogManager;
 
-  // Long press menu state
-  Offset? _longPressScreenPosition;
-  LatLng? _longPressMapPosition;
-
   // Current zoom level for dynamic marker sizing
   double _currentZoom = 13.0;
 
@@ -117,8 +119,28 @@ class MapTabState extends State<MapTab> {
   /// Minimum zoom at which the Vlake (skid-road) overlay is drawn.
   static const double _vlakeMinZoom = 13.0;
 
+  /// Minimum zoom at which the offline kataster (local parcels) overlay is
+  /// drawn. Parcels are dense, so only render when zoomed in.
+  static const double _offlineKatasterMinZoom = 15.0;
+
+  /// Minimum zoom at which parcel-number labels are drawn — higher than the
+  /// outline zoom so labels don't crowd the map until zoomed in close.
+  static const double _offlineKatasterLabelMinZoom = 17.0;
+
+  /// Cadastral parcels from the offline database, culled to the viewport.
+  /// Populated only when an offline parcels DB is loaded and zoomed in.
+  List<CadastralParcel> _offlineParcels = const [];
+
   // Searched parcel from WFS query
   WfsParcel? _searchedParcel;
+  // Queried cadastral parcel shown as a green preview while the import dialog
+  // is open (not yet saved to the database).
+  CadastralParcel? _previewParcel;
+  // When set, a non-modal import panel is shown over the map for this parcel.
+  // The map stays pannable while the panel is open.
+  CadastralParcel? _pendingImportParcel;
+  // True while a PDF is being generated for the pending import panel.
+  bool _printingParcel = false;
   _MeasurementState _measurement = const _MeasurementState();
   _DistanceUnit _distanceUnit = _DistanceUnit.meters;
   _AreaUnit _areaUnit = _AreaUnit.hectares;
@@ -608,6 +630,33 @@ class MapTabState extends State<MapTab> {
     }
   }
 
+  /// Recompute the offline kataster polygons for the current viewport. Cheap
+  /// (synchronous indexed SQLite query), called on move/zoom settle. Clears the
+  /// overlay when no offline DB is loaded or the map is zoomed out.
+  void _refreshOfflineParcels() {
+    final svc = ParcelLookupService.instance;
+    final bounds = _visibleBounds;
+    final overlays = context.read<MapProvider>().activeOverlays;
+    final katasterOn = overlays.contains(MapLayerType.kataster) ||
+        overlays.contains(MapLayerType.katasterNazivi);
+    if (!svc.isAvailable ||
+        !katasterOn ||
+        bounds == null ||
+        _currentZoom < _offlineKatasterMinZoom) {
+      if (_offlineParcels.isNotEmpty) {
+        setState(() => _offlineParcels = const []);
+      }
+      return;
+    }
+    final parcels = svc.parcelsInBounds(
+      west: bounds.west,
+      east: bounds.east,
+      south: bounds.south,
+      north: bounds.north,
+    );
+    setState(() => _offlineParcels = parcels);
+  }
+
   /// Query cadastral parcel at the given location and show import dialog
   Future<void> _queryParcelAtLocation(LatLng location) async {
     final mapProvider = context.read<MapProvider>();
@@ -628,10 +677,18 @@ class MapTabState extends State<MapTab> {
         return;
       }
 
-      // Show import dialog
+      // Preview the parcel geometry in green (without importing it). The camera
+      // is left where the user is; no automatic zoom/recenter.
+      setState(() => _previewParcel = parcel);
+
+      // Show the import flow. For a not-yet-imported parcel this opens a
+      // non-modal panel over the map (the map stays pannable); the panel's own
+      // actions clear the preview when done.
       await _showImportParcelDialog(parcel);
     } catch (e) {
       if (!mounted) return;
+      // Drop any green preview drawn before the failure.
+      if (_previewParcel != null) setState(() => _previewParcel = null);
       // Online lookup failed (timeout/connectivity) — try the offline fallback.
       if (_showOfflineOwnerFallback(location)) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -783,6 +840,8 @@ class MapTabState extends State<MapTab> {
     if (!mounted) return;
 
     if (existingParcel != null) {
+      // No panel for this branch — drop the green preview.
+      setState(() => _previewParcel = null);
       // Parcel already exists - show option to view it
       final viewParcel = await showDialog<bool>(
         context: context,
@@ -812,14 +871,166 @@ class MapTabState extends State<MapTab> {
       return;
     }
 
-    // Parcel doesn't exist - show import dialog
-    final confirmed = await MapDialogs.showImportParcelDialog(
-      context: context,
-      cadastralParcel: cadastralParcel,
-    );
+    // Parcel doesn't exist - show the non-modal import panel over the map so
+    // the map stays pannable while the user reviews the parcel.
+    setState(() {
+      _pendingImportParcel = cadastralParcel;
+      _printingParcel = false;
+    });
+  }
 
-    if (confirmed) {
-      await _importCadastralParcel(cadastralParcel);
+  /// Dismiss the import panel without importing, clearing the green preview.
+  void _dismissImportPanel() {
+    setState(() {
+      _pendingImportParcel = null;
+      _previewParcel = null;
+    });
+  }
+
+  /// Confirm the import from the panel, then close it and clear the preview.
+  Future<void> _confirmImportPanel() async {
+    final parcel = _pendingImportParcel;
+    if (parcel == null) return;
+    setState(() {
+      _pendingImportParcel = null;
+      _previewParcel = null;
+    });
+    await _importCadastralParcel(parcel);
+  }
+
+  /// Generate the parcel PDF from the panel, keeping the panel open with an
+  /// inline spinner while it runs.
+  Future<void> _printPendingParcel() async {
+    final parcel = _pendingImportParcel;
+    if (parcel == null) return;
+    setState(() => _printingParcel = true);
+    try {
+      await _printParcel(parcel);
+    } finally {
+      if (mounted) setState(() => _printingParcel = false);
+    }
+  }
+
+  /// Non-modal import panel anchored to the bottom of the map. Because it lives
+  /// in the map Stack (not a route/modal), the map behind it stays fully
+  /// pannable while the panel is open.
+  Widget _buildImportParcelPanel(BuildContext context) {
+    final parcel = _pendingImportParcel!;
+    final cs = Theme.of(context).colorScheme;
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Material(
+            elevation: 8,
+            color: cs.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Drag handle (visual affordance; tap Preklici to close).
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Uvozi parcelo',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    MapDialogs.importParcelInfoCard(context, parcel),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Ali zelite uvoziti to parcelo v "Moj gozd"?',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: _printingParcel ? null : _dismissImportPanel,
+                          child: const Text('Preklici'),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton.icon(
+                          onPressed: _printingParcel ? null : _printPendingParcel,
+                          icon: _printingParcel
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.print),
+                          label: const Text('Natisni'),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton.icon(
+                          onPressed: _printingParcel ? null : _confirmImportPanel,
+                          icon: const Icon(Icons.download),
+                          label: const Text('Uvozi'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Generate a PDF of the parcel (map snapshot + attributes, using the layers
+  /// currently shown on the map), save it to a temp file and open it in the
+  /// device's PDF viewer.
+  Future<void> _printParcel(CadastralParcel cadastralParcel) async {
+    final mapProvider = context.read<MapProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final bytes = await ParcelPdfService.instance.buildParcelPdf(
+        parcel: cadastralParcel,
+        baseLayer: mapProvider.currentBaseLayer,
+        activeOverlays: mapProvider.activeOverlays,
+        workerUrl:
+            mapProvider.workerUrl ?? MapPreferencesService.defaultWorkerUrl,
+      );
+      final safeNumber =
+          cadastralParcel.parcelNumber.replaceAll(RegExp(r'[^0-9A-Za-z]+'), '-');
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/parcela-$safeNumber.pdf');
+      await file.writeAsBytes(bytes, flush: true);
+      final result = await OpenFilex.open(file.path);
+      if (result.type != ResultType.done) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('PDF ni mogoče odpreti: ${result.message}')),
+        );
+      }
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Napaka pri pripravi PDF: $e')),
+      );
     }
   }
 
@@ -948,6 +1159,12 @@ class MapTabState extends State<MapTab> {
       },
       onOverlayToggled: (type) {
         mapProvider.toggleOverlay(type);
+        // Toggling the kataster layer doesn't fire a map event — sync the
+        // offline overlay so it appears/disappears immediately.
+        if (type == MapLayerType.kataster ||
+            type == MapLayerType.katasterNazivi) {
+          _refreshOfflineParcels();
+        }
       },
       onImportFile: _importGeoFile,
       onDownloadTiles: showTileDownloadDialog,
@@ -1017,10 +1234,38 @@ class MapTabState extends State<MapTab> {
     );
   }
 
+  /// Show the long-press action menu as a modal bottom sheet for the given map
+  /// location.
+  void _showLongPressMenu(LatLng position) {
+    final mapProvider = context.read<MapProvider>();
+    Parcel? parcelAtPosition;
+    try {
+      parcelAtPosition = mapProvider.parcels.firstWhere(
+        (parcel) => parcel.containsPoint(position),
+      );
+    } catch (_) {
+      parcelAtPosition = null;
+    }
+
+    MapLongPressMenu.show(
+      context,
+      mapPosition: position,
+      existingParcel: parcelAtPosition,
+      onAddLocation: () => _showAddLocationDialog(position),
+      onAddLog: () => _showAddLogDialog(position),
+      onAddSecnja: () => _showAddSecnjaDialog(position),
+      onMeasureDistance: () =>
+          _startMeasurementAt(_MeasurementTool.distance, position),
+      onMeasureArea: () => _startMeasurementAt(_MeasurementTool.area, position),
+      onImportParcel: () => _queryParcelAtLocation(position),
+      onViewParcel: parcelAtPosition != null
+          ? () => _navigateToParcelDetail(parcelAtPosition!)
+          : null,
+    );
+  }
+
   void _startMeasurement(_MeasurementTool tool) {
     setState(() {
-      _longPressScreenPosition = null;
-      _longPressMapPosition = null;
       _measurement = _MeasurementState(tool: tool);
     });
   }
@@ -1029,8 +1274,6 @@ class MapTabState extends State<MapTab> {
   /// menu, where the long-press location becomes the first point).
   void _startMeasurementAt(_MeasurementTool tool, LatLng point) {
     setState(() {
-      _longPressScreenPosition = null;
-      _longPressMapPosition = null;
       _measurement = _MeasurementState(tool: tool, points: [point]);
     });
   }
@@ -1412,11 +1655,19 @@ class MapTabState extends State<MapTab> {
       },
     );
 
-    // Create layer renderer using provider data
+    // When an offline parcels DB is loaded, render the kataster locally and
+    // skip the online WMS proxy for those overlays.
+    final offlineKataster = ParcelLookupService.instance.isAvailable;
+    // Show parcel numbers on the offline kataster when "Kataster z nazivi" is on.
+    final offlineKatasterNames =
+        mapProvider.activeOverlays.contains(MapLayerType.katasterNazivi);
     final layerRenderer = MapLayerRenderer(
       baseLayer: mapProvider.currentBaseLayer,
       activeOverlays: mapProvider.activeOverlays,
       workerUrl: mapProvider.workerUrl,
+      excludeOverlays: offlineKataster
+          ? const {MapLayerType.kataster, MapLayerType.katasterNazivi}
+          : const {},
     );
 
     // Show loading indicator while preferences are loading
@@ -1466,28 +1717,19 @@ class MapTabState extends State<MapTab> {
                     setState(() {
                       _visibleBounds = _mapController.camera.visibleBounds;
                     });
+                    _refreshOfflineParcels();
                   }
                 },
-                // Handle tap to dismiss long press menu
                 onTap: (tapPosition, point) {
                   if (_measurement.isActive && !_measurement.isFinished) {
                     _addMeasurementPoint(point);
                     return;
                   }
-                  if (_longPressScreenPosition != null) {
-                    setState(() {
-                      _longPressScreenPosition = null;
-                      _longPressMapPosition = null;
-                    });
-                  }
                 },
-                // Handle long press to show action menu
+                // Handle long press to show action menu as a bottom sheet
                 onLongPress: (tapPosition, point) {
                   if (_measurement.isActive) return;
-                  setState(() {
-                    _longPressScreenPosition = tapPosition.global;
-                    _longPressMapPosition = point;
-                  });
+                  _showLongPressMenu(point);
                 },
                 // Save map state when position/zoom/rotation changes
                 onMapEvent: (event) {
@@ -1498,6 +1740,8 @@ class MapTabState extends State<MapTab> {
                     if (VlakeSettings.instance.showOnMap && mounted) {
                       setState(() {});
                     }
+                    // Re-cull the offline kataster overlay once settled.
+                    _refreshOfflineParcels();
                   }
                   // Track zoom level for dynamic marker sizing
                   if (event.camera.zoom != _currentZoom) {
@@ -1505,19 +1749,46 @@ class MapTabState extends State<MapTab> {
                       _currentZoom = event.camera.zoom;
                       _visibleBounds = event.camera.visibleBounds;
                     });
-                  }
-                  // Dismiss menu on map move
-                  if (event is MapEventMoveStart &&
-                      _longPressScreenPosition != null) {
-                    setState(() {
-                      _longPressScreenPosition = null;
-                      _longPressMapPosition = null;
-                    });
+                    _refreshOfflineParcels();
                   }
                 },
               ),
               children: [
                 ...layerRenderer.getAllTileLayers(),
+                // Offline kataster: cadastral parcel outlines from the local DB,
+                // shown instead of the online WMS proxy when an offline parcels
+                // database is loaded.
+                if (offlineKataster && _offlineParcels.isNotEmpty)
+                  PolygonLayer(
+                    polygons: _offlineParcels
+                        .map(
+                          (p) => Polygon(
+                            points: p.polygon,
+                            color: const Color(0x00000000),
+                            borderColor: const Color(0xFFD50000),
+                            borderStrokeWidth: 2.5,
+                            label: (offlineKatasterNames &&
+                                    _currentZoom >=
+                                        _offlineKatasterLabelMinZoom)
+                                ? p.parcelNumber
+                                : null,
+                            labelStyle: const TextStyle(
+                              color: Color(0xFFB71C1C),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              // White 2px halo so red numbers stay readable
+                              // over aerial imagery.
+                              shadows: [
+                                Shadow(color: Colors.white, blurRadius: 2, offset: Offset(1, 1)),
+                                Shadow(color: Colors.white, blurRadius: 2, offset: Offset(-1, 1)),
+                                Shadow(color: Colors.white, blurRadius: 2, offset: Offset(1, -1)),
+                                Shadow(color: Colors.white, blurRadius: 2, offset: Offset(-1, -1)),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
                 // Embedded Vlake (forest skid-road) overlay, viewport-culled.
                 if (vlakeEnabled &&
                     _currentZoom >= _vlakeMinZoom &&
@@ -1561,6 +1832,28 @@ class MapTabState extends State<MapTab> {
                         ),
                       )
                       .toList(),
+                ),
+
+              // Queried parcel preview (green). Skipped when an offline parcels
+              // DB is loaded — the red offline kataster outline already shows it.
+              if (!offlineKataster &&
+                  _previewParcel != null &&
+                  _previewParcel!.polygon.isNotEmpty)
+                PolygonLayer(
+                  polygons: [
+                    Polygon(
+                      points: _previewParcel!.polygon,
+                      color: Colors.green.withValues(alpha: 0.2),
+                      borderColor: Colors.green,
+                      borderStrokeWidth: 2.0,
+                      label: 'Parcela ${_previewParcel!.parcelNumber}',
+                      labelStyle: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
 
               // Searched parcel (highlighted)
@@ -1805,44 +2098,6 @@ class MapTabState extends State<MapTab> {
           if (_measurement.isActive)
             _buildMeasurementPanel(context),
 
-          // Long press action menu
-          if (_longPressScreenPosition != null && _longPressMapPosition != null)
-            Builder(
-              builder: (ctx) {
-                // Capture position at build time so it persists after onDismiss clears state
-                final position = _longPressMapPosition!;
-                // Find parcel at this position
-                Parcel? parcelAtPosition;
-                try {
-                  parcelAtPosition = mapProvider.parcels.firstWhere(
-                    (parcel) => parcel.containsPoint(position),
-                  );
-                } catch (_) {
-                  parcelAtPosition = null;
-                }
-                return MapLongPressMenu(
-                  screenPosition: _longPressScreenPosition!,
-                  mapPosition: position,
-                  existingParcel: parcelAtPosition,
-                  onAddLocation: () => _showAddLocationDialog(position),
-                  onAddLog: () => _showAddLogDialog(position),
-                  onAddSecnja: () => _showAddSecnjaDialog(position),
-                  onMeasureDistance: () =>
-                      _startMeasurementAt(_MeasurementTool.distance, position),
-                  onMeasureArea: () =>
-                      _startMeasurementAt(_MeasurementTool.area, position),
-                  onImportParcel: () => _queryParcelAtLocation(position),
-                  onViewParcel: parcelAtPosition != null
-                      ? () => _navigateToParcelDetail(parcelAtPosition!)
-                      : null,
-                  onDismiss: () => setState(() {
-                    _longPressScreenPosition = null;
-                    _longPressMapPosition = null;
-                  }),
-                );
-              },
-            ),
-
           // Attribution overlay (bottom left) - tap to see usage rights.
           // Hidden while measuring so it doesn't overlap the measurement panel.
           if (!_measurement.isActive)
@@ -1875,6 +2130,9 @@ class MapTabState extends State<MapTab> {
               ),
             ),
           ),
+
+          // Non-modal import panel (keeps the map pannable while open).
+          if (_pendingImportParcel != null) _buildImportParcelPanel(context),
         ],
       ),
 
@@ -1889,7 +2147,7 @@ class MapTabState extends State<MapTab> {
         onRtkPressed: rtkBridgeSettings.enabled ? () => context.push(AppRoutes.rtkBridge) : null,
         onGpsPressed: _centerOnGpsLocation,
         onLocationsPressed: mapProvider.locations.isNotEmpty ? _showLocationsSheet : null,
-        hideBottomControls: _measurement.isActive,
+        hideBottomControls: _measurement.isActive || _pendingImportParcel != null,
       ),
     );
   }

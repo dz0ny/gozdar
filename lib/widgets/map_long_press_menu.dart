@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/parcel.dart';
 
-/// Popup menu shown on map long press with location-based actions
+/// Modal bottom sheet shown on map long press with location-based actions.
+///
+/// Rendered as a sheet (instead of a popup floating over the map tiles) so the
+/// options stay readable regardless of the underlying imagery.
 class MapLongPressMenu extends StatelessWidget {
-  final Offset screenPosition;
-  final LatLng mapPosition;
   final VoidCallback onAddLocation;
   final VoidCallback onAddLog;
   final VoidCallback onAddSecnja;
@@ -13,13 +14,10 @@ class MapLongPressMenu extends StatelessWidget {
   final VoidCallback onMeasureArea;
   final VoidCallback onImportParcel;
   final VoidCallback? onViewParcel;
-  final VoidCallback onDismiss;
   final Parcel? existingParcel;
 
   const MapLongPressMenu({
     super.key,
-    required this.screenPosition,
-    required this.mapPosition,
     required this.onAddLocation,
     required this.onAddLog,
     required this.onAddSecnja,
@@ -27,133 +25,116 @@ class MapLongPressMenu extends StatelessWidget {
     required this.onMeasureArea,
     required this.onImportParcel,
     this.onViewParcel,
-    required this.onDismiss,
     this.existingParcel,
   });
 
+  /// Present the action menu as a modal bottom sheet. The selected action runs
+  /// after the sheet is dismissed.
+  static Future<void> show(
+    BuildContext context, {
+    required LatLng mapPosition,
+    Parcel? existingParcel,
+    required VoidCallback onAddLocation,
+    required VoidCallback onAddLog,
+    required VoidCallback onAddSecnja,
+    required VoidCallback onMeasureDistance,
+    required VoidCallback onMeasureArea,
+    required VoidCallback onImportParcel,
+    VoidCallback? onViewParcel,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => MapLongPressMenu(
+        existingParcel: existingParcel,
+        onAddLocation: onAddLocation,
+        onAddLog: onAddLog,
+        onAddSecnja: onAddSecnja,
+        onMeasureDistance: onMeasureDistance,
+        onMeasureArea: onMeasureArea,
+        onImportParcel: onImportParcel,
+        onViewParcel: onViewParcel,
+      ),
+    );
+  }
+
   Widget _buildMenuItem({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required Color color,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(color: color, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-      ),
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(label),
+      onTap: () {
+        // Close the sheet first, then run the action it triggers.
+        Navigator.of(context).pop();
+        onTap();
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      left: screenPosition.dx - 80,
-      top: screenPosition.dy - 130,
-      child: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildMenuItem(
+            context: context,
+            icon: Icons.add_location_alt,
+            label: 'Dodaj tocko',
+            color: Colors.red,
+            onTap: onAddLocation,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Add point button
-              _buildMenuItem(
-                icon: Icons.add_location_alt,
-                label: 'Dodaj tocko',
-                color: Colors.red,
-                onTap: () {
-                  onDismiss();
-                  onAddLocation();
-                },
-              ),
-              const Divider(height: 8),
-              // Add log button
-              _buildMenuItem(
-                icon: Icons.forest,
-                label: 'Dodaj hlodovino',
-                color: Colors.brown,
-                onTap: () {
-                  onDismiss();
-                  onAddLog();
-                },
-              ),
-              const Divider(height: 8),
-              // Add sečnja button
-              _buildMenuItem(
-                icon: Icons.carpenter,
-                label: 'Označi sečnjo',
-                color: Colors.deepOrange,
-                onTap: () {
-                  onDismiss();
-                  onAddSecnja();
-                },
-              ),
-              const Divider(height: 8),
-              // Measure distance
-              _buildMenuItem(
-                icon: Icons.route,
-                label: 'Merjenje razdalje',
-                color: Colors.teal,
-                onTap: () {
-                  onDismiss();
-                  onMeasureDistance();
-                },
-              ),
-              const Divider(height: 8),
-              // Measure area
-              _buildMenuItem(
-                icon: Icons.square_foot,
-                label: 'Merjenje povrsine',
-                color: Colors.deepPurple,
-                onTap: () {
-                  onDismiss();
-                  onMeasureArea();
-                },
-              ),
-              const Divider(height: 8),
-              // Import parcel button (or view parcel if already on a parcel)
-              if (existingParcel != null)
-                _buildMenuItem(
-                  icon: Icons.visibility,
-                  label: 'Poglej parcelo',
-                  color: Colors.blue,
-                  onTap: () {
-                    onDismiss();
-                    onViewParcel?.call();
-                  },
-                )
-              else
-                _buildMenuItem(
-                  icon: Icons.download,
-                  label: 'Uvozi parcelo',
-                  color: Colors.blue,
-                  onTap: () {
-                    onDismiss();
-                    onImportParcel();
-                  },
-                ),
-            ],
+          _buildMenuItem(
+            context: context,
+            icon: Icons.forest,
+            label: 'Dodaj hlodovino',
+            color: Colors.brown,
+            onTap: onAddLog,
           ),
-        ),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.carpenter,
+            label: 'Označi sečnjo',
+            color: Colors.deepOrange,
+            onTap: onAddSecnja,
+          ),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.route,
+            label: 'Merjenje razdalje',
+            color: Colors.teal,
+            onTap: onMeasureDistance,
+          ),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.square_foot,
+            label: 'Merjenje povrsine',
+            color: Colors.deepPurple,
+            onTap: onMeasureArea,
+          ),
+          if (existingParcel != null)
+            _buildMenuItem(
+              context: context,
+              icon: Icons.visibility,
+              label: 'Poglej parcelo',
+              color: Colors.blue,
+              onTap: () => onViewParcel?.call(),
+            )
+          else
+            _buildMenuItem(
+              context: context,
+              icon: Icons.download,
+              label: 'Uvozi parcelo',
+              color: Colors.blue,
+              onTap: onImportParcel,
+            ),
+        ],
       ),
     );
   }

@@ -61,11 +61,20 @@ class HttpCacheService {
   Future<http.Response> get(Uri uri, {Duration? timeout}) async {
     final cached = await getCached(uri);
     if (cached != null) return cached;
-    final response = timeout != null
-        ? await http.get(uri).timeout(timeout)
-        : await http.get(uri);
-    if (response.statusCode == 200) await cacheResponse(uri, response);
-    return response;
+    try {
+      final response = timeout != null
+          ? await http.get(uri).timeout(timeout)
+          : await http.get(uri);
+      if (response.statusCode == 200) {
+        await cacheResponse(uri, response);
+      } else {
+        debugPrint('HTTP ${response.statusCode} for $uri');
+      }
+      return response;
+    } catch (e) {
+      debugPrint('HTTP request failed for $uri: $e');
+      rethrow;
+    }
   }
 
   Future<int> clearExpired() async {

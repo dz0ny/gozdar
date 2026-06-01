@@ -3,7 +3,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/map_layer.dart';
-import 'offline_map_caching_provider.dart';
 import 'offline_tile_cache_service.dart';
 import 'tile_download_service.dart';
 import 'tile_math_service.dart';
@@ -36,12 +35,13 @@ class TileCacheService {
   static Future<void> initialize() async {
     if (_initialized) return;
 
+    // Documented flutter_map caching: store raw tile bytes keyed by URL, no
+    // conversion or custom URL/style matching (that mismatched tiles before).
+    // https://docs.fleaflet.dev/layers/tile-layer/caching
     _tileProvider = NetworkTileProvider(
-      cachingProvider: OfflineMapCachingProvider(
-        BuiltInMapCachingProvider.getOrCreateInstance(
-          maxCacheSize: 10_000_000_000,
-          overrideFreshAge: const Duration(days: 365),
-        ),
+      cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
+        maxCacheSize: 10_000_000_000,
+        overrideFreshAge: const Duration(days: 365),
       ),
     );
     _initialized = true;

@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/map_layer.dart';
+import '../services/parcel_lookup_service.dart';
 import 'map_layer_renderer.dart';
 
 /// Non-interactive embedded map preview of a parcel, using the same base layer
@@ -25,9 +26,18 @@ class ParcelMapPreview extends StatelessWidget {
   final Color outlineColor;
 
   /// Width-to-height ratio of the preview. Defaults to 1.0 (square — full
-  /// content width).
+  /// content width). Ignored when [fill] is true.
   final double aspectRatio;
   final VoidCallback? onTap;
+
+  /// When true the map is pan/zoomable (drag + pinch + double-tap) instead of
+  /// a static snapshot. Use for full-screen sheets where the user explores the
+  /// parcel surroundings.
+  final bool interactive;
+
+  /// When true the map expands to fill its parent's constraints instead of
+  /// being sized by [aspectRatio]. Use inside an Expanded/sized container.
+  final bool fill;
 
   const ParcelMapPreview({
     super.key,
@@ -38,6 +48,8 @@ class ParcelMapPreview extends StatelessWidget {
     required this.outlineColor,
     this.aspectRatio = 1.0,
     this.onTap,
+    this.interactive = false,
+    this.fill = false,
   });
 
   /// Build base + overlay tile layers, falling back to ESRI World Imagery if
@@ -47,10 +59,17 @@ class ParcelMapPreview extends StatelessWidget {
     final resolvableBase = baseLayer.resolveUrlTemplate(workerUrl) != null
         ? baseLayer
         : MapLayer.esriWorldImagery;
+    // When an offline parcels DB is loaded, the cadastral layer comes from
+    // local data (drawn as the parcel outline), so skip the online WMS kataster
+    // proxy here too — matching the main map.
+    final excludeOverlays = ParcelLookupService.instance.isAvailable
+        ? const {MapLayerType.kataster, MapLayerType.katasterNazivi}
+        : const <MapLayerType>{};
     final renderer = MapLayerRenderer(
       baseLayer: resolvableBase,
       activeOverlays: activeOverlays,
       workerUrl: workerUrl,
+      excludeOverlays: excludeOverlays,
     );
     return renderer.getAllTileLayers();
   }
@@ -59,42 +78,45 @@ class ParcelMapPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final bounds = LatLngBounds.fromPoints(polygon);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: AspectRatio(
-        aspectRatio: aspectRatio,
-        child: Stack(
-          fit: StackFit.expand,
+    final map = Stack(
+      fit: StackFit.expand,
+      children: [
+        FlutterMap(
+          options: MapOptions(
+            crs: const Epsg3857(),
+            initialCameraFit: CameraFit.bounds(
+              bounds: bounds,
+              padding: const EdgeInsets.all(32),
+              maxZoom: 18,
+            ),
+            minZoom: 7.0,
+            maxZoom: MapLayer.appMaxZoom,
+            // Static preview unless [interactive] — interaction otherwise
+            // happens on the full map.
+            interactionOptions: InteractionOptions(
+              flags: interactive
+                  ? (InteractiveFlag.drag |
+                        InteractiveFlag.flingAnimation |
+                        InteractiveFlag.pinchMove |
+                        InteractiveFlag.pinchZoom |
+                        InteractiveFlag.doubleTapZoom)
+                  : InteractiveFlag.none,
+            ),
+          ),
           children: [
-            FlutterMap(
-              options: MapOptions(
-                crs: const Epsg3857(),
-                initialCameraFit: CameraFit.bounds(
-                  bounds: bounds,
-                  padding: const EdgeInsets.all(32),
-                  maxZoom: 18,
-                ),
-                minZoom: 7.0,
-                maxZoom: MapLayer.appMaxZoom,
-                // Static preview — interaction happens on the full map.
-                interactionOptions: const InteractionOptions(
-                  flags: InteractiveFlag.none,
-                ),
-              ),
-              children: [
-                ..._tileLayers(),
-                PolygonLayer(
-                  polygons: [
-                    Polygon(
-                      points: polygon,
-                      color: outlineColor.withValues(alpha: 0.25),
-                      borderColor: outlineColor,
-                      borderStrokeWidth: 3,
-                    ),
-                  ],
+            ..._tileLayers(),
+            PolygonLayer(
+              polygons: [
+                Polygon(
+                  points: polygon,
+                  color: outlineColor.withValues(alpha: 0.25),
+                  borderColor: outlineColor,
+                  borderStrokeWidth: 3,
                 ),
               ],
             ),
+          ],
+        ),
             // Tap target to open the full map.
             if (onTap != null)
               Positioned.fill(
@@ -142,9 +164,15 @@ class ParcelMapPreview extends StatelessWidget {
                   ),
                 ),
               ),
-          ],
-        ),
-      ),
+      ],
     );
+
+    final clipped = ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: map,
+    );
+
+    if (fill) return clipped;
+    return AspectRatio(aspectRatio: aspectRatio, child: clipped);
   }
 }

@@ -8,6 +8,7 @@ import '../models/navigation_target.dart';
 import '../services/database_service.dart';
 import '../services/map_preferences_service.dart';
 import '../services/cadastral_service.dart';
+import '../services/parcel_lookup_service.dart';
 
 /// Provider for map state management
 class MapProvider extends ChangeNotifier {
@@ -259,9 +260,19 @@ class MapProvider extends ChangeNotifier {
     }
   }
 
-  /// Query cadastral parcel at location
+  /// Query cadastral parcel at location.
+  ///
+  /// When an offline parcels database is loaded, resolve from it directly — no
+  /// online proxy/WFS call. Falls back to the online service only when offline
+  /// data is unavailable (or the point isn't covered by the local dataset).
   Future<CadastralParcel?> queryParcelAtLocation(LatLng location) async {
     if (_isQueryingParcel) return null;
+
+    final offline = ParcelLookupService.instance;
+    if (offline.isAvailable) {
+      final local = offline.parcelAt(location);
+      if (local != null) return local;
+    }
 
     _isQueryingParcel = true;
     notifyListeners();

@@ -417,131 +417,94 @@ class MapDialogs {
     return null;
   }
 
-  /// Show dialog to import a cadastral parcel
-  /// Returns true if import is confirmed, false if cancelled
-  static Future<bool> showImportParcelDialog({
-    required BuildContext context,
-    required CadastralParcel cadastralParcel,
-  }) async {
+  /// The parcel info card (header + KO + area + owner) shown when importing a
+  /// cadastral parcel. Extracted so both the map's non-modal import panel and
+  /// any dialog can reuse the exact same layout. Owner is looked up locally.
+  static Widget importParcelInfoCard(
+    BuildContext context,
+    CadastralParcel cadastralParcel,
+  ) {
     final owner = OwnerLookupService.instance.lookup(
       cadastralParcel.cadastralMunicipality,
       cadastralParcel.parcelNumber,
     );
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Uvozi parcelo'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Parcel info card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.outline.withValues(
-                    alpha: 0.3,
-                  ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: parcel number
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.landscape,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header: parcel number
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.landscape,
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Parcela ${cadastralParcel.parcelNumber}',
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              'Katastrska parcela',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  Divider(
-                    height: 24,
-                    color: Theme.of(context).colorScheme.outline.withValues(
-                      alpha: 0.2,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Parcela ${cadastralParcel.parcelNumber}',
+                      style: Theme.of(context).textTheme.titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  _detailRow(
-                    context,
-                    Icons.location_city,
-                    'Katastrska obcina',
-                    owner?.koName != null
-                        ? '${owner!.koName} (${cadastralParcel.cadastralMunicipality})'
-                        : cadastralParcel.cadastralMunicipality.toString(),
-                  ),
-                  _detailRow(
-                    context,
-                    Icons.straighten,
-                    'Povrsina',
-                    cadastralParcel.formattedArea,
-                  ),
-                  if (owner != null)
-                    _detailRow(
-                      context,
-                      Icons.person,
-                      'Lastnik',
-                      owner.displayOwners,
-                      secondary: owner.address,
+                    Text(
+                      'Katastrska parcela',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Ali zelite uvoziti to parcelo v "Moj gozd"?',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Preklici'),
+            ],
           ),
-          FilledButton.icon(
-            onPressed: () => Navigator.of(context).pop(true),
-            icon: const Icon(Icons.download),
-            label: const Text('Uvozi'),
+          Divider(
+            height: 24,
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
           ),
+          _detailRow(
+            context,
+            Icons.location_city,
+            'Katastrska obcina',
+            owner?.koName != null
+                ? '${owner!.koName} (${cadastralParcel.cadastralMunicipality})'
+                : cadastralParcel.cadastralMunicipality.toString(),
+          ),
+          _detailRow(
+            context,
+            Icons.straighten,
+            'Povrsina',
+            cadastralParcel.formattedArea,
+          ),
+          if (owner != null)
+            _detailRow(
+              context,
+              Icons.person,
+              'Lastnik',
+              owner.displayOwners,
+              secondary: owner.address,
+            ),
         ],
       ),
     );
-
-    return result ?? false;
   }
 
   /// One attribute row: leading icon, with a muted label above the value

@@ -1,8 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
+
+/// Thrown when an owners-database download is cancelled by the caller.
+class OwnerDownloadCancelled implements Exception {
+  const OwnerDownloadCancelled();
+}
 
 /// Owner(s) + address looked up for a single cadastral parcel.
 class OwnerInfo {
@@ -52,6 +58,11 @@ class OwnerLookupService {
   Database? _db;
   String? _path;
   int _rowCount = 0;
+  String? _source; // 'imported' | 'downloaded'
+
+  /// How the loaded database was obtained: `'imported'` (file picker) or
+  /// `'downloaded'` (R2), or null when unavailable. Tracked via a `.src` marker.
+  String? get source => _source;
 
   /// Whether the open database carries the per-parcel bounding-box columns
   /// (`min_lon`/`max_lon`/`min_lat`/`max_lat`) needed for offline reverse
@@ -112,7 +123,28 @@ class OwnerLookupService {
     }
     _rowCount = _readRowCount(db);
     _hasGeometry = _detectGeometry(db);
+    _source = _readSource(path);
     _db = db;
+  }
+
+  String? _readSource(String path) {
+    try {
+      final f = File('$path.src');
+      if (f.existsSync()) {
+        final v = f.readAsStringSync().trim();
+        return v.isNotEmpty ? v : null;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  void _writeSource(String path, String src) {
+    try {
+      File('$path.src').writeAsStringSync(src);
+      _source = src;
+    } catch (e) {
+      debugPrint('OwnerLookupService._writeSource failed: $e');
+    }
   }
 
   /// Detect whether the database carries per-parcel bounding-box columns. Be
@@ -145,6 +177,7 @@ class OwnerLookupService {
     _db = null;
     _rowCount = 0;
     _hasGeometry = false;
+    _source = null;
     _koNameCache.clear();
   }
 
@@ -166,6 +199,7 @@ class OwnerLookupService {
     try {
       // Opens read-write and validates that the 'owners' table exists.
       _open(target);
+      _writeSource(target, 'imported');
     } on FormatException {
       await _deleteDbFiles(target);
       _path = null;
@@ -178,6 +212,64 @@ class OwnerLookupService {
     return OwnerImportResult(_rowCount);
   }
 
+  /// Stream-download the owners database from [url] into the app and open it.
+  /// Reports progress via [onProgress]; throw via [isCancelled] to abort.
+  /// Downloads to a `.part` file and only replaces the live database on
+  /// success, so a failed/cancelled download never corrupts an existing one.
+  Future<OwnerImportResult> downloadAndOpen(
+    String url, {
+    void Function(int received, int? total)? onProgress,
+    bool Function()? isCancelled,
+  }) async {
+    final target = await _targetPath();
+    final part = File('$target.part');
+    if (await part.exists()) await part.delete();
+
+    final client = http.Client();
+    try {
+      final response = await client.send(http.Request('GET', Uri.parse(url)));
+      if (response.statusCode != 200) {
+        throw FormatException('Prenos ni uspel (HTTP ${response.statusCode}).');
+      }
+      final total = response.contentLength;
+      var received = 0;
+      final sink = part.openWrite();
+      try {
+        await for (final chunk in response.stream) {
+          if (isCancelled?.call() ?? false) {
+            throw const OwnerDownloadCancelled();
+          }
+          sink.add(chunk);
+          received += chunk.length;
+          onProgress?.call(received, total);
+        }
+      } finally {
+        await sink.close();
+      }
+
+      _close();
+      await _deleteDbFiles(target);
+      await part.rename(target);
+      _path = target;
+      try {
+        _open(target);
+        _writeSource(target, 'downloaded');
+      } on FormatException {
+        await _deleteDbFiles(target);
+        _path = null;
+        throw const FormatException('Prenesena datoteka ni baza lastnikov.');
+      }
+      return OwnerImportResult(_rowCount);
+    } finally {
+      client.close();
+      if (await part.exists()) {
+        try {
+          await part.delete();
+        } catch (_) {}
+      }
+    }
+  }
+
   /// Delete the imported database.
   Future<void> remove() async {
     _close();
@@ -187,7 +279,7 @@ class OwnerLookupService {
 
   /// Delete the database file together with its WAL/SHM/journal sidecars.
   Future<void> _deleteDbFiles(String path) async {
-    for (final suffix in ['', '-wal', '-shm', '-journal']) {
+    for (final suffix in ['', '-wal', '-shm', '-journal', '.src']) {
       final file = File('$path$suffix');
       if (await file.exists()) {
         try {

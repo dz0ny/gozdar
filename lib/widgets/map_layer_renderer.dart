@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import '../models/map_layer.dart';
 import '../services/tile_cache_service.dart';
@@ -8,10 +9,16 @@ class MapLayerRenderer {
   final Set<MapLayerType> activeOverlays;
   final String? workerUrl;
 
+  /// Overlay types to skip even when active — used to suppress the online WMS
+  /// kataster proxy when an offline parcels database is rendering those layers
+  /// locally.
+  final Set<MapLayerType> excludeOverlays;
+
   const MapLayerRenderer({
     required this.baseLayer,
     required this.activeOverlays,
     this.workerUrl,
+    this.excludeOverlays = const {},
   });
 
   /// Build tile layer for a given layer
@@ -29,6 +36,13 @@ class MapLayerRenderer {
       minZoom: layer.minZoom,
       tileProvider: tileCacheService.getGeneralTileProvider(),
       userAgentPackageName: 'dev.dz0ny.gozdar',
+      errorTileCallback: (tile, error, stackTrace) {
+        debugPrint(
+          'TILE ERROR [${layer.type.name}] '
+          '${tile.coordinates.z}/${tile.coordinates.x}/${tile.coordinates.y}: '
+          '$error',
+        );
+      },
     );
   }
 
@@ -41,6 +55,7 @@ class MapLayerRenderer {
   List<TileLayer> buildOverlayLayers() {
     return MapLayer.overlayLayers
         .where((layer) => activeOverlays.contains(layer.type))
+        .where((layer) => !excludeOverlays.contains(layer.type))
         .where((layer) => layer.resolveUrlTemplate(workerUrl) != null)
         .map((layer) => buildTileLayerForLayer(layer))
         .toList();

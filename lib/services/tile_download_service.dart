@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
@@ -244,6 +245,22 @@ class TileDownloadService {
           return TileFailed(tile, 'HTTP ${response.statusCode}');
         }
 
+        // Warm flutter_map's built-in cache with the exact tile URL so the map
+        // serves it offline later (this is the serving path now). Keep the
+        // ObjectBox copy for the download-manager stats/delete UI.
+        try {
+          await BuiltInMapCachingProvider.getOrCreateInstance().putTile(
+            url: url,
+            metadata: CachedMapTileMetadata(
+              staleAt: DateTime.now().add(const Duration(days: 365)),
+              lastModified: null,
+              etag: null,
+            ),
+            bytes: response.bodyBytes,
+          );
+        } catch (_) {
+          // Built-in cache unavailable (e.g. web) — ObjectBox copy still kept.
+        }
         await _cache.putTile(
           styleHash,
           tile.z,

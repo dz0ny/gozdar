@@ -163,58 +163,88 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: false,
+      // Near-fullscreen sheet so the embedded map is large and pannable. The
+      // map captures pan/zoom gestures; drag-to-dismiss works on the header.
       builder: (sheetContext) {
         final cs = Theme.of(sheetContext).colorScheme;
         final imported = _status[_key(hit)] == _ImportState.imported;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'KO ${hit.koLabel} • Parcela ${hit.parcela}',
-                  style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+        return SizedBox(
+          height: MediaQuery.of(sheetContext).size.height * 0.9,
+          child: Column(
+            children: [
+              // Drag handle.
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 4),
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(hit.owner),
-                if (hit.address != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    hit.address!,
-                    style: Theme.of(
-                      sheetContext,
-                    ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                ParcelMapPreview(
-                  polygon: wfs.polygon,
-                  baseLayer: mapProvider.currentBaseLayer,
-                  activeOverlays: mapProvider.activeOverlays,
-                  workerUrl: mapProvider.workerUrl,
-                  outlineColor: cs.primary,
-                  aspectRatio: 1.4,
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'KO ${hit.koLabel} • Parcela ${hit.parcela}',
+                      style: Theme.of(sheetContext).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(hit.owner),
+                    if (hit.address != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        hit.address!,
+                        style: Theme.of(sheetContext).textTheme.bodySmall
+                            ?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: imported
-                        ? null
-                        : () {
-                            Navigator.of(sheetContext).pop();
-                            _import(hit, prefetched: wfs);
-                          },
-                    icon: Icon(imported ? Icons.check : Icons.download),
-                    label: Text(imported ? 'Že uvožena' : 'Uvozi v Moj gozd'),
+              ),
+              const SizedBox(height: 12),
+              // Interactive map fills the remaining height.
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: ParcelMapPreview(
+                    polygon: wfs.polygon,
+                    baseLayer: mapProvider.currentBaseLayer,
+                    activeOverlays: mapProvider.activeOverlays,
+                    workerUrl: mapProvider.workerUrl,
+                    outlineColor: cs.primary,
+                    interactive: true,
+                    fill: true,
                   ),
                 ),
-              ],
-            ),
+              ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: imported
+                          ? null
+                          : () {
+                              Navigator.of(sheetContext).pop();
+                              _import(hit, prefetched: wfs);
+                            },
+                      icon: Icon(imported ? Icons.check : Icons.download),
+                      label: Text(
+                        imported ? 'Že uvožena' : 'Uvozi v Moj gozd',
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },

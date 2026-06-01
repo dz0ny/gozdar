@@ -1,20 +1,119 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:proj4dart/proj4dart.dart' as proj4;
 import 'http_cache_service.dart';
 
+/// A fetched parcel plus its bounding box, kept in the spatial cache.
+class _CachedParcel {
+  final CadastralParcel parcel;
+  final double minLat;
+  final double maxLat;
+  final double minLng;
+  final double maxLng;
+
+  const _CachedParcel(
+    this.parcel,
+    this.minLat,
+    this.maxLat,
+    this.minLng,
+    this.maxLng,
+  );
+}
+
 /// Service for querying Slovenian WMS data via GetFeatureInfo
 class CadastralService {
-  static const String _wmsBaseUrl = 'https://prostor.zgs.gov.si/geoserver/pregledovalnik/wms';
+  // Global geoserver WMS endpoint (workspace-qualified layer names work here).
+  // Matches the official ZGS pregledovalnik viewer configuration.
+  static const String _wmsBaseUrl = 'https://prostor.zgs.gov.si/geoserver/wms';
   static const String _wfsApiUrl = 'https://gozdar-proxy.dz0ny.workers.dev/api/wfs';
 
   final HttpCacheService _httpCache = HttpCacheService();
+
+  // Persistent spatial cache of parcels already fetched. A tap inside a cached
+  // parcel's shape is served without a network request, even after restart.
+  static const int _maxCachedParcels = 300;
+  static const String _cacheFileName = 'parcel_spatial_cache.json';
+  final List<_CachedParcel> _parcelCache = [];
+  bool _cacheLoaded = false;
+  File? _cacheFile;
 
   // Singleton instance
   static final CadastralService _instance = CadastralService._internal();
   factory CadastralService() => _instance;
   CadastralService._internal();
+
+  /// Load the persisted cache from disk once.
+  Future<void> _ensureCacheLoaded() async {
+    if (_cacheLoaded) return;
+    _cacheLoaded = true;
+    try {
+      final dir = await getApplicationSupportDirectory();
+      _cacheFile = File('${dir.path}/$_cacheFileName');
+      if (await _cacheFile!.exists()) {
+        final data = jsonDecode(await _cacheFile!.readAsString()) as List;
+        for (final entry in data) {
+          final parcel =
+              CadastralParcel.fromJson(entry as Map<String, dynamic>);
+          _addToCache(parcel, persist: false);
+        }
+        debugPrint('Loaded ${_parcelCache.length} cached parcels');
+      }
+    } catch (e) {
+      debugPrint('Error loading parcel cache: $e');
+    }
+  }
+
+  /// Return a previously-fetched parcel whose shape contains [point], using the
+  /// bounding box as a fast pre-filter before the precise polygon test.
+  CadastralParcel? _cachedParcelAt(LatLng point) {
+    for (final cached in _parcelCache) {
+      if (point.latitude < cached.minLat ||
+          point.latitude > cached.maxLat ||
+          point.longitude < cached.minLng ||
+          point.longitude > cached.maxLng) {
+        continue;
+      }
+      if (cached.parcel.containsPoint(point)) return cached.parcel;
+    }
+    return null;
+  }
+
+  void _addToCache(CadastralParcel parcel, {bool persist = true}) {
+    if (parcel.polygon.isEmpty) return;
+    if (_parcelCache.any((c) => c.parcel.id == parcel.id)) return;
+    var minLat = parcel.polygon.first.latitude;
+    var maxLat = minLat;
+    var minLng = parcel.polygon.first.longitude;
+    var maxLng = minLng;
+    for (final p in parcel.polygon) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+    _parcelCache.add(_CachedParcel(parcel, minLat, maxLat, minLng, maxLng));
+    if (_parcelCache.length > _maxCachedParcels) {
+      _parcelCache.removeAt(0);
+    }
+    if (persist) _persistCache();
+  }
+
+  /// Write the cache to disk (fire-and-forget).
+  Future<void> _persistCache() async {
+    final file = _cacheFile;
+    if (file == null) return;
+    try {
+      final data = _parcelCache
+          .map((c) => c.parcel.toJson())
+          .toList(growable: false);
+      await file.writeAsString(jsonEncode(data));
+    } catch (e) {
+      debugPrint('Error saving parcel cache: $e');
+    }
+  }
 
   // EPSG:3794 projection for Slovenia
   static proj4.Projection? _epsg3794;
@@ -121,19 +220,69 @@ class CadastralService {
     }
   }
 
-  /// Query cadastral parcel at given location
-  /// Returns null if no parcel found or on error
+  /// Query cadastral parcel at given location via the proxy API.
+  /// Returns null if no parcel found or on error.
   Future<CadastralParcel?> queryParcelAtLocation(LatLng location) async {
+    // Spatial cache first: a tap inside an already-fetched parcel is free.
+    await _ensureCacheLoaded();
+    final cached = _cachedParcelAt(location);
+    if (cached != null) return cached;
+
+    // Primary: official ZGS WMS, which is accurate to the clicked point.
+    // Fallback: our proxy point endpoint (may be offset by a few meters).
+    var parcel = await _queryParcelViaWms(location);
+    parcel ??= await _queryParcelViaProxy(location);
+
+    if (parcel != null) _addToCache(parcel);
+    return parcel;
+  }
+
+  /// Query the parcel via the official ZGS WMS GetFeatureInfo (EPSG:3794).
+  ///
+  /// The query box can intersect several parcels, so pick the one whose shape
+  /// actually contains the clicked point rather than blindly taking the first.
+  Future<CadastralParcel?> _queryParcelViaWms(LatLng location) async {
     final features = await queryLayerAtLocation(
       location,
       'pregledovalnik:kn_parcele',
     );
-
-    if (features == null || features.isEmpty) {
+    if (features == null || features.isEmpty) return null;
+    try {
+      final parcels = features.map(CadastralParcel.fromGeoJson).toList();
+      for (final parcel in parcels) {
+        if (parcel.containsPoint(location)) return parcel;
+      }
+      return parcels.first;
+    } catch (e) {
+      debugPrint('Error parsing WMS parcel: $e');
       return null;
     }
+  }
 
-    return CadastralParcel.fromGeoJson(features.first);
+  /// Query the parcel via our proxy point endpoint (fallback).
+  Future<CadastralParcel?> _queryParcelViaProxy(LatLng location) async {
+    try {
+      // Cap coordinates to ~1 m precision (5 decimals). Sub-meter precision
+      // adds no value and would fragment the HTTP cache.
+      final lat = location.latitude.toStringAsFixed(5);
+      final lon = location.longitude.toStringAsFixed(5);
+      final uri = Uri.parse('$_wfsApiUrl/parcel/point?lat=$lat&lon=$lon');
+
+      final response =
+          await _httpCache.get(uri, timeout: const Duration(seconds: 30));
+      if (response.statusCode != 200) return null;
+
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final features = json['features'] as List<dynamic>?;
+      if (features == null || features.isEmpty) return null;
+
+      return CadastralParcel.fromWfsParcel(
+        WfsParcel.fromGeoJson(features.first as Map<String, dynamic>),
+      );
+    } catch (e) {
+      debugPrint('Error querying proxy parcel at $location: $e');
+      return null;
+    }
   }
 
   /// Query cadastral parcel by KO number and parcel number
@@ -372,6 +521,24 @@ class CadastralParcel {
     );
   }
 
+  /// Create from a [WfsParcel] (proxy API, WGS84). The national cadastral
+  /// reference is `"<ko> <parcel>"`, e.g. "1651 603".
+  factory CadastralParcel.fromWfsParcel(WfsParcel parcel) {
+    final parts = parcel.nationalCadastralReference.trim().split(RegExp(r'\s+'));
+    final ko = parts.isNotEmpty ? int.tryParse(parts.first) ?? 0 : 0;
+    var parcelNumber = parcel.label;
+    if (parcelNumber.isEmpty && parts.length > 1) {
+      parcelNumber = parts.sublist(1).join(' ');
+    }
+    return CadastralParcel(
+      id: parcel.localId,
+      cadastralMunicipality: ko,
+      parcelNumber: parcelNumber,
+      area: parcel.area,
+      polygon: parcel.polygon,
+    );
+  }
+
   /// Get formatted area string
   String get formattedArea {
     if (area >= 10000) {
@@ -383,6 +550,51 @@ class CadastralParcel {
 
   /// Get display name for the parcel
   String get displayName => 'Parcela $parcelNumber (KO $cadastralMunicipality)';
+
+  /// Serialize for the persistent spatial cache.
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'ko': cadastralMunicipality,
+        'parcela': parcelNumber,
+        'area': area,
+        'polygon': polygon
+            .map((p) => [p.latitude, p.longitude])
+            .toList(growable: false),
+      };
+
+  factory CadastralParcel.fromJson(Map<String, dynamic> json) {
+    final poly = (json['polygon'] as List<dynamic>? ?? [])
+        .map((c) => LatLng(
+              (c[0] as num).toDouble(),
+              (c[1] as num).toDouble(),
+            ))
+        .toList();
+    return CadastralParcel(
+      id: json['id'] as String? ?? '',
+      cadastralMunicipality: (json['ko'] as num?)?.toInt() ?? 0,
+      parcelNumber: json['parcela']?.toString() ?? '',
+      area: (json['area'] as num?)?.toDouble() ?? 0.0,
+      polygon: poly,
+    );
+  }
+
+  /// Ray-casting point-in-polygon test (WGS84).
+  bool containsPoint(LatLng point) {
+    final poly = polygon;
+    if (poly.length < 3) return false;
+    bool inside = false;
+    int j = poly.length - 1;
+    for (int i = 0; i < poly.length; i++) {
+      final xi = poly[i].longitude, yi = poly[i].latitude;
+      final xj = poly[j].longitude, yj = poly[j].latitude;
+      if (((yi > point.latitude) != (yj > point.latitude)) &&
+          (point.longitude < (xj - xi) * (point.latitude - yi) / (yj - yi) + xi)) {
+        inside = !inside;
+      }
+      j = i;
+    }
+    return inside;
+  }
 }
 
 /// Represents a cadastral parcel from the WFS API (GURS official data)

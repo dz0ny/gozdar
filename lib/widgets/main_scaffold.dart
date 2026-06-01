@@ -55,6 +55,66 @@ class _MainScaffoldState extends State<MainScaffold> {
     );
   }
 
+  NavigationRailDestination _buildRailDestination({
+    required String semanticLabel,
+    required String label,
+    required IconData icon,
+    required IconData selectedIcon,
+    required bool selected,
+  }) {
+    return NavigationRailDestination(
+      icon: Semantics(
+        button: true,
+        selected: selected,
+        label: semanticLabel,
+        child: ExcludeSemantics(
+          child: Icon(icon),
+        ),
+      ),
+      selectedIcon: Semantics(
+        button: true,
+        selected: selected,
+        label: semanticLabel,
+        child: ExcludeSemantics(
+          child: Icon(selectedIcon),
+        ),
+      ),
+      label: Text(label),
+    );
+  }
+
+  /// Build the list of tab definitions shared by both the bottom bar and rail.
+  List<({String semanticLabel, String label, IconData icon, IconData selectedIcon})>
+      _tabDefinitions(bool rtkEnabled) {
+    return [
+      (
+        semanticLabel: 'Tab Karta',
+        label: 'Karta',
+        icon: Icons.map_outlined,
+        selectedIcon: Icons.map,
+      ),
+      (
+        semanticLabel: 'Tab Gozd',
+        label: 'Gozd',
+        icon: Icons.park_outlined,
+        selectedIcon: Icons.park,
+      ),
+      (
+        semanticLabel: 'Tab Hlodi',
+        label: 'Hlodi',
+        icon: Icons.forest_outlined,
+        selectedIcon: Icons.forest,
+      ),
+      if (rtkEnabled)
+        (
+          semanticLabel: 'RTK GNSS',
+          label: 'RTK',
+          icon: Icons.gps_fixed_outlined,
+          selectedIcon: Icons.gps_fixed,
+        ),
+    ];
+  }
+
   @override
   void initState() {
     super.initState();
@@ -181,47 +241,65 @@ class _MainScaffoldState extends State<MainScaffold> {
     context.watch<NavigationNotifier>();
     final rtkBridgeSettings = context.watch<RtkBridgeSettings>();
 
+    final tabs = _tabDefinitions(rtkBridgeSettings.enabled);
+    final currentIndex = widget.navigationShell.currentIndex;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    final body = Stack(
+      children: [
+        widget.navigationShell,
+        // Update banner overlay (Android only)
+        if (Platform.isAndroid && !isPlayDistribution)
+          UpdateBanner(updateService: UpdateService()),
+      ],
+    );
+
+    // In landscape, place the tab bar on the left as a NavigationRail to
+    // reclaim vertical space. In portrait, keep the bottom NavigationBar.
+    if (isLandscape) {
+      return Scaffold(
+        body: Row(
+          children: [
+            // Only the rail observes safe-area insets; the body stays full-bleed
+            // so the map isn't padded away from the right edge.
+            SafeArea(
+              right: false,
+              child: NavigationRail(
+                selectedIndex: currentIndex < tabs.length ? currentIndex : null,
+                onDestinationSelected: _handleTabTap,
+                labelType: NavigationRailLabelType.all,
+                destinations: [
+                  for (var i = 0; i < tabs.length; i++)
+                    _buildRailDestination(
+                      semanticLabel: tabs[i].semanticLabel,
+                      label: tabs[i].label,
+                      icon: tabs[i].icon,
+                      selectedIcon: tabs[i].selectedIcon,
+                      selected: currentIndex == i,
+                    ),
+                ],
+              ),
+            ),
+            Expanded(child: body),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
-      body: Stack(
-        children: [
-          widget.navigationShell,
-          // Update banner overlay (Android only)
-          if (Platform.isAndroid && !isPlayDistribution)
-            UpdateBanner(updateService: UpdateService()),
-        ],
-      ),
+      body: body,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: widget.navigationShell.currentIndex,
+        selectedIndex: currentIndex < tabs.length ? currentIndex : 0,
         onDestinationSelected: _handleTabTap,
         destinations: [
-          _buildNavigationDestination(
-            semanticLabel: 'Tab Karta',
-            label: 'Karta',
-            icon: Icons.map_outlined,
-            selectedIcon: Icons.map,
-            selected: widget.navigationShell.currentIndex == 0,
-          ),
-          _buildNavigationDestination(
-            semanticLabel: 'Tab Gozd',
-            label: 'Gozd',
-            icon: Icons.park_outlined,
-            selectedIcon: Icons.park,
-            selected: widget.navigationShell.currentIndex == 1,
-          ),
-          _buildNavigationDestination(
-            semanticLabel: 'Tab Hlodi',
-            label: 'Hlodi',
-            icon: Icons.forest_outlined,
-            selectedIcon: Icons.forest,
-            selected: widget.navigationShell.currentIndex == 2,
-          ),
-          if (rtkBridgeSettings.enabled)
+          for (var i = 0; i < tabs.length; i++)
             _buildNavigationDestination(
-              semanticLabel: 'RTK GNSS',
-              label: 'RTK',
-              icon: Icons.gps_fixed_outlined,
-              selectedIcon: Icons.gps_fixed,
-              selected: false,
+              semanticLabel: tabs[i].semanticLabel,
+              label: tabs[i].label,
+              icon: tabs[i].icon,
+              selectedIcon: tabs[i].selectedIcon,
+              selected: currentIndex == i,
             ),
         ],
       ),

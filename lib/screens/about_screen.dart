@@ -5,9 +5,13 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/owner_offline_settings_service.dart';
+import '../services/parcel_lookup_service.dart';
 import '../services/rtk_bridge_settings.dart';
 import '../services/vlake_service.dart';
 import '../services/vlake_settings.dart';
+
+/// Which offline reference databases a wipe action targets.
+enum _WipeScope { all, imported, downloaded }
 
 /// Full-featured About screen with app info, map sources, and legal information
 class AboutScreen extends StatefulWidget {
@@ -23,6 +27,24 @@ class _AboutScreenState extends State<AboutScreen> {
   /// Hidden developer options, revealed by long-pressing the version card.
   /// Rendered inline under the RTK setting rather than in a separate sheet.
   bool _showDeveloperOptions = false;
+
+  /// R2-hosted databases.
+  static const _dbBaseUrl = 'https://gozdar-kataster.dz0ny.dev';
+  static const _regionsManifestUrl = '$_dbBaseUrl/regions.json';
+  static const _ownersDbUrl = '$_dbBaseUrl/owners.sqlite';
+
+  // Offline parcels download progress.
+  bool _downloadingParcels = false;
+  bool _cancelParcelDownload = false;
+  int _parcelReceived = 0;
+  int? _parcelTotal;
+  String _parcelDownloadLabel = 'Prenašam regijo…';
+
+  // Owners database download progress.
+  bool _downloadingOwners = false;
+  bool _cancelOwnerDownload = false;
+  int _ownerReceived = 0;
+  int? _ownerTotal;
 
   @override
   void initState() {
@@ -230,29 +252,43 @@ class _AboutScreenState extends State<AboutScreen> {
             },
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: _importOwners,
-                  icon: const Icon(Icons.file_open),
-                  label: Text(
-                    service.isAvailable
-                        ? 'Zamenjaj (.sqlite)'
-                        : 'Uvozi bazo (.sqlite)',
+          if (_downloadingOwners)
+            _buildDbDownloadProgress(
+              context,
+              colorScheme,
+              received: _ownerReceived,
+              total: _ownerTotal,
+              label: 'Prenašam bazo lastnikov…',
+              onCancel: () => setState(() => _cancelOwnerDownload = true),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _downloadOwners,
+                    icon: const Icon(Icons.cloud_download_outlined),
+                    label: Text(
+                      service.isAvailable ? 'Posodobi (~300 MB)' : 'Prenesi (~300 MB)',
+                    ),
                   ),
                 ),
-              ),
-              if (service.isAvailable) ...[
                 const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  onPressed: _removeOwners,
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Odstrani'),
+                IconButton.outlined(
+                  onPressed: _importOwners,
+                  icon: const Icon(Icons.file_open),
+                  tooltip: 'Uvozi iz datoteke (.sqlite)',
                 ),
+                if (service.isAvailable) ...[
+                  const SizedBox(width: 8),
+                  IconButton.outlined(
+                    onPressed: _removeOwners,
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: 'Odstrani',
+                  ),
+                ],
               ],
-            ],
-          ),
+            ),
           if (service.isAvailable && service.hasGeometry) ...[
             const Divider(height: 24),
             SwitchListTile(
@@ -269,6 +305,13 @@ class _AboutScreenState extends State<AboutScreen> {
               },
             ),
           ],
+
+          const Divider(height: 24),
+          _buildParcelsDbSection(context, colorScheme),
+
+          const Divider(height: 24),
+          _buildWipeSection(context, colorScheme),
+
           const Divider(height: 24),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -323,6 +366,471 @@ class _AboutScreenState extends State<AboutScreen> {
     if (mounted) setState(() {});
     messenger.showSnackBar(
       const SnackBar(content: Text('Baza lastnikov odstranjena.')),
+    );
+  }
+
+  /// Offline parcels (kataster) database — when loaded, the cadastral layer is
+  /// rendered and identified locally instead of via the online WMS proxy.
+  Widget _buildParcelsDbSection(BuildContext context, ColorScheme colorScheme) {
+    final service = ParcelLookupService.instance;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Offline kataster (parcele)',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 4),
+        FutureBuilder<int?>(
+          future: service.fileSizeBytes(),
+          builder: (context, snapshot) {
+            if (!service.isAvailable) {
+              return Text(
+                'Ni naložena — kataster se prikazuje prek spleta.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+              );
+            }
+            final size = snapshot.data;
+            final sizeLabel = size != null
+                ? ' • ${(size / (1024 * 1024)).toStringAsFixed(0)} MB'
+                : '';
+            final dateLabel =
+                service.dataDate != null ? ' • ${service.dataDate}' : '';
+            final regions = service.loadedRegions;
+            final regionLabel = regions.isNotEmpty ? '${regions.join(', ')}\n' : '';
+            return Text(
+              '$regionLabel${_formatCount(service.rowCount)} parcel'
+              '$sizeLabel$dateLabel • brez spleta',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        if (_downloadingParcels)
+          _buildDbDownloadProgress(
+            context,
+            colorScheme,
+            received: _parcelReceived,
+            total: _parcelTotal,
+            label: _parcelDownloadLabel,
+            onCancel: () => setState(() => _cancelParcelDownload = true),
+          )
+        else
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _pickAndDownloadRegion,
+                  icon: const Icon(Icons.cloud_download_outlined),
+                  label: Text(
+                    service.isAvailable ? 'Dodaj regijo' : 'Prenesi regijo',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              IconButton.outlined(
+                onPressed: _importParcels,
+                icon: const Icon(Icons.file_open),
+                tooltip: 'Uvozi iz datoteke (.sqlite)',
+              ),
+              if (service.isAvailable) ...[
+                const SizedBox(width: 8),
+                IconButton.outlined(
+                  onPressed: _removeParcels,
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Odstrani',
+                ),
+              ],
+            ],
+          ),
+        if (!_downloadingParcels && !service.isAvailable) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Prenesi le svojo statistično regijo — priporočena povezava Wi-Fi.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Fetch the region manifest, let the user pick one or more regions, then
+  /// download them all in sequence.
+  Future<void> _pickAndDownloadRegion() async {
+    final messenger = ScaffoldMessenger.of(context);
+    List<ParcelRegion> regions;
+    try {
+      regions = await ParcelLookupService.fetchRegions(_regionsManifestUrl);
+    } catch (e) {
+      final message = e is FormatException ? e.message : 'Napaka: $e';
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
+    if (!mounted || regions.isEmpty) return;
+    regions.sort((a, b) => a.name.compareTo(b.name));
+
+    final chosen = await showModalBottomSheet<List<ParcelRegion>>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final selected = <String>{};
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final loadedFiles = ParcelLookupService.instance.loadedFiles;
+            final selectedBytes = regions
+                .where((r) => selected.contains(r.file))
+                .fold<int>(0, (sum, r) => sum + (r.bytes ?? 0));
+            final mb = (selectedBytes / (1024 * 1024)).toStringAsFixed(0);
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Izberi statistične regije',
+                        style: Theme.of(sheetContext).textTheme.titleMedium,
+                      ),
+                    ),
+                  ),
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        for (final region in regions)
+                          CheckboxListTile(
+                            value: selected.contains(region.file),
+                            onChanged: (v) => setSheetState(() {
+                              if (v == true) {
+                                selected.add(region.file);
+                              } else {
+                                selected.remove(region.file);
+                              }
+                            }),
+                            secondary: Icon(
+                              loadedFiles.contains(region.file)
+                                  ? Icons.check_circle
+                                  : Icons.map_outlined,
+                              color: loadedFiles.contains(region.file)
+                                  ? Colors.green
+                                  : null,
+                            ),
+                            title: Text(region.name),
+                            subtitle: region.sizeMb != null
+                                ? Text('${region.sizeMb!.toStringAsFixed(0)} MB'
+                                    '${region.rows != null ? ' • ${_formatCount(region.rows!)} parcel' : ''}'
+                                    '${loadedFiles.contains(region.file) ? ' • naloženo' : ''}')
+                                : null,
+                          ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: selected.isEmpty
+                            ? null
+                            : () => Navigator.of(sheetContext).pop(
+                                regions
+                                    .where((r) => selected.contains(r.file))
+                                    .toList()),
+                        icon: const Icon(Icons.cloud_download_outlined),
+                        label: Text(selected.isEmpty
+                            ? 'Prenesi'
+                            : 'Prenesi ${selected.length} (~$mb MB)'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+    if (chosen != null && chosen.isNotEmpty) {
+      await _downloadRegions(chosen);
+    }
+  }
+
+  Future<void> _downloadRegions(List<ParcelRegion> regions) async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _downloadingParcels = true;
+      _cancelParcelDownload = false;
+      _parcelReceived = 0;
+      _parcelTotal = null;
+    });
+    var done = 0;
+    final failures = <String>[];
+    try {
+      for (var i = 0; i < regions.length; i++) {
+        if (_cancelParcelDownload) break;
+        final region = regions[i];
+        setState(() {
+          _parcelDownloadLabel = '${region.name} (${i + 1}/${regions.length})…';
+          _parcelReceived = 0;
+          _parcelTotal = region.bytes;
+        });
+        try {
+          await ParcelLookupService.instance.downloadAndOpen(
+            '$_dbBaseUrl/${region.file}',
+            fileName: region.file,
+            onProgress: (received, total) {
+              if (!mounted) return;
+              if (received - _parcelReceived >= 4 * 1024 * 1024 ||
+                  (total != null && received >= total)) {
+                setState(() {
+                  _parcelReceived = received;
+                  _parcelTotal = total ?? region.bytes;
+                });
+              }
+            },
+            isCancelled: () => _cancelParcelDownload,
+          );
+          done++;
+        } on ParcelDownloadCancelled {
+          break;
+        } catch (e) {
+          failures.add(region.name);
+        }
+      }
+      if (mounted) setState(() {});
+      final msg = StringBuffer('Prenesenih regij: $done.');
+      if (failures.isNotEmpty) msg.write(' Neuspešno: ${failures.join(', ')}.');
+      messenger.showSnackBar(SnackBar(content: Text(msg.toString())));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _downloadingParcels = false;
+          _cancelParcelDownload = false;
+        });
+      }
+    }
+  }
+
+  /// Shared download-progress row (bar + MB/percent + cancel) used by the
+  /// parcels and owners database sections.
+  Widget _buildDbDownloadProgress(
+    BuildContext context,
+    ColorScheme colorScheme, {
+    required int received,
+    required int? total,
+    required String label,
+    required VoidCallback onCancel,
+  }) {
+    final pct = (total != null && total > 0) ? received / total : null;
+    final mb = received / (1024 * 1024);
+    final totalMb = total != null ? total / (1024 * 1024) : null;
+    final sizes = totalMb != null
+        ? '${mb.toStringAsFixed(0)} / ${totalMb.toStringAsFixed(0)} MB'
+        : '${mb.toStringAsFixed(0)} MB';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LinearProgressIndicator(value: pct),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '$label $sizes'
+                '${pct != null ? ' • ${(pct * 100).toStringAsFixed(0)}%' : ''}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ),
+            TextButton(
+              onPressed: onCancel,
+              child: const Text('Prekliči'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _downloadOwners() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _downloadingOwners = true;
+      _cancelOwnerDownload = false;
+      _ownerReceived = 0;
+      _ownerTotal = null;
+    });
+    try {
+      final result = await OwnerLookupService.instance.downloadAndOpen(
+        _ownersDbUrl,
+        onProgress: (received, total) {
+          if (!mounted) return;
+          if (received - _ownerReceived >= 4 * 1024 * 1024 ||
+              (total != null && received >= total)) {
+            setState(() {
+              _ownerReceived = received;
+              _ownerTotal = total;
+            });
+          }
+        },
+        isCancelled: () => _cancelOwnerDownload,
+      );
+      if (mounted) setState(() {});
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Prenesenih ${_formatCount(result.rows)} lastnikov.'),
+        ),
+      );
+    } on OwnerDownloadCancelled {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Prenos preklican.')),
+      );
+    } catch (e) {
+      final message = e is FormatException ? e.message : 'Prenos ni uspel: $e';
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _downloadingOwners = false;
+          _cancelOwnerDownload = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _importParcels() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await FilePicker.pickFiles(type: FileType.any);
+    final path = result?.files.single.path;
+    if (path == null) return;
+
+    final lower = path.toLowerCase();
+    if (!lower.endsWith('.sqlite') && !lower.endsWith('.db')) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Izberi datoteko .sqlite.')),
+      );
+      return;
+    }
+
+    try {
+      final imported = await ParcelLookupService.instance.importFromFile(path);
+      if (mounted) setState(() {});
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Uvoženih ${_formatCount(imported.rows)} parcel.'),
+        ),
+      );
+    } catch (e) {
+      final message = e is FormatException ? e.message : 'Uvoz ni uspel: $e';
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  Future<void> _removeParcels() async {
+    final messenger = ScaffoldMessenger.of(context);
+    await ParcelLookupService.instance.removeAll();
+    if (mounted) setState(() {});
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Baze parcel odstranjene.')),
+    );
+  }
+
+  /// Wipe the offline reference databases (owners + parcels) by how they were
+  /// obtained. Does NOT touch the user's own parcels/logs (ObjectBox).
+  Widget _buildWipeSection(BuildContext context, ColorScheme colorScheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Pobriši podatke (baze parcel + lastnikov)',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () => _wipeData(_WipeScope.imported),
+              icon: const Icon(Icons.file_open_outlined, size: 18),
+              label: const Text('Uvožene'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _wipeData(_WipeScope.downloaded),
+              icon: const Icon(Icons.cloud_off_outlined, size: 18),
+              label: const Text('Prenesene'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _wipeData(_WipeScope.all),
+              style: OutlinedButton.styleFrom(foregroundColor: colorScheme.error),
+              icon: const Icon(Icons.delete_forever, size: 18),
+              label: const Text('Vse'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _wipeData(_WipeScope scope) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final label = switch (scope) {
+      _WipeScope.all => 'vse baze',
+      _WipeScope.imported => 'uvožene baze',
+      _WipeScope.downloaded => 'prenesene baze',
+    };
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Pobriši podatke'),
+        content: Text('Ali res želiš pobrisati $label? Tega ni mogoče razveljaviti.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Prekliči'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Pobriši'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final onlySource = switch (scope) {
+      _WipeScope.all => null,
+      _WipeScope.imported => 'imported',
+      _WipeScope.downloaded => 'downloaded',
+    };
+    bool ownerMatches(String? src) => onlySource == null || src == onlySource;
+
+    var removed = 0;
+    final owners = OwnerLookupService.instance;
+    final parcels = ParcelLookupService.instance;
+    if (owners.isAvailable && ownerMatches(owners.source)) {
+      await owners.remove();
+      removed++;
+    }
+    // Parcels can hold multiple region databases — remove those matching.
+    removed += await parcels.removeBySource(onlySource);
+    if (mounted) setState(() {});
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(removed == 0
+            ? 'Ni ustreznih baz za brisanje.'
+            : 'Pobrisanih baz: $removed.'),
+      ),
     );
   }
 
