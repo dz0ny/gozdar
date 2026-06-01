@@ -31,7 +31,7 @@ class _AboutScreenState extends State<AboutScreen> {
   /// R2-hosted databases.
   static const _dbBaseUrl = 'https://gozdar-kataster.dz0ny.dev';
   static const _regionsManifestUrl = '$_dbBaseUrl/regions.json';
-  static const _ownersDbUrl = '$_dbBaseUrl/owners.sqlite';
+  static const _ownersDbUrl = '$_dbBaseUrl/owners.sqlite.enc';
 
   // Offline parcels download progress.
   bool _downloadingParcels = false;
@@ -662,8 +662,43 @@ class _AboutScreenState extends State<AboutScreen> {
     );
   }
 
+  /// Prompt for a password (obscured). Returns null if cancelled.
+  Future<String?> _promptPassword(String title) {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Geslo',
+            prefixIcon: Icon(Icons.lock_outline),
+          ),
+          onSubmitted: (v) => Navigator.of(ctx).pop(v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Prekliči'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: const Text('Odkleni'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _downloadOwners() async {
     final messenger = ScaffoldMessenger.of(context);
+    // The owners DB is AES-encrypted in transit; ask for the password to
+    // decrypt it as it streams in.
+    final password = await _promptPassword('Geslo za bazo lastnikov');
+    if (password == null || password.isEmpty) return;
     setState(() {
       _downloadingOwners = true;
       _cancelOwnerDownload = false;
@@ -673,6 +708,7 @@ class _AboutScreenState extends State<AboutScreen> {
     try {
       final result = await OwnerLookupService.instance.downloadAndOpen(
         _ownersDbUrl,
+        password: password,
         onProgress: (received, total) {
           if (!mounted) return;
           if (received - _ownerReceived >= 4 * 1024 * 1024 ||

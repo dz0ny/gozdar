@@ -67,6 +67,7 @@ dependencies:
   shared_preferences: any
   http: any
   crypto: any
+  pointycastle: any
   nsd: any
 
   # App Updates

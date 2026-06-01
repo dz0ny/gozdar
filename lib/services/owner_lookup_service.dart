@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import 'aes_file_decryptor.dart';
+
 /// Thrown when an owners-database download is cancelled by the caller.
 class OwnerDownloadCancelled implements Exception {
   const OwnerDownloadCancelled();
@@ -213,11 +215,14 @@ class OwnerLookupService {
   }
 
   /// Stream-download the owners database from [url] into the app and open it.
-  /// Reports progress via [onProgress]; throw via [isCancelled] to abort.
-  /// Downloads to a `.part` file and only replaces the live database on
-  /// success, so a failed/cancelled download never corrupts an existing one.
+  /// When [password] is given the download is treated as an AES-256 encrypted
+  /// file (see [AesFileDecryptor]) and decrypted on the fly. Reports progress
+  /// via [onProgress]; throw via [isCancelled] to abort. Downloads to a `.part`
+  /// file and only replaces the live database on success, so a failed/cancelled
+  /// download never corrupts an existing one.
   Future<OwnerImportResult> downloadAndOpen(
     String url, {
+    String? password,
     void Function(int received, int? total)? onProgress,
     bool Function()? isCancelled,
   }) async {
@@ -232,17 +237,31 @@ class OwnerLookupService {
         throw FormatException('Prenos ni uspel (HTTP ${response.statusCode}).');
       }
       final total = response.contentLength;
-      var received = 0;
       final sink = part.openWrite();
       try {
-        await for (final chunk in response.stream) {
-          if (isCancelled?.call() ?? false) {
-            throw const OwnerDownloadCancelled();
+        if (password != null && password.isNotEmpty) {
+          await AesFileDecryptor.decrypt(
+            input: response.stream,
+            out: sink,
+            password: password,
+            onBytes: (b) => onProgress?.call(b, total),
+            isCancelled: isCancelled,
+          );
+        } else {
+          var received = 0;
+          await for (final chunk in response.stream) {
+            if (isCancelled?.call() ?? false) {
+              throw const OwnerDownloadCancelled();
+            }
+            sink.add(chunk);
+            received += chunk.length;
+            onProgress?.call(received, total);
           }
-          sink.add(chunk);
-          received += chunk.length;
-          onProgress?.call(received, total);
         }
+      } on AesCancelled {
+        throw const OwnerDownloadCancelled();
+      } on AesDecryptException catch (e) {
+        throw FormatException(e.message);
       } finally {
         await sink.close();
       }

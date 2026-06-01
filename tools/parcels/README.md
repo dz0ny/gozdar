@@ -131,6 +131,26 @@ rclone copyto owners.sqlite cloudflare:gozdar-kataster/owners.sqlite \
 The `cloudflare:` rclone remote (S3/Cloudflare provider) holds the R2 API
 credentials — it lives in the local rclone config, **never in this repo**.
 
+## 4b. Encrypt the owners DB (transport encryption)
+
+The owners database is served **AES-256 encrypted** and decrypted in the app
+after download (the plaintext only lands on-device, never on R2/in transit). You
+choose the password — it never goes through the build host or this repo.
+
+```bash
+./encrypt_db.py owners.sqlite owners.sqlite.enc      # prompts for a password
+rclone copyto owners.sqlite.enc cloudflare:gozdar-kataster/owners.sqlite.enc
+```
+
+The app downloads `owners.sqlite.enc`, asks for the same password, and
+stream-decrypts it on the fly (`lib/services/aes_file_decryptor.dart`). Format:
+magic `GZDRAES1` + salt(16) + iv(16) + AES-256-CBC/PKCS7; key =
+PBKDF2-HMAC-SHA256(password, salt, 120000, 32). Cross-language compatibility is
+covered by `test/services/aes_file_decryptor_test.dart`.
+
+> Parcels region DBs are **not** encrypted (public cadastral geometry); only the
+> owners DB is.
+
 ## 5. In-app download
 
 The about/developer screen downloads these straight from R2 into app storage:
