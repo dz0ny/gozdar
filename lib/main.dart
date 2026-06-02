@@ -27,6 +27,7 @@ void main() async {
   await OnboardingService.initialize();
   await RtkBridgeSettings.instance.load();
   await OwnerLookupService.instance.init();
+  await OwnerLookupService.instance.initPublic();
   await ParcelLookupService.instance.init();
   await OwnerOfflineSettingsService.instance.init();
   await CacheSettings.instance.load();

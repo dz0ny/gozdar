@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -57,10 +58,25 @@ class OwnerLookupService {
 
   static const _fileName = 'owners.sqlite';
 
+  // Embedded, redistributable public-owners DB (legal-entity owners + managers,
+  // built from the GURS KN open data; CC-BY). Shipped as an asset and copied to
+  // a writable file on first run because sqlite cannot open assets directly.
+  // Bump [_publicAssetVersion] whenever assets/public_owners.sqlite changes so
+  // the on-device copy is refreshed.
+  static const _publicFileName = 'public_owners.sqlite';
+  static const _publicAsset = 'assets/public_owners.sqlite';
+  static const _publicAssetVersion = '2026-06-02';
+
   Database? _db;
   String? _path;
   int _rowCount = 0;
   String? _source; // 'imported' | 'downloaded'
+
+  Database? _publicDb;
+  int _publicRowCount = 0;
+
+  /// Number of rows in the embedded public-owners DB (0 when unavailable).
+  int get publicRowCount => _publicRowCount;
 
   /// How the loaded database was obtained: `'imported'` (file picker) or
   /// `'downloaded'` (R2), or null when unavailable. Tracked via a `.src` marker.
@@ -75,8 +91,9 @@ class OwnerLookupService {
   /// are cached too (negative lookups). Cleared when the database changes.
   final Map<int, String?> _koNameCache = {};
 
-  /// Whether an owners database has been imported and opened successfully.
-  bool get isAvailable => _db != null;
+  /// Whether owner lookups can be answered — either the embedded public DB or
+  /// an imported/downloaded private DB is open.
+  bool get isAvailable => _db != null || _publicDb != null;
 
   /// Number of owner rows in the imported database (0 when unavailable).
   int get rowCount => _rowCount;
@@ -108,6 +125,50 @@ class OwnerLookupService {
       debugPrint('OwnerLookupService.init failed: $e');
       _close();
     }
+  }
+
+  /// Install (on first run / version change) and open the embedded public-owners
+  /// database. Safe to call on every app start; cheap once installed.
+  Future<void> initPublic() async {
+    try {
+      final dir = await getApplicationSupportDirectory();
+      final path = '${dir.path}${Platform.pathSeparator}$_publicFileName';
+      final marker = File('$path.ver');
+      final installed = marker.existsSync() ? marker.readAsStringSync().trim() : '';
+      if (!File(path).existsSync() || installed != _publicAssetVersion) {
+        final data = await rootBundle.load(_publicAsset);
+        final bytes =
+            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+        await _deleteDbFiles(path); // drop any stale copy + sidecars
+        await File(path).writeAsBytes(bytes, flush: true);
+        marker.writeAsStringSync(_publicAssetVersion);
+      }
+      _openPublic(path);
+    } catch (e) {
+      debugPrint('OwnerLookupService.initPublic failed: $e');
+      _publicDb?.close();
+      _publicDb = null;
+    }
+  }
+
+  void _openPublic(String path) {
+    final db = sqlite3.open(path);
+    final ok = db.select(
+      "SELECT name FROM sqlite_master WHERE type='table' "
+      "AND name IN ('owners','names')",
+    );
+    if (ok.length < 2) {
+      db.close();
+      throw const FormatException('Neveljavna javna baza lastnikov.');
+    }
+    try {
+      final meta = db.select("SELECT v FROM meta WHERE k='rows'");
+      _publicRowCount =
+          meta.isEmpty ? 0 : (int.tryParse(meta.first['v'].toString()) ?? 0);
+    } catch (_) {
+      _publicRowCount = 0;
+    }
+    _publicDb = db;
   }
 
   void _open(String path) {
@@ -354,11 +415,54 @@ class OwnerLookupService {
   /// number ([parcela], e.g. "1799/89"). Returns null when no database is
   /// imported or no match is found. Fast (indexed) and synchronous.
   OwnerInfo? lookup(int? sifko, String? parcela) {
-    final db = _db;
-    if (db == null || sifko == null || parcela == null) return null;
+    if (sifko == null || parcela == null) return null;
     final key = parcela.trim();
     if (key.isEmpty) return null;
+    // Public (embedded, redistributable) takes precedence; fall back to the
+    // imported/downloaded private database for natural-person owners.
+    return _lookupPublic(sifko, key) ?? _lookupPrivate(sifko, key);
+  }
 
+  /// Owner(s) + manager(s) from the embedded public database. Managers are
+  /// suffixed " (upravljavec)" so they read distinctly from owners. Returns null
+  /// when the public DB is absent or has no row for the parcel.
+  OwnerInfo? _lookupPublic(int sifko, String key) {
+    final db = _publicDb;
+    if (db == null) return null;
+    try {
+      final rows = db.select(
+        'SELECT n.naziv AS naziv, o.vloga AS vloga '
+        'FROM owners o JOIN names n ON n.id = o.name_id '
+        'WHERE o.sifko = ? AND o.parcela = ?',
+        [sifko, key],
+      );
+      if (rows.isEmpty) return null;
+      final owners = <String>[];
+      final managers = <String>[];
+      for (final r in rows) {
+        final name = (r['naziv'] as String?)?.trim();
+        if (name == null || name.isEmpty) continue;
+        if (r['vloga'] == 'U') {
+          if (!managers.contains(name)) managers.add(name);
+        } else if (!owners.contains(name)) {
+          owners.add(name);
+        }
+      }
+      final all = <String>[
+        ...owners,
+        for (final m in managers) '$m (upravljavec)',
+      ];
+      if (all.isEmpty) return null;
+      return OwnerInfo(owners: all);
+    } catch (e) {
+      debugPrint('OwnerLookupService._lookupPublic failed: $e');
+      return null;
+    }
+  }
+
+  OwnerInfo? _lookupPrivate(int sifko, String key) {
+    final db = _db;
+    if (db == null) return null;
     try {
       final rows = db.select(
         'SELECT DISTINCT lastnik, naslov, imeko, obcina FROM owners '
