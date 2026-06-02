@@ -131,6 +131,7 @@ flutter:
   assets:
     - icon.png
     - assets/vlake.bin
+    - assets/regije.geojson
     - assets/fonts/Roboto-Regular.ttf
     - assets/fonts/Roboto-Bold.ttf
 

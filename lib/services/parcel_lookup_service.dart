@@ -88,6 +88,10 @@ class ParcelLookupService {
   /// Geometry blob format version emitted by the converter.
   static const _blobVersion = 1;
 
+  /// R2 host serving the offline databases.
+  static const r2BaseUrl = 'https://gozdar-kataster.dz0ny.dev';
+  static const regionsManifestUrl = '$r2BaseUrl/regions.json';
+
   final List<_RegionDb> _dbs = [];
 
   /// Whether at least one offline parcels database is loaded.

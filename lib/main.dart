@@ -11,6 +11,7 @@ import 'services/tile_cache_service.dart';
 import 'services/onboarding_service.dart';
 import 'services/owner_lookup_service.dart';
 import 'services/parcel_lookup_service.dart';
+import 'services/cache_settings.dart';
 import 'services/owner_offline_settings_service.dart';
 import 'services/update_service.dart';
 import 'services/vlake_settings.dart';
@@ -28,6 +29,7 @@ void main() async {
   await OwnerLookupService.instance.init();
   await ParcelLookupService.instance.init();
   await OwnerOfflineSettingsService.instance.init();
+  await CacheSettings.instance.load();
   await VlakeSettings.instance.load();
 
   // Initialize update service (Android only)

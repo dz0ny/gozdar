@@ -46,7 +46,7 @@ class ForestTabState extends State<ForestTab> {
   /// Get unique owners from all parcels
   List<String> get _uniqueOwners {
     final owners = _parcels
-        .map((p) => p.owner)
+        .map(_ownerForParcel)
         .where((owner) => owner != null && owner.isNotEmpty)
         .cast<String>()
         .toSet()
@@ -60,7 +60,17 @@ class ForestTabState extends State<ForestTab> {
     if (_selectedOwnerFilter == null) {
       return _parcels;
     }
-    return _parcels.where((p) => p.owner == _selectedOwnerFilter).toList();
+    return _parcels
+        .where((p) => _ownerForParcel(p) == _selectedOwnerFilter)
+        .toList();
+  }
+
+  String? _ownerForParcel(Parcel parcel) {
+    if (parcel.owner != null && parcel.owner!.isNotEmpty) return parcel.owner;
+    if (!parcel.isCadastral) return null;
+    return OwnerLookupService.instance
+        .lookup(parcel.cadastralMunicipality, parcel.parcelNumber)
+        ?.displayOwners;
   }
 
   @override
@@ -799,6 +809,7 @@ class ForestTabState extends State<ForestTab> {
   }
 
   Widget _buildParcelCard(BuildContext context, Parcel parcel) {
+    final owner = _ownerForParcel(parcel);
     return Dismissible(
       key: Key('parcel_${parcel.id}'),
       direction: DismissDirection.endToStart,
@@ -840,9 +851,9 @@ class ForestTabState extends State<ForestTab> {
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (parcel.owner != null && parcel.owner!.isNotEmpty)
+              if (owner != null && owner.isNotEmpty)
                 Text(
-                  parcel.owner!,
+                  owner,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: Colors.grey[600]),
                 ),

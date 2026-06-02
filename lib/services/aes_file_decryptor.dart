@@ -32,6 +32,9 @@ class AesFileDecryptor {
   /// Stream-decrypt [input] into [out]. [onBytes] reports encrypted bytes
   /// consumed (for progress). Throws [AesDecryptException] on wrong password or
   /// corrupt data, or [AesCancelled] when [isCancelled] returns true.
+  ///
+  /// Decrypts directly into a 64 KiB output buffer and flushes in bulk — a
+  /// 300 MB DB is ~19M blocks, so per-block sink writes would be pathological.
   static Future<void> decrypt({
     required Stream<List<int>> input,
     required IOSink out,
@@ -39,39 +42,32 @@ class AesFileDecryptor {
     void Function(int bytes)? onBytes,
     bool Function()? isCancelled,
   }) async {
-    final header = <int>[];
+    const outCap = 1 << 16; // 64 KiB (multiple of the 16-byte block)
+    final outChunk = Uint8List(outCap);
+    var outLen = 0;
     CBCBlockCipher? cipher;
-    final pending = BytesBuilder(); // ciphertext bytes not yet a full block
-    Uint8List? heldPlain; // last decrypted block, withheld so it can be unpadded
+    var pending = Uint8List(0); // ciphertext not yet decrypted
     var received = 0;
 
-    void initCipher() {
-      for (var i = 0; i < 8; i++) {
-        if (header[i] != _magic[i]) {
-          throw const AesDecryptException(
-              'Datoteka ni v pričakovani obliki (napačna glava).');
-        }
+    void flush() {
+      if (outLen > 0) {
+        out.add(outChunk.sublist(0, outLen)); // sublist copies; buffer reused
+        outLen = 0;
       }
-      final salt = Uint8List.fromList(header.sublist(8, 24));
-      final iv = Uint8List.fromList(header.sublist(24, 40));
-      final key = _deriveKey(password, salt);
-      cipher = CBCBlockCipher(AESEngine())
-        ..init(false, ParametersWithIV(KeyParameter(key), iv));
     }
 
-    void processBuffer() {
+    // Decrypt full blocks from [pending], keeping [keep] trailing bytes back
+    // (the final padded block is only known at end-of-stream).
+    void emit(int keep) {
       final c = cipher!;
-      final buf = pending.toBytes();
-      pending.clear();
       var off = 0;
-      while (buf.length - off >= 16) {
-        final outBlock = Uint8List(16);
-        c.processBlock(buf, off, outBlock, 0);
+      while (pending.length - keep - off >= 16) {
+        if (outLen + 16 > outCap) flush();
+        c.processBlock(pending, off, outChunk, outLen);
         off += 16;
-        if (heldPlain != null) out.add(heldPlain!);
-        heldPlain = outBlock;
+        outLen += 16;
       }
-      if (off < buf.length) pending.add(buf.sublist(off));
+      if (off > 0) pending = pending.sublist(off); // compact small remainder
     }
 
     await for (final chunk in input) {
@@ -79,43 +75,51 @@ class AesFileDecryptor {
       received += chunk.length;
       onBytes?.call(received);
 
-      var data = chunk;
+      pending = _concat(pending, chunk);
       if (cipher == null) {
-        final need = _headerLen - header.length;
-        if (chunk.length <= need) {
-          header.addAll(chunk);
-          if (header.length < _headerLen) continue;
-          initCipher();
-          data = const [];
-        } else {
-          header.addAll(chunk.sublist(0, need));
-          initCipher();
-          data = chunk.sublist(need);
+        if (pending.length < _headerLen) continue;
+        for (var i = 0; i < 8; i++) {
+          if (pending[i] != _magic[i]) {
+            throw const AesDecryptException(
+                'Datoteka ni v pričakovani obliki (napačna glava).');
+          }
         }
+        final salt = Uint8List.sublistView(pending, 8, 24);
+        final iv = Uint8List.sublistView(pending, 24, 40);
+        cipher = CBCBlockCipher(AESEngine())
+          ..init(false, ParametersWithIV(KeyParameter(_deriveKey(password, salt)), iv));
+        pending = pending.sublist(_headerLen);
       }
-      if (data.isNotEmpty) {
-        pending.add(data);
-        processBuffer();
-      }
+      emit(16); // always hold back the (possibly final) last block
     }
 
-    if (cipher == null || pending.length != 0) {
+    if (cipher == null || pending.length != 16) {
       throw const AesDecryptException('Datoteka je okvarjena ali nepopolna.');
     }
-    if (heldPlain == null) {
-      throw const AesDecryptException('Datoteka je prazna.');
-    }
-    // Validate + strip PKCS7 padding on the final block.
-    final pad = heldPlain![15];
+    // Decrypt + validate + strip PKCS7 padding on the final block.
+    final finalBlock = Uint8List(16);
+    cipher.processBlock(pending, 0, finalBlock, 0);
+    final pad = finalBlock[15];
     if (pad < 1 || pad > 16) {
       throw const AesDecryptException('Napačno geslo.');
     }
     for (var i = 16 - pad; i < 16; i++) {
-      if (heldPlain![i] != pad) {
+      if (finalBlock[i] != pad) {
         throw const AesDecryptException('Napačno geslo.');
       }
     }
-    out.add(heldPlain!.sublist(0, 16 - pad));
+    for (var i = 0; i < 16 - pad; i++) {
+      if (outLen >= outCap) flush();
+      outChunk[outLen++] = finalBlock[i];
+    }
+    flush();
+  }
+
+  static Uint8List _concat(Uint8List a, List<int> b) {
+    final r = Uint8List(a.length + b.length);
+    r.setRange(0, a.length, a);
+    r.setRange(a.length, r.length, b);
+    return r;
   }
 
   static Uint8List _deriveKey(String password, Uint8List salt) {

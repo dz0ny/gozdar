@@ -3,7 +3,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/map_layer.dart';
-import '../services/parcel_lookup_service.dart';
 import 'map_layer_renderer.dart';
 
 /// Non-interactive embedded map preview of a parcel, using the same base layer
@@ -59,17 +58,16 @@ class ParcelMapPreview extends StatelessWidget {
     final resolvableBase = baseLayer.resolveUrlTemplate(workerUrl) != null
         ? baseLayer
         : MapLayer.esriWorldImagery;
-    // When an offline parcels DB is loaded, the cadastral layer comes from
-    // local data (drawn as the parcel outline), so skip the online WMS kataster
-    // proxy here too — matching the main map.
-    final excludeOverlays = ParcelLookupService.instance.isAvailable
-        ? const {MapLayerType.kataster, MapLayerType.katasterNazivi}
-        : const <MapLayerType>{};
+    // Kataster comes from local data (the parcel outline is drawn on top), so
+    // never fetch the WMS kataster proxy here — matching the main map.
     final renderer = MapLayerRenderer(
       baseLayer: resolvableBase,
       activeOverlays: activeOverlays,
       workerUrl: workerUrl,
-      excludeOverlays: excludeOverlays,
+      excludeOverlays: const {
+        MapLayerType.kataster,
+        MapLayerType.katasterNazivi,
+      },
     );
     return renderer.getAllTileLayers();
   }

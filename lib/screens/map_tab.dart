@@ -24,6 +24,7 @@ import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/parcel_lookup_service.dart';
 import '../services/parcel_pdf_service.dart';
+import '../services/region_locator.dart';
 import '../services/owner_offline_settings_service.dart';
 import '../services/tile_cache_service.dart';
 import '../services/rtk_position_service.dart';
@@ -117,7 +118,7 @@ class MapTabState extends State<MapTab> {
   LatLngBounds? _visibleBounds;
 
   /// Minimum zoom at which the Vlake (skid-road) overlay is drawn.
-  static const double _vlakeMinZoom = 13.0;
+  static const double _vlakeMinZoom = 15.0;
 
   /// Minimum zoom at which the offline kataster (local parcels) overlay is
   /// drawn. Parcels are dense, so only render when zoomed in.
@@ -130,6 +131,14 @@ class MapTabState extends State<MapTab> {
   /// Cadastral parcels from the offline database, culled to the viewport.
   /// Populated only when an offline parcels DB is loaded and zoomed in.
   List<CadastralParcel> _offlineParcels = const [];
+
+  /// Regions we've already offered to download this session (avoid nagging).
+  final Set<String> _promptedRegions = {};
+  // Active region download triggered from the map (auto-prompt).
+  String? _downloadingRegionName;
+  int _regionReceived = 0;
+  int? _regionTotal;
+  bool _cancelRegionDownload = false;
 
   // Searched parcel from WFS query
   WfsParcel? _searchedParcel;
@@ -655,6 +664,109 @@ class MapTabState extends State<MapTab> {
       north: bounds.north,
     );
     setState(() => _offlineParcels = parcels);
+  }
+
+  /// When the map center lands in a statistical region whose parcels aren't
+  /// loaded yet, offer to download it. Only while the kataster layer is on, and
+  /// at most once per region per session.
+  Future<void> _maybePromptRegionDownload(LatLng center) async {
+    if (_downloadingRegionName != null) return;
+    final overlays = context.read<MapProvider>().activeOverlays;
+    final katasterOn = overlays.contains(MapLayerType.kataster) ||
+        overlays.contains(MapLayerType.katasterNazivi);
+    if (!katasterOn) return;
+
+    await RegionLocator.instance.ensureLoaded();
+    if (!mounted) return;
+    final region = RegionLocator.instance.regionForPoint(center);
+    if (region == null) return;
+    if (_promptedRegions.contains(region.name)) return;
+    if (ParcelLookupService.instance.loadedRegions.contains(region.name)) return;
+
+    _promptedRegions.add(region.name);
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 6),
+        content: Text('Za regijo ${region.name} ni podatkov katastra.'),
+        action: SnackBarAction(
+          label: 'Prenesi',
+          onPressed: () => _downloadRegionByName(region.name),
+        ),
+      ),
+    );
+  }
+
+  /// Download a region's parcels DB by name (from the auto-prompt).
+  Future<void> _downloadRegionByName(String name) async {
+    if (_downloadingRegionName != null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    List<ParcelRegion> regions;
+    try {
+      regions = await ParcelLookupService.fetchRegions(
+          ParcelLookupService.regionsManifestUrl);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+          content: Text(e is FormatException ? e.message : 'Napaka: $e')));
+      return;
+    }
+    ParcelRegion? match;
+    for (final r in regions) {
+      if (r.name == name) {
+        match = r;
+        break;
+      }
+    }
+    if (match == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Regije $name ni v seznamu.')),
+      );
+      return;
+    }
+    final region = match;
+    setState(() {
+      _downloadingRegionName = name;
+      _regionReceived = 0;
+      _regionTotal = region.bytes;
+      _cancelRegionDownload = false;
+    });
+    try {
+      final result = await ParcelLookupService.instance.downloadAndOpen(
+        '${ParcelLookupService.r2BaseUrl}/${region.file}',
+        fileName: region.file,
+        onProgress: (received, total) {
+          if (!mounted) return;
+          if (received - _regionReceived >= 4 * 1024 * 1024 ||
+              (total != null && received >= total)) {
+            setState(() {
+              _regionReceived = received;
+              _regionTotal = total ?? region.bytes;
+            });
+          }
+        },
+        isCancelled: () => _cancelRegionDownload,
+      );
+      if (mounted) {
+        setState(() {});
+        _refreshOfflineParcels();
+        messenger.showSnackBar(SnackBar(
+          content: Text('$name: prenesenih ${result.rows} parcel.'),
+        ));
+      }
+    } on ParcelDownloadCancelled {
+      messenger.showSnackBar(const SnackBar(content: Text('Prenos preklican.')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+          content: Text(e is FormatException ? e.message : 'Prenos ni uspel: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _downloadingRegionName = null;
+          _cancelRegionDownload = false;
+        });
+      }
+    }
   }
 
   /// Query cadastral parcel at the given location and show import dialog
@@ -1656,8 +1768,8 @@ class MapTabState extends State<MapTab> {
       },
     );
 
-    // When an offline parcels DB is loaded, render the kataster locally and
-    // skip the online WMS proxy for those overlays.
+    // Kataster + "Kataster z nazivi" are rendered from the local SQLite DB, so
+    // never fetch them over WMS — they stay toggleable, but draw locally.
     final offlineKataster = ParcelLookupService.instance.isAvailable;
     // Show parcel numbers on the offline kataster when "Kataster z nazivi" is on.
     final offlineKatasterNames =
@@ -1666,9 +1778,10 @@ class MapTabState extends State<MapTab> {
       baseLayer: mapProvider.currentBaseLayer,
       activeOverlays: mapProvider.activeOverlays,
       workerUrl: mapProvider.workerUrl,
-      excludeOverlays: offlineKataster
-          ? const {MapLayerType.kataster, MapLayerType.katasterNazivi}
-          : const {},
+      excludeOverlays: const {
+        MapLayerType.kataster,
+        MapLayerType.katasterNazivi,
+      },
     );
 
     // Show loading indicator while preferences are loading
@@ -1743,6 +1856,8 @@ class MapTabState extends State<MapTab> {
                     }
                     // Re-cull the offline kataster overlay once settled.
                     _refreshOfflineParcels();
+                    // Offer to download the region's parcels when panning into it.
+                    _maybePromptRegionDownload(event.camera.center);
                   }
                   // Track zoom level for dynamic marker sizing
                   if (event.camera.zoom != _currentZoom) {
@@ -1777,13 +1892,13 @@ class MapTabState extends State<MapTab> {
                               color: Color(0xFFB71C1C),
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
-                              // White 2px halo so red numbers stay readable
+                              // White hard-edge outline so red numbers stay readable
                               // over aerial imagery.
                               shadows: [
-                                Shadow(color: Colors.white, blurRadius: 2, offset: Offset(1, 1)),
-                                Shadow(color: Colors.white, blurRadius: 2, offset: Offset(-1, 1)),
-                                Shadow(color: Colors.white, blurRadius: 2, offset: Offset(1, -1)),
-                                Shadow(color: Colors.white, blurRadius: 2, offset: Offset(-1, -1)),
+                                Shadow(color: Colors.white, offset: Offset(1, 1)),
+                                Shadow(color: Colors.white, offset: Offset(-1, 1)),
+                                Shadow(color: Colors.white, offset: Offset(1, -1)),
+                                Shadow(color: Colors.white, offset: Offset(-1, -1)),
                               ],
                             ),
                           ),
@@ -1824,12 +1939,6 @@ class MapTabState extends State<MapTab> {
                           color: Colors.green.withValues(alpha: 0.2),
                           borderColor: Colors.green,
                           borderStrokeWidth: 2.0,
-                          label: parcel.name,
-                          labelStyle: const TextStyle(
-                            color: Colors.green,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
                         ),
                       )
                       .toList(),
@@ -1847,12 +1956,6 @@ class MapTabState extends State<MapTab> {
                       color: Colors.green.withValues(alpha: 0.2),
                       borderColor: Colors.green,
                       borderStrokeWidth: 2.0,
-                      label: 'Parcela ${_previewParcel!.parcelNumber}',
-                      labelStyle: const TextStyle(
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
                     ),
                   ],
                 ),
@@ -2092,6 +2195,55 @@ class MapTabState extends State<MapTab> {
                       ],
                     ),
                   ),
+                ),
+              ),
+            ),
+
+          // Region download progress (auto-prompt).
+          if (_downloadingRegionName != null)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              left: 16,
+              right: 16,
+              child: Material(
+                elevation: 4,
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                color: Theme.of(context).colorScheme.surface,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+                  child: Builder(builder: (context) {
+                    final total = _regionTotal;
+                    final pct = (total != null && total > 0)
+                        ? _regionReceived / total
+                        : null;
+                    final mb = (_regionReceived / (1024 * 1024)).toStringAsFixed(0);
+                    final totMb = total != null
+                        ? (total / (1024 * 1024)).toStringAsFixed(0)
+                        : '?';
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Prenašam $_downloadingRegionName… $mb/$totMb MB'
+                                '${pct != null ? ' • ${(pct * 100).toStringAsFixed(0)}%' : ''}',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  setState(() => _cancelRegionDownload = true),
+                              child: const Text('Prekliči'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        LinearProgressIndicator(value: pct),
+                      ],
+                    );
+                  }),
                 ),
               ),
             ),

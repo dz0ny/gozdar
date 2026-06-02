@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../db/app_database.dart';
+import 'cache_settings.dart';
 import 'database_service.dart';
 
 class HttpCacheService {
@@ -26,6 +27,7 @@ class HttpCacheService {
       uri.host == _workerDomain;
 
   Future<http.Response?> getCached(Uri uri) async {
+    if (!CacheSettings.instance.httpEnabled) return null;
     if (!_shouldCache(uri)) return null;
     try {
       final urlHash = _hashUrl(uri.toString());
@@ -42,6 +44,7 @@ class HttpCacheService {
   }
 
   Future<void> cacheResponse(Uri uri, http.Response response) async {
+    if (!CacheSettings.instance.httpEnabled) return;
     if (!_shouldCache(uri) || response.statusCode != 200) return;
     try {
       final urlHash = _hashUrl(uri.toString());

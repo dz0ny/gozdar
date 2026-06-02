@@ -4,9 +4,11 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/owner_lookup_service.dart';
+import '../services/cache_settings.dart';
 import '../services/owner_offline_settings_service.dart';
 import '../services/parcel_lookup_service.dart';
 import '../services/rtk_bridge_settings.dart';
+import '../services/tile_cache_service.dart';
 import '../services/vlake_service.dart';
 import '../services/vlake_settings.dart';
 
@@ -29,8 +31,8 @@ class _AboutScreenState extends State<AboutScreen> {
   bool _showDeveloperOptions = false;
 
   /// R2-hosted databases.
-  static const _dbBaseUrl = 'https://gozdar-kataster.dz0ny.dev';
-  static const _regionsManifestUrl = '$_dbBaseUrl/regions.json';
+  static const _dbBaseUrl = ParcelLookupService.r2BaseUrl;
+  static const _regionsManifestUrl = ParcelLookupService.regionsManifestUrl;
   static const _ownersDbUrl = '$_dbBaseUrl/owners.sqlite.enc';
 
   // Offline parcels download progress.
@@ -307,9 +309,6 @@ class _AboutScreenState extends State<AboutScreen> {
           ],
 
           const Divider(height: 24),
-          _buildParcelsDbSection(context, colorScheme),
-
-          const Divider(height: 24),
           _buildWipeSection(context, colorScheme),
 
           const Divider(height: 24),
@@ -329,6 +328,48 @@ class _AboutScreenState extends State<AboutScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMapCacheSection(BuildContext context, ColorScheme colorScheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: Icon(Icons.http, color: colorScheme.primary),
+          title: const Text('Predpomnilnik HTTP'),
+          subtitle: const Text(
+            'Predpomni odgovore državnih API-jev (prostor.zgs.gov.si).',
+          ),
+          value: CacheSettings.instance.httpEnabled,
+          onChanged: (v) async {
+            await CacheSettings.instance.setHttpEnabled(v);
+            if (mounted) setState(() {});
+          },
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: Icon(Icons.map, color: colorScheme.primary),
+          title: const Text('Predpomnilnik ploščic'),
+          subtitle: const Text(
+            'Predpomni karte (ločeno od HTTP predpomnilnika).',
+          ),
+          value: CacheSettings.instance.tileEnabled,
+          onChanged: (v) async {
+            await CacheSettings.instance.setTileEnabled(v);
+            if (mounted) setState(() {});
+          },
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            onPressed: _clearFlutterMapCache,
+            icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+            label: const Text('Počisti predpomnilnik karte'),
+          ),
+        ),
+      ],
     );
   }
 
@@ -367,6 +408,20 @@ class _AboutScreenState extends State<AboutScreen> {
     messenger.showSnackBar(
       const SnackBar(content: Text('Baza lastnikov odstranjena.')),
     );
+  }
+
+  Future<void> _clearFlutterMapCache() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await TileCacheService().clearFlutterMapCache();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Predpomnilnik karte počiščen.')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Brisanje predpomnilnika ni uspelo: $e')),
+      );
+    }
   }
 
   /// Offline parcels (kataster) database — when loaded, the cadastral layer is
@@ -893,6 +948,16 @@ class _AboutScreenState extends State<AboutScreen> {
             subtitle: const Text('Prikazi RTK most v navigaciji in na karti'),
             value: rtkBridgeSettings.enabled,
             onChanged: rtkBridgeSettings.setEnabled,
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: _buildParcelsDbSection(context, colorScheme),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: _buildMapCacheSection(context, colorScheme),
           ),
           if (_showDeveloperOptions) ...[
             const Divider(height: 1),

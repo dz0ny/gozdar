@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter/painting.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/map_layer.dart';
+import 'cache_settings.dart';
 import 'offline_tile_cache_service.dart';
 import 'tile_download_service.dart';
 import 'tile_math_service.dart';
@@ -14,6 +16,7 @@ class TileCacheService {
   static bool _isDownloading = false;
   static bool _ignoreDownloadEvents = false;
   static TileDownloadService? _downloadService;
+  static BuiltInMapCachingProvider? _builtInCachingProvider;
   static NetworkTileProvider? _tileProvider;
   static final ValueNotifier<TileDownloadVisualState> _downloadVisualState =
       ValueNotifier(const TileDownloadVisualState());
@@ -38,10 +41,15 @@ class TileCacheService {
     // Documented flutter_map caching: store raw tile bytes keyed by URL, no
     // conversion or custom URL/style matching (that mismatched tiles before).
     // https://docs.fleaflet.dev/layers/tile-layer/caching
+    // Wrapped so the dev "Tile cache" toggle can disable it at runtime. This
+    // is the map tile cache only — it shares nothing with HttpCacheService.
+    _builtInCachingProvider = BuiltInMapCachingProvider.getOrCreateInstance(
+      maxCacheSize: 10_000_000_000,
+      overrideFreshAge: const Duration(days: 365),
+    );
     _tileProvider = NetworkTileProvider(
-      cachingProvider: BuiltInMapCachingProvider.getOrCreateInstance(
-        maxCacheSize: 10_000_000_000,
-        overrideFreshAge: const Duration(days: 365),
+      cachingProvider: _ToggleableCachingProvider(
+        () => _builtInCachingProvider!,
       ),
     );
     _initialized = true;
@@ -84,6 +92,23 @@ class TileCacheService {
 
   Future<void> clearCache() async {
     await _offlineCache.clearCache();
+  }
+
+  Future<void> clearFlutterMapCache() async {
+    if (!_initialized) {
+      await initialize();
+    }
+
+    final provider = _builtInCachingProvider;
+    if (provider != null && provider.isSupported) {
+      await provider.destroy(deleteCache: true);
+    }
+    _builtInCachingProvider = BuiltInMapCachingProvider.getOrCreateInstance(
+      maxCacheSize: 10_000_000_000,
+      overrideFreshAge: const Duration(days: 365),
+    );
+    imageCache.clear();
+    imageCache.clearLiveImages();
   }
 
   bool get isDownloading => _isDownloading;
@@ -324,6 +349,32 @@ class TileCacheService {
     if (event is TileDownloadCancelled) {
       _downloadVisualState.value = current.copyWith(isDownloading: false);
     }
+  }
+}
+
+/// Wraps the built-in tile cache so the dev toggle can disable it at runtime.
+/// When off, reads miss (network fetch) and writes are dropped.
+class _ToggleableCachingProvider implements MapCachingProvider {
+  final MapCachingProvider Function() _delegate;
+  _ToggleableCachingProvider(this._delegate);
+
+  @override
+  bool get isSupported => _delegate().isSupported;
+
+  @override
+  Future<CachedMapTile?> getTile(String url) {
+    if (!CacheSettings.instance.tileEnabled) return Future.value(null);
+    return _delegate().getTile(url);
+  }
+
+  @override
+  Future<void> putTile({
+    required String url,
+    required CachedMapTileMetadata metadata,
+    Uint8List? bytes,
+  }) {
+    if (!CacheSettings.instance.tileEnabled) return Future.value();
+    return _delegate().putTile(url: url, metadata: metadata, bytes: bytes);
   }
 }
 
