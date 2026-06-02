@@ -271,7 +271,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Preklici'),
+            child: const Text('Prekliči'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text),
@@ -315,8 +315,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
-            labelText: 'Kolicina (m³)',
-            hintText: 'Vnesite dovoljeno kolicino',
+            labelText: 'Količina (m³)',
+            hintText: 'Vnesite dovoljeno količino',
             border: OutlineInputBorder(),
             suffixText: 'm³',
           ),
@@ -326,7 +326,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Preklici'),
+            child: const Text('Prekliči'),
           ),
           FilledButton(
             onPressed: () {
@@ -363,7 +363,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
             if (_parcel.woodAllowance > 0) ...[
               const SizedBox(height: 4),
               Text(
-                'Se na voljo: ${_parcel.woodRemaining.toStringAsFixed(2)} m³',
+                'Še na voljo: ${_parcel.woodRemaining.toStringAsFixed(2)} m³',
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium?.copyWith(color: Colors.green),
@@ -374,7 +374,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
               controller: volumeController,
               decoration: const InputDecoration(
                 labelText: 'Dodaj posek (m³)',
-                hintText: 'Vnesite kolicino',
+                hintText: 'Vnesite količino',
                 border: OutlineInputBorder(),
                 suffixText: 'm³',
               ),
@@ -387,8 +387,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
             TextField(
               controller: treesController,
               decoration: const InputDecoration(
-                labelText: 'Stevilo dreves',
-                hintText: 'Vnesite stevilo',
+                labelText: 'Število dreves',
+                hintText: 'Vnesite število',
                 border: OutlineInputBorder(),
                 suffixText: 'dreves',
               ),
@@ -399,7 +399,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Preklici'),
+            child: const Text('Prekliči'),
           ),
           FilledButton(
             onPressed: () {
@@ -437,12 +437,12 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Ponastavi posek'),
         content: const Text(
-          'Ali ste prepricani, da zelite ponastaviti kolicino posekanega lesa na 0?',
+          'Ali ste prepričani, da želite ponastaviti količino posekanega lesa na 0?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Preklici'),
+            child: const Text('Prekliči'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
@@ -469,7 +469,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
           controller: controller,
           keyboardType: TextInputType.number,
           decoration: const InputDecoration(
-            labelText: 'Stevilo dreves',
+            labelText: 'Število dreves',
             suffixText: 'dreves',
             border: OutlineInputBorder(),
           ),
@@ -478,7 +478,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Preklici'),
+            child: const Text('Prekliči'),
           ),
           FilledButton(
             onPressed: () {
@@ -504,12 +504,12 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Ponastavi drevesa'),
         content: const Text(
-          'Ali ste prepricani, da zelite ponastaviti stevilo posekanih dreves na 0?',
+          'Ali ste prepričani, da želite ponastaviti število posekanih dreves na 0?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Preklici'),
+            child: const Text('Prekliči'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),

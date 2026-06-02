@@ -36,7 +36,7 @@ DAILY_BUILD := $(shell \
 # DAILY resets each day (for readability), BUILD always increments (for Android)
 NEW_VERSION := $(YEAR).$(MMDD).$(DAILY_BUILD)+$(NEW_BUILD_NUMBER)
 
-.PHONY: help version bump build build-direct build-play build-play-no-bump release release-android release-play-internal release-play-production release-ios clean deps analyze test icon
+.PHONY: help version bump build build-direct build-play build-play-no-bump build-linux build-macos build-windows build-desktop release release-android release-play-internal release-play-production release-ios clean deps analyze test icon
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -86,6 +86,17 @@ build-play-no-bump: ## Build Play release AAB without bumping version
 	flutter build appbundle --release --flavor play --dart-define=GOZDAR_PLAY_DISTRIBUTION=true
 	@ls -lh $(PLAY_BUNDLE_DIR)/app-play-release.aab
 
+build-linux: ## Build Linux desktop release
+	flutter build linux --release
+
+build-macos: ## Build macOS desktop release
+	flutter build macos --release
+
+build-windows: ## Build Windows desktop release
+	flutter build windows --release
+
+build-desktop: build-linux build-macos build-windows ## Build desktop releases
+
 release: release-android release-ios ## Bump+push, build Android in CI, upload iOS to TestFlight
 	@echo "Release done: Android built & published by CI; iOS uploaded to TestFlight."
 
@@ -128,6 +139,6 @@ run: ## Run app in development mode
 	flutter run
 
 # Build for all platforms
-build-all: bump ## Build for Android and iOS
+build-all: bump build-desktop ## Build for Android, iOS, Linux, macOS, and Windows
 	flutter build apk --release --flavor direct
 	flutter build ios --release --no-codesign

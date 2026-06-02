@@ -99,6 +99,9 @@ class MapMarkerRenderer {
     final markers = <Marker>[];
 
     for (final parcel in parcels) {
+      // Cadastral (imported) parcels are shown by the red kataster outline —
+      // skip the green numbered boundary markers so they don't duplicate it.
+      if (parcel.isCadastral) continue;
       for (int i = 0; i < parcel.polygon.length; i++) {
         final point = parcel.polygon[i];
         final pointName = parcel.getPointName(i);

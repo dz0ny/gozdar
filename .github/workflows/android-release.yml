@@ -1,4 +1,4 @@
-name: Android Release
+name: Release
 
 on:
   release:
@@ -98,3 +98,99 @@ jobs:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           SKIP_ANDROID_BUILD: "1"
         run: cd android && bundle exec fastlane android internal
+
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          pub-cache: true
+
+      - name: Install Linux build dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang cmake libgtk-3-dev liblzma-dev ninja-build pkg-config
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Build Linux release
+        run: flutter build linux --release
+
+      - name: Prepare Linux release asset
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          cd build/linux/x64/release/bundle
+          tar -czf ../../../../../gozdar-${RELEASE_TAG}-linux-x64.tar.gz .
+
+      - name: Upload Linux asset to GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: gozdar-${{ github.event.release.tag_name }}-linux-x64.tar.gz
+
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          pub-cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Build macOS release
+        run: flutter build macos --release
+
+      - name: Prepare macOS release asset
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: ditto -c -k --sequesterRsrc --keepParent build/macos/Build/Products/Release/gozdar.app gozdar-${RELEASE_TAG}-macos.zip
+
+      - name: Upload macOS asset to GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: gozdar-${{ github.event.release.tag_name }}-macos.zip
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          pub-cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Prepare Windows release asset
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        shell: pwsh
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "gozdar-$env:RELEASE_TAG-windows-x64.zip"
+
+      - name: Upload Windows asset to GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: gozdar-${{ github.event.release.tag_name }}-windows-x64.zip

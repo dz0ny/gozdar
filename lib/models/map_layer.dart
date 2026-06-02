@@ -16,8 +16,8 @@ const Map<OverlayCategory, String> overlayCategoryNames = {
   OverlayCategory.administrativno: 'Administrativno',
   OverlayCategory.infrastruktura: 'Infrastruktura',
   OverlayCategory.gozdnoGospodarstvo: 'Gozdno gospodarstvo',
-  OverlayCategory.zavarovanaObmocja: 'Zavarovana obmocja',
-  OverlayCategory.nevarnostiInSkode: 'Nevarnosti in skode',
+  OverlayCategory.zavarovanaObmocja: 'Zavarovana območja',
+  OverlayCategory.nevarnostiInSkode: 'Nevarnosti in škode',
   OverlayCategory.funkcijeGozda: 'Funkcije gozda',
   OverlayCategory.posebno: 'Posebno',
 };
@@ -279,10 +279,10 @@ class MapLayer {
     category: OverlayCategory.administrativno,
   );
 
-  /// Katastrske obcine - Cadastral municipalities
+  /// Katastrske občine - Cadastral municipalities
   static const katastrskObcine = MapLayer(
     type: MapLayerType.katastrskObcine,
-    name: 'Katastrske obcine',
+    name: 'Katastrske občine',
     attribution: '© GURS',
     maxZoom: 19,
     isWms: true,
@@ -343,10 +343,10 @@ class MapLayer {
     category: OverlayCategory.infrastruktura,
   );
 
-  /// Zeleznice - Railways
+  /// Železnice - Railways
   static const zeleznice = MapLayer(
     type: MapLayerType.zeleznice,
-    name: 'Zeleznice',
+    name: 'Železnice',
     attribution: '© GURS',
     maxZoom: 19,
     isWms: true,
@@ -373,10 +373,10 @@ class MapLayer {
     category: OverlayCategory.infrastruktura,
   );
 
-  /// Hisne stevilke - House numbers
+  /// Hišne številke - House numbers
   static const hisnestevilke = MapLayer(
     type: MapLayerType.hisnestevilke,
-    name: 'Hisne stevilke',
+    name: 'Hišne številke',
     attribution: '© GURS',
     maxZoom: 19,
     isWms: true,
@@ -403,10 +403,10 @@ class MapLayer {
     category: OverlayCategory.administrativno,
   );
 
-  /// Obcine - Municipalities
+  /// Občine - Municipalities
   static const obcine = MapLayer(
     type: MapLayerType.obcine,
-    name: 'Obcine',
+    name: 'Občine',
     attribution: '© GURS',
     maxZoom: 19,
     isWms: true,
@@ -435,10 +435,10 @@ class MapLayer {
     category: OverlayCategory.administrativno,
   );
 
-  /// Statisticne regije - Statistical regions
+  /// Statistične regije - Statistical regions
   static const statisticneRegije = MapLayer(
     type: MapLayerType.statisticneRegije,
-    name: 'Statisticne regije',
+    name: 'Statistične regije',
     attribution: '© GURS',
     maxZoom: 19,
     isWms: true,
@@ -451,10 +451,10 @@ class MapLayer {
     category: OverlayCategory.administrativno,
   );
 
-  /// Drzavna meja - State border
+  /// Državna meja - State border
   static const drzavnaMeja = MapLayer(
     type: MapLayerType.drzavnaMeja,
-    name: 'Drzavna meja',
+    name: 'Državna meja',
     attribution: '© GURS',
     maxZoom: 19,
     isWms: true,
@@ -548,7 +548,7 @@ class MapLayer {
     category: OverlayCategory.gozdnoGospodarstvo,
   );
 
-  /// GGO - Forest management areas (Gozdnogospodarska obmocja)
+  /// GGO - Forest management areas (Gozdnogospodarska območja)
   static const ggo = MapLayer(
     type: MapLayerType.ggo,
     name: 'GGO',
@@ -614,10 +614,10 @@ class MapLayer {
     category: OverlayCategory.zavarovanaObmocja,
   );
 
-  /// Zavarovana obmocja - Protected areas
+  /// Zavarovana območja - Protected areas
   static const zavarovanaObmocja = MapLayer(
     type: MapLayerType.zavarovanaObmocja,
-    name: 'Zavarovana obmocja',
+    name: 'Zavarovana območja',
     attribution: '© ZGS',
     maxZoom: 19,
     isWms: true,
@@ -646,10 +646,10 @@ class MapLayer {
     category: OverlayCategory.zavarovanaObmocja,
   );
 
-  /// Ekolosko pomembna obmocja - Ecologically important areas
+  /// Ekološko pomembna območja - Ecologically important areas
   static const ekoloskoObmocja = MapLayer(
     type: MapLayerType.ekoloskoObmocja,
-    name: 'Ekolosko pomembna obmocja',
+    name: 'Ekološko pomembna območja',
     attribution: '© ZGS',
     maxZoom: 19,
     isWms: true,
@@ -665,7 +665,7 @@ class MapLayer {
   /// Koridorji - Ecological corridors
   static const koridorji = MapLayer(
     type: MapLayerType.koridorji,
-    name: 'Ekoloski koridorji',
+    name: 'Ekološki koridorji',
     attribution: '© ZGS',
     maxZoom: 19,
     isWms: true,
@@ -712,10 +712,10 @@ class MapLayer {
 
   // ============ HAZARDS & DISASTERS ============
 
-  /// Pozarna ogrozenost - Fire hazard zones
+  /// Požarna ogroženost - Fire hazard zones
   static const pozarnaOgrozenost = MapLayer(
     type: MapLayerType.pozarnaOgrozenost,
-    name: 'Pozarna ogrozenost',
+    name: 'Požarna ogroženost',
     attribution: '© ZGS',
     maxZoom: 19,
     isWms: true,
@@ -728,10 +728,10 @@ class MapLayer {
     category: OverlayCategory.nevarnostiInSkode,
   );
 
-  /// Gozdni pozari - Historical forest fires
+  /// Gozdni požari - Historical forest fires
   static const gozdniPozari = MapLayer(
     type: MapLayerType.gozdniPozari,
-    name: 'Gozdni pozari',
+    name: 'Gozdni požari',
     attribution: '© ZGS',
     maxZoom: 19,
     isWms: true,
@@ -744,10 +744,10 @@ class MapLayer {
     category: OverlayCategory.nevarnostiInSkode,
   );
 
-  /// Protipozarne preseke - Firebreaks
+  /// Protipožarne preseke - Firebreaks
   static const protipozarnePreseke = MapLayer(
     type: MapLayerType.protipozarnePreseke,
-    name: 'Protipozarne preseke',
+    name: 'Protipožarne preseke',
     attribution: '© ZGS',
     maxZoom: 19,
     isWms: true,
@@ -792,10 +792,10 @@ class MapLayer {
     category: OverlayCategory.nevarnostiInSkode,
   );
 
-  /// Zled 2014 - Ice storm damage 2014
+  /// Žled 2014 - Ice storm damage 2014
   static const zled2014 = MapLayer(
     type: MapLayerType.zled2014,
-    name: 'Zled 2014',
+    name: 'Žled 2014',
     attribution: '© ZGS',
     maxZoom: 19,
     isWms: true,
@@ -824,10 +824,10 @@ class MapLayer {
     category: OverlayCategory.nevarnostiInSkode,
   );
 
-  /// Krcitve - Forest clearings
+  /// Krčitve - Forest clearings
   static const krcitve = MapLayer(
     type: MapLayerType.krcitve,
-    name: 'Krcitve',
+    name: 'Krčitve',
     attribution: '© ZGS',
     maxZoom: 19,
     isWms: true,
@@ -889,10 +889,10 @@ class MapLayer {
 
   // ============ SPECIAL ============
 
-  /// Lovisca - Hunting grounds
+  /// Lovišča - Hunting grounds
   static const lovisca = MapLayer(
     type: MapLayerType.lovisca,
-    name: 'Lovisca',
+    name: 'Lovišča',
     attribution: '© ZGS',
     maxZoom: 19,
     isWms: true,

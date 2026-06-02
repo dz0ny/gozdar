@@ -355,7 +355,7 @@ class CadastralService {
       return null;
     }
 
-    return WmsFeature.fromGeoJson(features.first, 'Zavarovano obmocje');
+    return WmsFeature.fromGeoJson(features.first, 'Zavarovano območje');
   }
 
   /// Query multiple layers at once and return all results
@@ -390,13 +390,13 @@ class CadastralService {
       'pregledovalnik:ggo': 'GGO',
       'pregledovalnik:gozdni_rezervati': 'Gozdni rezervat',
       'pregledovalnik:varovalni_gozdovi': 'Varovalni gozd',
-      'pregledovalnik:zavarovana_obmocja_poligoni': 'Zavarovano obmocje',
+      'pregledovalnik:zavarovana_obmocja_poligoni': 'Zavarovano območje',
       'pregledovalnik:naravne_vrednote_poligoni': 'Naravna vrednota',
       'pregledovalnik:epo_poligoni': 'EPO',
-      'pregledovalnik:lovisca': 'Lovisce',
-      'pregledovalnik:pozarna_ogrozenost': 'Pozarna ogrozenost',
-      'pregledovalnik:NEP_RPE_OBCINE': 'Obcina',
-      'pregledovalnik:KN_KATASTRSKE_OBCINE': 'Katastrska obcina',
+      'pregledovalnik:lovisca': 'Lovišče',
+      'pregledovalnik:pozarna_ogrozenost': 'Požarna ogroženost',
+      'pregledovalnik:NEP_RPE_OBCINE': 'Občina',
+      'pregledovalnik:KN_KATASTRSKE_OBCINE': 'Katastrska občina',
     };
     return names[layerName] ?? layerName.split(':').last;
   }
@@ -480,9 +480,9 @@ class WmsFeature {
 /// Represents a cadastral parcel from the WMS service
 class CadastralParcel {
   final String id;
-  final int cadastralMunicipality; // ko (katastrska obcina)
+  final int cadastralMunicipality; // ko (katastrska občina)
   final String parcelNumber; // parcela
-  final double area; // povrsina in m²
+  final double area; // površina in m²
   final List<LatLng> polygon; // Converted to WGS84
 
   const CadastralParcel({

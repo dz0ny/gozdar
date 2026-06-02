@@ -147,7 +147,7 @@ class UpdateBanner extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Prenasanje posodobitve...',
+                'Prenašanje posodobitve...',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,

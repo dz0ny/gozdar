@@ -62,7 +62,7 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                           Text(
                             parcel.woodAllowance > 0
                                 ? '${parcel.woodAllowance.toStringAsFixed(2)} m³'
-                                : 'Ni dolocen',
+                                : 'Ni določen',
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ],
@@ -130,11 +130,11 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '${parcel.woodUsedPercent.toStringAsFixed(0)}% izkorisceno',
+                    '${parcel.woodUsedPercent.toStringAsFixed(0)}% izkoriščeno',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   Text(
-                    'Se na voljo: ${parcel.woodRemaining.toStringAsFixed(2)} m³',
+                    'Še na voljo: ${parcel.woodRemaining.toStringAsFixed(2)} m³',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.green[700],
                       fontWeight: FontWeight.bold,

@@ -86,7 +86,7 @@ class MapLongPressMenu extends StatelessWidget {
           _buildMenuItem(
             context: context,
             icon: Icons.add_location_alt,
-            label: 'Dodaj tocko',
+            label: 'Dodaj točko',
             color: Colors.red,
             onTap: onAddLocation,
           ),
@@ -114,7 +114,7 @@ class MapLongPressMenu extends StatelessWidget {
           _buildMenuItem(
             context: context,
             icon: Icons.square_foot,
-            label: 'Merjenje povrsine',
+            label: 'Merjenje površine',
             color: Colors.deepPurple,
             onTap: onMeasureArea,
           ),

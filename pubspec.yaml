@@ -32,7 +32,7 @@ dependencies:
     sdk: flutter
 
   # Map
-  flutter_map: any
+  flutter_map: ^8.3.0
   latlong2: any
   proj4dart: any
 

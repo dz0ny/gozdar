@@ -483,7 +483,7 @@ class MapDialogs {
           _detailRow(
             context,
             Icons.location_city,
-            'Katastrska obcina',
+            'Katastrska občina',
             owner?.koName != null
                 ? '${owner!.koName} (${cadastralParcel.cadastralMunicipality})'
                 : cadastralParcel.cadastralMunicipality.toString(),
@@ -491,7 +491,7 @@ class MapDialogs {
           _detailRow(
             context,
             Icons.straighten,
-            'Povrsina',
+            'Površina',
             cadastralParcel.formattedArea,
           ),
           if (owner != null)

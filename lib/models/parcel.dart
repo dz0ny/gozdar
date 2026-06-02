@@ -77,9 +77,9 @@ class Parcel {
 
   String getPointName(int index) {
     final names = pointNames;
-    if (index < 0 || index >= polygon.length) return 'Tocka ?';
+    if (index < 0 || index >= polygon.length) return 'Točka ?';
     final customName = index < names.length ? names[index] : null;
-    return customName ?? 'Tocka ${index + 1}';
+    return customName ?? 'Točka ${index + 1}';
   }
 
   Parcel withPointName(int index, String? name) {

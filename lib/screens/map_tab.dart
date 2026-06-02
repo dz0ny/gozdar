@@ -287,7 +287,7 @@ class MapTabState extends State<MapTab> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Izberite orodje, nato tapnite na karto za dodajanje tock.',
+                  'Izberite orodje, nato tapnite na karto za dodajanje točk.',
                   style: Theme.of(ctx).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 20),
@@ -295,7 +295,7 @@ class MapTabState extends State<MapTab> {
                   context: ctx,
                   icon: Icons.route,
                   title: 'Izmeri razdaljo',
-                  subtitle: 'Polilinija z dolzino v metrih ali kilometrih',
+                  subtitle: 'Polilinija z dolžino v metrih ali kilometrih',
                   onTap: () {
                     Navigator.of(ctx).pop();
                     _startMeasurement(_MeasurementTool.distance);
@@ -305,7 +305,7 @@ class MapTabState extends State<MapTab> {
                 _buildMeasurementOption(
                   context: ctx,
                   icon: Icons.square_foot,
-                  title: 'Izmeri povrsino',
+                  title: 'Izmeri površino',
                   subtitle: 'Pokritost iz poligona v m2 ali ha',
                   onTap: () {
                     Navigator.of(ctx).pop();
@@ -1076,7 +1076,7 @@ class MapTabState extends State<MapTab> {
                     MapDialogs.importParcelInfoCard(context, parcel),
                     const SizedBox(height: 16),
                     Text(
-                      'Ali zelite uvoziti to parcelo v "Moj gozd"?',
+                      'Ali želite uvoziti to parcelo v "Moj gozd"?',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),
@@ -1160,7 +1160,7 @@ class MapTabState extends State<MapTab> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Parcela ${cadastralParcel.cadastralMunicipality} - ${cadastralParcel.parcelNumber} uspesno uvozena',
+                'Parcela ${cadastralParcel.cadastralMunicipality} - ${cadastralParcel.parcelNumber} uspešno uvožena',
               ),
             ),
           );
@@ -1505,21 +1505,21 @@ class MapTabState extends State<MapTab> {
 
   String _measurementHintLabel() {
     if (!_measurement.isActive) {
-      return 'Odprite Sloji karte za zacetek merjenja.';
+      return 'Odprite Sloji karte za začetek merjenja.';
     }
     if (_measurement.isFinished) {
-      return 'Merjenje je zakljuceno.';
+      return 'Merjenje je zaključeno.';
     }
     if (_measurement.tool == _MeasurementTool.distance) {
       if (_measurement.points.length < 2) {
-        return 'Tapnite na karto za dodajanje tock razdalje.';
+        return 'Tapnite na karto za dodajanje točk razdalje.';
       }
-      return 'Dodajte naslednjo tocko ali zakljucite merjenje.';
+      return 'Dodajte naslednjo točko ali zaključite merjenje.';
     }
     if (_measurement.points.length < 3) {
-      return 'Za povrsino potrebujete vsaj 3 tocke.';
+      return 'Za površino potrebujete vsaj 3 točke.';
     }
-    return 'Dodajte naslednjo tocko ali zakljucite poligon.';
+    return 'Dodajte naslednjo točko ali zaključite poligon.';
   }
 
   List<Marker> _measurementMarkers() {
@@ -1671,7 +1671,7 @@ class MapTabState extends State<MapTab> {
                   Expanded(
                     child: Text(
                       _measurement.tool == _MeasurementTool.area
-                          ? 'Merjenje povrsine'
+                          ? 'Merjenje površine'
                           : 'Merjenje razdalje',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,

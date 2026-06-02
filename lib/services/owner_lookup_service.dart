@@ -323,7 +323,31 @@ class OwnerLookupService {
     return s
         .replaceAll('?\u0107', '\u0106') // ?ć -> Ć
         .replaceAll('?\u00EE', '\u010C') // ?î -> Č
+        .replaceAll('?á', 'Š') // ?a-acute -> S-caron
+        .replaceAll('?Ż', 'Ž') // ?Z-dot -> Z-caron
+        .replaceAll('?É', 'Đ') // ?E-acute -> D-stroke
+        .replaceAll('?ä', 'Ä') // ?a-uml -> A-uml
+        .replaceAll('?ë', 'É') // ?e-uml -> E-acute
+        .replaceAll('?ö', 'Ô') // ?o-uml -> O-circumflex
+        .replaceAll('?ü', 'Ü') // ?u-uml -> U-uml
+        .replaceAll('?ľ', 'Ü') // ?l-caron -> U-uml
+        .replaceAll('?ť', 'Ü') // ?t-caron -> U-uml
+        .replaceAll('?č', 'ß') // ?c-caron -> sharp-s
         .replaceAll(_strayMarker, '');
+  }
+
+  /// Strip leading zeros from standalone number tokens (e.g. house numbers
+  /// "097" -> "97"), without touching mid-number zeros, decimals, or numbers
+  /// glued to letters.
+  static final _leadingZero = RegExp(r'(?<![\w.])0+(\d)');
+  static String? _stripLeadingZeros(String? s) =>
+      s?.replaceAllMapped(_leadingZero, (m) => m.group(1)!);
+
+  /// Full normalization for address-like fields (encoding repair + leading-zero
+  /// cleanup), collapsing the result to null when empty.
+  static String? _normalizeAddress(String? s) {
+    final repaired = _stripLeadingZeros(_repairEncoding(s))?.trim();
+    return (repaired == null || repaired.isEmpty) ? null : repaired;
   }
 
   /// Look up the owner(s) for a cadastral parcel by KO code ([sifko]) and parcel
@@ -356,16 +380,16 @@ class OwnerLookupService {
           owners.add(name);
         }
         if (naslov == null) {
-          final v = (row['naslov'] as String?)?.trim();
-          if (v != null && v.isNotEmpty) naslov = v;
+          final v = _normalizeAddress(row['naslov'] as String?);
+          if (v != null) naslov = v;
         }
         if (imeko == null) {
-          final v = (row['imeko'] as String?)?.trim();
-          if (v != null && v.isNotEmpty) imeko = v;
+          final v = _normalizeAddress(row['imeko'] as String?);
+          if (v != null) imeko = v;
         }
         if (obcina == null) {
-          final v = (row['obcina'] as String?)?.trim();
-          if (v != null && v.isNotEmpty) obcina = v;
+          final v = _normalizeAddress(row['obcina'] as String?);
+          if (v != null) obcina = v;
         }
       }
       if (owners.isEmpty) return null;
@@ -446,19 +470,16 @@ class OwnerLookupService {
       );
       return rows.map((r) {
         final owner = _repairEncoding((r['lastnik'] as String?)?.trim()) ?? '';
-        final naslov = (r['naslov'] as String?)?.trim() ?? '';
-        final obcina = (r['obcina'] as String?)?.trim() ?? '';
-        final imeko = (r['imeko'] as String?)?.trim() ?? '';
-        final addr = [
-          if (naslov.isNotEmpty) naslov,
-          if (obcina.isNotEmpty) obcina,
-        ].join(', ');
+        final naslov = _normalizeAddress(r['naslov'] as String?);
+        final obcina = _normalizeAddress(r['obcina'] as String?);
+        final imeko = _normalizeAddress(r['imeko'] as String?);
+        final addr = [?naslov, ?obcina].join(', ');
         return OwnerSearchHit(
           sifko: r['sifko'] as int,
           parcela: r['parcela'] as String,
           owner: owner,
           address: addr.isEmpty ? null : addr,
-          koName: imeko.isEmpty ? null : imeko,
+          koName: imeko,
         );
       }).toList();
     } catch (e) {
@@ -504,19 +525,16 @@ class OwnerLookupService {
 
       return rows.map((r) {
         final owner = _repairEncoding((r['lastnik'] as String?)?.trim()) ?? '';
-        final naslov = (r['naslov'] as String?)?.trim() ?? '';
-        final obcina = (r['obcina'] as String?)?.trim() ?? '';
-        final imeko = (r['imeko'] as String?)?.trim() ?? '';
-        final addr = [
-          if (naslov.isNotEmpty) naslov,
-          if (obcina.isNotEmpty) obcina,
-        ].join(', ');
+        final naslov = _normalizeAddress(r['naslov'] as String?);
+        final obcina = _normalizeAddress(r['obcina'] as String?);
+        final imeko = _normalizeAddress(r['imeko'] as String?);
+        final addr = [?naslov, ?obcina].join(', ');
         return OwnerSearchHit(
           sifko: r['sifko'] as int,
           parcela: r['parcela'] as String,
           owner: owner,
           address: addr.isEmpty ? null : addr,
-          koName: imeko.isEmpty ? null : imeko,
+          koName: imeko,
         );
       }).toList();
     } catch (e) {

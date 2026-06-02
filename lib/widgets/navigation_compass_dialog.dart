@@ -178,9 +178,9 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
   // Check if compass accuracy is low
   String? get _accuracyWarning {
     if (_compassAccuracy != null && _compassAccuracy! > 30) {
-      return 'Nizka natancnost kompasa (±${_compassAccuracy!.round()}°). Kalibrirajte napravo.';
+      return 'Nizka natančnost kompasa (±${_compassAccuracy!.round()}°). Kalibrirajte napravo.';
     } else if (_compassAccuracy != null && _compassAccuracy! > 15) {
-      return 'Zmerna natancnost kompasa (±${_compassAccuracy!.round()}°)';
+      return 'Zmerna natančnost kompasa (±${_compassAccuracy!.round()}°)';
     }
     return null;
   }

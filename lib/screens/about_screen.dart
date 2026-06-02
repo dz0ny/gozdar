@@ -104,7 +104,7 @@ class _AboutScreenState extends State<AboutScreen> {
           const SizedBox(height: 16),
 
           // Open source libraries
-          _buildSectionTitle(context, 'Odprtokodne knjiznice'),
+          _buildSectionTitle(context, 'Odprtokodne knjižnice'),
           _buildOpenSourceCard(context, colorScheme),
           const SizedBox(height: 16),
 
@@ -192,7 +192,7 @@ class _AboutScreenState extends State<AboutScreen> {
             ),
             const Divider(height: 24),
             _buildInfoRow('Verzija', version),
-            _buildInfoRow('Stevilka gradnje', buildNumber),
+            _buildInfoRow('Številka gradnje', buildNumber),
             _buildInfoRow('Paket', _packageInfo?.packageName ?? '...'),
           ],
         ),
@@ -945,7 +945,7 @@ class _AboutScreenState extends State<AboutScreen> {
           SwitchListTile(
             secondary: Icon(Icons.gps_fixed, color: colorScheme.primary),
             title: const Text('RTK GNSS'),
-            subtitle: const Text('Prikazi RTK most v navigaciji in na karti'),
+            subtitle: const Text('Prikaži RTK most v navigaciji in na karti'),
             value: rtkBridgeSettings.enabled,
             onChanged: rtkBridgeSettings.setEnabled,
           ),
@@ -1005,7 +1005,7 @@ class _AboutScreenState extends State<AboutScreen> {
               context,
               'Zavod za gozdove Slovenije (ZGS)',
               'Gozdarski sloji, sestoji, odseki, revirji, gozdni rezervati, '
-                  'varovalni gozdovi, pozarna ogrozenost, vetrolomi, podlubniki',
+                  'varovalni gozdovi, požarna ogroženost, vetrolomi, podlubniki',
               'https://prostor.zgs.gov.si',
               Icons.park,
             ),
@@ -1013,8 +1013,8 @@ class _AboutScreenState extends State<AboutScreen> {
             _buildMapSourceItem(
               context,
               'Geodetska uprava RS (GURS)',
-              'Ortofoto posnetki (2022-2024), kataster, katastrske obcine, '
-                  'obcine, upravne enote, DMR',
+              'Ortofoto posnetki (2022-2024), kataster, katastrske občine, '
+                  'občine, upravne enote, DMR',
               'https://www.e-prostor.gov.si',
               Icons.map,
             ),
@@ -1116,10 +1116,10 @@ class _AboutScreenState extends State<AboutScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Aplikacija Gozdar je namenjena izkljucno informativnim namenom. '
+              'Aplikacija Gozdar je namenjena izključno informativnim namenom. '
               'Podatki o parcelah, gozdnih sestojih in drugih kartografskih '
               'slojih so povzeti iz javno dostopnih virov in morda niso '
-              'posodobljeni ali popolnoma tocni.',
+              'posodobljeni ali popolnoma točni.',
               style: TextStyle(
                 fontSize: 13,
                 color: colorScheme.onSurfaceVariant,
@@ -1135,9 +1135,9 @@ class _AboutScreenState extends State<AboutScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Razvijalec ne prevzema odgovornosti za morebitno skodo, ki bi '
+              'Razvijalec ne prevzema odgovornosti za morebitno škodo, ki bi '
               'nastala zaradi uporabe aplikacije ali podatkov v njej. Za '
-              'uradne podatke o lastnistvu in mejah parcel se obrnite na '
+              'uradne podatke o lastništvu in mejah parcel se obrnite na '
               'pristojne organe (GURS, ZGS).',
               style: TextStyle(
                 fontSize: 13,
@@ -1172,9 +1172,9 @@ class _AboutScreenState extends State<AboutScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Aplikacija zbira anonimne podatke o uporabi za izboljsanje '
+              'Aplikacija zbira anonimne podatke o uporabi za izboljšanje '
               'delovanja (Firebase Analytics). Lokacijski podatki se ne '
-              'posiljajo na streznik - vsi podatki o parcelah in hlodih '
+              'pošiljajo na strežnik - vsi podatki o parcelah in hlodih '
               'se hranijo lokalno na napravi.',
               style: TextStyle(
                 fontSize: 13,
@@ -1192,8 +1192,8 @@ class _AboutScreenState extends State<AboutScreen> {
     return Card(
       child: ListTile(
         leading: Icon(Icons.code, color: colorScheme.primary),
-        title: const Text('Prikazi licence'),
-        subtitle: const Text('Flutter in odprtokodne knjiznice'),
+        title: const Text('Prikaži licence'),
+        subtitle: const Text('Flutter in odprtokodne knjižnice'),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
           showLicensePage(
@@ -1233,7 +1233,7 @@ class _AboutScreenState extends State<AboutScreen> {
           ListTile(
             leading: Icon(Icons.email, color: colorScheme.primary),
             title: const Text('Kontakt'),
-            subtitle: const Text('Posiljite povratne informacije'),
+            subtitle: const Text('Pošljite povratne informacije'),
             trailing: const Icon(Icons.open_in_new, size: 18),
             onTap: () => _launchUrl('mailto:gozdar@dz0ny.dev'),
           ),

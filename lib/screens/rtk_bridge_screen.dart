@@ -824,7 +824,7 @@ class _RtkBridgeScreenState extends State<RtkBridgeScreen> {
         _buildAccuracyCheck(
           context,
           checked: estimatedAccuracy != null && estimatedAccuracy <= 0.05,
-          label: 'Ocenjena natancnost',
+          label: 'Ocenjena natančnost',
           value: _estimatedAccuracyLabel(),
         ),
         const SizedBox(height: 6),

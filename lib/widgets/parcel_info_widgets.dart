@@ -108,7 +108,7 @@ class ParcelInfoCard extends StatelessWidget {
                             ),
                       ),
                       Text(
-                        '${parcel.polygon.length} tock',
+                        '${parcel.polygon.length} točk',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -180,7 +180,7 @@ class ParcelOwnerCard extends StatelessWidget {
 
     Widget subtitle;
     if (name == null) {
-      subtitle = const Text('Ni dolocen');
+      subtitle = const Text('Ni določen');
     } else {
       subtitle = Column(
         crossAxisAlignment: CrossAxisAlignment.start,

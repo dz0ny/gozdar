@@ -174,7 +174,7 @@ class ParcelLocationsCard extends StatelessWidget {
                 const Icon(Icons.location_on, color: Colors.orange),
                 const SizedBox(width: 8),
                 Text(
-                  'Shranjene tocke (${locations.length})',
+                  'Shranjene točke (${locations.length})',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
