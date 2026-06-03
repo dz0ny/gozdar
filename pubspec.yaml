@@ -130,9 +130,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - icon.png
-    - assets/vlake.bin
     - assets/regije.geojson
-    - assets/public_owners.sqlite
     - assets/fonts/Roboto-Regular.ttf
     - assets/fonts/Roboto-Bold.ttf
 

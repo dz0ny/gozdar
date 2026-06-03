@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:latlong2/latlong.dart';
+
+import 'parcel_lookup_service.dart';
+import 'remote_asset.dart';
 
 /// A single Vlake (forest skid-road) polyline with a precomputed bounding box
 /// for fast viewport culling.
@@ -20,17 +24,19 @@ class VlakeLine {
   );
 }
 
-/// Loads the embedded Vlake overlay (`assets/vlake.bin`, produced by
-/// `tool/build_vlake.dart`) and serves viewport-culled subsets for rendering.
+/// Loads the Vlake overlay (`vlake.bin`, produced by `tool/build_vlake.dart`)
+/// and serves viewport-culled subsets for rendering.
 ///
-/// The data (~78k polylines) is loaded lazily the first time the overlay is
-/// enabled, parsed off the UI isolate, and kept in memory for the session.
+/// The file is downloaded from R2 on first use (like the kataster) instead of
+/// bundled. The data (~78k polylines) is loaded lazily the first time the
+/// overlay is enabled, parsed off the UI isolate, and kept in memory.
 class VlakeService {
   VlakeService._();
   static final VlakeService instance = VlakeService._();
   factory VlakeService() => instance;
 
-  static const _assetPath = 'assets/vlake.bin';
+  static const _fileName = 'vlake.bin';
+  static String get _url => '${ParcelLookupService.r2BaseUrl}/$_fileName';
 
   List<VlakeLine>? _lines;
   Future<void>? _loading;
@@ -46,11 +52,13 @@ class VlakeService {
 
   Future<void> _load() async {
     try {
-      final data = await rootBundle.load(_assetPath);
-      final bytes = data.buffer.asUint8List(
-        data.offsetInBytes,
-        data.lengthInBytes,
-      );
+      // Downloaded from R2 on first use (like the kataster) instead of bundled.
+      final path = await RemoteAsset.ensure(_url, _fileName);
+      if (path == null) {
+        _lines = const [];
+        return;
+      }
+      final bytes = await File(path).readAsBytes();
       _lines = await compute(_parseVlake, bytes);
     } catch (e) {
       debugPrint('VlakeService load failed: $e');

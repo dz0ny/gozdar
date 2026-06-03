@@ -22,6 +22,7 @@ import '../services/database_service.dart';
 import '../widgets/log_entry_form.dart';
 import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../services/public_parcel_settings.dart';
 import '../services/parcel_lookup_service.dart';
 import '../services/parcel_pdf_service.dart';
 import '../services/region_locator.dart';
@@ -131,6 +132,76 @@ class MapTabState extends State<MapTab> {
   /// Cadastral parcels from the offline database, culled to the viewport.
   /// Populated only when an offline parcels DB is loaded and zoomed in.
   List<CadastralParcel> _offlineParcels = const [];
+
+  /// Ids of [_offlineParcels] that are publicly owned/managed (in the embedded
+  /// public-owners DB). Computed in [_refreshOfflineParcels] so the per-frame
+  /// polygon build stays cheap. Empty unless the highlight option is on.
+  Set<String> _publicParcelIds = const {};
+
+  /// Composite keys ("ko|parcela") of parcels whose mejniki (boundary points) are
+  /// shown. Per-parcel and transient — toggled from the long-press menu for the
+  /// parcel under the press.
+  final Set<String> _mejnikiKeys = {};
+
+  String _parcelKey(int ko, String parcela) => '$ko|$parcela';
+
+  /// Number of distinct boundary vertices in a polygon ring, ignoring a trailing
+  /// point that closes the ring (equal to the first) so it isn't double-marked.
+  int _vertexCount(List<LatLng> ring) =>
+      (ring.length > 1 && ring.first == ring.last)
+      ? ring.length - 1
+      : ring.length;
+
+  /// A tappable boundary-point (mejnik) marker. Tapping navigates to the point
+  /// with the compass, matching the saved-parcel mejniki behaviour.
+  Marker _mejnikMarker(LatLng point, int number, String parcela) {
+    return Marker(
+      point: point,
+      width: 48,
+      height: 48,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          setNavigationTarget(
+            NavigationTarget(
+              location: point,
+              name: 'Mejnik $number ($parcela)',
+            ),
+            zoomIn: false,
+          );
+          _showCompassForTarget();
+        },
+        child: Center(
+          child: Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                '$number',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   /// Regions we've already offered to download this session (avoid nagging).
   final Set<String> _promptedRegions = {};
@@ -487,9 +558,9 @@ class MapTabState extends State<MapTab> {
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Dodano "$name"')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Dodano "$name"')));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Napaka: ${mapProvider.error}')),
@@ -532,9 +603,9 @@ class MapTabState extends State<MapTab> {
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Sečnja "$name" označena')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Sečnja "$name" označena')));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Napaka: ${mapProvider.error}')),
@@ -646,14 +717,18 @@ class MapTabState extends State<MapTab> {
     final svc = ParcelLookupService.instance;
     final bounds = _visibleBounds;
     final overlays = context.read<MapProvider>().activeOverlays;
-    final katasterOn = overlays.contains(MapLayerType.kataster) ||
+    final katasterOn =
+        overlays.contains(MapLayerType.kataster) ||
         overlays.contains(MapLayerType.katasterNazivi);
     if (!svc.isAvailable ||
         !katasterOn ||
         bounds == null ||
         _currentZoom < _offlineKatasterMinZoom) {
       if (_offlineParcels.isNotEmpty) {
-        setState(() => _offlineParcels = const []);
+        setState(() {
+          _offlineParcels = const [];
+          _publicParcelIds = const {};
+        });
       }
       return;
     }
@@ -663,7 +738,20 @@ class MapTabState extends State<MapTab> {
       south: bounds.south,
       north: bounds.north,
     );
-    setState(() => _offlineParcels = parcels);
+    // Pre-compute which parcels are publicly owned/managed so the polygon
+    // builder can tint them without per-frame DB queries.
+    Set<String> publicIds = const {};
+    if (PublicParcelSettings.instance.enabled) {
+      final owners = OwnerLookupService.instance;
+      publicIds = {
+        for (final p in parcels)
+          if (owners.isPublic(p.cadastralMunicipality, p.parcelNumber)) p.id,
+      };
+    }
+    setState(() {
+      _offlineParcels = parcels;
+      _publicParcelIds = publicIds;
+    });
   }
 
   /// When the map center lands in a statistical region whose parcels aren't
@@ -672,7 +760,8 @@ class MapTabState extends State<MapTab> {
   Future<void> _maybePromptRegionDownload(LatLng center) async {
     if (_downloadingRegionName != null) return;
     final overlays = context.read<MapProvider>().activeOverlays;
-    final katasterOn = overlays.contains(MapLayerType.kataster) ||
+    final katasterOn =
+        overlays.contains(MapLayerType.kataster) ||
         overlays.contains(MapLayerType.katasterNazivi);
     if (!katasterOn) return;
 
@@ -681,7 +770,9 @@ class MapTabState extends State<MapTab> {
     final region = RegionLocator.instance.regionForPoint(center);
     if (region == null) return;
     if (_promptedRegions.contains(region.name)) return;
-    if (ParcelLookupService.instance.loadedRegions.contains(region.name)) return;
+    if (ParcelLookupService.instance.loadedRegions.contains(region.name)) {
+      return;
+    }
 
     _promptedRegions.add(region.name);
     final messenger = ScaffoldMessenger.of(context);
@@ -705,10 +796,14 @@ class MapTabState extends State<MapTab> {
     List<ParcelRegion> regions;
     try {
       regions = await ParcelLookupService.fetchRegions(
-          ParcelLookupService.regionsManifestUrl);
+        ParcelLookupService.regionsManifestUrl,
+      );
     } catch (e) {
-      messenger.showSnackBar(SnackBar(
-          content: Text(e is FormatException ? e.message : 'Napaka: $e')));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(e is FormatException ? e.message : 'Napaka: $e'),
+        ),
+      );
       return;
     }
     ParcelRegion? match;
@@ -750,15 +845,22 @@ class MapTabState extends State<MapTab> {
       if (mounted) {
         setState(() {});
         _refreshOfflineParcels();
-        messenger.showSnackBar(SnackBar(
-          content: Text('$name: prenesenih ${result.rows} parcel.'),
-        ));
+        messenger.showSnackBar(
+          SnackBar(content: Text('$name: prenesenih ${result.rows} parcel.')),
+        );
       }
     } on ParcelDownloadCancelled {
-      messenger.showSnackBar(const SnackBar(content: Text('Prenos preklican.')));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Prenos preklican.')),
+      );
     } catch (e) {
-      messenger.showSnackBar(SnackBar(
-          content: Text(e is FormatException ? e.message : 'Prenos ni uspel: $e')));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            e is FormatException ? e.message : 'Prenos ni uspel: $e',
+          ),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -803,9 +905,9 @@ class MapTabState extends State<MapTab> {
       if (_previewParcel != null) setState(() => _previewParcel = null);
       // Online lookup failed (timeout/connectivity) — try the offline fallback.
       if (_showOfflineOwnerFallback(location)) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Napaka pri iskanju parcele: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Napaka pri iskanju parcele: $e')));
     }
   }
 
@@ -819,10 +921,7 @@ class MapTabState extends State<MapTab> {
     final service = OwnerLookupService.instance;
     if (!service.isAvailable || !service.hasGeometry) return false;
 
-    final hits = service.findOwnersAt(
-      location.latitude,
-      location.longitude,
-    );
+    final hits = service.findOwnersAt(location.latitude, location.longitude);
     if (hits.isEmpty) return false;
 
     // Show the first (smallest bounding box) candidate.
@@ -869,9 +968,7 @@ class MapTabState extends State<MapTab> {
                       children: [
                         Text(
                           'Lastnik (offline)',
-                          style: Theme.of(sheetContext)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(sheetContext).textTheme.titleMedium
                               ?.copyWith(
                                 color: colorScheme.tertiary,
                                 fontWeight: FontWeight.bold,
@@ -879,9 +976,7 @@ class MapTabState extends State<MapTab> {
                         ),
                         Text(
                           '≈ približno (brez povezave)',
-                          style: Theme.of(sheetContext)
-                              .textTheme
-                              .bodySmall
+                          style: Theme.of(sheetContext).textTheme.bodySmall
                               ?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
@@ -913,9 +1008,8 @@ class MapTabState extends State<MapTab> {
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
                       details,
-                      style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                      style: Theme.of(sheetContext).textTheme.bodyMedium
+                          ?.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ),
                 ),
@@ -977,7 +1071,9 @@ class MapTabState extends State<MapTab> {
       );
 
       if (viewParcel == true && mounted) {
-        context.read<NavigationNotifier>().navigateToForestWithParcel(existingParcel);
+        context.read<NavigationNotifier>().navigateToForestWithParcel(
+          existingParcel,
+        );
         context.go(AppRoutes.parcelDetail(existingParcel.id));
       }
       return;
@@ -1043,72 +1139,78 @@ class MapTabState extends State<MapTab> {
             confirmDismiss: (_) async => !_printingParcel,
             onDismissed: (_) => _dismissImportPanel(),
             child: Material(
-            elevation: 8,
-            color: cs.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Drag handle — swipe the panel down to dismiss.
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: cs.onSurfaceVariant.withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(2),
+              elevation: 8,
+              color: cs.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Drag handle — swipe the panel down to dismiss.
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
-                    ),
-                    Text(
-                      'Uvozi parcelo',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
+                      Text(
+                        'Uvozi parcelo',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    MapDialogs.importParcelInfoCard(context, parcel),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Ali želite uvoziti to parcelo v "Moj gozd"?',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton.icon(
-                          onPressed: _printingParcel ? null : _printPendingParcel,
-                          icon: _printingParcel
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.print),
-                          label: const Text('Natisni'),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton.icon(
-                          onPressed: _printingParcel ? null : _confirmImportPanel,
-                          icon: const Icon(Icons.download),
-                          label: const Text('Uvozi'),
-                        ),
-                      ],
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      MapDialogs.importParcelInfoCard(context, parcel),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Ali želite uvoziti to parcelo v "Moj gozd"?',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            onPressed: _printingParcel
+                                ? null
+                                : _printPendingParcel,
+                            icon: _printingParcel
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.print),
+                            label: const Text('Natisni'),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton.icon(
+                            onPressed: _printingParcel
+                                ? null
+                                : _confirmImportPanel,
+                            icon: const Icon(Icons.download),
+                            label: const Text('Uvozi'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
           ),
         ),
       ),
@@ -1129,8 +1231,10 @@ class MapTabState extends State<MapTab> {
         workerUrl:
             mapProvider.workerUrl ?? MapPreferencesService.defaultWorkerUrl,
       );
-      final safeNumber =
-          cadastralParcel.parcelNumber.replaceAll(RegExp(r'[^0-9A-Za-z]+'), '-');
+      final safeNumber = cadastralParcel.parcelNumber.replaceAll(
+        RegExp(r'[^0-9A-Za-z]+'),
+        '-',
+      );
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/parcela-$safeNumber.pdf');
       await file.writeAsBytes(bytes, flush: true);
@@ -1172,9 +1276,9 @@ class MapTabState extends State<MapTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri uvozu parcele: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu parcele: $e')));
       }
     }
   }
@@ -1199,9 +1303,9 @@ class MapTabState extends State<MapTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri uvozu: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu: $e')));
       }
     }
   }
@@ -1360,6 +1464,18 @@ class MapTabState extends State<MapTab> {
       parcelAtPosition = null;
     }
 
+    // The offline kataster parcel under the press, for the per-parcel mejniki
+    // toggle (boundary points come from its polygon).
+    final offlineParcelAtPosition = ParcelLookupService.instance.parcelAt(
+      position,
+    );
+    final mejnikiKey = offlineParcelAtPosition == null
+        ? null
+        : _parcelKey(
+            offlineParcelAtPosition.cadastralMunicipality,
+            offlineParcelAtPosition.parcelNumber,
+          );
+
     MapLongPressMenu.show(
       context,
       mapPosition: position,
@@ -1374,6 +1490,25 @@ class MapTabState extends State<MapTab> {
       onViewParcel: parcelAtPosition != null
           ? () => _navigateToParcelDetail(parcelAtPosition!)
           : null,
+      katasterAvailable: ParcelLookupService.instance.isAvailable,
+      highlightPublic: PublicParcelSettings.instance.enabled,
+      onToggleHighlightPublic: (v) async {
+        await PublicParcelSettings.instance.setEnabled(v);
+        _refreshOfflineParcels(); // recompute which parcels are public
+        if (mounted) setState(() {});
+      },
+      mejnikiAvailable: offlineParcelAtPosition != null,
+      showMejniki: mejnikiKey != null && _mejnikiKeys.contains(mejnikiKey),
+      onToggleMejniki: (v) {
+        if (mejnikiKey == null) return;
+        setState(() {
+          if (v) {
+            _mejnikiKeys.add(mejnikiKey);
+          } else {
+            _mejnikiKeys.remove(mejnikiKey);
+          }
+        });
+      },
     );
   }
 
@@ -1426,15 +1561,15 @@ class MapTabState extends State<MapTab> {
   double _measurementAreaM2(List<LatLng> points) {
     if (points.length < 3) return 0;
 
-    final centerLat = points
-            .map((p) => p.latitude)
-            .reduce((a, b) => a + b) /
-        points.length;
+    final centerLat =
+        points.map((p) => p.latitude).reduce((a, b) => a + b) / points.length;
 
-    final metersPerDegreeLat = 111132.92 -
+    final metersPerDegreeLat =
+        111132.92 -
         559.82 * math.cos(2 * centerLat * math.pi / 180) +
         1.175 * math.cos(4 * centerLat * math.pi / 180);
-    final metersPerDegreeLon = 111412.84 * math.cos(centerLat * math.pi / 180) -
+    final metersPerDegreeLon =
+        111412.84 * math.cos(centerLat * math.pi / 180) -
         93.5 * math.cos(3 * centerLat * math.pi / 180);
 
     double area = 0;
@@ -1691,10 +1826,11 @@ class MapTabState extends State<MapTab> {
                   Expanded(
                     child: Text(
                       _measurementValueLabel(),
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                   ),
                   _measurementUnitSelector(),
@@ -1730,7 +1866,8 @@ class MapTabState extends State<MapTab> {
       });
     }
     final externalPosition = rtkPositionService.position;
-    final activeUserPosition = externalPosition?.point ??
+    final activeUserPosition =
+        externalPosition?.point ??
         (_locationTracker.userPosition != null
             ? LatLng(
                 _locationTracker.userPosition!.latitude,
@@ -1772,8 +1909,9 @@ class MapTabState extends State<MapTab> {
     // never fetch them over WMS — they stay toggleable, but draw locally.
     final offlineKataster = ParcelLookupService.instance.isAvailable;
     // Show parcel numbers on the offline kataster when "Kataster z nazivi" is on.
-    final offlineKatasterNames =
-        mapProvider.activeOverlays.contains(MapLayerType.katasterNazivi);
+    final offlineKatasterNames = mapProvider.activeOverlays.contains(
+      MapLayerType.katasterNazivi,
+    );
     final layerRenderer = MapLayerRenderer(
       baseLayer: mapProvider.currentBaseLayer,
       activeOverlays: mapProvider.activeOverlays,
@@ -1876,34 +2014,59 @@ class MapTabState extends State<MapTab> {
                 // database is loaded.
                 if (offlineKataster && _offlineParcels.isNotEmpty)
                   PolygonLayer(
-                    polygons: _offlineParcels
-                        .map(
-                          (p) => Polygon(
-                            points: p.polygon,
-                            color: const Color(0x00000000),
-                            borderColor: const Color(0xFFD50000),
-                            borderStrokeWidth: 2.5,
-                            label: (offlineKatasterNames &&
-                                    _currentZoom >=
-                                        _offlineKatasterLabelMinZoom)
-                                ? p.parcelNumber
-                                : null,
-                            labelStyle: const TextStyle(
-                              color: Color(0xFFB71C1C),
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                              // White hard-edge outline so red numbers stay readable
-                              // over aerial imagery.
-                              shadows: [
-                                Shadow(color: Colors.white, offset: Offset(1, 1)),
-                                Shadow(color: Colors.white, offset: Offset(-1, 1)),
-                                Shadow(color: Colors.white, offset: Offset(1, -1)),
-                                Shadow(color: Colors.white, offset: Offset(-1, -1)),
-                              ],
-                            ),
-                          ),
-                        )
-                        .toList(),
+                    polygons: _offlineParcels.map((p) {
+                      final isPublic = _publicParcelIds.contains(p.id);
+                      return Polygon(
+                        points: p.polygon,
+                        // Public (state/občina/company-owned or -managed)
+                        // parcels get a blue outline + faint fill; private
+                        // ones stay red outline only.
+                        color: isPublic
+                            ? const Color(0x221565C0)
+                            : const Color(0x00000000),
+                        borderColor: isPublic
+                            ? const Color(0xFF1565C0)
+                            : const Color(0xFFD50000),
+                        borderStrokeWidth: 2.5,
+                        label:
+                            (offlineKatasterNames &&
+                                _currentZoom >= _offlineKatasterLabelMinZoom)
+                            ? p.parcelNumber
+                            : null,
+                        labelStyle: TextStyle(
+                          color: isPublic
+                              ? const Color(0xFF0D47A1)
+                              : const Color(0xFFB71C1C),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          // White hard-edge outline so red numbers stay readable
+                          // over aerial imagery.
+                          shadows: [
+                            Shadow(color: Colors.white, offset: Offset(1, 1)),
+                            Shadow(color: Colors.white, offset: Offset(-1, 1)),
+                            Shadow(color: Colors.white, offset: Offset(1, -1)),
+                            Shadow(color: Colors.white, offset: Offset(-1, -1)),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                // Mejniki: tappable boundary-point markers, per parcel — only
+                // the parcels toggled on from the long-press menu. Tapping one
+                // navigates to that boundary point (compass), like the saved
+                // parcel mejniki.
+                if (offlineKataster &&
+                    _mejnikiKeys.isNotEmpty &&
+                    _offlineParcels.isNotEmpty)
+                  MarkerLayer(
+                    markers: [
+                      for (final p in _offlineParcels)
+                        if (_mejnikiKeys.contains(
+                          _parcelKey(p.cadastralMunicipality, p.parcelNumber),
+                        ))
+                          for (int i = 0; i < _vertexCount(p.polygon); i++)
+                            _mejnikMarker(p.polygon[i], i + 1, p.parcelNumber),
+                    ],
                   ),
                 // Embedded Vlake (forest skid-road) overlay, viewport-culled.
                 if (vlakeEnabled &&
@@ -1929,164 +2092,170 @@ class MapTabState extends State<MapTab> {
                         )
                         .toList(),
                   ),
-              // Saved parcels as polygons
-              if (mapProvider.parcels.isNotEmpty)
-                PolygonLayer(
-                  polygons: mapProvider.parcels
-                      .map(
-                        (parcel) => Polygon(
-                          points: parcel.polygon,
-                          color: Colors.green.withValues(alpha: 0.2),
-                          borderColor: Colors.green,
-                          borderStrokeWidth: 2.0,
-                        ),
-                      )
-                      .toList(),
-                ),
+                // Saved parcels as polygons
+                if (mapProvider.parcels.isNotEmpty)
+                  PolygonLayer(
+                    polygons: mapProvider.parcels
+                        .map(
+                          (parcel) => Polygon(
+                            points: parcel.polygon,
+                            color: Colors.green.withValues(alpha: 0.2),
+                            borderColor: Colors.green,
+                            borderStrokeWidth: 2.0,
+                          ),
+                        )
+                        .toList(),
+                  ),
 
-              // Queried parcel preview (green). Skipped when an offline parcels
-              // DB is loaded — the red offline kataster outline already shows it.
-              if (!offlineKataster &&
-                  _previewParcel != null &&
-                  _previewParcel!.polygon.isNotEmpty)
-                PolygonLayer(
-                  polygons: [
-                    Polygon(
-                      points: _previewParcel!.polygon,
-                      color: Colors.green.withValues(alpha: 0.2),
-                      borderColor: Colors.green,
-                      borderStrokeWidth: 2.0,
-                    ),
-                  ],
-                ),
-
-              // Searched parcel (highlighted)
-              if (_searchedParcel != null &&
-                  _searchedParcel!.polygon.isNotEmpty)
-                PolygonLayer(
-                  polygons: [
-                    Polygon(
-                      points: _searchedParcel!.polygon,
-                      color: Colors.blue.withValues(alpha: 0.3),
-                      borderColor: Colors.blue,
-                      borderStrokeWidth: 3.0,
-                      label: 'Parcela ${_searchedParcel!.label}',
-                      labelStyle: const TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        shadows: [Shadow(color: Colors.white, blurRadius: 2)],
+                // Queried parcel preview (green). Skipped when an offline parcels
+                // DB is loaded — the red offline kataster outline already shows it.
+                if (!offlineKataster &&
+                    _previewParcel != null &&
+                    _previewParcel!.polygon.isNotEmpty)
+                  PolygonLayer(
+                    polygons: [
+                      Polygon(
+                        points: _previewParcel!.polygon,
+                        color: Colors.green.withValues(alpha: 0.2),
+                        borderColor: Colors.green,
+                        borderStrokeWidth: 2.0,
                       ),
-                    ),
-                  ],
-                ),
-              if (_measurement.tool == _MeasurementTool.area &&
-                  _measurement.points.length >= 3)
-                PolygonLayer(
-                  polygons: [
-                    Polygon(
-                      points: _measurement.points,
-                      color: Colors.deepPurple.withValues(alpha: 0.18),
-                      borderColor: Colors.deepPurple,
-                      borderStrokeWidth: 3,
-                    ),
-                  ],
-                ),
-              if (_measurement.points.length >= 2)
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: _measurement.points,
-                      color: _measurement.tool == _MeasurementTool.area
-                          ? Colors.deepPurple
-                          : Colors.teal,
-                      strokeWidth: 3,
-                    ),
-                  ],
-                ),
-              if (externalPosition != null && externalPosition.accuracyMeters != null)
-                CircleLayer(
-                  circles: [
-                    CircleMarker(
-                      point: externalPosition.point,
-                      radius: externalPosition.accuracyMeters!,
-                      useRadiusInMeter: true,
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.16),
-                      borderColor: Theme.of(context).colorScheme.primary,
-                      borderStrokeWidth: 2,
-                    ),
-                  ],
-                ),
-              // All markers using the unified renderer
-              MarkerLayer(markers: markerRenderer.getAllMarkers()),
-              if (_measurement.points.isNotEmpty)
-                MarkerLayer(markers: _measurementMarkers()),
-              // Navigation target line (from user to target)
-              if (mapProvider.navigationTarget != null &&
-                  activeUserPosition != null)
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: [
-                        activeUserPosition,
-                        mapProvider.navigationTarget!.location,
-                      ],
-                      color: Colors.orange.withValues(alpha: 0.6),
-                      strokeWidth: 3,
-                      pattern: const StrokePattern.dotted(),
-                    ),
-                  ],
-                ),
-              // Navigation target marker
-              if (mapProvider.navigationTarget != null)
-                Builder(
-                  builder: (ctx) {
-                    final navSize = _getMarkerSize(34, mapProvider);
-                    final navIconSize = _getMarkerSize(20, mapProvider);
-                    final navBorderWidth = _getMarkerSize(2, mapProvider);
-                    return MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: mapProvider.navigationTarget!.location,
-                          width: navSize,
-                          height: navSize,
-                          child: GestureDetector(
-                            onTap: _showCompassForTarget,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.orange,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: navBorderWidth,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+                    ],
+                  ),
+
+                // Searched parcel (highlighted)
+                if (_searchedParcel != null &&
+                    _searchedParcel!.polygon.isNotEmpty)
+                  PolygonLayer(
+                    polygons: [
+                      Polygon(
+                        points: _searchedParcel!.polygon,
+                        color: Colors.blue.withValues(alpha: 0.3),
+                        borderColor: Colors.blue,
+                        borderStrokeWidth: 3.0,
+                        label: 'Parcela ${_searchedParcel!.label}',
+                        labelStyle: const TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          shadows: [Shadow(color: Colors.white, blurRadius: 2)],
+                        ),
+                      ),
+                    ],
+                  ),
+                if (_measurement.tool == _MeasurementTool.area &&
+                    _measurement.points.length >= 3)
+                  PolygonLayer(
+                    polygons: [
+                      Polygon(
+                        points: _measurement.points,
+                        color: Colors.deepPurple.withValues(alpha: 0.18),
+                        borderColor: Colors.deepPurple,
+                        borderStrokeWidth: 3,
+                      ),
+                    ],
+                  ),
+                if (_measurement.points.length >= 2)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: _measurement.points,
+                        color: _measurement.tool == _MeasurementTool.area
+                            ? Colors.deepPurple
+                            : Colors.teal,
+                        strokeWidth: 3,
+                      ),
+                    ],
+                  ),
+                if (externalPosition != null &&
+                    externalPosition.accuracyMeters != null)
+                  CircleLayer(
+                    circles: [
+                      CircleMarker(
+                        point: externalPosition.point,
+                        radius: externalPosition.accuracyMeters!,
+                        useRadiusInMeter: true,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.16),
+                        borderColor: Theme.of(context).colorScheme.primary,
+                        borderStrokeWidth: 2,
+                      ),
+                    ],
+                  ),
+                // All markers using the unified renderer
+                MarkerLayer(markers: markerRenderer.getAllMarkers()),
+                if (_measurement.points.isNotEmpty)
+                  MarkerLayer(markers: _measurementMarkers()),
+                // Navigation target line (from user to target)
+                if (mapProvider.navigationTarget != null &&
+                    activeUserPosition != null)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: [
+                          activeUserPosition,
+                          mapProvider.navigationTarget!.location,
+                        ],
+                        color: Colors.orange.withValues(alpha: 0.6),
+                        strokeWidth: 3,
+                        pattern: const StrokePattern.dotted(),
+                      ),
+                    ],
+                  ),
+                // Navigation target marker
+                if (mapProvider.navigationTarget != null)
+                  Builder(
+                    builder: (ctx) {
+                      final navSize = _getMarkerSize(34, mapProvider);
+                      final navIconSize = _getMarkerSize(20, mapProvider);
+                      final navBorderWidth = _getMarkerSize(2, mapProvider);
+                      return MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: mapProvider.navigationTarget!.location,
+                            width: navSize,
+                            height: navSize,
+                            child: GestureDetector(
+                              onTap: _showCompassForTarget,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.orange,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: navBorderWidth,
                                   ),
-                                ],
-                              ),
-                              child: Icon(
-                                Icons.navigation,
-                                color: Colors.white,
-                                size: navIconSize,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.navigation,
+                                  color: Colors.white,
+                                  size: navIconSize,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                        ],
+                      );
+                    },
+                  ),
               ],
             ),
           ),
           ValueListenableBuilder<TileDownloadVisualState>(
             valueListenable: _tileCacheService.downloadVisualStateListenable,
             builder: (context, downloadState, _) {
-              if (!downloadState.isDownloading && downloadState.overlays.isEmpty) {
+              if (!downloadState.isDownloading &&
+                  downloadState.overlays.isEmpty) {
                 return const SizedBox.shrink();
               }
 
@@ -2095,9 +2264,14 @@ class MapTabState extends State<MapTab> {
                 left: 16,
                 child: Container(
                   width: 210,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: 0.92),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -2117,7 +2291,9 @@ class MapTabState extends State<MapTab> {
                       ),
                       const SizedBox(height: 6),
                       LinearProgressIndicator(
-                        value: downloadState.total == 0 ? null : downloadState.percent,
+                        value: downloadState.total == 0
+                            ? null
+                            : downloadState.percent,
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -2132,10 +2308,18 @@ class MapTabState extends State<MapTab> {
           ),
           if (externalPosition != null)
             Positioned(
-              top: 16 +
+              top:
+                  16 +
                   MediaQuery.of(context).padding.top +
-                  (_tileCacheService.downloadVisualStateListenable.value.isDownloading ||
-                          _tileCacheService.downloadVisualStateListenable.value.overlays.isNotEmpty
+                  (_tileCacheService
+                              .downloadVisualStateListenable
+                              .value
+                              .isDownloading ||
+                          _tileCacheService
+                              .downloadVisualStateListenable
+                              .value
+                              .overlays
+                              .isNotEmpty
                       ? 104
                       : 0),
               left: 16,
@@ -2211,45 +2395,48 @@ class MapTabState extends State<MapTab> {
                 color: Theme.of(context).colorScheme.surface,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-                  child: Builder(builder: (context) {
-                    final total = _regionTotal;
-                    final pct = (total != null && total > 0)
-                        ? _regionReceived / total
-                        : null;
-                    final mb = (_regionReceived / (1024 * 1024)).toStringAsFixed(0);
-                    final totMb = total != null
-                        ? (total / (1024 * 1024)).toStringAsFixed(0)
-                        : '?';
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Prenašam $_downloadingRegionName… $mb/$totMb MB'
-                                '${pct != null ? ' • ${(pct * 100).toStringAsFixed(0)}%' : ''}',
-                                style: Theme.of(context).textTheme.bodyMedium,
+                  child: Builder(
+                    builder: (context) {
+                      final total = _regionTotal;
+                      final pct = (total != null && total > 0)
+                          ? _regionReceived / total
+                          : null;
+                      final mb = (_regionReceived / (1024 * 1024))
+                          .toStringAsFixed(0);
+                      final totMb = total != null
+                          ? (total / (1024 * 1024)).toStringAsFixed(0)
+                          : '?';
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Prenašam $_downloadingRegionName… $mb/$totMb MB'
+                                  '${pct != null ? ' • ${(pct * 100).toStringAsFixed(0)}%' : ''}',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
                               ),
-                            ),
-                            TextButton(
-                              onPressed: () =>
-                                  setState(() => _cancelRegionDownload = true),
-                              child: const Text('Prekliči'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        LinearProgressIndicator(value: pct),
-                      ],
-                    );
-                  }),
+                              TextButton(
+                                onPressed: () => setState(
+                                  () => _cancelRegionDownload = true,
+                                ),
+                                child: const Text('Prekliči'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          LinearProgressIndicator(value: pct),
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
 
-          if (_measurement.isActive)
-            _buildMeasurementPanel(context),
+          if (_measurement.isActive) _buildMeasurementPanel(context),
 
           // Attribution overlay (bottom left) - tap to see usage rights.
           // Hidden while measuring so it doesn't overlap the measurement panel.
@@ -2259,30 +2446,36 @@ class MapTabState extends State<MapTab> {
               left: 4,
               child: GestureDetector(
                 onTap: _showUsageRightsDialog,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.info_outline,
-                      color: Colors.white,
-                      size: 10,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _buildAttributionText(),
-                      style: const TextStyle(color: Colors.white, fontSize: 9),
-                    ),
-                  ],
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        color: Colors.white,
+                        size: 10,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _buildAttributionText(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
 
           // Non-modal import panel (keeps the map pannable while open).
           if (_pendingImportParcel != null) _buildImportParcelPanel(context),
@@ -2297,10 +2490,15 @@ class MapTabState extends State<MapTab> {
         onLayerSelectorPressed: _showLayerSelector,
         onMeasurePressed: _showMeasurementSelector,
         onSearchPressed: showParcelSearchDialog,
-        onRtkPressed: rtkBridgeSettings.enabled ? () => context.push(AppRoutes.rtkBridge) : null,
+        onRtkPressed: rtkBridgeSettings.enabled
+            ? () => context.push(AppRoutes.rtkBridge)
+            : null,
         onGpsPressed: _centerOnGpsLocation,
-        onLocationsPressed: mapProvider.locations.isNotEmpty ? _showLocationsSheet : null,
-        hideBottomControls: _measurement.isActive || _pendingImportParcel != null,
+        onLocationsPressed: mapProvider.locations.isNotEmpty
+            ? _showLocationsSheet
+            : null,
+        hideBottomControls:
+            _measurement.isActive || _pendingImportParcel != null,
       ),
     );
   }
@@ -2392,7 +2590,9 @@ class MapTabState extends State<MapTab> {
           });
           if (existingParcel != null) {
             // Parcel already exists - navigate to Forest tab
-            context.read<NavigationNotifier>().navigateToForestWithParcel(existingParcel);
+            context.read<NavigationNotifier>().navigateToForestWithParcel(
+              existingParcel,
+            );
             context.go(AppRoutes.parcelDetail(existingParcel.id));
           } else {
             // Parcel doesn't exist - import it
@@ -2442,7 +2642,9 @@ class MapTabState extends State<MapTab> {
           );
 
           if (viewParcel == true && mounted) {
-            context.read<NavigationNotifier>().navigateToForestWithParcel(existingParcel);
+            context.read<NavigationNotifier>().navigateToForestWithParcel(
+              existingParcel,
+            );
             context.go(AppRoutes.parcelDetail(existingParcel.id));
           }
         }

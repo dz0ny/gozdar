@@ -1,12 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'aes_file_decryptor.dart';
+import 'parcel_lookup_service.dart';
+import 'remote_asset.dart';
 
 /// Thrown when an owners-database download is cancelled by the caller.
 class OwnerDownloadCancelled implements Exception {
@@ -58,14 +60,12 @@ class OwnerLookupService {
 
   static const _fileName = 'owners.sqlite';
 
-  // Embedded, redistributable public-owners DB (legal-entity owners + managers,
-  // built from the GURS KN open data; CC-BY). Shipped as an asset and copied to
-  // a writable file on first run because sqlite cannot open assets directly.
-  // Bump [_publicAssetVersion] whenever assets/public_owners.sqlite changes so
-  // the on-device copy is refreshed.
+  // Redistributable public-owners DB (legal-entity owners + managers, built
+  // from the GURS KN open data; CC-BY). Hosted on R2 and downloaded on first
+  // use (like the kataster) rather than bundled, to keep the app small.
   static const _publicFileName = 'public_owners.sqlite';
-  static const _publicAsset = 'assets/public_owners.sqlite';
-  static const _publicAssetVersion = '2026-06-02';
+  static String get _publicUrl =>
+      '${ParcelLookupService.r2BaseUrl}/$_publicFileName';
 
   Database? _db;
   String? _path;
@@ -127,27 +127,31 @@ class OwnerLookupService {
     }
   }
 
-  /// Install (on first run / version change) and open the embedded public-owners
-  /// database. Safe to call on every app start; cheap once installed.
+  /// Open the public-owners database if present; otherwise download it from R2
+  /// in the background (first use) and open it when ready. Returns quickly so
+  /// app start is never blocked by the large download.
   Future<void> initPublic() async {
     try {
-      final dir = await getApplicationSupportDirectory();
-      final path = '${dir.path}${Platform.pathSeparator}$_publicFileName';
-      final marker = File('$path.ver');
-      final installed = marker.existsSync() ? marker.readAsStringSync().trim() : '';
-      if (!File(path).existsSync() || installed != _publicAssetVersion) {
-        final data = await rootBundle.load(_publicAsset);
-        final bytes =
-            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-        await _deleteDbFiles(path); // drop any stale copy + sidecars
-        await File(path).writeAsBytes(bytes, flush: true);
-        marker.writeAsStringSync(_publicAssetVersion);
+      final path = await RemoteAsset.localPath(_publicFileName);
+      if (File(path).existsSync()) {
+        _openPublic(path);
+        return;
       }
-      _openPublic(path);
+      unawaited(_downloadPublic());
     } catch (e) {
       debugPrint('OwnerLookupService.initPublic failed: $e');
       _publicDb?.close();
       _publicDb = null;
+    }
+  }
+
+  Future<void> _downloadPublic() async {
+    final path = await RemoteAsset.ensure(_publicUrl, _publicFileName);
+    if (path == null) return;
+    try {
+      _openPublic(path);
+    } catch (e) {
+      debugPrint('OwnerLookupService._downloadPublic open failed: $e');
     }
   }
 
@@ -457,6 +461,26 @@ class OwnerLookupService {
     } catch (e) {
       debugPrint('OwnerLookupService._lookupPublic failed: $e');
       return null;
+    }
+  }
+
+  /// Whether the parcel is publicly owned/managed — i.e. it has a row in the
+  /// embedded public database (legal-entity owner or manager). Fast (indexed).
+  /// Used to tint such parcels differently on the map.
+  bool isPublic(int? sifko, String? parcela) {
+    final db = _publicDb;
+    if (db == null || sifko == null || parcela == null) return false;
+    final key = parcela.trim();
+    if (key.isEmpty) return false;
+    try {
+      final rows = db.select(
+        'SELECT 1 FROM owners WHERE sifko = ? AND parcela = ? LIMIT 1',
+        [sifko, key],
+      );
+      return rows.isNotEmpty;
+    } catch (e) {
+      debugPrint('OwnerLookupService.isPublic failed: $e');
+      return false;
     }
   }
 
