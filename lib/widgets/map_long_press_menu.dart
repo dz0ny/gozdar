@@ -30,6 +30,9 @@ class MapLongPressMenu extends StatefulWidget {
   final bool showMejniki;
   final ValueChanged<bool> onToggleMejniki;
 
+  /// Closes the (non-modal) sheet. Called by actions before they run.
+  final VoidCallback onClose;
+
   const MapLongPressMenu({
     super.key,
     required this.onAddLocation,
@@ -45,10 +48,14 @@ class MapLongPressMenu extends StatefulWidget {
     required this.mejnikiAvailable,
     required this.showMejniki,
     required this.onToggleMejniki,
+    required this.onClose,
   });
 
-  /// Present the action menu as a modal bottom sheet. The selected action runs
-  /// after the sheet is dismissed.
+  /// Currently open sheet, so a new long-press replaces it instead of stacking.
+  static PersistentBottomSheetController? _open;
+
+  /// Present the action menu as a *non-modal* bottom sheet: no scrim and the map
+  /// behind stays pannable. Returns a future that completes when it closes.
   static Future<void> show(
     BuildContext context, {
     required LatLng mapPosition,
@@ -66,11 +73,12 @@ class MapLongPressMenu extends StatefulWidget {
     required bool mejnikiAvailable,
     required bool showMejniki,
     required ValueChanged<bool> onToggleMejniki,
-  }) {
-    return showModalBottomSheet<void>(
-      context: context,
+  }) async {
+    _open?.close();
+    late final PersistentBottomSheetController controller;
+    controller = Scaffold.of(context).showBottomSheet(
       showDragHandle: true,
-      builder: (_) => MapLongPressMenu(
+      (_) => MapLongPressMenu(
         existingParcel: existingParcel,
         onAddLocation: onAddLocation,
         onAddLog: onAddLog,
@@ -84,8 +92,12 @@ class MapLongPressMenu extends StatefulWidget {
         mejnikiAvailable: mejnikiAvailable,
         showMejniki: showMejniki,
         onToggleMejniki: onToggleMejniki,
+        onClose: () => controller.close(),
       ),
     );
+    _open = controller;
+    await controller.closed;
+    if (identical(_open, controller)) _open = null;
   }
 
   @override
@@ -111,7 +123,7 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          Navigator.of(context).pop();
+          widget.onClose();
           onTap();
         },
         child: Padding(
@@ -137,8 +149,11 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
 
   @override
   Widget build(BuildContext context) {
+    // No bottom safe-area inset: the sheet sits above the nav bar, which already
+    // accounts for the home indicator — adding it here leaves dead space.
     return SafeArea(
       top: false,
+      bottom: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         child: Column(
