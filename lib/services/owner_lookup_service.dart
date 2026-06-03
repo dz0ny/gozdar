@@ -8,6 +8,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 import 'aes_file_decryptor.dart';
 import 'parcel_lookup_service.dart';
+import 'public_parcel_settings.dart';
 import 'remote_asset.dart';
 
 /// Thrown when an owners-database download is cancelled by the caller.
@@ -464,24 +465,58 @@ class OwnerLookupService {
     }
   }
 
-  /// Whether the parcel is publicly owned/managed — i.e. it has a row in the
-  /// embedded public database (legal-entity owner or manager). Fast (indexed).
-  /// Used to tint such parcels differently on the map.
-  bool isPublic(int? sifko, String? parcela) {
+  /// Category of a publicly owned/managed parcel (state / municipality /
+  /// company), or null when the parcel has no public record. Classified from
+  /// the owner name(s), preferring owners over managers and state over
+  /// municipality over company. Fast (indexed). Used to colour parcels by
+  /// owner type on the map.
+  PublicOwnerCategory? publicCategory(int? sifko, String? parcela) {
     final db = _publicDb;
-    if (db == null || sifko == null || parcela == null) return false;
+    if (db == null || sifko == null || parcela == null) return null;
     final key = parcela.trim();
-    if (key.isEmpty) return false;
+    if (key.isEmpty) return null;
     try {
       final rows = db.select(
-        'SELECT 1 FROM owners WHERE sifko = ? AND parcela = ? LIMIT 1',
+        'SELECT n.naziv AS naziv, o.vloga AS vloga '
+        'FROM owners o JOIN names n ON n.id = o.name_id '
+        'WHERE o.sifko = ? AND o.parcela = ?',
         [sifko, key],
       );
-      return rows.isNotEmpty;
+      if (rows.isEmpty) return null;
+      PublicOwnerCategory? owner;
+      PublicOwnerCategory? manager;
+      for (final r in rows) {
+        final name = (r['naziv'] as String?)?.trim();
+        if (name == null || name.isEmpty) continue;
+        final c = _classifyOwner(name);
+        if (r['vloga'] == 'L') {
+          owner = _moreSpecific(owner, c);
+        } else {
+          manager = _moreSpecific(manager, c);
+        }
+      }
+      return owner ?? manager;
     } catch (e) {
-      debugPrint('OwnerLookupService.isPublic failed: $e');
-      return false;
+      debugPrint('OwnerLookupService.publicCategory failed: $e');
+      return null;
     }
+  }
+
+  static PublicOwnerCategory _classifyOwner(String name) {
+    final u = name.toUpperCase();
+    if (u.contains('REPUBLIKA SLOVENIJA')) return PublicOwnerCategory.state;
+    if (u.contains('OBČIN')) return PublicOwnerCategory.obcina; // OBČINA/OBČINE
+    return PublicOwnerCategory.company;
+  }
+
+  /// Keep the more notable category when a parcel has several owners:
+  /// state > municipality > company.
+  static PublicOwnerCategory _moreSpecific(
+    PublicOwnerCategory? a,
+    PublicOwnerCategory b,
+  ) {
+    if (a == null) return b;
+    return a.index <= b.index ? a : b; // enum order: state, obcina, company
   }
 
   OwnerInfo? _lookupPrivate(int sifko, String key) {

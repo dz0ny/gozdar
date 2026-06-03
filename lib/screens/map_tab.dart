@@ -133,10 +133,11 @@ class MapTabState extends State<MapTab> {
   /// Populated only when an offline parcels DB is loaded and zoomed in.
   List<CadastralParcel> _offlineParcels = const [];
 
-  /// Ids of [_offlineParcels] that are publicly owned/managed (in the embedded
-  /// public-owners DB). Computed in [_refreshOfflineParcels] so the per-frame
-  /// polygon build stays cheap. Empty unless the highlight option is on.
-  Set<String> _publicParcelIds = const {};
+  /// Public-owner category per [_offlineParcels] id (state / municipality /
+  /// company), for parcels that are publicly owned/managed. Computed in
+  /// [_refreshOfflineParcels] so the per-frame polygon build stays cheap. Empty
+  /// unless at least one category highlight is on.
+  Map<String, PublicOwnerCategory> _publicParcelCategory = const {};
 
   /// Composite keys ("ko|parcela") of parcels whose mejniki (boundary points) are
   /// shown. Per-parcel and transient — toggled from the long-press menu for the
@@ -727,7 +728,7 @@ class MapTabState extends State<MapTab> {
       if (_offlineParcels.isNotEmpty) {
         setState(() {
           _offlineParcels = const [];
-          _publicParcelIds = const {};
+          _publicParcelCategory = const {};
         });
       }
       return;
@@ -738,19 +739,23 @@ class MapTabState extends State<MapTab> {
       south: bounds.south,
       north: bounds.north,
     );
-    // Pre-compute which parcels are publicly owned/managed so the polygon
-    // builder can tint them without per-frame DB queries.
-    Set<String> publicIds = const {};
-    if (PublicParcelSettings.instance.enabled) {
+    // Pre-compute each parcel's public-owner category so the polygon builder can
+    // tint by owner type without per-frame DB queries. Only when at least one
+    // category highlight is enabled.
+    Map<String, PublicOwnerCategory> categories = const {};
+    if (PublicParcelSettings.instance.anyOn) {
       final owners = OwnerLookupService.instance;
-      publicIds = {
+      categories = {
         for (final p in parcels)
-          if (owners.isPublic(p.cadastralMunicipality, p.parcelNumber)) p.id,
+          p.id: ?owners.publicCategory(
+            p.cadastralMunicipality,
+            p.parcelNumber,
+          ),
       };
     }
     setState(() {
       _offlineParcels = parcels;
-      _publicParcelIds = publicIds;
+      _publicParcelCategory = categories;
     });
   }
 
@@ -1491,10 +1496,9 @@ class MapTabState extends State<MapTab> {
           ? () => _navigateToParcelDetail(parcelAtPosition!)
           : null,
       katasterAvailable: ParcelLookupService.instance.isAvailable,
-      highlightPublic: PublicParcelSettings.instance.enabled,
-      onToggleHighlightPublic: (v) async {
-        await PublicParcelSettings.instance.setEnabled(v);
-        _refreshOfflineParcels(); // recompute which parcels are public
+      onTogglePublicCategory: (cat, v) async {
+        await PublicParcelSettings.instance.setOn(cat, v);
+        _refreshOfflineParcels(); // recompute categories for the new selection
         if (mounted) setState(() {});
       },
       mejnikiAvailable: offlineParcelAtPosition != null,
@@ -2015,17 +2019,19 @@ class MapTabState extends State<MapTab> {
                 if (offlineKataster && _offlineParcels.isNotEmpty)
                   PolygonLayer(
                     polygons: _offlineParcels.map((p) {
-                      final isPublic = _publicParcelIds.contains(p.id);
+                      // Colour by public-owner category when that category's
+                      // highlight is on; otherwise the default red outline.
+                      final cat = _publicParcelCategory[p.id];
+                      final highlight =
+                          cat != null &&
+                          PublicParcelSettings.instance.isOn(cat);
                       return Polygon(
                         points: p.polygon,
-                        // Public (state/občina/company-owned or -managed)
-                        // parcels get a blue outline + faint fill; private
-                        // ones stay red outline only.
-                        color: isPublic
-                            ? const Color(0x221565C0)
+                        color: highlight
+                            ? cat.fillColor
                             : const Color(0x00000000),
-                        borderColor: isPublic
-                            ? const Color(0xFF1565C0)
+                        borderColor: highlight
+                            ? cat.color
                             : const Color(0xFFD50000),
                         borderStrokeWidth: 2.5,
                         label:
@@ -2034,8 +2040,8 @@ class MapTabState extends State<MapTab> {
                             ? p.parcelNumber
                             : null,
                         labelStyle: TextStyle(
-                          color: isPublic
-                              ? const Color(0xFF0D47A1)
+                          color: highlight
+                              ? cat.color
                               : const Color(0xFFB71C1C),
                           fontWeight: FontWeight.w700,
                           fontSize: 12,

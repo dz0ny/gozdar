@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/parcel.dart';
+import '../services/public_parcel_settings.dart';
 
 /// Modal bottom sheet shown on map long press with location-based actions.
 ///
@@ -17,10 +18,11 @@ class MapLongPressMenu extends StatefulWidget {
   final Parcel? existingParcel;
 
   /// Whether an offline kataster (parcels DB) is available — gates the public
-  /// highlight toggle, which colours all imported parcels.
+  /// owner-category highlight toggles, which colour imported parcels by owner
+  /// type (state / municipality / company).
   final bool katasterAvailable;
-  final bool highlightPublic;
-  final ValueChanged<bool> onToggleHighlightPublic;
+  final void Function(PublicOwnerCategory category, bool value)
+  onTogglePublicCategory;
 
   /// Whether a specific offline parcel sits under the long-press point — gates
   /// the (per-parcel) mejniki toggle.
@@ -39,8 +41,7 @@ class MapLongPressMenu extends StatefulWidget {
     this.onViewParcel,
     this.existingParcel,
     required this.katasterAvailable,
-    required this.highlightPublic,
-    required this.onToggleHighlightPublic,
+    required this.onTogglePublicCategory,
     required this.mejnikiAvailable,
     required this.showMejniki,
     required this.onToggleMejniki,
@@ -60,8 +61,8 @@ class MapLongPressMenu extends StatefulWidget {
     required VoidCallback onImportParcel,
     VoidCallback? onViewParcel,
     required bool katasterAvailable,
-    required bool highlightPublic,
-    required ValueChanged<bool> onToggleHighlightPublic,
+    required void Function(PublicOwnerCategory category, bool value)
+    onTogglePublicCategory,
     required bool mejnikiAvailable,
     required bool showMejniki,
     required ValueChanged<bool> onToggleMejniki,
@@ -79,8 +80,7 @@ class MapLongPressMenu extends StatefulWidget {
         onImportParcel: onImportParcel,
         onViewParcel: onViewParcel,
         katasterAvailable: katasterAvailable,
-        highlightPublic: highlightPublic,
-        onToggleHighlightPublic: onToggleHighlightPublic,
+        onTogglePublicCategory: onTogglePublicCategory,
         mejnikiAvailable: mejnikiAvailable,
         showMejniki: showMejniki,
         onToggleMejniki: onToggleMejniki,
@@ -93,8 +93,10 @@ class MapLongPressMenu extends StatefulWidget {
 }
 
 class _MapLongPressMenuState extends State<MapLongPressMenu> {
-  late bool _highlightPublic = widget.highlightPublic;
-  late bool _showMejniki = widget.showMejniki;
+  late final Set<PublicOwnerCategory> _publicOn = {
+    for (final c in PublicOwnerCategory.values)
+      if (PublicParcelSettings.instance.isOn(c)) c,
+  };
 
   /// Compact action button: an icon over a short label, sized for a toolbar
   /// grid. Closes the sheet, then runs the action.
@@ -135,7 +137,6 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
 
   @override
   Widget build(BuildContext context) {
-    final hasToggles = widget.katasterAvailable || widget.mejnikiAvailable;
     return SafeArea(
       top: false,
       child: Padding(
@@ -188,46 +189,55 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
                   )
                 else
                   _action(
-                    icon: Icons.download,
-                    label: 'Uvozi',
+                    icon: Icons.info_outline,
+                    label: 'Info',
                     color: Colors.blue,
                     onTap: widget.onImportParcel,
                   ),
+                if (widget.mejnikiAvailable)
+                  _action(
+                    icon: Icons.scatter_plot,
+                    label: 'Mejniki',
+                    color: widget.showMejniki ? Colors.orange : Colors.green,
+                    onTap: () => widget.onToggleMejniki(!widget.showMejniki),
+                  ),
               ],
             ),
-            // Display toggles as chips. Public is global; mejniki is per-parcel.
-            // They stay on the sheet so they can be flipped in place.
-            if (hasToggles) ...[
+            // Colour imported parcels by public-owner type. Chips stay on the
+            // sheet so several categories can be flipped in place.
+            if (widget.katasterAvailable) ...[
               const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Javne parcele',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+              ),
+              const SizedBox(height: 4),
               Wrap(
-                alignment: WrapAlignment.center,
                 spacing: 8,
                 runSpacing: 4,
                 children: [
-                  if (widget.katasterAvailable)
+                  for (final cat in PublicOwnerCategory.values)
                     FilterChip(
-                      avatar: Icon(
-                        Icons.account_balance,
-                        color: _highlightPublic ? Colors.indigo : null,
+                      avatar: CircleAvatar(
+                        radius: 8,
+                        backgroundColor: cat.color,
                       ),
-                      label: const Text('Javne parcele'),
-                      selected: _highlightPublic,
+                      label: Text(cat.label),
+                      selected: _publicOn.contains(cat),
+                      selectedColor: cat.fillColor,
+                      checkmarkColor: cat.color,
                       onSelected: (v) {
-                        setState(() => _highlightPublic = v);
-                        widget.onToggleHighlightPublic(v);
-                      },
-                    ),
-                  if (widget.mejnikiAvailable)
-                    FilterChip(
-                      avatar: Icon(
-                        Icons.scatter_plot,
-                        color: _showMejniki ? Colors.orange : null,
-                      ),
-                      label: const Text('Mejniki'),
-                      selected: _showMejniki,
-                      onSelected: (v) {
-                        setState(() => _showMejniki = v);
-                        widget.onToggleMejniki(v);
+                        setState(() {
+                          if (v) {
+                            _publicOn.add(cat);
+                          } else {
+                            _publicOn.remove(cat);
+                          }
+                        });
+                        widget.onTogglePublicCategory(cat, v);
                       },
                     ),
                 ],

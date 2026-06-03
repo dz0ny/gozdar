@@ -1,25 +1,52 @@
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Whether offline kataster parcels that are publicly owned/managed (present in
-/// the embedded public-owners DB: state, municipalities, companies, managers)
-/// are drawn in a distinct colour from privately owned ones.
+/// Category of a publicly owned/managed parcel, by owner type. Each carries a
+/// map colour and a Slovenian label used by the long-press toggles.
+enum PublicOwnerCategory {
+  state('Država', Color(0xFF1565C0)), // Republika Slovenija
+  obcina('Občina', Color(0xFF2E7D32)), // municipalities
+  company('Podjetje', Color(0xFFEF6C00)); // other legal entities
+
+  const PublicOwnerCategory(this.label, this.color);
+
+  /// Outline colour for parcels of this category.
+  final Color color;
+  final String label;
+
+  /// Faint fill so the parcel interior is tinted but imagery still reads.
+  Color get fillColor => color.withValues(alpha: 0.13);
+
+  String get _prefKey => 'public_cat_$name';
+}
+
+/// Which public-owner categories are highlighted on the map. Per-category
+/// on/off, toggled from the long-press menu; empty means no highlighting (all
+/// parcels stay the default red).
 class PublicParcelSettings {
   PublicParcelSettings._();
   static final PublicParcelSettings instance = PublicParcelSettings._();
 
-  static const _key = 'highlight_public_parcels';
-  bool _enabled = false;
+  final Set<PublicOwnerCategory> _on = {};
 
-  bool get enabled => _enabled;
+  bool isOn(PublicOwnerCategory c) => _on.contains(c);
+  bool get anyOn => _on.isNotEmpty;
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    _enabled = prefs.getBool(_key) ?? false;
+    _on.clear();
+    for (final c in PublicOwnerCategory.values) {
+      if (prefs.getBool(c._prefKey) ?? false) _on.add(c);
+    }
   }
 
-  Future<void> setEnabled(bool value) async {
-    _enabled = value;
+  Future<void> setOn(PublicOwnerCategory c, bool value) async {
+    if (value) {
+      _on.add(c);
+    } else {
+      _on.remove(c);
+    }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_key, value);
+    await prefs.setBool(c._prefKey, value);
   }
 }
