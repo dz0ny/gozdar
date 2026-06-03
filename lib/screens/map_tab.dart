@@ -144,6 +144,10 @@ class MapTabState extends State<MapTab> {
   /// parcel under the press.
   final Set<String> _mejnikiKeys = {};
 
+  /// The offline parcel under an open long-press menu, highlighted pink while
+  /// the sheet is shown. Null when no menu is open.
+  CadastralParcel? _selectedParcel;
+
   String _parcelKey(int ko, String parcela) => '$ko|$parcela';
 
   /// Number of distinct boundary vertices in a polygon ring, ignoring a trailing
@@ -1458,7 +1462,7 @@ class MapTabState extends State<MapTab> {
 
   /// Show the long-press action menu as a modal bottom sheet for the given map
   /// location.
-  void _showLongPressMenu(LatLng position) {
+  Future<void> _showLongPressMenu(LatLng position) async {
     final mapProvider = context.read<MapProvider>();
     Parcel? parcelAtPosition;
     try {
@@ -1481,7 +1485,10 @@ class MapTabState extends State<MapTab> {
             offlineParcelAtPosition.parcelNumber,
           );
 
-    MapLongPressMenu.show(
+    // Highlight the long-pressed parcel pink while the sheet is open.
+    setState(() => _selectedParcel = offlineParcelAtPosition);
+
+    await MapLongPressMenu.show(
       context,
       mapPosition: position,
       existingParcel: parcelAtPosition,
@@ -1501,10 +1508,21 @@ class MapTabState extends State<MapTab> {
         _refreshOfflineParcels(); // recompute categories for the new selection
         if (mounted) setState(() {});
       },
-      mejnikiAvailable: offlineParcelAtPosition != null,
+      // Show Mejniki whenever the offline kataster is loaded (a permanent
+      // toolbar item like Info); it acts on the parcel under the press.
+      mejnikiAvailable: ParcelLookupService.instance.isAvailable,
       showMejniki: mejnikiKey != null && _mejnikiKeys.contains(mejnikiKey),
       onToggleMejniki: (v) {
-        if (mejnikiKey == null) return;
+        if (mejnikiKey == null) {
+          ScaffoldMessenger.of(context)
+            ..clearSnackBars()
+            ..showSnackBar(
+              const SnackBar(
+                content: Text('Dolgo pritisnite na parcelo za prikaz mejnikov.'),
+              ),
+            );
+          return;
+        }
         setState(() {
           if (v) {
             _mejnikiKeys.add(mejnikiKey);
@@ -1514,6 +1532,9 @@ class MapTabState extends State<MapTab> {
         });
       },
     );
+
+    // Sheet dismissed — drop the pink highlight.
+    if (mounted) setState(() => _selectedParcel = null);
   }
 
   void _startMeasurement(_MeasurementTool tool) {
@@ -2056,6 +2077,18 @@ class MapTabState extends State<MapTab> {
                         ),
                       );
                     }).toList(),
+                  ),
+                // Pink highlight on the parcel under an open long-press sheet.
+                if (_selectedParcel != null)
+                  PolygonLayer(
+                    polygons: [
+                      Polygon(
+                        points: _selectedParcel!.polygon,
+                        color: const Color(0x33E91E63),
+                        borderColor: const Color(0xFFE91E63),
+                        borderStrokeWidth: 3,
+                      ),
+                    ],
                   ),
                 // Mejniki: tappable boundary-point markers, per parcel — only
                 // the parcels toggled on from the long-press menu. Tapping one
