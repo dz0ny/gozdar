@@ -10,6 +10,7 @@ import '../screens/about_screen.dart';
 import '../services/onboarding_service.dart';
 import '../services/rtk_bridge_settings.dart';
 import '../services/update_service.dart';
+import 'map_long_press_menu.dart';
 import 'update_banner.dart';
 
 /// Main scaffold with bottom navigation for the app shell
@@ -177,6 +178,11 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   void _handleTabTap(int index) {
+    // Close the map's non-modal long-press sheet when leaving/switching tabs so
+    // it doesn't linger over other tabs (it's anchored to the map Scaffold,
+    // which stays alive in the IndexedStack).
+    MapLongPressMenu.closeOpen();
+
     final rtkBridgeSettings = context.read<RtkBridgeSettings>();
     if (rtkBridgeSettings.enabled && index == 3) {
       context.push(AppRoutes.rtkBridge);
@@ -287,7 +293,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       );
     }
 
-    return Scaffold(
+    final scaffold = Scaffold(
       body: body,
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex < tabs.length ? currentIndex : 0,
@@ -304,5 +310,17 @@ class _MainScaffoldState extends State<MainScaffold> {
         ],
       ),
     );
+
+    // iOS reserves a large bottom safe-area (home indicator) inset that pushes
+    // both the map body and the nav bar up, leaving a dead gap. Strip it on iOS
+    // so the map fills to the bottom and the nav bar sits flush at the edge.
+    // Android keeps its gesture-nav inset.
+    return Platform.isIOS
+        ? MediaQuery.removePadding(
+            context: context,
+            removeBottom: true,
+            child: scaffold,
+          )
+        : scaffold;
   }
 }

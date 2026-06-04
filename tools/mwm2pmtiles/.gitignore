@@ -1,0 +1,15 @@
+# Heavy + generated artifacts: OM checkout, downloaded mwm/drules, dumps, tiles.
+work/
+
+# In case anything lands outside work/.
+*.mwm
+*.geojsonl
+*.pmtiles
+*.mbtiles
+__pycache__/
+
+# Generated style output (regenerate via port_style.py).
+*.style.json
+
+# Tracked on purpose: mwm_dump.cpp, CMakeLists.txt, build.sh, convert.sh,
+# port_style.py, om_layers.py, README.md

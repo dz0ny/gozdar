@@ -258,6 +258,14 @@ class MapTabState extends State<MapTab> {
         .toList();
   }
 
+  /// The public-owner category a parcel should be highlighted with, or null
+  /// when it has no public record or that category's highlight is off.
+  PublicOwnerCategory? _highlightCategory(CadastralParcel p) {
+    final cat = _publicParcelCategory[p.id];
+    if (cat != null && PublicParcelSettings.instance.isOn(cat)) return cat;
+    return null;
+  }
+
   /// Set navigation target and center map on it
   void setNavigationTarget(NavigationTarget target, {bool zoomIn = true}) {
     final mapProvider = context.read<MapProvider>();
@@ -318,93 +326,6 @@ class MapTabState extends State<MapTab> {
           layers: [mapProvider.currentBaseLayer, ...activeOverlayLayers],
           bounds: bounds,
           currentZoom: _currentZoom.toInt(),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showMeasurementSelector() async {
-    if (!mounted) return;
-
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(ctx).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        ctx,
-                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Merjenje na karti',
-                  style: Theme.of(
-                    ctx,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Izberite orodje, nato tapnite na karto za dodajanje točk.',
-                  style: Theme.of(ctx).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 20),
-                _buildMeasurementOption(
-                  context: ctx,
-                  icon: Icons.route,
-                  title: 'Izmeri razdaljo',
-                  subtitle: 'Polilinija z dolžino v metrih ali kilometrih',
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _startMeasurement(_MeasurementTool.distance);
-                  },
-                ),
-                const SizedBox(height: 12),
-                _buildMeasurementOption(
-                  context: ctx,
-                  icon: Icons.square_foot,
-                  title: 'Izmeri površino',
-                  subtitle: 'Pokritost iz poligona v m2 ali ha',
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _startMeasurement(_MeasurementTool.area);
-                  },
-                ),
-                if (_measurement.isActive) ...[
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.of(ctx).pop();
-                      _closeMeasurement();
-                    },
-                    icon: const Icon(Icons.close),
-                    label: const Text('Zapri merjenje'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -1400,64 +1321,10 @@ class MapTabState extends State<MapTab> {
     );
   }
 
-  Widget _buildMeasurementOption({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  icon,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  /// Format a parcel area (m²) concisely — hectares once it's large enough.
+  String _formatArea(double m2) {
+    if (m2 >= 10000) return '${(m2 / 10000).toStringAsFixed(2)} ha';
+    return '${m2.toStringAsFixed(0)} m²';
   }
 
   /// Show the long-press action menu as a modal bottom sheet for the given map
@@ -1488,6 +1355,33 @@ class MapTabState extends State<MapTab> {
     // Highlight the long-pressed parcel pink while the sheet is open.
     setState(() => _selectedParcel = offlineParcelAtPosition);
 
+    // Concise info about the parcel under the press (from the offline DBs), shown
+    // as a compact header in the sheet.
+    String? parcelTitle;
+    String? parcelSubtitle;
+    String? parcelOwner;
+    String? parcelAddress;
+    PublicOwnerCategory? parcelPublicCategory;
+    if (offlineParcelAtPosition != null) {
+      final p = offlineParcelAtPosition;
+      final ownerSvc = OwnerLookupService.instance;
+      final koName = ownerSvc.koName(p.cadastralMunicipality);
+      final ownerInfo = ownerSvc.lookup(
+        p.cadastralMunicipality,
+        p.parcelNumber,
+      );
+      parcelOwner = ownerInfo?.displayOwners;
+      parcelAddress = ownerInfo?.address;
+      parcelPublicCategory = ownerSvc.publicCategory(
+        p.cadastralMunicipality,
+        p.parcelNumber,
+      );
+      parcelTitle =
+          'Parc. ${p.parcelNumber} • KO ${p.cadastralMunicipality}'
+          '${koName != null && koName.isNotEmpty ? ' $koName' : ''}';
+      parcelSubtitle = p.area > 0 ? _formatArea(p.area) : null;
+    }
+
     await MapLongPressMenu.show(
       context,
       mapPosition: position,
@@ -1495,17 +1389,22 @@ class MapTabState extends State<MapTab> {
       onAddLocation: () => _showAddLocationDialog(position),
       onAddLog: () => _showAddLogDialog(position),
       onAddSecnja: () => _showAddSecnjaDialog(position),
-      onMeasureDistance: () =>
-          _startMeasurementAt(_MeasurementTool.distance, position),
-      onMeasureArea: () => _startMeasurementAt(_MeasurementTool.area, position),
       onImportParcel: () => _queryParcelAtLocation(position),
       onViewParcel: parcelAtPosition != null
           ? () => _navigateToParcelDetail(parcelAtPosition!)
           : null,
-      katasterAvailable: ParcelLookupService.instance.isAvailable,
-      onTogglePublicCategory: (cat, v) async {
-        await PublicParcelSettings.instance.setOn(cat, v);
-        _refreshOfflineParcels(); // recompute categories for the new selection
+      parcelTitle: parcelTitle,
+      parcelSubtitle: parcelSubtitle,
+      parcelOwner: parcelOwner,
+      parcelAddress: parcelAddress,
+      parcelPublicCategory: parcelPublicCategory,
+      onMeasureDistance: () => _startMeasurement(_MeasurementTool.distance),
+      onMeasureArea: () => _startMeasurement(_MeasurementTool.area),
+      // Public-parcel (javne parcele) colouring is available whenever the
+      // offline kataster is loaded.
+      publicParcelsAvailable: ParcelLookupService.instance.isAvailable,
+      onPublicParcelsChanged: () {
+        _refreshOfflineParcels();
         if (mounted) setState(() {});
       },
       // Show Mejniki whenever the offline kataster is loaded (a permanent
@@ -1533,21 +1432,18 @@ class MapTabState extends State<MapTab> {
       },
     );
 
-    // Sheet dismissed — drop the pink highlight.
-    if (mounted) setState(() => _selectedParcel = null);
+    // Sheet dismissed — drop the pink highlight, but only if a newer long-press
+    // hasn't already replaced the selection. (Opening a new sheet closes this
+    // one, which completes the await above *after* the new sheet set its own
+    // selection; without this guard we'd wipe the new highlight.)
+    if (mounted && identical(_selectedParcel, offlineParcelAtPosition)) {
+      setState(() => _selectedParcel = null);
+    }
   }
 
   void _startMeasurement(_MeasurementTool tool) {
     setState(() {
       _measurement = _MeasurementState(tool: tool);
-    });
-  }
-
-  /// Start a measurement seeded with a first point (used from the long-press
-  /// menu, where the long-press location becomes the first point).
-  void _startMeasurementAt(_MeasurementTool tool, LatLng point) {
-    setState(() {
-      _measurement = _MeasurementState(tool: tool, points: [point]);
     });
   }
 
@@ -2037,23 +1933,34 @@ class MapTabState extends State<MapTab> {
                 // Offline kataster: cadastral parcel outlines from the local DB,
                 // shown instead of the online WMS proxy when an offline parcels
                 // database is loaded.
+                // Public-parcel (javne parcele) category fills, drawn *under* all
+                // outlines and without their own borders. Keeping fills in a
+                // separate lower layer stops a filled parcel from painting over
+                // an adjacent parcel's outline (which looked like doubled lines).
+                if (offlineKataster && _offlineParcels.isNotEmpty)
+                  PolygonLayer(
+                    polygons: [
+                      for (final p in _offlineParcels)
+                        if (_highlightCategory(p) case final cat?)
+                          Polygon(
+                            points: p.polygon,
+                            color: cat.fillColor,
+                            borderStrokeWidth: 0,
+                          ),
+                    ],
+                  ),
+                // Cadastral outlines + parcel-number labels, drawn on top of the
+                // fills so every boundary is a single crisp line.
                 if (offlineKataster && _offlineParcels.isNotEmpty)
                   PolygonLayer(
                     polygons: _offlineParcels.map((p) {
-                      // Colour by public-owner category when that category's
-                      // highlight is on; otherwise the default red outline.
-                      final cat = _publicParcelCategory[p.id];
-                      final highlight =
-                          cat != null &&
-                          PublicParcelSettings.instance.isOn(cat);
+                      // Colour the outline by public-owner category when on;
+                      // otherwise the default red kataster outline.
+                      final cat = _highlightCategory(p);
                       return Polygon(
                         points: p.polygon,
-                        color: highlight
-                            ? cat.fillColor
-                            : const Color(0x00000000),
-                        borderColor: highlight
-                            ? cat.color
-                            : const Color(0xFFD50000),
+                        color: const Color(0x00000000),
+                        borderColor: cat?.color ?? const Color(0xFFD50000),
                         borderStrokeWidth: 2.5,
                         label:
                             (offlineKatasterNames &&
@@ -2061,14 +1968,12 @@ class MapTabState extends State<MapTab> {
                             ? p.parcelNumber
                             : null,
                         labelStyle: TextStyle(
-                          color: highlight
-                              ? cat.color
-                              : const Color(0xFFB71C1C),
+                          color: cat?.color ?? const Color(0xFFB71C1C),
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
                           // White hard-edge outline so red numbers stay readable
                           // over aerial imagery.
-                          shadows: [
+                          shadows: const [
                             Shadow(color: Colors.white, offset: Offset(1, 1)),
                             Shadow(color: Colors.white, offset: Offset(-1, 1)),
                             Shadow(color: Colors.white, offset: Offset(1, -1)),
@@ -2527,7 +2432,6 @@ class MapTabState extends State<MapTab> {
         currentBaseLayer: mapProvider.currentBaseLayer,
         locationsCount: mapProvider.locations.length,
         onLayerSelectorPressed: _showLayerSelector,
-        onMeasurePressed: _showMeasurementSelector,
         onSearchPressed: showParcelSearchDialog,
         onRtkPressed: rtkBridgeSettings.enabled
             ? () => context.push(AppRoutes.rtkBridge)

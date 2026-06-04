@@ -35,6 +35,14 @@ dependencies:
   flutter_map: ^8.3.0
   latlong2: any
   proj4dart: any
+  # Vector basemap (Organic Maps -> slovenia.pmtiles). vector_map_tiles 10.x is
+  # the only line compatible with flutter_map 8; the _pmtiles bridge is pinned to
+  # the old line, so we read the archive via the core `pmtiles` package and a
+  # small custom VectorTileProvider.
+  vector_map_tiles: ^10.0.0-beta.2
+  # pmtiles 2.x pulls protobuf 6, conflicting with vector_tile's protobuf 3; 1.3.x
+  # shares the protobuf 3 line vector_map_tiles uses.
+  pmtiles: ^1.3.0
 
   # Database & Storage
   drift: ^2.32.1
