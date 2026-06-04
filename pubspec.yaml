@@ -35,11 +35,16 @@ dependencies:
   flutter_map: ^8.3.0
   latlong2: any
   proj4dart: any
-  # Vector basemap (Organic Maps -> slovenia.pmtiles). vector_map_tiles 10.x is
-  # the only line compatible with flutter_map 8; the _pmtiles bridge is pinned to
-  # the old line, so we read the archive via the core `pmtiles` package and a
-  # small custom VectorTileProvider.
-  vector_map_tiles: ^10.0.0-beta.2
+  # Vector basemap (Organic Maps -> slovenia.pmtiles). Pinned to 9.x: it's
+  # compatible with flutter_map 8 (^8.1.1) and renders via canvas rasterization
+  # (VectorTileLayerMode.raster) — works on the Flutter stable channel. 10.x
+  # requires the Flutter GPU preview (dev channel + recompiled shaders), which
+  # only paints the background on stable. We read the archive via the core
+  # `pmtiles` package and a small custom VectorTileProvider.
+  vector_map_tiles: 9.0.0-beta.9
+  # Used directly for ThemeReader/Theme when building the layer from the bundled
+  # style; matches the line vector_map_tiles 9.x resolves.
+  vector_tile_renderer: ^6.1.0
   # pmtiles 2.x pulls protobuf 6, conflicting with vector_tile's protobuf 3; 1.3.x
   # shares the protobuf 3 line vector_map_tiles uses.
   pmtiles: ^1.3.0
@@ -139,6 +144,7 @@ flutter:
   assets:
     - icon.png
     - assets/regije.geojson
+    - assets/gozdar_basemap_style.json
     - assets/fonts/Roboto-Regular.ttf
     - assets/fonts/Roboto-Bold.ttf
 

@@ -9,6 +9,7 @@ import '../services/owner_offline_settings_service.dart';
 import '../services/parcel_lookup_service.dart';
 import '../services/rtk_bridge_settings.dart';
 import '../services/tile_cache_service.dart';
+import '../services/vector_basemap_service.dart';
 import '../services/vlake_service.dart';
 import '../services/vlake_settings.dart';
 
@@ -47,6 +48,12 @@ class _AboutScreenState extends State<AboutScreen> {
   bool _cancelOwnerDownload = false;
   int _ownerReceived = 0;
   int? _ownerTotal;
+
+  // Vector basemap (offline) download progress.
+  bool _downloadingBasemap = false;
+  bool _cancelBasemapDownload = false;
+  int _basemapReceived = 0;
+  int? _basemapTotal;
 
   @override
   void initState() {
@@ -675,6 +682,148 @@ class _AboutScreenState extends State<AboutScreen> {
     }
   }
 
+  /// Vector basemap: optionally download the full Slovenia archive for offline
+  /// use (otherwise it streams from the network on demand).
+  Widget _buildVectorBasemapSection(
+    BuildContext context,
+    ColorScheme colorScheme,
+  ) {
+    final service = VectorBasemapService.instance;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Vektorska karta (brez spleta)',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 4),
+        FutureBuilder<int?>(
+          future: service.downloadedSizeBytes(),
+          builder: (context, snapshot) {
+            final size = snapshot.data;
+            final text = size == null
+                ? 'Ni prenesena — karta se pretaka prek spleta (~210 MB).'
+                : 'Prenesena • ${(size / (1024 * 1024)).toStringAsFixed(0)} MB • brez spleta';
+            return Text(
+              text,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        if (_downloadingBasemap)
+          _buildDbDownloadProgress(
+            context,
+            colorScheme,
+            received: _basemapReceived,
+            total: _basemapTotal,
+            label: 'Prenašam karto…',
+            onCancel: () => setState(() => _cancelBasemapDownload = true),
+          )
+        else
+          FutureBuilder<bool>(
+            future: service.isDownloaded(),
+            builder: (context, snapshot) {
+              final downloaded = snapshot.data ?? false;
+              return Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _downloadBasemap,
+                      icon: const Icon(Icons.cloud_download_outlined),
+                      label: Text(
+                        downloaded ? 'Posodobi (~210 MB)' : 'Prenesi (~210 MB)',
+                      ),
+                    ),
+                  ),
+                  if (downloaded) ...[
+                    const SizedBox(width: 8),
+                    IconButton.outlined(
+                      onPressed: _removeBasemap,
+                      icon: const Icon(Icons.delete_outline),
+                      tooltip: 'Odstrani',
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+        if (!_downloadingBasemap) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Prenesi celotno karto za uporabo brez povezave — priporočena Wi-Fi.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _downloadBasemap() async {
+    setState(() {
+      _downloadingBasemap = true;
+      _cancelBasemapDownload = false;
+      _basemapReceived = 0;
+      _basemapTotal = null;
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await VectorBasemapService.instance.download(
+        onProgress: (received, total) {
+          if (!mounted) return;
+          // Throttle UI updates to ~every 4 MB (or on completion).
+          if (received - _basemapReceived >= 4 * 1024 * 1024 ||
+              (total != null && received >= total)) {
+            setState(() {
+              _basemapReceived = received;
+              _basemapTotal = total;
+            });
+          }
+        },
+        isCancelled: () => _cancelBasemapDownload,
+      );
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Vektorska karta prenesena za uporabo brez povezave.'),
+          ),
+        );
+      }
+    } on VectorBasemapDownloadCancelled {
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Prenos preklican.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              e is FormatException ? e.message : 'Prenos ni uspel: $e',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _downloadingBasemap = false);
+    }
+  }
+
+  Future<void> _removeBasemap() async {
+    await VectorBasemapService.instance.removeDownload();
+    if (mounted) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lokalna kopija vektorske karte odstranjena.')),
+      );
+    }
+  }
+
   /// Shared download-progress row (bar + MB/percent + cancel) used by the
   /// parcels and owners database sections.
   Widget _buildDbDownloadProgress(
@@ -953,6 +1102,11 @@ class _AboutScreenState extends State<AboutScreen> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: _buildParcelsDbSection(context, colorScheme),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: _buildVectorBasemapSection(context, colorScheme),
           ),
           const Divider(height: 1),
           Padding(

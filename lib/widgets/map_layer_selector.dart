@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/map_layer.dart';
+import '../services/vector_basemap_service.dart';
 
 /// Modern bottom sheet for selecting map base layer and overlays
 class MapLayerSelector extends StatefulWidget {
@@ -242,6 +243,10 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       children: [
         // International base layers
         _buildBaseLayerSection('Mednarodne karte', [
+          // Only offer the vector basemap once it's downloaded for offline use
+          // (managed in the About screen).
+          if (VectorBasemapService.instance.hasLocalCopy)
+            MapLayer.vectorBasemap,
           MapLayer.openStreetMap,
           MapLayer.openTopoMap,
           MapLayer.esriWorldImagery,
@@ -699,6 +704,8 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     switch (type) {
       case MapLayerType.openStreetMap:
         return Icons.map;
+      case MapLayerType.vectorBasemap:
+        return Icons.layers_outlined;
       case MapLayerType.openTopoMap:
       case MapLayerType.esriTopoMap:
         return Icons.terrain;

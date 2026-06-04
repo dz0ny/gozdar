@@ -33,6 +33,7 @@ enum MapLayerType {
   ortofoto2022,
   dofIr,
   dmr,
+  vectorBasemap,
 
   // Administrative
   kataster,
@@ -106,6 +107,11 @@ class MapLayer {
   final String? wmsStyles;
   final bool isTransparent;
   final bool isOverlay;
+
+  /// Vector (PMTiles) basemap rendered via `vector_map_tiles` instead of raster
+  /// XYZ/WMS tiles. Such a base layer is drawn by [VectorBasemapService], not by
+  /// the raster tile renderer.
+  final bool isVector;
   final Crs? crs;
   final bool queryable; // Supports GetFeatureInfo queries
   final OverlayCategory? category; // Category for overlay layers
@@ -124,6 +130,7 @@ class MapLayer {
     this.wmsStyles,
     this.isTransparent = false,
     this.isOverlay = false,
+    this.isVector = false,
     this.crs,
     this.queryable = false,
     this.category,
@@ -257,6 +264,16 @@ class MapLayer {
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
     wmsLayers: ['pregledovalnik:DMR'],
     wmsFormat: 'image/jpeg',
+  );
+
+  /// Offline-capable vector basemap (Organic Maps data → slovenia.pmtiles),
+  /// rendered with vector_map_tiles. Drawn by VectorBasemapService.
+  static const vectorBasemap = MapLayer(
+    type: MapLayerType.vectorBasemap,
+    name: 'Vektorska karta',
+    attribution: '© OpenStreetMap contributors / Organic Maps',
+    maxZoom: appMaxZoom,
+    isVector: true,
   );
 
   // ============ OVERLAY LAYERS ============
@@ -916,6 +933,7 @@ class MapLayer {
     ortofoto2022,
     dofIr,
     dmr,
+    vectorBasemap,
   ];
 
   /// Overlay layers (can be toggled on/off) - organized by category

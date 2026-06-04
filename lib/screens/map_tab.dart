@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:vector_map_tiles/vector_map_tiles.dart' as vmt;
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:open_filex/open_filex.dart';
@@ -32,6 +33,7 @@ import '../services/rtk_position_service.dart';
 import '../services/rtk_bridge_settings.dart';
 import '../services/vlake_service.dart';
 import '../services/vlake_settings.dart';
+import '../services/vector_basemap_service.dart';
 import '../widgets/navigation_compass_dialog.dart';
 import '../widgets/tile_download_dialog.dart';
 import '../widgets/map_long_press_menu.dart';
@@ -350,6 +352,10 @@ class MapTabState extends State<MapTab> {
       onResetOnboarding: null, // TODO: Implement onboarding reset
     );
     rtkPositionService.addListener(_handleRtkPositionUpdate);
+    // Rebuild the map once the vector basemap finishes loading, and learn
+    // whether an offline copy exists (gates the layer in the selector).
+    VectorBasemapService.instance.addListener(_handleRtkPositionUpdate);
+    VectorBasemapService.instance.refreshLocal();
     _initializeData();
     _initializeLocationTracking();
   }
@@ -380,6 +386,7 @@ class MapTabState extends State<MapTab> {
   @override
   void dispose() {
     rtkPositionService.removeListener(_handleRtkPositionUpdate);
+    VectorBasemapService.instance.removeListener(_handleRtkPositionUpdate);
     _locationTracker.dispose();
     _mapController.dispose();
     super.dispose();
@@ -1843,6 +1850,14 @@ class MapTabState extends State<MapTab> {
       },
     );
 
+    // Vector (PMTiles) basemap: load it lazily the first time it's selected,
+    // then render it as the bottom map layer once ready.
+    final vectorBase = mapProvider.currentBaseLayer.isVector;
+    final vectorBasemap = VectorBasemapService.instance;
+    if (vectorBase && !vectorBasemap.isReady) {
+      vectorBasemap.ensureLoaded();
+    }
+
     // Show loading indicator while preferences are loading
     if (!mapProvider.isPreferencesLoaded) {
       return Scaffold(
@@ -1929,6 +1944,13 @@ class MapTabState extends State<MapTab> {
                 },
               ),
               children: [
+                // Vector basemap (bottom-most), when selected and loaded.
+                if (vectorBase && vectorBasemap.isReady)
+                  vmt.VectorTileLayer(
+                    tileProviders: vectorBasemap.tileProviders!,
+                    theme: vectorBasemap.theme!,
+                    tileOffset: vmt.TileOffset.DEFAULT,
+                  ),
                 ...layerRenderer.getAllTileLayers(),
                 // Offline kataster: cadastral parcel outlines from the local DB,
                 // shown instead of the online WMS proxy when an offline parcels
