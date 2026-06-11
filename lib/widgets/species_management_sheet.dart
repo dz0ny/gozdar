@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/species_service.dart';
+import '../utils/sl_plural.dart';
 
 /// Bottom sheet for managing tree species
 class SpeciesManagementSheet extends StatefulWidget {
@@ -186,9 +187,9 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
             ),
             const SizedBox(height: 16),
             Text(
-              '${_species.length} vrst',
+              slCount(_species.length, 'vrsta', 'vrsti', 'vrste', 'vrst'),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
             const SizedBox(height: 8),
@@ -201,12 +202,14 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
                           Icon(
                             Icons.forest_outlined,
                             size: 48,
-                            color: Colors.grey[400],
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Ni dodanih vrst',
-                            style: TextStyle(color: Colors.grey[600]),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),

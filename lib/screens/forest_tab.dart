@@ -11,6 +11,7 @@ import '../router/route_names.dart';
 import '../services/database_service.dart';
 import '../services/kml_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../utils/sl_plural.dart';
 import '../widgets/parcel_silhouette.dart';
 import 'owner_import_search_screen.dart';
 
@@ -178,8 +179,14 @@ class ForestTabState extends State<ForestTab> {
           final logsCount = deleted['logs'] ?? 0;
           final locationsCount = deleted['locations'] ?? 0;
           final extras = <String>[];
-          if (logsCount > 0) extras.add('$logsCount hlodov');
-          if (locationsCount > 0) extras.add('$locationsCount točk');
+          if (logsCount > 0) {
+            extras.add(slCount(logsCount, 'hlod', 'hloda', 'hlodi', 'hlodov'));
+          }
+          if (locationsCount > 0) {
+            extras.add(
+              slCount(locationsCount, 'točka', 'točki', 'točke', 'točk'),
+            );
+          }
           final extraText = extras.isNotEmpty ? ' (${extras.join(', ')})' : '';
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -259,7 +266,9 @@ class ForestTabState extends State<ForestTab> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Uvozi parcele'),
-          content: Text('Najdenih ${parcels.length} parcel. Jih uvozim?'),
+          content: Text(
+            'Najdenih ${slCount(parcels.length, 'parcela', 'parceli', 'parcele', 'parcel')}. Jih uvozim?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -289,7 +298,7 @@ class ForestTabState extends State<ForestTab> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Uvoženih ${parcels.length} parcel ($areaFormatted)',
+                'Uvoženih ${slCount(parcels.length, 'parcela', 'parceli', 'parcele', 'parcel')} ($areaFormatted)',
               ),
             ),
           );
@@ -311,13 +320,15 @@ class ForestTabState extends State<ForestTab> {
     final items = <String>[];
     items.add('Parcela: ${data.parcel.name}');
     if (data.logs.isNotEmpty) {
-      items.add('${data.logs.length} hlodov');
+      items.add(slCount(data.logs.length, 'hlod', 'hloda', 'hlodi', 'hlodov'));
     }
     if (data.secnja.isNotEmpty) {
       items.add('${data.secnja.length} sečenj');
     }
     if (data.locations.isNotEmpty) {
-      items.add('${data.locations.length} točk');
+      items.add(
+        slCount(data.locations.length, 'točka', 'točki', 'točke', 'točk'),
+      );
     }
 
     final confirmed = await showDialog<bool>(
@@ -401,18 +412,48 @@ class ForestTabState extends State<ForestTab> {
     }
   }
 
-  /// Person-icon action: when the GURS owners DB is imported, open the
-  /// search-and-import-by-owner screen; otherwise filter own parcels by owner.
+  /// Person-icon action: when the GURS owners DB is imported, offer a choice
+  /// between filtering own parcels by owner and searching/importing from GURS;
+  /// otherwise filter own parcels by owner directly.
   Future<void> _onOwnerButtonPressed() async {
-    if (OwnerLookupService.instance.isAvailable) {
+    if (!OwnerLookupService.instance.isAvailable) {
+      await _showOwnerFilterDialog();
+      return;
+    }
+
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.filter_list),
+              title: const Text('Filtriraj po lastniku'),
+              onTap: () => Navigator.of(context).pop('filter'),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.person_search),
+              title: const Text('Uvoz po lastniku'),
+              onTap: () => Navigator.of(context).pop('import'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!mounted || choice == null) return;
+
+    if (choice == 'filter') {
+      await _showOwnerFilterDialog();
+    } else if (choice == 'import') {
       await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const OwnerImportSearchScreen()),
       );
       // Refresh in case parcels were imported.
       await _loadData();
-      return;
     }
-    await _showOwnerFilterDialog();
   }
 
   Future<void> _showOwnerFilterDialog() async {
@@ -469,7 +510,7 @@ class ForestTabState extends State<ForestTab> {
                 itemBuilder: (context, index) {
                   final owner = owners[index];
                   final parcelCount = _parcels
-                      .where((p) => p.owner == owner)
+                      .where((p) => _ownerForParcel(p) == owner)
                       .length;
                   final isSelected = _selectedOwnerFilter == owner;
 
@@ -481,7 +522,15 @@ class ForestTabState extends State<ForestTab> {
                           : null,
                     ),
                     title: Text(owner),
-                    subtitle: Text('$parcelCount parcel'),
+                    subtitle: Text(
+                      slCount(
+                        parcelCount,
+                        'parcela',
+                        'parceli',
+                        'parcele',
+                        'parcel',
+                      ),
+                    ),
                     selected: isSelected,
                     onTap: () {
                       setState(() => _selectedOwnerFilter = owner);
@@ -539,13 +588,26 @@ class ForestTabState extends State<ForestTab> {
             tooltip: 'Več možnosti gozda',
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
-              if (value == 'import') {
+              if (value == 'draw') {
+                _addParcel();
+              } else if (value == 'import') {
                 _importKml();
               } else if (value == 'export') {
                 _exportKml();
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'draw',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_location_alt),
+                    SizedBox(width: 8),
+                    Text('Nariši parcelo'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
               const PopupMenuItem(
                 value: 'import',
                 child: Row(
@@ -612,8 +674,15 @@ class ForestTabState extends State<ForestTab> {
                   // Parcels list
                   Expanded(
                     child: displayParcels.isEmpty
-                        ? Center(
-                            child: _selectedOwnerFilter != null
+                        ? LayoutBuilder(
+                            builder: (context, constraints) => SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight,
+                                ),
+                                child: Center(
+                                  child: _selectedOwnerFilter != null
                                 // Filter active but no matching parcels
                                 ? Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -690,6 +759,9 @@ class ForestTabState extends State<ForestTab> {
                                       ),
                                     ],
                                   ),
+                                ),
+                              ),
+                            ),
                           )
                         : _buildGroupedParcelsList(context, displayParcels),
                   ),
@@ -781,7 +853,7 @@ class ForestTabState extends State<ForestTab> {
                     ),
                   ),
                   Text(
-                    '$count parcel • $areaFormatted',
+                    '${slCount(count, 'parcela', 'parceli', 'parcele', 'parcel')} • $areaFormatted',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -864,7 +936,13 @@ class ForestTabState extends State<ForestTab> {
                     Text(' · ', style: TextStyle(color: Colors.grey[400])),
                     if (parcel.treesCut > 0)
                       Text(
-                        '${parcel.treesCut} dreves',
+                        slCount(
+                          parcel.treesCut,
+                          'drevo',
+                          'drevesi',
+                          'drevesa',
+                          'dreves',
+                        ),
                         style: TextStyle(color: Colors.orange[700]),
                       ),
                     if (parcel.treesCut > 0 && parcel.woodCut > 0)

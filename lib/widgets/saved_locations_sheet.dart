@@ -163,7 +163,9 @@ class _ContentWidget extends StatelessWidget {
           ),
           // List
           Expanded(
-            child: ListView(
+            child: totalCount == 0
+                ? _buildEmptyState(context)
+                : ListView(
               controller: scrollController,
               children: [
                 // Locations section (non-sečnja)
@@ -235,6 +237,29 @@ class _ContentWidget extends StatelessWidget {
           ),
         ],
       );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.location_off,
+            size: 48,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Ni shranjenih lokacij',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -314,7 +339,10 @@ class _LocationListTile extends StatelessWidget {
       subtitle: parcelName != null
           ? Text(
               parcelName!,
-              style: TextStyle(color: Colors.green[700], fontSize: 12),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.secondary,
+                fontSize: 12,
+              ),
             )
           : null,
       trailing: PopupMenuButton<String>(
@@ -397,7 +425,7 @@ class _LogListTile extends StatelessWidget {
         backgroundColor: Colors.brown.withValues(alpha: 0.2),
         child: const Icon(Icons.forest, color: Colors.brown),
       ),
-      title: Text('${log.volume.toStringAsFixed(3)} m³'),
+      title: Text('${log.volume.toStringAsFixed(2)} m³'),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -412,7 +440,10 @@ class _LogListTile extends StatelessWidget {
           if (parcelName != null)
             Text(
               parcelName!,
-              style: TextStyle(color: Colors.green[700], fontSize: 12),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.secondary,
+                fontSize: 12,
+              ),
             ),
         ],
       ),

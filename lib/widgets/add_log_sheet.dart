@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/log_entry.dart';
 import '../services/location_settings.dart';
 import '../services/species_service.dart';
+import '../utils/decimal_input.dart';
 
 /// Bottom sheet for adding a new log entry
 class AddLogSheet extends StatefulWidget {
@@ -62,8 +62,8 @@ class _AddLogSheetState extends State<AddLogSheet> {
   }
 
   void _updateVolume() {
-    final diameter = double.tryParse(_diameterController.text);
-    final length = double.tryParse(_lengthController.text);
+    final diameter = parseDecimal(_diameterController.text);
+    final length = parseDecimal(_lengthController.text);
 
     setState(() {
       if (diameter != null && length != null && diameter > 0 && length > 0) {
@@ -120,8 +120,8 @@ class _AddLogSheetState extends State<AddLogSheet> {
     }
 
     return LogEntry(
-      diameter: double.parse(_diameterController.text),
-      length: double.parse(_lengthController.text),
+      diameter: parseDecimal(_diameterController.text),
+      length: parseDecimal(_lengthController.text),
       volume: _calculatedVolume!,
       latitude: _latitude,
       longitude: _longitude,
@@ -146,6 +146,12 @@ class _AddLogSheetState extends State<AddLogSheet> {
       });
       if (mounted) {
         _diameterFocus.requestFocus();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Napaka pri shranjevanju: $e')),
+        );
       }
     } finally {
       if (mounted) {
@@ -191,9 +197,7 @@ class _AddLogSheetState extends State<AddLogSheet> {
                         isDense: true,
                       ),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                      ],
+                      inputFormatters: [DecimalTextInputFormatter()],
                       validator: (v) => v == null || v.isEmpty ? 'Vnesi' : null,
                     ),
                   ),
@@ -207,9 +211,7 @@ class _AddLogSheetState extends State<AddLogSheet> {
                         isDense: true,
                       ),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                      ],
+                      inputFormatters: [DecimalTextInputFormatter()],
                       validator: (v) => v == null || v.isEmpty ? 'Vnesi' : null,
                     ),
                   ),
@@ -259,18 +261,18 @@ class _AddLogSheetState extends State<AddLogSheet> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.green[50],
+                    color: Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.calculate, color: Colors.green[700]),
+                      const Icon(Icons.calculate, color: Colors.green),
                       const SizedBox(width: 8),
                       Text(
                         'Volumen: ${_calculatedVolume!.toStringAsFixed(4)} m³',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.green[800],
+                          color: Colors.green,
                         ),
                       ),
                     ],

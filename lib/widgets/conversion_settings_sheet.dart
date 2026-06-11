@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/decimal_input.dart';
 
 /// Bottom sheet for configuring volume conversion factors (m³ → PRM/NM)
 class ConversionSettingsSheet extends StatefulWidget {
@@ -22,12 +23,45 @@ class ConversionSettingsSheet extends StatefulWidget {
 class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
   late double _prm;
   late double _nm;
+  late final TextEditingController _prmController;
+  late final TextEditingController _nmController;
 
   @override
   void initState() {
     super.initState();
     _prm = widget.prmFactor;
     _nm = widget.nmFactor;
+    _prmController = TextEditingController(text: _formatFactor(_prm));
+    _nmController = TextEditingController(text: _formatFactor(_nm));
+  }
+
+  @override
+  void dispose() {
+    _prmController.dispose();
+    _nmController.dispose();
+    super.dispose();
+  }
+
+  String _formatFactor(double value) {
+    var text = value.toStringAsFixed(2);
+    if (text.endsWith('0')) text = text.substring(0, text.length - 1);
+    return text;
+  }
+
+  void _setPrm(double value) {
+    setState(() => _prm = value);
+    final text = _formatFactor(value);
+    if (_prmController.text != text) {
+      _prmController.text = text;
+    }
+  }
+
+  void _setNm(double value) {
+    setState(() => _nm = value);
+    final text = _formatFactor(value);
+    if (_nmController.text != text) {
+      _nmController.text = text;
+    }
   }
 
   @override
@@ -89,10 +123,16 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _FactorChip(label: 'Bukev/Hrast', value: 0.67, selected: _prm == 0.67, onTap: () => setState(() => _prm = 0.67)),
-                _FactorChip(label: 'Smreka/Jelka', value: 0.57, selected: _prm == 0.57, onTap: () => setState(() => _prm = 0.57)),
-                _FactorChip(label: 'Mehki listavci', value: 0.60, selected: _prm == 0.60, onTap: () => setState(() => _prm = 0.60)),
+                _FactorChip(label: 'Privzeto', value: 0.65, selected: _prm == 0.65, onTap: () => _setPrm(0.65)),
+                _FactorChip(label: 'Bukev/Hrast', value: 0.67, selected: _prm == 0.67, onTap: () => _setPrm(0.67)),
+                _FactorChip(label: 'Smreka/Jelka', value: 0.57, selected: _prm == 0.57, onTap: () => _setPrm(0.57)),
+                _FactorChip(label: 'Mehki listavci', value: 0.60, selected: _prm == 0.60, onTap: () => _setPrm(0.60)),
               ],
+            ),
+            const SizedBox(height: 8),
+            _CustomFactorField(
+              controller: _prmController,
+              onChanged: (value) => setState(() => _prm = value),
             ),
             const SizedBox(height: 12),
 
@@ -107,10 +147,15 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _FactorChip(label: 'Trdi les', value: 0.45, selected: _nm == 0.45, onTap: () => setState(() => _nm = 0.45)),
-                _FactorChip(label: 'Mehki les', value: 0.35, selected: _nm == 0.35, onTap: () => setState(() => _nm = 0.35)),
-                _FactorChip(label: 'Povprečje', value: 0.40, selected: _nm == 0.40, onTap: () => setState(() => _nm = 0.40)),
+                _FactorChip(label: 'Privzeto', value: 0.40, selected: _nm == 0.40, onTap: () => _setNm(0.40)),
+                _FactorChip(label: 'Trdi les', value: 0.45, selected: _nm == 0.45, onTap: () => _setNm(0.45)),
+                _FactorChip(label: 'Mehki les', value: 0.35, selected: _nm == 0.35, onTap: () => _setNm(0.35)),
               ],
+            ),
+            const SizedBox(height: 8),
+            _CustomFactorField(
+              controller: _nmController,
+              onChanged: (value) => setState(() => _nm = value),
             ),
             const SizedBox(height: 16),
 
@@ -147,21 +192,58 @@ class _FactorChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? Theme.of(context).colorScheme.primary : Colors.grey[800],
+          color: selected
+              ? colorScheme.primary
+              : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           '$label ($value)',
           style: TextStyle(
             fontSize: 12,
-            color: selected ? Colors.black : Colors.white,
+            color: selected ? colorScheme.onPrimary : colorScheme.onSurface,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Compact custom-value input for a conversion factor
+class _CustomFactorField extends StatelessWidget {
+  final TextEditingController controller;
+  final void Function(double value) onChanged;
+
+  const _CustomFactorField({
+    required this.controller,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 140,
+      child: TextField(
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [DecimalTextInputFormatter()],
+        decoration: const InputDecoration(
+          labelText: 'Faktor po meri',
+          isDense: true,
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (text) {
+          final value = parseDecimal(text);
+          if (value != null && value > 0) {
+            onChanged(value);
+          }
+        },
       ),
     );
   }

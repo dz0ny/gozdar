@@ -43,7 +43,7 @@ class LogCard extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            '${logEntry.volume.toStringAsFixed(3)} m³',
+                            '${logEntry.volume.toStringAsFixed(2)} m³',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),

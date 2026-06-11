@@ -203,7 +203,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Prenos koncen'),
+            content: Text('Prenos končan'),
             backgroundColor: Colors.green,
           ),
         );
@@ -232,7 +232,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Pocisti predpomnilnik?'),
+        title: const Text('Počisti predpomnilnik?'),
         content: const Text(
           'Vse prenesene ploščice bodo izbrisane. Te operacije ni mogoče razveljaviti.',
         ),
@@ -290,7 +290,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     _syncSubscription?.cancel();
     setState(() {
       _isSyncing = true;
-      _syncStatus = 'Syncing ${style.displayName}';
+      _syncStatus = 'Sinhroniziram ${style.displayName}';
       _syncProgress = 0;
     });
 
@@ -300,18 +300,18 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       if (!mounted) return;
       if (event is PeerSyncStarted) {
         setState(() {
-          _syncStatus = 'Syncing ${style.displayName}';
+          _syncStatus = 'Sinhroniziram ${style.displayName}';
           _syncProgress = event.totalTiles == 0 ? 1 : 0;
         });
       } else if (event is PeerSyncTileDownloaded) {
         setState(() {
           _syncProgress = event.total == 0 ? 1 : event.downloaded / event.total;
-          _syncStatus = 'Downloaded ${event.downloaded}/${event.total}';
+          _syncStatus = 'Preneseno ${event.downloaded}/${event.total}';
         });
       } else if (event is PeerSyncTileSkipped) {
         setState(() {
           _syncProgress = event.total == 0 ? 1 : event.skipped / event.total;
-          _syncStatus = 'Cached ${event.skipped}/${event.total}';
+          _syncStatus = 'Iz predpomnilnika ${event.skipped}/${event.total}';
         });
       } else if (event is PeerSyncComplete) {
         await _loadCacheStats();
@@ -320,12 +320,12 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
           _isSyncing = false;
           _syncProgress = 1;
           _syncStatus =
-              'Done! ${event.downloaded} downloaded, ${event.skipped} cached, ${event.failed} failed';
+              'Končano! ${event.downloaded} prenesenih, ${event.skipped} iz predpomnilnika, ${event.failed} neuspešnih';
         });
       } else if (event is PeerSyncCancelled) {
         setState(() {
           _isSyncing = false;
-          _syncStatus = 'Sync cancelled';
+          _syncStatus = 'Sinhronizacija preklicana';
         });
       }
     });
@@ -370,16 +370,16 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                       ),
                     ),
                     Text(
-                      'Tile Sharing',
+                      'Deljenje ploščic',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 12),
                     SwitchListTile(
-                      title: const Text('Share my tiles'),
+                      title: const Text('Deli moje ploščice'),
                       subtitle: Text(
                         _isServerRunning
-                            ? 'Other devices can fetch tiles from this device'
-                            : 'Start serving cached tiles to nearby devices',
+                            ? 'Druge naprave lahko prenesejo ploščice s te naprave'
+                            : 'Začni deliti predpomnjene ploščice z bližnjimi napravami',
                       ),
                       secondary: Icon(
                         _isServerRunning
@@ -397,7 +397,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
-                          'My Cached Maps',
+                          'Moje predpomnjene karte',
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                       ),
@@ -407,11 +407,11 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                           leading: const Icon(Icons.map, size: 20),
                           title: Text(style.displayName),
                           subtitle: Text(
-                            '${_formatNumber(style.tileCount)} tiles, ${_formatBytes(style.sizeBytes)}',
+                            '${_formatNumber(style.tileCount)} ploščic, ${_formatBytes(style.sizeBytes)}',
                           ),
                           trailing: IconButton(
                             icon: const Icon(Icons.delete_outline, size: 20),
-                            tooltip: 'Delete',
+                            tooltip: 'Izbriši',
                             onPressed: () async {
                               await _confirmDeleteStyle(context, style);
                               refreshSheet();
@@ -427,7 +427,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Nearby Devices',
+                              'Bližnje naprave',
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                           ),
@@ -440,7 +440,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                           else
                             IconButton(
                               icon: const Icon(Icons.refresh, size: 20),
-                              tooltip: 'Refresh',
+                              tooltip: 'Osveži',
                               onPressed: () async {
                                 await _refreshPeerCatalogs();
                                 refreshSheet();
@@ -448,7 +448,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                             ),
                           IconButton(
                             icon: const Icon(Icons.add, size: 20),
-                            tooltip: 'Add peer manually',
+                            tooltip: 'Ročno dodaj napravo',
                             onPressed: () => _showAddPeerDialog(context, refreshSheet),
                           ),
                         ],
@@ -458,7 +458,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
-                          'No peers found on the local network.\nMake sure other devices have tile sharing enabled.',
+                          'V lokalnem omrežju ni najdenih naprav.\nPreverite, da imajo druge naprave vključeno deljenje ploščic.',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
@@ -474,7 +474,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                           (peer) => ListTile(
                             leading: const Icon(Icons.devices),
                             title: Text(peer.ipAddress),
-                            subtitle: const Text('Fetching catalog'),
+                            subtitle: const Text('Pridobivam katalog'),
                             trailing: IconButton(
                               icon: const Icon(Icons.remove_circle_outline, size: 20),
                               onPressed: () {
@@ -506,7 +506,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                                   _tileSharingService.cancelSync();
                                   refreshSheet();
                                 },
-                                child: const Text('Cancel'),
+                                child: const Text('Prekliči'),
                               ),
                           ],
                         ),
@@ -558,7 +558,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  'No cached tiles on this device',
+                  'Na tej napravi ni predpomnjenih ploščic',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context)
                         .colorScheme
@@ -579,8 +579,8 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                 leading: const Icon(Icons.map_outlined, size: 20),
                 title: Text(style.displayName),
                 subtitle: Text(
-                  '${_formatNumber(style.tileCount)} tiles, ${_formatBytes(style.sizeBytes)}'
-                  '${localCount > 0 ? ' (you have ${_formatNumber(localCount)})' : ''}',
+                  '${_formatNumber(style.tileCount)} ploščic, ${_formatBytes(style.sizeBytes)}'
+                  '${localCount > 0 ? ' (imate ${_formatNumber(localCount)})' : ''}',
                 ),
                 trailing: missingTiles > 0
                     ? TextButton.icon(
@@ -593,7 +593,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                         icon: const Icon(Icons.download, size: 16),
                         label: Text(
                           missingTiles == style.tileCount
-                              ? 'Get all'
+                              ? 'Prenesi vse'
                               : '+${_formatNumber(missingTiles)}',
                         ),
                       )
@@ -611,11 +611,11 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add peer'),
+        title: const Text('Dodaj napravo'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
-            labelText: 'IP Address',
+            labelText: 'IP naslov',
             hintText: '192.168.1.100',
           ),
           keyboardType: TextInputType.number,
@@ -624,7 +624,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Prekliči'),
           ),
           TextButton(
             onPressed: () {
@@ -634,7 +634,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                 Navigator.pop(context);
               }
             },
-            child: const Text('Add'),
+            child: const Text('Dodaj'),
           ),
         ],
       ),
@@ -646,18 +646,18 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Delete ${style.displayName}?'),
+        title: Text('Izbriši ${style.displayName}?'),
         content: Text(
-          '${_formatNumber(style.tileCount)} tiles, ${_formatBytes(style.sizeBytes)} will be deleted.',
+          '${_formatNumber(style.tileCount)} ploščic, ${_formatBytes(style.sizeBytes)} bo izbrisanih.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: const Text('Prekliči'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Izbriši', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -761,7 +761,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                 _isServerRunning ? Icons.wifi_tethering : Icons.wifi_tethering_off,
               ),
             ),
-            tooltip: _isServerRunning ? 'Sharing tiles' : 'Tile sharing off',
+            tooltip: _isServerRunning ? 'Deljenje ploščic vključeno' : 'Deljenje ploščic izklopljeno',
             onPressed: _showSharingSheet,
           ),
         ],
@@ -939,7 +939,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     return TextButton.icon(
       onPressed: _clearCache,
       icon: const Icon(Icons.delete_outline),
-      label: const Text('Pocisti predpomnilnik'),
+      label: const Text('Počisti predpomnilnik'),
       style: TextButton.styleFrom(foregroundColor: Colors.red),
     );
   }

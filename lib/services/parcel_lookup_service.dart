@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -94,6 +95,17 @@ class ParcelLookupService {
 
   final List<_RegionDb> _dbs = [];
 
+  /// LRU cache of decoded parcels keyed by `eid` so re-querying overlapping
+  /// bounds while panning reuses already-decoded geometry instead of re-reading
+  /// the poly blob. Insertion-ordered ([LinkedHashMap]); the oldest entry is
+  /// evicted once [_decodeCacheCap] is reached. Cleared whenever databases are
+  /// loaded/unloaded/replaced so stale geometry can't survive a region swap.
+  static const _decodeCacheCap = 8000;
+  final LinkedHashMap<String, CadastralParcel> _decodeCache =
+      LinkedHashMap<String, CadastralParcel>();
+
+  void _clearDecodeCache() => _decodeCache.clear();
+
   /// Whether at least one offline parcels database is loaded.
   bool get isAvailable => _dbs.isNotEmpty;
 
@@ -155,6 +167,9 @@ class ParcelLookupService {
   }
 
   _RegionDb _openDb(String path) {
+    // A new region is being added — drop decoded geometry so a re-query can't
+    // return parcels from before the loaded set changed.
+    _clearDecodeCache();
     final db = sqlite3.open(path);
     final hasTable = db.select(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='parcels'",
@@ -177,6 +192,7 @@ class ParcelLookupService {
 
   /// Close + drop the in-memory handle for [path] if currently open.
   void _dropOpen(String path) {
+    _clearDecodeCache();
     _dbs.removeWhere((d) {
       if (d.path == path) {
         d.db.close();
@@ -347,6 +363,7 @@ class ParcelLookupService {
 
   /// Remove all loaded region databases.
   Future<void> removeAll() async {
+    _clearDecodeCache();
     final paths = _dbs.map((d) => d.path).toList();
     for (final d in _dbs) {
       d.db.close();
@@ -360,6 +377,7 @@ class ParcelLookupService {
   /// Remove loaded databases matching [onlySource] (`'imported'`/`'downloaded'`),
   /// or all when null. Returns how many were removed.
   Future<int> removeBySource(String? onlySource) async {
+    _clearDecodeCache();
     final toRemove = _dbs
         .where((d) => onlySource == null || d.source == onlySource)
         .toList();
@@ -479,9 +497,25 @@ class ParcelLookupService {
   }
 
   CadastralParcel? _rowToParcel(Row row) {
+    final eid = (row['eid'] ?? '').toString();
+    if (eid.isNotEmpty) {
+      final cached = _decodeCache.remove(eid);
+      if (cached != null) {
+        // Re-insert to mark as most-recently-used.
+        _decodeCache[eid] = cached;
+        return cached;
+      }
+    }
     final rings = _decodeRings(row['poly'] as Uint8List);
     if (rings.isEmpty) return null;
-    return _parcelFrom(row, rings.first);
+    final parcel = _parcelFrom(row, rings.first);
+    if (eid.isNotEmpty) {
+      _decodeCache[eid] = parcel;
+      if (_decodeCache.length > _decodeCacheCap) {
+        _decodeCache.remove(_decodeCache.keys.first);
+      }
+    }
+    return parcel;
   }
 
   CadastralParcel _parcelFrom(Row row, List<LatLng> outerRing) {

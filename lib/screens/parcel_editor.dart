@@ -171,13 +171,20 @@ class _ParcelEditorState extends State<ParcelEditor> {
       return;
     }
 
-    final parcel = Parcel(
-      id: widget.parcel?.id ?? 0,
-      name: _nameController.text.trim(),
-      polygon: _polygon,
-      forestType: _forestType,
-      createdAt: widget.parcel?.createdAt,
-    );
+    // When editing, copy the existing parcel so all other fields (owner,
+    // notes, cadastral, wood tracking, point names) survive. Only build a
+    // fresh Parcel for the create case.
+    final parcel = widget.parcel != null
+        ? widget.parcel!.copyWith(
+            name: _nameController.text.trim(),
+            polygon: _polygon,
+            forestType: _forestType,
+          )
+        : Parcel(
+            name: _nameController.text.trim(),
+            polygon: _polygon,
+            forestType: _forestType,
+          );
 
     widget.onSave?.call(parcel);
     context.pop();

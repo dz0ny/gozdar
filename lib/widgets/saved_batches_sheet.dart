@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/log_batch.dart';
 import '../providers/logs_provider.dart';
 import '../screens/batch_detail_screen.dart';
+import '../utils/sl_plural.dart';
 
 /// Bottom sheet displaying saved log batches/projects
 class SavedBatchesSheet extends StatefulWidget {
@@ -37,8 +38,11 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Izbriši'),
-        content: const Text('Ali ste prepričani?'),
+        title: const Text('Izbriši projekt'),
+        content: const Text(
+          'Ali ste prepričani, da želite izbrisati ta projekt?\n\n'
+          'Hlodi v projektu bodo ostali shranjeni.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -198,7 +202,7 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                                       ),
                                       const Spacer(),
                                       Text(
-                                        '${batch.logCount} hlodov',
+                                        slCount(batch.logCount, 'hlod', 'hloda', 'hlodi', 'hlodov'),
                                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                               color: Colors.grey[500],
                                             ),

@@ -21,6 +21,7 @@ import '../services/owner_lookup_service.dart';
 import '../services/parcel_pdf_service.dart';
 import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
+import '../utils/decimal_input.dart';
 import '../widgets/notes_editor_sheet.dart';
 import '../widgets/parcel_info_widgets.dart';
 import '../widgets/parcel_map_preview.dart';
@@ -137,6 +138,10 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         _parcel = updatedParcel;
         _isLoading = false;
       });
+      // Refresh the map so the Karta tab reflects the edited polygon/name.
+      if (mounted) {
+        context.read<MapProvider>().loadParcels();
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
@@ -151,6 +156,24 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   Future<void> _printParcel() async {
     final mapProvider = context.read<MapProvider>();
     final messenger = ScaffoldMessenger.of(context);
+    // PDF generation fetches map tiles and is slow; show progress feedback
+    // since the popup menu has already closed.
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 16),
+            Text('Pripravljam PDF …'),
+          ],
+        ),
+        duration: Duration(minutes: 1),
+      ),
+    );
     final cadastral = CadastralParcel(
       id: _parcel.cadastralId ?? '',
       cadastralMunicipality: _parcel.cadastralMunicipality ?? 0,
@@ -173,6 +196,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/parcela-$safeName.pdf');
       await file.writeAsBytes(bytes, flush: true);
+      messenger.hideCurrentSnackBar();
       final result = await OpenFilex.open(file.path);
       if (result.type != ResultType.done && mounted) {
         messenger.showSnackBar(
@@ -180,6 +204,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         );
       }
     } catch (e) {
+      messenger.hideCurrentSnackBar();
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(content: Text('Napaka pri pripravi PDF: $e')),
@@ -189,6 +214,24 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   }
 
   Future<void> _exportParcel() async {
+    final messenger = ScaffoldMessenger.of(context);
+    // Export can be slow; show progress since the popup menu has closed.
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 16),
+            Text('Pripravljam izvoz …'),
+          ],
+        ),
+        duration: Duration(minutes: 1),
+      ),
+    );
     try {
       await KmlService.exportParcelWithData(
         parcel: _parcel,
@@ -196,11 +239,18 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         secnja: _secnjaInParcel,
         locations: _locationsInParcel,
       );
-    } catch (e) {
+      messenger.hideCurrentSnackBar();
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Napaka pri izvozu: $e')));
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Izvoz zaključen')),
+        );
+      }
+    } catch (e) {
+      messenger.hideCurrentSnackBar();
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Napaka pri izvozu: $e')),
+        );
       }
     }
   }
@@ -283,7 +333,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
 
     if (result != null) {
       await _updateParcel(
-        _parcel.copyWith(owner: result.isEmpty ? null : result),
+        result.isEmpty
+            ? _parcel.copyWith(clearOwner: true)
+            : _parcel.copyWith(owner: result),
       );
     }
   }
@@ -298,7 +350,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
 
     if (result != null) {
       await _updateParcel(
-        _parcel.copyWith(notes: result.isEmpty ? null : result),
+        result.isEmpty
+            ? _parcel.copyWith(clearNotes: true)
+            : _parcel.copyWith(notes: result),
       );
     }
   }
@@ -308,34 +362,54 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       text: _parcel.woodAllowance > 0 ? _parcel.woodAllowance.toString() : '',
     );
 
+    String? errorText;
     final result = await showDialog<double>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Dovoljen posek'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Količina (m³)',
-            hintText: 'Vnesite dovoljeno količino',
-            border: OutlineInputBorder(),
-            suffixText: 'm³',
-          ),
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Prekliči'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = double.tryParse(controller.text) ?? 0.0;
-              Navigator.of(context).pop(value);
-            },
-            child: const Text('Shrani'),
-          ),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Dovoljen posek'),
+            content: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                labelText: 'Količina (m³)',
+                hintText: 'Vnesite dovoljeno količino',
+                border: const OutlineInputBorder(),
+                suffixText: 'm³',
+                errorText: errorText,
+              ),
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [DecimalTextInputFormatter()],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Prekliči'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final text = controller.text.trim();
+                  if (text.isEmpty) {
+                    Navigator.of(context).pop(0.0);
+                    return;
+                  }
+                  final value = parseDecimal(text);
+                  if (value == null) {
+                    setDialogState(
+                      () => errorText = 'Neveljavna številka',
+                    );
+                    return;
+                  }
+                  Navigator.of(context).pop(value);
+                },
+                child: const Text('Shrani'),
+              ),
+            ],
+          );
+        },
       ),
     );
 
@@ -348,7 +422,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     final volumeController = TextEditingController();
     final treesController = TextEditingController(text: '1');
 
-    final result = await showDialog<({double volume, int trees})>(
+    final result = await showDialog<({double? volume, int trees})>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Zabeleži posek'),
@@ -382,6 +456,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: [DecimalTextInputFormatter()],
             ),
             const SizedBox(height: 12),
             TextField(
@@ -403,7 +478,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
           ),
           FilledButton(
             onPressed: () {
-              final volume = double.tryParse(volumeController.text) ?? 0.0;
+              final volume = parseDecimal(volumeController.text);
               final trees = int.tryParse(treesController.text) ?? 0;
               Navigator.of(context).pop((volume: volume, trees: trees));
             },
@@ -413,21 +488,31 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       ),
     );
 
-    if (result != null && result.volume > 0) {
-      final newWoodCut = _parcel.woodCut + result.volume;
-      final newTreesCut = _parcel.treesCut + result.trees;
-      await _updateParcel(
-        _parcel.copyWith(woodCut: newWoodCut, treesCut: newTreesCut),
-      );
+    if (result == null) return;
 
+    final volume = result.volume;
+    if (volume == null || volume <= 0) {
       if (mounted) {
-        final message = result.trees > 0
-            ? 'Dodano ${result.volume.toStringAsFixed(2)} m³ poseka (${result.trees} dreves)'
-            : 'Dodano ${result.volume.toStringAsFixed(2)} m³ poseka';
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vnesite veljavno količino poseka')),
+        );
       }
+      return;
+    }
+
+    final newWoodCut = _parcel.woodCut + volume;
+    final newTreesCut = _parcel.treesCut + result.trees;
+    await _updateParcel(
+      _parcel.copyWith(woodCut: newWoodCut, treesCut: newTreesCut),
+    );
+
+    if (mounted) {
+      final message = result.trees > 0
+          ? 'Dodano ${volume.toStringAsFixed(2)} m³ poseka (${result.trees} dreves)'
+          : 'Dodano ${volume.toStringAsFixed(2)} m³ poseka';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -531,16 +616,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       extra: ParcelEditorParams(
         parcel: _parcel,
         onSave: (result) async {
-          // Preserve the existing metadata when updating polygon
-          final updatedParcel = result.copyWith(
-            owner: _parcel.owner,
-            woodAllowance: _parcel.woodAllowance,
-            woodCut: _parcel.woodCut,
-            treesCut: _parcel.treesCut,
-            cadastralMunicipality: _parcel.cadastralMunicipality,
-            parcelNumber: _parcel.parcelNumber,
-          );
-          await _updateParcel(updatedParcel);
+          // ParcelEditor copies the existing parcel, so owner/notes/cadastral/
+          // wood fields and point names are already preserved.
+          await _updateParcel(result);
         },
       ),
     );

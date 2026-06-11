@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +9,8 @@ import '../providers/logs_provider.dart';
 import '../services/database_service.dart';
 import '../services/export_service.dart';
 import '../services/location_settings.dart';
+import '../services/species_service.dart';
+import '../utils/decimal_input.dart';
 import '../widgets/conversion_settings_sheet.dart';
 import '../widgets/log_card.dart';
 
@@ -115,6 +116,9 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
                   latitude: entry.latitude,
                   longitude: entry.longitude,
                   notes: entry.notes,
+                  species: entry.species,
+                  createdAt: entry.createdAt,
+                  parcelId: entry.parcelId,
                   batchId: _batch.id,
                 );
                 await _databaseService.insertLog(newEntry);
@@ -169,14 +173,24 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => ConversionSettingsSheet(
-        totalVolume: _totalVolume,
-        prmFactor: provider.conversionFactors.prm,
-        nmFactor: provider.conversionFactors.nm,
-        onChanged: (prm, nm) {
-          provider.setConversionFactors(prm, nm);
-          setState(() {}); // Refresh to show updated conversions
-        },
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ConversionSettingsSheet(
+          totalVolume: _totalVolume,
+          prmFactor: provider.conversionFactors.prm,
+          nmFactor: provider.conversionFactors.nm,
+          onChanged: (prm, nm) {
+            provider.setConversionFactors(prm, nm);
+            setState(() {}); // Refresh to show updated conversions
+          },
+        ),
       ),
     );
   }
@@ -420,11 +434,24 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
   bool _isSaving = false;
   int _addedCount = 0;
 
+  final _speciesService = SpeciesService();
+  List<String> _availableSpecies = [];
+  String? _selectedSpecies;
+
   @override
   void initState() {
     super.initState();
+    _loadSpecies();
     _diameterController.addListener(_updateVolume);
     _lengthController.addListener(_updateVolume);
+  }
+
+  Future<void> _loadSpecies() async {
+    final species = await _speciesService.getSpecies();
+    if (!mounted) return;
+    setState(() {
+      _availableSpecies = species;
+    });
   }
 
   @override
@@ -436,8 +463,8 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
   }
 
   void _updateVolume() {
-    final diameter = double.tryParse(_diameterController.text);
-    final length = double.tryParse(_lengthController.text);
+    final diameter = parseDecimal(_diameterController.text);
+    final length = parseDecimal(_lengthController.text);
 
     setState(() {
       if (diameter != null && length != null && diameter > 0 && length > 0) {
@@ -452,14 +479,25 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
     setState(() => _isLoadingLocation = true);
 
     try {
-      final permission = await Geolocator.checkPermission();
+      LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        await Geolocator.requestPermission();
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Dovoljenje za lokacijo zavrnjeno')),
+          );
+        }
+        return;
       }
 
       final position = await Geolocator.getCurrentPosition(
         locationSettings: GozdarLocationSettings.currentPosition,
       );
+      if (!mounted) return;
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;
@@ -471,7 +509,9 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
         );
       }
     } finally {
-      setState(() => _isLoadingLocation = false);
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+      }
     }
   }
 
@@ -481,11 +521,12 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
     }
 
     return LogEntry(
-      diameter: double.parse(_diameterController.text),
-      length: double.parse(_lengthController.text),
+      diameter: parseDecimal(_diameterController.text),
+      length: parseDecimal(_lengthController.text),
       volume: _calculatedVolume!,
       latitude: _latitude,
       longitude: _longitude,
+      species: _selectedSpecies,
       batchId: widget.batchId,
     );
   }
@@ -497,15 +538,20 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
     setState(() => _isSaving = true);
     try {
       await widget.onAdd(entry);
+      if (!mounted) return;
       setState(() {
         _addedCount++;
         _diameterController.clear();
         _lengthController.clear();
         _calculatedVolume = null;
       });
-      _diameterFocus.requestFocus();
+      if (mounted) {
+        _diameterFocus.requestFocus();
+      }
     } finally {
-      setState(() => _isSaving = false);
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -554,7 +600,7 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
                       ),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                        DecimalTextInputFormatter(),
                       ],
                       validator: (v) => v == null || v.isEmpty ? 'Vnesi' : null,
                     ),
@@ -570,12 +616,51 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
                       ),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                        DecimalTextInputFormatter(),
                       ],
                       validator: (v) => v == null || v.isEmpty ? 'Vnesi' : null,
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                // ignore: deprecated_member_use
+                value: _selectedSpecies,
+                decoration: InputDecoration(
+                  labelText: 'Drevesna vrsta',
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.forest, size: 18),
+                  suffixIcon: _selectedSpecies != null
+                      ? IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () {
+                            setState(() {
+                              _selectedSpecies = null;
+                            });
+                          },
+                          visualDensity: VisualDensity.compact,
+                        )
+                      : null,
+                ),
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: null,
+                    child: Text('Ni izbrano'),
+                  ),
+                  ..._availableSpecies.map((species) {
+                    return DropdownMenuItem<String>(
+                      value: species,
+                      child: Text(species),
+                    );
+                  }),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedSpecies = value;
+                  });
+                },
               ),
               const SizedBox(height: 12),
               if (_calculatedVolume != null)
@@ -718,6 +803,9 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
       notes: _notesController.text.isEmpty ? null : _notesController.text,
       latitude: _latitude,
       longitude: _longitude,
+      clearOwner: _ownerController.text.isEmpty,
+      clearNotes: _notesController.text.isEmpty,
+      clearLocation: _latitude == null || _longitude == null,
     );
     Navigator.pop(context, updated);
   }

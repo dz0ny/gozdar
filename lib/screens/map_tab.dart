@@ -95,6 +95,72 @@ class _MeasurementState {
   }
 }
 
+/// Fixed aiming reticle drawn at the centre of the map while measuring.
+/// A circle + cross with a white outline (visible over any imagery) and a
+/// coloured core, plus a tiny centre dot marking the exact target point.
+class _MeasurementCrosshair extends StatelessWidget {
+  const _MeasurementCrosshair({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(44, 44),
+      painter: _MeasurementCrosshairPainter(color: color),
+    );
+  }
+}
+
+class _MeasurementCrosshairPainter extends CustomPainter {
+  _MeasurementCrosshairPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    const radius = 14.0;
+    const arm = 9.0;
+
+    final outline = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    final core = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+
+    // Cross arms (drawn with a gap over the centre so the ring/dot read clearly).
+    final segments = <List<Offset>>[
+      [Offset(center.dx, center.dy - radius - arm), Offset(center.dx, center.dy - radius)],
+      [Offset(center.dx, center.dy + radius), Offset(center.dx, center.dy + radius + arm)],
+      [Offset(center.dx - radius - arm, center.dy), Offset(center.dx - radius, center.dy)],
+      [Offset(center.dx + radius, center.dy), Offset(center.dx + radius + arm, center.dy)],
+    ];
+    for (final s in segments) {
+      canvas.drawLine(s[0], s[1], outline);
+    }
+    // Ring outline then coloured ring.
+    canvas.drawCircle(center, radius, outline);
+    for (final s in segments) {
+      canvas.drawLine(s[0], s[1], core);
+    }
+    canvas.drawCircle(center, radius, core);
+
+    // Exact-point centre dot: white halo + coloured fill.
+    canvas.drawCircle(center, 3.5, Paint()..color = Colors.white);
+    canvas.drawCircle(center, 2.0, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_MeasurementCrosshairPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
 /// Map Tab screen for the Gozdar app
 /// Displays an interactive map with support for multiple layers,
 /// saved locations, and GPS functionality
@@ -137,9 +203,31 @@ class MapTabState extends State<MapTab> {
 
   /// Public-owner category per [_offlineParcels] id (state / municipality /
   /// company), for parcels that are publicly owned/managed. Computed in
-  /// [_refreshOfflineParcels] so the per-frame polygon build stays cheap. Empty
+  /// [_refreshOfflineParcels] so the polygon build stays cheap. Empty
   /// unless at least one category highlight is on.
   Map<String, PublicOwnerCategory> _publicParcelCategory = const {};
+
+  /// Prebuilt polygons for the two offline-kataster layers, rebuilt in
+  /// [_refreshOfflineParcels]/[_rebuildOfflinePolygons] rather than in
+  /// [build] so a plain rebuild (e.g. a marker animation) doesn't re-map
+  /// thousands of parcels. [_offlineFillPolygons] holds the public-owner
+  /// category tints (drawn under the outlines); [_offlineOutlinePolygons]
+  /// holds the red/category outlines and the parcel-number labels.
+  List<Polygon> _offlineFillPolygons = const [];
+  List<Polygon> _offlineOutlinePolygons = const [];
+
+  /// Padded bounds the cached parcels were queried for, and the label/category
+  /// state they were built with. While the viewport stays inside this rect and
+  /// the state is unchanged, [_refreshOfflineParcels] can skip the SQLite query.
+  /// Invalidated (set null) when the kataster layer toggles, a region DB loads,
+  /// or category/name state changes.
+  LatLngBounds? _offlineQueriedBounds;
+  bool _offlineQueriedLabels = false;
+  bool _offlineQueriedAnyCategory = false;
+
+  /// Debounce timer for mid-gesture zoom refreshes (continuous pinches), so a
+  /// query runs at most a few times per gesture instead of every frame.
+  Timer? _offlineZoomDebounce;
 
   /// Composite keys ("ko|parcela") of parcels whose mejniki (boundary points) are
   /// shown. Per-parcel and transient — toggled from the long-press menu for the
@@ -385,6 +473,7 @@ class MapTabState extends State<MapTab> {
 
   @override
   void dispose() {
+    _offlineZoomDebounce?.cancel();
     rtkPositionService.removeListener(_handleRtkPositionUpdate);
     VectorBasemapService.instance.removeListener(_handleRtkPositionUpdate);
     _locationTracker.dispose();
@@ -454,12 +543,13 @@ class MapTabState extends State<MapTab> {
         target = LatLng(position.latitude, position.longitude);
       }
 
-      // Animate map to current location (respect maxZoom), reset rotation to north
+      // Animate map to current location (respect maxZoom), preserving the
+      // current rotation like every other camera move in this file.
       final targetZoom = 15.0.clamp(7.0, MapLayer.appMaxZoom);
       _mapController.moveAndRotate(
         target,
         targetZoom,
-        0, // Reset rotation to north
+        _mapController.camera.rotation,
       );
     } catch (e) {
       if (mounted) {
@@ -563,35 +653,40 @@ class MapTabState extends State<MapTab> {
       longitude: position.longitude,
     );
 
-    final result = await Navigator.of(context).push<LogEntry>(
+    await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (context) => LogEntryForm(logEntry: prefilledEntry),
+        builder: (dialogContext) => LogEntryForm(
+          logEntry: prefilledEntry,
+          // LogEntryForm pops without a result; it only reports the saved
+          // entry through onSave. Persist it and refresh the map markers here.
+          // Use the tab's own context (not the popping dialog's) for the
+          // provider lookup and snackbar.
+          onSave: (entry) async {
+            final mapProvider = context.read<MapProvider>();
+            try {
+              await DatabaseService().insertLog(entry);
+              await mapProvider.loadGeolocatedLogs();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Hlod dodan (${entry.volume.toStringAsFixed(3)} m³)',
+                    ),
+                  ),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Napaka pri dodajanju hloda: $e')),
+                );
+              }
+            }
+          },
+        ),
         fullscreenDialog: true,
       ),
     );
-
-    if (result != null && mounted) {
-      final mapProvider = context.read<MapProvider>();
-      try {
-        await DatabaseService().insertLog(result);
-        await mapProvider.loadGeolocatedLogs();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Hlod dodan (${result.volume.toStringAsFixed(3)} m³)',
-              ),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka pri dodajanju hloda: $e')),
-          );
-        }
-      }
-    }
   }
 
   /// Navigate to parcel detail screen
@@ -643,9 +738,24 @@ class MapTabState extends State<MapTab> {
     }
   }
 
+  /// Whether parcel-number labels are currently drawn (names overlay on and
+  /// zoomed in past the label threshold).
+  bool get _offlineLabelsVisible {
+    final overlays = context.read<MapProvider>().activeOverlays;
+    return overlays.contains(MapLayerType.katasterNazivi) &&
+        _currentZoom >= _offlineKatasterLabelMinZoom;
+  }
+
+  /// Invalidate the remembered padded query rect so the next
+  /// [_refreshOfflineParcels] re-queries. Call when something other than panning
+  /// changes what should be drawn (layer toggle, region load, recolour).
+  void _invalidateOfflineQueryCache() => _offlineQueriedBounds = null;
+
   /// Recompute the offline kataster polygons for the current viewport. Cheap
-  /// (synchronous indexed SQLite query), called on move/zoom settle. Clears the
-  /// overlay when no offline DB is loaded or the map is zoomed out.
+  /// (synchronous indexed SQLite query), called on move/zoom settle. Queries a
+  /// padded bounds and remembers it so subsequent pans that stay inside skip the
+  /// query entirely. Clears the overlay when no offline DB is loaded or the map
+  /// is zoomed out, and rebuilds the cached polygon lists used by [build].
   void _refreshOfflineParcels() {
     final svc = ParcelLookupService.instance;
     final bounds = _visibleBounds;
@@ -657,25 +767,50 @@ class MapTabState extends State<MapTab> {
         !katasterOn ||
         bounds == null ||
         _currentZoom < _offlineKatasterMinZoom) {
+      _offlineQueriedBounds = null;
       if (_offlineParcels.isNotEmpty) {
         setState(() {
           _offlineParcels = const [];
           _publicParcelCategory = const {};
+          _offlineFillPolygons = const [];
+          _offlineOutlinePolygons = const [];
         });
       }
       return;
     }
+
+    final labels = _offlineLabelsVisible;
+    final anyCategory = PublicParcelSettings.instance.anyOn;
+
+    // Skip the query+rebuild when the viewport is still inside the padded rect
+    // we last queried and the label/category state hasn't changed — panning
+    // within the margin needs no new data (flutter_map culls off-screen parcels).
+    final cached = _offlineQueriedBounds;
+    if (cached != null &&
+        labels == _offlineQueriedLabels &&
+        anyCategory == _offlineQueriedAnyCategory &&
+        cached.containsBounds(bounds)) {
+      return;
+    }
+
+    // Query a padded bounds (~40% margin) so small pans reuse the result.
+    final latPad = (bounds.north - bounds.south) * 0.4;
+    final lonPad = (bounds.east - bounds.west) * 0.4;
+    final padded = LatLngBounds(
+      LatLng(bounds.south - latPad, bounds.west - lonPad),
+      LatLng(bounds.north + latPad, bounds.east + lonPad),
+    );
     final parcels = svc.parcelsInBounds(
-      west: bounds.west,
-      east: bounds.east,
-      south: bounds.south,
-      north: bounds.north,
+      west: padded.west,
+      east: padded.east,
+      south: padded.south,
+      north: padded.north,
     );
     // Pre-compute each parcel's public-owner category so the polygon builder can
     // tint by owner type without per-frame DB queries. Only when at least one
     // category highlight is enabled.
     Map<String, PublicOwnerCategory> categories = const {};
-    if (PublicParcelSettings.instance.anyOn) {
+    if (anyCategory) {
       final owners = OwnerLookupService.instance;
       categories = {
         for (final p in parcels)
@@ -685,9 +820,83 @@ class MapTabState extends State<MapTab> {
           ),
       };
     }
+
+    _offlineQueriedBounds = padded;
+    _offlineQueriedLabels = labels;
+    _offlineQueriedAnyCategory = anyCategory;
     setState(() {
       _offlineParcels = parcels;
       _publicParcelCategory = categories;
+      _rebuildOfflinePolygons(labels: labels);
+    });
+  }
+
+  /// Rebuild the cached fill/outline polygon lists from [_offlineParcels] and
+  /// the current category/label state. Call inside a [setState] (or wrap the
+  /// call). Used by [_refreshOfflineParcels] and by the recolour/label paths
+  /// that change appearance without re-querying.
+  void _rebuildOfflinePolygons({required bool labels}) {
+    _offlineFillPolygons = [
+      for (final p in _offlineParcels)
+        if (_highlightCategory(p) case final cat?)
+          Polygon(
+            points: p.polygon,
+            color: cat.fillColor,
+            borderStrokeWidth: 0,
+          ),
+    ];
+    _offlineOutlinePolygons = _offlineParcels.map((p) {
+      // Colour the outline by public-owner category when on; otherwise the
+      // default red kataster outline.
+      final cat = _highlightCategory(p);
+      return Polygon(
+        points: p.polygon,
+        color: const Color(0x00000000),
+        borderColor: cat?.color ?? const Color(0xFFD50000),
+        borderStrokeWidth: 2.5,
+        label: labels ? p.parcelNumber : null,
+        labelStyle: TextStyle(
+          color: cat?.color ?? const Color(0xFFB71C1C),
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+          // White hard-edge outline so red numbers stay readable over aerial
+          // imagery.
+          shadows: const [
+            Shadow(color: Colors.white, offset: Offset(1, 1)),
+            Shadow(color: Colors.white, offset: Offset(-1, 1)),
+            Shadow(color: Colors.white, offset: Offset(1, -1)),
+            Shadow(color: Colors.white, offset: Offset(-1, -1)),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  /// Recolour the cached polygons after a category-highlight toggle without
+  /// re-querying the DB (the parcels are unchanged, only their tints). Also
+  /// invalidates the query cache so the next pan re-evaluates category state.
+  void _recolourOfflinePolygons() {
+    _invalidateOfflineQueryCache();
+    if (_offlineParcels.isEmpty) return;
+    setState(() => _rebuildOfflinePolygons(labels: _offlineLabelsVisible));
+  }
+
+  /// Handle a mid-gesture zoom change. The overlay/label visibility flips at the
+  /// kataster min-zoom (15) and the label min-zoom (17); crossing either of those
+  /// in either direction triggers an immediate refresh so the overlay/labels
+  /// appear/disappear promptly. Otherwise the refresh is debounced so a
+  /// continuous pinch runs at most a few queries instead of one per frame.
+  void _onZoomChanged(double from, double to) {
+    bool crosses(double t) => (from < t) != (to < t);
+    if (crosses(_offlineKatasterMinZoom) ||
+        crosses(_offlineKatasterLabelMinZoom)) {
+      _offlineZoomDebounce?.cancel();
+      _refreshOfflineParcels();
+      return;
+    }
+    _offlineZoomDebounce?.cancel();
+    _offlineZoomDebounce = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) _refreshOfflineParcels();
     });
   }
 
@@ -781,6 +990,9 @@ class MapTabState extends State<MapTab> {
       );
       if (mounted) {
         setState(() {});
+        // A new region's parcels just loaded — drop the remembered query rect so
+        // the viewport (which may sit inside it) is re-queried against the new DB.
+        _invalidateOfflineQueryCache();
         _refreshOfflineParcels();
         messenger.showSnackBar(
           SnackBar(content: Text('$name: prenesenih ${result.rows} parcel.')),
@@ -1317,6 +1529,7 @@ class MapTabState extends State<MapTab> {
         // offline overlay so it appears/disappears immediately.
         if (type == MapLayerType.kataster ||
             type == MapLayerType.katasterNazivi) {
+          _invalidateOfflineQueryCache();
           _refreshOfflineParcels();
         }
       },
@@ -1411,8 +1624,12 @@ class MapTabState extends State<MapTab> {
       // offline kataster is loaded.
       publicParcelsAvailable: ParcelLookupService.instance.isAvailable,
       onPublicParcelsChanged: () {
+        // A category toggle changes which parcels are tinted. When the
+        // on/off-any state flipped, _refreshOfflineParcels re-queries to (re)build
+        // _publicParcelCategory; otherwise it short-circuits and the recolour
+        // below rebuilds the cached tints from the existing category data.
         _refreshOfflineParcels();
-        if (mounted) setState(() {});
+        _recolourOfflinePolygons();
       },
       // Show Mejniki whenever the offline kataster is loaded (a permanent
       // toolbar item like Info); it acts on the parcel under the press.
@@ -1464,9 +1681,35 @@ class MapTabState extends State<MapTab> {
     });
   }
 
+  /// Append the current map-centre (where the crosshair is aimed) as the next
+  /// measurement point.
+  void _addMeasurementPointAtCrosshair() {
+    _addMeasurementPoint(_mapController.camera.center);
+  }
+
   void _closeMeasurement() {
     setState(() {
       _measurement = const _MeasurementState();
+    });
+  }
+
+  /// Remove the most recently added measurement point.
+  void _undoMeasurementPoint() {
+    if (_measurement.points.isEmpty) return;
+    setState(() {
+      _measurement = _measurement.copyWith(
+        points: _measurement.points.sublist(0, _measurement.points.length - 1),
+        // Re-open the measurement if it had been finished.
+        isFinished: false,
+      );
+    });
+  }
+
+  /// Lock the measurement so further taps no longer add points.
+  void _finishMeasurement() {
+    if (!_measurement.hasEnoughPoints) return;
+    setState(() {
+      _measurement = _measurement.copyWith(isFinished: true);
     });
   }
 
@@ -1568,21 +1811,21 @@ class MapTabState extends State<MapTab> {
 
   String _measurementHintLabel() {
     if (!_measurement.isActive) {
-      return 'Odprite Sloji karte za začetek merjenja.';
+      return 'Dolgo pritisnite na karto za začetek merjenja.';
     }
     if (_measurement.isFinished) {
       return 'Merjenje je zaključeno.';
     }
     if (_measurement.tool == _MeasurementTool.distance) {
       if (_measurement.points.length < 2) {
-        return 'Tapnite na karto za dodajanje točk razdalje.';
+        return 'Premaknite karto, da nitni križ kaže na točko, in tapnite »Dodaj točko«.';
       }
-      return 'Dodajte naslednjo točko ali zaključite merjenje.';
+      return 'Naslednjo točko dodajte z nitnim križem ali zaključite merjenje.';
     }
     if (_measurement.points.length < 3) {
-      return 'Za površino potrebujete vsaj 3 točke.';
+      return 'Z nitnim križem dodajte vsaj 3 točke za površino.';
     }
-    return 'Dodajte naslednjo točko ali zaključite poligon.';
+    return 'Naslednjo točko dodajte z nitnim križem ali zaključite poligon.';
   }
 
   List<Marker> _measurementMarkers() {
@@ -1592,8 +1835,8 @@ class MapTabState extends State<MapTab> {
 
       return Marker(
         point: point,
-        width: 34,
-        height: 34,
+        width: 20,
+        height: 20,
         child: Container(
           decoration: BoxDecoration(
             color: _measurement.tool == _MeasurementTool.area
@@ -1603,8 +1846,8 @@ class MapTabState extends State<MapTab> {
             border: Border.all(color: Colors.white, width: 2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 4,
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 3,
                 offset: const Offset(0, 1),
               ),
             ],
@@ -1615,7 +1858,7 @@ class MapTabState extends State<MapTab> {
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 12,
+                fontSize: 9,
               ),
             ),
           ),
@@ -1687,6 +1930,21 @@ class MapTabState extends State<MapTab> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Fixed crosshair drawn at the centre of the map viewport while measuring.
+  /// It is a screen-space overlay (not a map marker): the user pans/zooms the
+  /// map to aim it, then taps "Dodaj točko" to drop the point under it. Styled
+  /// with a white outline so it stays visible over both light and dark imagery.
+  Widget _buildMeasurementCrosshair(BuildContext context) {
+    final color = _measurement.tool == _MeasurementTool.area
+        ? Colors.deepPurple
+        : Colors.teal;
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Center(child: _MeasurementCrosshair(color: color)),
       ),
     );
   }
@@ -1771,6 +2029,47 @@ class MapTabState extends State<MapTab> {
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
+              const SizedBox(height: 8),
+              // Primary action: add the point currently under the crosshair.
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _measurement.isFinished
+                      ? null
+                      : _addMeasurementPointAtCrosshair,
+                  icon: const Icon(Icons.add_location_alt, size: 20),
+                  label: const Text('Dodaj točko'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _measurement.points.isEmpty
+                          ? null
+                          : _undoMeasurementPoint,
+                      icon: const Icon(Icons.undo, size: 18),
+                      label: const Text('Razveljavi'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed:
+                          (_measurement.hasEnoughPoints &&
+                              !_measurement.isFinished)
+                          ? _finishMeasurement
+                          : null,
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text('Zaključi'),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -1836,10 +2135,6 @@ class MapTabState extends State<MapTab> {
     // Kataster + "Kataster z nazivi" are rendered from the local SQLite DB, so
     // never fetch them over WMS — they stay toggleable, but draw locally.
     final offlineKataster = ParcelLookupService.instance.isAvailable;
-    // Show parcel numbers on the offline kataster when "Kataster z nazivi" is on.
-    final offlineKatasterNames = mapProvider.activeOverlays.contains(
-      MapLayerType.katasterNazivi,
-    );
     final layerRenderer = MapLayerRenderer(
       baseLayer: mapProvider.currentBaseLayer,
       activeOverlays: mapProvider.activeOverlays,
@@ -1909,10 +2204,10 @@ class MapTabState extends State<MapTab> {
                   }
                 },
                 onTap: (tapPosition, point) {
-                  if (_measurement.isActive && !_measurement.isFinished) {
-                    _addMeasurementPoint(point);
-                    return;
-                  }
+                  // While measuring, points are added via the "Dodaj točko"
+                  // button using the centre crosshair — tapping the map must
+                  // not add points, so panning to aim can't drop one by
+                  // accident.
                 },
                 // Handle long press to show action menu as a bottom sheet
                 onLongPress: (tapPosition, point) {
@@ -1935,11 +2230,12 @@ class MapTabState extends State<MapTab> {
                   }
                   // Track zoom level for dynamic marker sizing
                   if (event.camera.zoom != _currentZoom) {
+                    final prevZoom = _currentZoom;
                     setState(() {
                       _currentZoom = event.camera.zoom;
                       _visibleBounds = event.camera.visibleBounds;
                     });
-                    _refreshOfflineParcels();
+                    _onZoomChanged(prevZoom, event.camera.zoom);
                   }
                 },
               ),
@@ -1950,6 +2246,11 @@ class MapTabState extends State<MapTab> {
                     tileProviders: vectorBasemap.tileProviders!,
                     theme: vectorBasemap.theme!,
                     tileOffset: vmt.TileOffset.DEFAULT,
+                    // Without this the raster layerMode caps at zoom 18 and the
+                    // basemap vanishes when zooming further in. Render (scaled)
+                    // up to the app max zoom instead, matching raster layers
+                    // which upscale past their native zoom.
+                    maximumZoom: MapLayer.appMaxZoom,
                   ),
                 ...layerRenderer.getAllTileLayers(),
                 // Offline kataster: cadastral parcel outlines from the local DB,
@@ -1959,51 +2260,16 @@ class MapTabState extends State<MapTab> {
                 // outlines and without their own borders. Keeping fills in a
                 // separate lower layer stops a filled parcel from painting over
                 // an adjacent parcel's outline (which looked like doubled lines).
-                if (offlineKataster && _offlineParcels.isNotEmpty)
-                  PolygonLayer(
-                    polygons: [
-                      for (final p in _offlineParcels)
-                        if (_highlightCategory(p) case final cat?)
-                          Polygon(
-                            points: p.polygon,
-                            color: cat.fillColor,
-                            borderStrokeWidth: 0,
-                          ),
-                    ],
-                  ),
+                if (offlineKataster && _offlineFillPolygons.isNotEmpty)
+                  PolygonLayer(polygons: _offlineFillPolygons),
                 // Cadastral outlines + parcel-number labels, drawn on top of the
-                // fills so every boundary is a single crisp line.
-                if (offlineKataster && _offlineParcels.isNotEmpty)
+                // fills so every boundary is a single crisp line. Polygons are
+                // prebuilt in _refreshOfflineParcels; drawLabelsLast keeps label
+                // painting from interleaving with polygon painting.
+                if (offlineKataster && _offlineOutlinePolygons.isNotEmpty)
                   PolygonLayer(
-                    polygons: _offlineParcels.map((p) {
-                      // Colour the outline by public-owner category when on;
-                      // otherwise the default red kataster outline.
-                      final cat = _highlightCategory(p);
-                      return Polygon(
-                        points: p.polygon,
-                        color: const Color(0x00000000),
-                        borderColor: cat?.color ?? const Color(0xFFD50000),
-                        borderStrokeWidth: 2.5,
-                        label:
-                            (offlineKatasterNames &&
-                                _currentZoom >= _offlineKatasterLabelMinZoom)
-                            ? p.parcelNumber
-                            : null,
-                        labelStyle: TextStyle(
-                          color: cat?.color ?? const Color(0xFFB71C1C),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                          // White hard-edge outline so red numbers stay readable
-                          // over aerial imagery.
-                          shadows: const [
-                            Shadow(color: Colors.white, offset: Offset(1, 1)),
-                            Shadow(color: Colors.white, offset: Offset(-1, 1)),
-                            Shadow(color: Colors.white, offset: Offset(1, -1)),
-                            Shadow(color: Colors.white, offset: Offset(-1, -1)),
-                          ],
-                        ),
-                      );
-                    }).toList(),
+                    drawLabelsLast: true,
+                    polygons: _offlineOutlinePolygons,
                   ),
                 // Pink highlight on the parcel under an open long-press sheet.
                 if (_selectedParcel != null)
@@ -2109,6 +2375,8 @@ class MapTabState extends State<MapTab> {
                       ),
                     ],
                   ),
+                // Area fill (no border here — the casing+border is drawn as a
+                // closed polyline below so it gets the white underlay too).
                 if (_measurement.tool == _MeasurementTool.area &&
                     _measurement.points.length >= 3)
                   PolygonLayer(
@@ -2116,22 +2384,39 @@ class MapTabState extends State<MapTab> {
                       Polygon(
                         points: _measurement.points,
                         color: Colors.deepPurple.withValues(alpha: 0.18),
-                        borderColor: Colors.deepPurple,
-                        borderStrokeWidth: 3,
+                        borderStrokeWidth: 0,
                       ),
                     ],
                   ),
+                // Measurement line/border with a white casing underneath so it
+                // stays visible over orthophoto imagery. The wider white line is
+                // listed first, the coloured line on top.
                 if (_measurement.points.length >= 2)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: _measurement.points,
-                        color: _measurement.tool == _MeasurementTool.area
-                            ? Colors.deepPurple
-                            : Colors.teal,
-                        strokeWidth: 3,
-                      ),
-                    ],
+                  Builder(
+                    builder: (ctx) {
+                      final isArea =
+                          _measurement.tool == _MeasurementTool.area;
+                      final color = isArea ? Colors.deepPurple : Colors.teal;
+                      // For an area, close the ring so the border is continuous.
+                      final linePoints = (isArea &&
+                              _measurement.points.length >= 3)
+                          ? [..._measurement.points, _measurement.points.first]
+                          : _measurement.points;
+                      return PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: linePoints,
+                            color: Colors.white,
+                            strokeWidth: 7,
+                          ),
+                          Polyline(
+                            points: linePoints,
+                            color: color,
+                            strokeWidth: 3.5,
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 if (externalPosition != null &&
                     externalPosition.accuracyMeters != null)
@@ -2226,7 +2511,7 @@ class MapTabState extends State<MapTab> {
               }
 
               return Positioned(
-                top: 16,
+                top: MediaQuery.of(context).padding.top + 16,
                 left: 16,
                 child: Container(
                   width: 210,
@@ -2292,11 +2577,13 @@ class MapTabState extends State<MapTab> {
               child: _buildRtkAccuracyBadge(context, externalPosition),
             ),
 
-          // Loading indicator for locations
+          // Loading indicator for locations. Anchored to the right edge so it
+          // never overlaps the left-anchored tile-download box or the
+          // full-width region-download overlay, which share the top-left slot.
           if (mapProvider.isLoadingLocations)
             Positioned(
               top: MediaQuery.of(context).padding.top + 16,
-              left: 16,
+              right: 16,
               child: Material(
                 elevation: 4,
                 borderRadius: const BorderRadius.all(Radius.circular(8)),
@@ -2401,6 +2688,9 @@ class MapTabState extends State<MapTab> {
                 ),
               ),
             ),
+
+          if (_measurement.isActive && !_measurement.isFinished)
+            _buildMeasurementCrosshair(context),
 
           if (_measurement.isActive) _buildMeasurementPanel(context),
 
@@ -2564,7 +2854,17 @@ class MapTabState extends State<MapTab> {
             await _importSearchedParcel(parcel);
           }
         },
-      );
+      ).whenComplete(() {
+        // Clear the temporary blue overlay whenever the sheet closes, including
+        // swipe-down / scrim dismissals that never fire onHide. This is
+        // idempotent with onHide/onAction (which clear it too); after an import
+        // the overlay is already gone and the imported parcel draws its own.
+        if (mounted && _searchedParcel != null) {
+          setState(() {
+            _searchedParcel = null;
+          });
+        }
+      });
     }
   }
 
@@ -2639,19 +2939,13 @@ class MapTabState extends State<MapTab> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Parcela je bila uvožena'),
-            backgroundColor: Colors.green,
-          ),
+          const SnackBar(content: Text('Parcela je bila uvožena')),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Napaka pri uvozu: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Napaka pri uvozu: $e')),
         );
       }
     }

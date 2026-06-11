@@ -6,6 +6,7 @@ import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
 import '../router/app_router.dart';
 import '../router/route_names.dart';
+import '../utils/sl_plural.dart';
 import '../widgets/log_card.dart';
 import '../widgets/add_log_sheet.dart';
 import '../widgets/conversion_settings_sheet.dart';
@@ -253,6 +254,10 @@ class LogsTab extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Shranjeno')),
               );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Napaka pri shranjevanju projekta')),
+              );
             }
           }
         },
@@ -378,7 +383,7 @@ class LogsTab extends StatelessWidget {
                           ),
                           const Spacer(),
                           Text(
-                            '${provider.entryCount} hlodov',
+                            slCount(provider.entryCount, 'hlod', 'hloda', 'hlodi', 'hlodov'),
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   color: Colors.grey[500],
                                 ),
@@ -457,27 +462,27 @@ class LogsTab extends StatelessWidget {
             // Species header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: Colors.grey[100],
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: Row(
                 children: [
                   Icon(
                     Icons.forest,
                     size: 20,
-                    color: Colors.green[700],
+                    color: Colors.green[400],
                   ),
                   const SizedBox(width: 8),
                   Text(
                     species,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.green[800],
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                   ),
                   const Spacer(),
                   Text(
-                    '$count hlodov • ${totalVolume.toStringAsFixed(2)} m³',
+                    '${slCount(count, 'hlod', 'hloda', 'hlodi', 'hlodov')} • ${totalVolume.toStringAsFixed(2)} m³',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                   ),
                 ],
@@ -499,6 +504,7 @@ class LogsTab extends StatelessWidget {
 
   Widget _buildEmptyState(BuildContext context) {
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

@@ -32,6 +32,7 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
   StreamSubscription<CompassEvent>? _compassSubscription;
   StreamSubscription<Position>? _positionSubscription;
   bool _showDMS = false;
+  bool _locationDenied = false;
 
   @override
   void initState() {
@@ -39,7 +40,20 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
     _initializeStreams();
   }
 
-  void _initializeStreams() {
+  Future<bool> _ensureLocationPermission() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    final granted = permission != LocationPermission.denied &&
+        permission != LocationPermission.deniedForever;
+    if (mounted) {
+      setState(() => _locationDenied = !granted);
+    }
+    return granted;
+  }
+
+  Future<void> _initializeStreams() async {
     // Subscribe to compass updates
     final compassStream = FlutterCompass.events;
     if (compassStream != null) {
@@ -51,6 +65,12 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
           });
         }
       });
+    }
+
+    // Ensure location permission before using position APIs
+    final granted = await _ensureLocationPermission();
+    if (!granted || !mounted) {
+      return;
     }
 
     // Subscribe to position updates
@@ -200,6 +220,37 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
           // Header
           _buildHeader(context),
 
+          // Location permission denied
+          if (_locationDenied)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.location_off,
+                    color: Colors.orange.shade700,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Dovoljenje za lokacijo zavrnjeno — razdalja ni na voljo',
+                      style: TextStyle(
+                        color: Colors.orange.shade700,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Accuracy warning
           if (accuracyWarning != null)
             Container(
@@ -295,7 +346,10 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
                 ),
                 Text(
                   widget.targetName,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 14,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

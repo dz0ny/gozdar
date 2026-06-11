@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/log_entry.dart';
 import '../services/location_settings.dart';
 import '../services/species_service.dart';
+import '../utils/decimal_input.dart';
 
 class LogEntryForm extends StatefulWidget {
   final LogEntry? logEntry;
@@ -53,24 +53,28 @@ class _LogEntryFormState extends State<LogEntryForm> {
   }
 
   void _initializeFromEntry(LogEntry entry) {
+    final isNew = entry.id == 0;
     if (entry.diameter != null && entry.length != null) {
       _isCalculateMode = true;
       _diameterController.text = entry.diameter!.toStringAsFixed(1);
       _lengthController.text = entry.length!.toStringAsFixed(2);
     } else {
       _isCalculateMode = false;
-      _volumeController.text = entry.volume.toStringAsFixed(3);
+      // Leave the volume field empty for a fresh prefilled entry with no volume.
+      if (!(isNew && entry.volume == 0)) {
+        _volumeController.text = entry.volume.toStringAsFixed(3);
+      }
     }
     _notesController.text = entry.notes ?? '';
     _selectedSpecies = entry.species;
     _latitude = entry.latitude;
     _longitude = entry.longitude;
-    _calculatedVolume = entry.volume;
+    _calculatedVolume = isNew && entry.volume == 0 ? null : entry.volume;
   }
 
   void _updateCalculatedVolume() {
-    final diameter = double.tryParse(_diameterController.text);
-    final length = double.tryParse(_lengthController.text);
+    final diameter = parseDecimal(_diameterController.text);
+    final length = parseDecimal(_lengthController.text);
 
     if (diameter != null && length != null && diameter > 0 && length > 0) {
       setState(() {
@@ -222,11 +226,11 @@ class _LogEntryFormState extends State<LogEntryForm> {
         );
         return;
       }
-      diameter = double.parse(_diameterController.text);
-      length = double.parse(_lengthController.text);
+      diameter = parseDecimal(_diameterController.text);
+      length = parseDecimal(_lengthController.text);
       volume = _calculatedVolume!;
     } else {
-      volume = double.parse(_volumeController.text);
+      volume = parseDecimal(_volumeController.text)!;
     }
 
     final entry = LogEntry(
@@ -254,11 +258,15 @@ class _LogEntryFormState extends State<LogEntryForm> {
     super.dispose();
   }
 
+  /// A prefilled entry with id == 0 (e.g. passed from the map tab) is still a
+  /// new entry, not an edit.
+  bool get _isNew => widget.logEntry == null || widget.logEntry!.id == 0;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.logEntry == null ? 'Nov' : 'Uredi'),
+        title: Text(_isNew ? 'Nov' : 'Uredi'),
         actions: [
           IconButton(icon: const Icon(Icons.check), onPressed: _saveEntry),
         ],
@@ -318,14 +326,12 @@ class _LogEntryFormState extends State<LogEntryForm> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
+                inputFormatters: [DecimalTextInputFormatter()],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Prosim vnesite premer';
                   }
-                  final diameter = double.tryParse(value);
+                  final diameter = parseDecimal(value);
                   if (diameter == null || diameter <= 0) {
                     return 'Prosim vnesite veljaven premer';
                   }
@@ -344,14 +350,12 @@ class _LogEntryFormState extends State<LogEntryForm> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
+                inputFormatters: [DecimalTextInputFormatter()],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Prosim vnesite dolžino';
                   }
-                  final length = double.tryParse(value);
+                  final length = parseDecimal(value);
                   if (length == null || length <= 0) {
                     return 'Prosim vnesite veljavno dolžino';
                   }
@@ -411,14 +415,12 @@ class _LogEntryFormState extends State<LogEntryForm> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
+                inputFormatters: [DecimalTextInputFormatter()],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Prosim vnesite volumen';
                   }
-                  final volume = double.tryParse(value);
+                  final volume = parseDecimal(value);
                   if (volume == null || volume <= 0) {
                     return 'Prosim vnesite veljaven volumen';
                   }

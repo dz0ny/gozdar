@@ -150,6 +150,9 @@ class Parcel {
     return LatLng(avgLat, avgLng);
   }
 
+  /// Copies the parcel with overrides. Nullable fields (owner, notes,
+  /// cadastralMunicipality, parcelNumber) keep their current value when the
+  /// argument is null; pass the matching `clear*` flag to set them to null.
   Parcel copyWith({
     int? id,
     String? name,
@@ -157,9 +160,13 @@ class Parcel {
     List<String?>? pointNames,
     DateTime? createdAt,
     int? cadastralMunicipality,
+    bool clearCadastralMunicipality = false,
     String? parcelNumber,
+    bool clearParcelNumber = false,
     String? owner,
+    bool clearOwner = false,
     String? notes,
+    bool clearNotes = false,
     ForestType? forestType,
     double? woodAllowance,
     double? woodCut,
@@ -171,10 +178,12 @@ class Parcel {
       polygon: polygon ?? this.polygon,
       pointNames: pointNames ?? this.pointNames,
       createdAt: createdAt ?? this.createdAt,
-      cadastralMunicipality: cadastralMunicipality ?? this.cadastralMunicipality,
-      parcelNumber: parcelNumber ?? this.parcelNumber,
-      owner: owner ?? this.owner,
-      notes: notes ?? this.notes,
+      cadastralMunicipality: clearCadastralMunicipality
+          ? null
+          : (cadastralMunicipality ?? this.cadastralMunicipality),
+      parcelNumber: clearParcelNumber ? null : (parcelNumber ?? this.parcelNumber),
+      owner: clearOwner ? null : (owner ?? this.owner),
+      notes: clearNotes ? null : (notes ?? this.notes),
       forestType: forestType ?? this.forestType,
       woodAllowance: woodAllowance ?? this.woodAllowance,
       woodCut: woodCut ?? this.woodCut,

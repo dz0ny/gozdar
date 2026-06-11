@@ -92,6 +92,12 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
       if (mounted) {
         Navigator.pop(context);
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Napaka pri shranjevanju projekta')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -102,7 +108,12 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
