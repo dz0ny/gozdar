@@ -1183,9 +1183,9 @@ class _AboutScreenState extends State<AboutScreen> {
             const Divider(height: 24),
             _buildMapSourceItem(
               context,
-              'OpenTopoMap',
-              'Topografski zemljevid',
-              'https://opentopomap.org',
+              'Topo LIDAR + OSM',
+              'Topografski zemljevid (Seznam.cz)',
+              'https://mapy.cz',
               Icons.terrain,
             ),
             const Divider(height: 24),

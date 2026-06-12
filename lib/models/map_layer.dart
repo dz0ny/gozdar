@@ -116,6 +116,10 @@ class MapLayer {
   final bool queryable; // Supports GetFeatureInfo queries
   final OverlayCategory? category; // Category for overlay layers
 
+  /// Extra HTTP headers the tile source requires (e.g. mapy.cz rejects
+  /// requests without a mapy.com Referer with 403).
+  final Map<String, String> httpHeaders;
+
   const MapLayer({
     required this.type,
     required this.name,
@@ -134,7 +138,17 @@ class MapLayer {
     this.crs,
     this.queryable = false,
     this.category,
+    this.httpHeaders = const {},
   });
+
+  static const _mapyHeaders = {'Referer': 'https://mapy.com/'};
+
+  /// Extra headers required by known tile hosts, for fetch paths that only
+  /// have a tile URL (offline downloader) instead of a [MapLayer].
+  static Map<String, String> httpHeadersForUrl(String url) {
+    if (url.contains('mapserver.mapy.cz')) return _mapyHeaders;
+    return const {};
+  }
 
   /// Check if this layer is from Slovenian prostor.zgs.gov.si server
   bool get isSlovenian =>
@@ -177,13 +191,15 @@ class MapLayer {
     maxZoom: 19,
   );
 
-  /// OpenTopoMap - Topographic map
+  /// Mapy.cz Turist - Tourist/hiking map
+  /// (enum value kept as openTopoMap for saved-preferences compatibility)
   static const openTopoMap = MapLayer(
     type: MapLayerType.openTopoMap,
-    name: 'OpenTopoMap',
-    urlTemplate: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
-    attribution: '© OpenTopoMap (CC-BY-SA)',
-    maxZoom: 17,
+    name: 'Topo LIDAR + OSM',
+    urlTemplate: 'https://mapserver.mapy.cz/turist-en/retina/{z}-{x}-{y}',
+    attribution: '© Seznam.cz, © OpenStreetMap contributors',
+    maxZoom: 19,
+    httpHeaders: _mapyHeaders,
   );
 
   /// ESRI World Imagery - Satellite imagery

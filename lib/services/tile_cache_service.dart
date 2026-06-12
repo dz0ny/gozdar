@@ -18,6 +18,7 @@ class TileCacheService {
   static TileDownloadService? _downloadService;
   static BuiltInMapCachingProvider? _builtInCachingProvider;
   static NetworkTileProvider? _tileProvider;
+  static final Map<String, NetworkTileProvider> _headeredTileProviders = {};
   static final ValueNotifier<TileDownloadVisualState> _downloadVisualState =
       ValueNotifier(const TileDownloadVisualState());
 
@@ -67,6 +68,28 @@ class TileCacheService {
 
   NetworkTileProvider getGeneralTileProvider() {
     return getTileProvider();
+  }
+
+  /// Provider for [layer], including any extra headers its tile source
+  /// requires. Shares the same cache as the general provider.
+  NetworkTileProvider getTileProviderFor(MapLayer layer) {
+    if (layer.httpHeaders.isEmpty) {
+      return getTileProvider();
+    }
+    getTileProvider(); // Ensure initialized.
+    final key = layer.httpHeaders.entries
+        .map((e) => '${e.key}:${e.value}')
+        .join('|');
+    return _headeredTileProviders.putIfAbsent(
+      key,
+      // Mutable copy: TileLayer putIfAbsents a User-Agent into this map.
+      () => NetworkTileProvider(
+        headers: Map.of(layer.httpHeaders),
+        cachingProvider: _ToggleableCachingProvider(
+          () => _builtInCachingProvider!,
+        ),
+      ),
+    );
   }
 
   Future<Map<String, dynamic>> getStats() async {

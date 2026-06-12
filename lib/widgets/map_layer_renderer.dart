@@ -34,7 +34,7 @@ class MapLayerRenderer {
       maxZoom: MapLayer.appMaxZoom,
       maxNativeZoom: layer.nativeMaxZoom,
       minZoom: layer.minZoom,
-      tileProvider: tileCacheService.getGeneralTileProvider(),
+      tileProvider: tileCacheService.getTileProviderFor(layer),
       userAgentPackageName: 'dev.dz0ny.gozdar',
       errorTileCallback: (tile, error, stackTrace) {
         debugPrint(
