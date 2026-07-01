@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/map_layer.dart';
-import '../services/vector_basemap_service.dart';
+import '../services/public_parcel_settings.dart';
 
 /// Modern bottom sheet for selecting map base layer and overlays
 class MapLayerSelector extends StatefulWidget {
@@ -22,6 +22,9 @@ class MapLayerSelector extends StatefulWidget {
   /// Called when the Vlake overlay is toggled from the selector.
   final ValueChanged<bool>? onVlakeToggled;
 
+  final bool publicParcelsAvailable;
+  final VoidCallback? onPublicParcelsChanged;
+
   const MapLayerSelector({
     super.key,
     required this.currentBaseLayer,
@@ -34,6 +37,8 @@ class MapLayerSelector extends StatefulWidget {
     this.vlakeAvailable = false,
     this.vlakeVisible = false,
     this.onVlakeToggled,
+    this.publicParcelsAvailable = false,
+    this.onPublicParcelsChanged,
   });
 
   /// Show the layer selector as a modal bottom sheet
@@ -49,6 +54,8 @@ class MapLayerSelector extends StatefulWidget {
     bool vlakeAvailable = false,
     bool vlakeVisible = false,
     ValueChanged<bool>? onVlakeToggled,
+    bool publicParcelsAvailable = false,
+    VoidCallback? onPublicParcelsChanged,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -74,6 +81,8 @@ class MapLayerSelector extends StatefulWidget {
             vlakeAvailable: vlakeAvailable,
             vlakeVisible: vlakeVisible,
             onVlakeToggled: onVlakeToggled,
+            publicParcelsAvailable: publicParcelsAvailable,
+            onPublicParcelsChanged: onPublicParcelsChanged,
           ),
         ),
       ),
@@ -243,10 +252,6 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       children: [
         // International base layers
         _buildBaseLayerSection('Mednarodne karte', [
-          // Only offer the vector basemap once it's downloaded for offline use
-          // (managed in the About screen).
-          if (VectorBasemapService.instance.hasLocalCopy)
-            MapLayer.vectorBasemap,
           MapLayer.openStreetMap,
           MapLayer.openTopoMap,
           MapLayer.esriWorldImagery,
@@ -489,8 +494,10 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     // developer-unlocked embedded layer surfaced here under Infrastruktura.
     final showVlakeTile =
         category == OverlayCategory.infrastruktura && widget.vlakeAvailable;
+    final showPublicParcelTiles =
+        category == OverlayCategory.posebno && widget.publicParcelsAvailable;
 
-    if (filteredLayers.isEmpty && !showVlakeTile) {
+    if (filteredLayers.isEmpty && !showVlakeTile && !showPublicParcelTiles) {
       return const SizedBox.shrink();
     }
 
@@ -498,7 +505,12 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     final activeCount = filteredLayers
             .where((layer) => _selectedOverlays.contains(layer.type))
             .length +
-        (showVlakeTile && _vlakeVisible ? 1 : 0);
+        (showVlakeTile && _vlakeVisible ? 1 : 0) +
+        (showPublicParcelTiles
+            ? PublicOwnerCategory.values
+                .where(PublicParcelSettings.instance.isOn)
+                .length
+            : 0);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -570,9 +582,74 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
               children: [
                 ...filteredLayers.map((layer) => _buildOverlayTile(layer)),
                 if (showVlakeTile) _buildVlakeTile(),
+                if (showPublicParcelTiles) _buildPublicParcelTiles(),
               ],
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPublicParcelTiles() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Javne parcele',
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+        for (final cat in PublicOwnerCategory.values)
+          _buildPublicParcelTile(cat),
+      ],
+    );
+  }
+
+  Widget _buildPublicParcelTile(PublicOwnerCategory category) {
+    final isActive = PublicParcelSettings.instance.isOn(category);
+
+    void toggle() async {
+      await PublicParcelSettings.instance.setOn(category, !isActive);
+      if (!mounted) return;
+      setState(() {});
+      widget.onPublicParcelsChanged?.call();
+    }
+
+    return InkWell(
+      onTap: toggle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: Checkbox(
+                value: isActive,
+                onChanged: (_) => toggle(),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            CircleAvatar(radius: 8, backgroundColor: category.color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                category.label,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -704,8 +781,6 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     switch (type) {
       case MapLayerType.openStreetMap:
         return Icons.map;
-      case MapLayerType.vectorBasemap:
-        return Icons.layers_outlined;
       case MapLayerType.openTopoMap:
       case MapLayerType.esriTopoMap:
         return Icons.terrain;

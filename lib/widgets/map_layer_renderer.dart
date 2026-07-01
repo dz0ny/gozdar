@@ -61,11 +61,10 @@ class MapLayerRenderer {
         .toList();
   }
 
-  /// Get all tile layers (base + overlays). A vector base layer is rendered
-  /// separately as a VectorTileLayer, so skip the raster base for it.
+  /// Get all tile layers (base + overlays).
   List<TileLayer> getAllTileLayers() {
     final layers = <TileLayer>[];
-    if (!baseLayer.isVector) layers.add(buildBaseTileLayer());
+    layers.add(buildBaseTileLayer());
     layers.addAll(buildOverlayLayers());
     return layers;
   }

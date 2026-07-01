@@ -36,6 +36,12 @@
 	<string>Aplikacija potrebuje dostop do lokacije za navigacijo do točk v gozdu.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Aplikacija potrebuje dostop do lokacije za prikaz vaše pozicije na zemljevidu in označevanje lokacij hlodov.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_gozdar-kataster._tcp.</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Aplikacija uporablja lokalno omrežje za deljenje offline katastra med napravami.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Aplikacija uporablja senzorje gibanja za prikaz smeri kompasa.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:vector_map_tiles/vector_map_tiles.dart' as vmt;
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:open_filex/open_filex.dart';
@@ -33,7 +32,6 @@ import '../services/rtk_position_service.dart';
 import '../services/rtk_bridge_settings.dart';
 import '../services/vlake_service.dart';
 import '../services/vlake_settings.dart';
-import '../services/vector_basemap_service.dart';
 import '../widgets/navigation_compass_dialog.dart';
 import '../widgets/tile_download_dialog.dart';
 import '../widgets/map_long_press_menu.dart';
@@ -229,6 +227,14 @@ class MapTabState extends State<MapTab> {
   /// query runs at most a few times per gesture instead of every frame.
   Timer? _offlineZoomDebounce;
 
+  /// Prebuilt Vlake polylines, rebuilt in [_refreshVlake] rather than in
+  /// [build] so a plain rebuild doesn't re-scan ~78k line bounding boxes.
+  List<Polyline> _vlakePolylines = const [];
+
+  /// Padded bounds [_vlakePolylines] were culled for. While the viewport stays
+  /// inside this rect, [_refreshVlake] skips the scan entirely.
+  LatLngBounds? _vlakeQueriedBounds;
+
   /// Composite keys ("ko|parcela") of parcels whose mejniki (boundary points) are
   /// shown. Per-parcel and transient — toggled from the long-press menu for the
   /// parcel under the press.
@@ -327,25 +333,49 @@ class MapTabState extends State<MapTab> {
     return baseSize * scale;
   }
 
-  /// Build Vlake polylines for the current viewport (culled by bounding box).
-  List<Polyline> _buildVlakePolylines() {
+  /// Recompute the cached Vlake polylines for the current viewport. Culls a
+  /// padded bounds (~40% margin) and remembers it so subsequent pans that stay
+  /// inside skip the ~78k-line scan entirely. Clears the cache when the overlay
+  /// is off, not loaded, or zoomed out. Mirrors [_refreshOfflineParcels].
+  void _refreshVlake() {
     final bounds = _visibleBounds;
-    if (bounds == null) return const [];
-    final lines = VlakeService.instance.linesInBounds(
-      bounds.south,
-      bounds.west,
-      bounds.north,
-      bounds.east,
+    if (!VlakeSettings.instance.showOnMap ||
+        !VlakeService.instance.isLoaded ||
+        bounds == null ||
+        _currentZoom < _vlakeMinZoom) {
+      _vlakeQueriedBounds = null;
+      if (_vlakePolylines.isNotEmpty) {
+        setState(() => _vlakePolylines = const []);
+      }
+      return;
+    }
+
+    final cached = _vlakeQueriedBounds;
+    if (cached != null && cached.containsBounds(bounds)) return;
+
+    final latPad = (bounds.north - bounds.south) * 0.4;
+    final lonPad = (bounds.east - bounds.west) * 0.4;
+    final padded = LatLngBounds(
+      LatLng(bounds.south - latPad, bounds.west - lonPad),
+      LatLng(bounds.north + latPad, bounds.east + lonPad),
     );
-    return lines
-        .map(
-          (l) => Polyline(
+    final lines = VlakeService.instance.linesInBounds(
+      padded.south,
+      padded.west,
+      padded.north,
+      padded.east,
+    );
+    _vlakeQueriedBounds = padded;
+    setState(() {
+      _vlakePolylines = [
+        for (final l in lines)
+          Polyline(
             points: l.points,
             color: const Color(0xFFFF6D00), // orange skid-road
             strokeWidth: 2.0,
           ),
-        )
-        .toList();
+      ];
+    });
   }
 
   /// The public-owner category a parcel should be highlighted with, or null
@@ -440,10 +470,6 @@ class MapTabState extends State<MapTab> {
       onResetOnboarding: null, // TODO: Implement onboarding reset
     );
     rtkPositionService.addListener(_handleRtkPositionUpdate);
-    // Rebuild the map once the vector basemap finishes loading, and learn
-    // whether an offline copy exists (gates the layer in the selector).
-    VectorBasemapService.instance.addListener(_handleRtkPositionUpdate);
-    VectorBasemapService.instance.refreshLocal();
     _initializeData();
     _initializeLocationTracking();
   }
@@ -475,7 +501,6 @@ class MapTabState extends State<MapTab> {
   void dispose() {
     _offlineZoomDebounce?.cancel();
     rtkPositionService.removeListener(_handleRtkPositionUpdate);
-    VectorBasemapService.instance.removeListener(_handleRtkPositionUpdate);
     _locationTracker.dispose();
     _mapController.dispose();
     super.dispose();
@@ -889,14 +914,18 @@ class MapTabState extends State<MapTab> {
   void _onZoomChanged(double from, double to) {
     bool crosses(double t) => (from < t) != (to < t);
     if (crosses(_offlineKatasterMinZoom) ||
-        crosses(_offlineKatasterLabelMinZoom)) {
+        crosses(_offlineKatasterLabelMinZoom) ||
+        crosses(_vlakeMinZoom)) {
       _offlineZoomDebounce?.cancel();
       _refreshOfflineParcels();
+      _refreshVlake();
       return;
     }
     _offlineZoomDebounce?.cancel();
     _offlineZoomDebounce = Timer(const Duration(milliseconds: 200), () {
-      if (mounted) _refreshOfflineParcels();
+      if (!mounted) return;
+      _refreshOfflineParcels();
+      _refreshVlake();
     });
   }
 
@@ -1537,7 +1566,21 @@ class MapTabState extends State<MapTab> {
       onDownloadTiles: showTileDownloadDialog,
       vlakeAvailable: vlakeSettings.enabled,
       vlakeVisible: vlakeSettings.visible,
-      onVlakeToggled: (visible) => vlakeSettings.setVisible(visible),
+      onVlakeToggled: (visible) {
+        vlakeSettings.setVisible(visible);
+        // Populate/clear the cached polylines immediately (data may already be
+        // loaded); otherwise nothing rebuilds them until the next pan.
+        _refreshVlake();
+      },
+      publicParcelsAvailable: ParcelLookupService.instance.isAvailable,
+      onPublicParcelsChanged: () {
+        // A category toggle changes which parcels are tinted. When the
+        // on/off-any state flipped, _refreshOfflineParcels re-queries to
+        // (re)build _publicParcelCategory; otherwise it short-circuits and the
+        // recolour below rebuilds the cached tints from existing category data.
+        _refreshOfflineParcels();
+        _recolourOfflinePolygons();
+      },
     );
   }
 
@@ -1620,17 +1663,6 @@ class MapTabState extends State<MapTab> {
       parcelPublicCategory: parcelPublicCategory,
       onMeasureDistance: () => _startMeasurement(_MeasurementTool.distance),
       onMeasureArea: () => _startMeasurement(_MeasurementTool.area),
-      // Public-parcel (javne parcele) colouring is available whenever the
-      // offline kataster is loaded.
-      publicParcelsAvailable: ParcelLookupService.instance.isAvailable,
-      onPublicParcelsChanged: () {
-        // A category toggle changes which parcels are tinted. When the
-        // on/off-any state flipped, _refreshOfflineParcels re-queries to (re)build
-        // _publicParcelCategory; otherwise it short-circuits and the recolour
-        // below rebuilds the cached tints from the existing category data.
-        _refreshOfflineParcels();
-        _recolourOfflinePolygons();
-      },
       // Show Mejniki whenever the offline kataster is loaded (a permanent
       // toolbar item like Info); it acts on the parcel under the press.
       mejnikiAvailable: ParcelLookupService.instance.isAvailable,
@@ -2089,7 +2121,7 @@ class MapTabState extends State<MapTab> {
     // Lazily load the embedded Vlake data the first time the overlay is on.
     if (vlakeEnabled && !VlakeService.instance.isLoaded) {
       VlakeService.instance.ensureLoaded().then((_) {
-        if (mounted) setState(() {});
+        if (mounted) _refreshVlake();
       });
     }
     final externalPosition = rtkPositionService.position;
@@ -2144,14 +2176,6 @@ class MapTabState extends State<MapTab> {
         MapLayerType.katasterNazivi,
       },
     );
-
-    // Vector (PMTiles) basemap: load it lazily the first time it's selected,
-    // then render it as the bottom map layer once ready.
-    final vectorBase = mapProvider.currentBaseLayer.isVector;
-    final vectorBasemap = VectorBasemapService.instance;
-    if (vectorBase && !vectorBasemap.isReady) {
-      vectorBasemap.ensureLoaded();
-    }
 
     // Show loading indicator while preferences are loading
     if (!mapProvider.isPreferencesLoaded) {
@@ -2220,9 +2244,7 @@ class MapTabState extends State<MapTab> {
                     _saveMapState();
                     _visibleBounds = event.camera.visibleBounds;
                     // Re-cull the Vlake overlay once movement settles.
-                    if (VlakeSettings.instance.showOnMap && mounted) {
-                      setState(() {});
-                    }
+                    _refreshVlake();
                     // Re-cull the offline kataster overlay once settled.
                     _refreshOfflineParcels();
                     // Offer to download the region's parcels when panning into it.
@@ -2240,18 +2262,6 @@ class MapTabState extends State<MapTab> {
                 },
               ),
               children: [
-                // Vector basemap (bottom-most), when selected and loaded.
-                if (vectorBase && vectorBasemap.isReady)
-                  vmt.VectorTileLayer(
-                    tileProviders: vectorBasemap.tileProviders!,
-                    theme: vectorBasemap.theme!,
-                    tileOffset: vmt.TileOffset.DEFAULT,
-                    // Without this the raster layerMode caps at zoom 18 and the
-                    // basemap vanishes when zooming further in. Render (scaled)
-                    // up to the app max zoom instead, matching raster layers
-                    // which upscale past their native zoom.
-                    maximumZoom: MapLayer.appMaxZoom,
-                  ),
                 ...layerRenderer.getAllTileLayers(),
                 // Offline kataster: cadastral parcel outlines from the local DB,
                 // shown instead of the online WMS proxy when an offline parcels
@@ -2300,12 +2310,10 @@ class MapTabState extends State<MapTab> {
                             _mejnikMarker(p.polygon[i], i + 1, p.parcelNumber),
                     ],
                   ),
-                // Embedded Vlake (forest skid-road) overlay, viewport-culled.
-                if (vlakeEnabled &&
-                    _currentZoom >= _vlakeMinZoom &&
-                    VlakeService.instance.isLoaded &&
-                    _visibleBounds != null)
-                  PolylineLayer(polylines: _buildVlakePolylines()),
+                // Embedded Vlake (forest skid-road) overlay. Polylines are
+                // prebuilt in _refreshVlake (viewport-culled with margin).
+                if (vlakeEnabled && _vlakePolylines.isNotEmpty)
+                  PolylineLayer(polylines: _vlakePolylines),
                 if (downloadState.overlays.isNotEmpty)
                   PolygonLayer(
                     polygons: downloadState.overlays
@@ -2511,10 +2519,10 @@ class MapTabState extends State<MapTab> {
               }
 
               return Positioned(
-                top: MediaQuery.of(context).padding.top + 16,
                 left: 16,
+                right: 16,
+                bottom: MediaQuery.of(context).padding.bottom + 84,
                 child: Container(
-                  width: 210,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 10,
@@ -2559,27 +2567,14 @@ class MapTabState extends State<MapTab> {
           ),
           if (externalPosition != null)
             Positioned(
-              top:
-                  16 +
-                  MediaQuery.of(context).padding.top +
-                  (_tileCacheService
-                              .downloadVisualStateListenable
-                              .value
-                              .isDownloading ||
-                          _tileCacheService
-                              .downloadVisualStateListenable
-                              .value
-                              .overlays
-                              .isNotEmpty
-                      ? 104
-                      : 0),
+              top: MediaQuery.of(context).padding.top + 16,
               left: 16,
               child: _buildRtkAccuracyBadge(context, externalPosition),
             ),
 
           // Loading indicator for locations. Anchored to the right edge so it
-          // never overlaps the left-anchored tile-download box or the
-          // full-width region-download overlay, which share the top-left slot.
+          // never overlaps the left-anchored RTK badge or the full-width region
+          // download overlay, which share the top area.
           if (mapProvider.isLoadingLocations)
             Positioned(
               top: MediaQuery.of(context).padding.top + 16,
