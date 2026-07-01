@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'cadastral_service.dart';
+import 'kataster_sharing_service.dart';
 
 /// Thrown when a download is cancelled by the caller.
 class ParcelDownloadCancelled implements Exception {
@@ -314,6 +315,31 @@ class ParcelLookupService {
   }) async {
     final target = _join(await _dirPath(), fileName);
     final part = File('$target.part');
+    if (await part.exists()) await part.delete();
+
+    final peerDownloaded = await KatasterSharingService.instance.downloadFileTo(
+      fileName,
+      part,
+      onProgress: onProgress,
+      isCancelled: isCancelled,
+    );
+    if (peerDownloaded) {
+      _dropOpen(target);
+      await _deleteDbFiles(target);
+      await part.rename(target);
+      try {
+        _writeSource(target, 'downloaded');
+        final opened = _openDb(target);
+        _dbs.add(opened);
+        return ParcelImportResult(opened.rowCount);
+      } on FormatException {
+        await _deleteDbFiles(target);
+        throw const FormatException('Prenesena datoteka ni baza parcel.');
+      }
+    }
+    if (isCancelled?.call() ?? false) {
+      throw const ParcelDownloadCancelled();
+    }
     if (await part.exists()) await part.delete();
 
     final client = http.Client();

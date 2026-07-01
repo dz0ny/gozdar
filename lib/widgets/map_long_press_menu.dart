@@ -5,7 +5,7 @@ import '../services/public_parcel_settings.dart';
 
 /// Top-level groups in the long-press menu. Tapping a group drills into its
 /// sub-icons (replacing the row, with a back arrow to return).
-enum _MenuSection { add, measure, publicParcels }
+enum _MenuSection { add, measure }
 
 /// Modal bottom sheet shown on map long press with location-based actions.
 ///
@@ -13,7 +13,7 @@ enum _MenuSection { add, measure, publicParcels }
 /// options stay readable regardless of the underlying imagery.
 ///
 /// The sheet is a small drill-down menu: the top level shows grouped icons
-/// (Dodaj, Merjenje, Javne parcele) plus direct actions (Uvozi/Parcela,
+/// (Dodaj, Merjenje) plus direct actions (Uvozi/Parcela,
 /// Natisni, Mejniki); tapping a group replaces the row with its sub-icons.
 class MapLongPressMenu extends StatefulWidget {
   final VoidCallback onAddLocation;
@@ -45,14 +45,6 @@ class MapLongPressMenu extends StatefulWidget {
   final VoidCallback onMeasureDistance;
   final VoidCallback onMeasureArea;
 
-  /// Whether the public-parcel (javne parcele) owner-category toggles are shown
-  /// (only when an offline kataster is loaded — otherwise nothing to colour).
-  final bool publicParcelsAvailable;
-
-  /// Called after a public-owner category is toggled, so the map overlay can be
-  /// recoloured.
-  final VoidCallback onPublicParcelsChanged;
-
   /// Whether a specific offline parcel sits under the long-press point — gates
   /// the (per-parcel) mejniki toggle.
   final bool mejnikiAvailable;
@@ -77,8 +69,6 @@ class MapLongPressMenu extends StatefulWidget {
     this.parcelPublicCategory,
     required this.onMeasureDistance,
     required this.onMeasureArea,
-    required this.publicParcelsAvailable,
-    required this.onPublicParcelsChanged,
     required this.mejnikiAvailable,
     required this.showMejniki,
     required this.onToggleMejniki,
@@ -112,8 +102,6 @@ class MapLongPressMenu extends StatefulWidget {
     PublicOwnerCategory? parcelPublicCategory,
     required VoidCallback onMeasureDistance,
     required VoidCallback onMeasureArea,
-    required bool publicParcelsAvailable,
-    required VoidCallback onPublicParcelsChanged,
     required bool mejnikiAvailable,
     required bool showMejniki,
     required ValueChanged<bool> onToggleMejniki,
@@ -142,8 +130,6 @@ class MapLongPressMenu extends StatefulWidget {
           parcelPublicCategory: parcelPublicCategory,
           onMeasureDistance: onMeasureDistance,
           onMeasureArea: onMeasureArea,
-          publicParcelsAvailable: publicParcelsAvailable,
-          onPublicParcelsChanged: onPublicParcelsChanged,
           mejnikiAvailable: mejnikiAvailable,
           showMejniki: showMejniki,
           onToggleMejniki: onToggleMejniki,
@@ -248,13 +234,6 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
           color: Colors.teal,
           section: _MenuSection.measure,
         ),
-        if (widget.publicParcelsAvailable)
-          _group(
-            icon: Icons.account_balance,
-            label: 'Javne parcele',
-            color: Colors.indigo,
-            section: _MenuSection.publicParcels,
-          ),
         if (widget.existingParcel != null)
           _action(
             icon: Icons.visibility,
@@ -447,49 +426,12 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
     );
   }
 
-  Widget _publicParcelsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Text(
-            'Obarvaj uvožene parcele po vrsti javnega lastnika.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ),
-        Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: [
-            for (final cat in PublicOwnerCategory.values)
-              FilterChip(
-                avatar: CircleAvatar(radius: 8, backgroundColor: cat.color),
-                label: Text(cat.label),
-                selected: PublicParcelSettings.instance.isOn(cat),
-                selectedColor: cat.fillColor,
-                checkmarkColor: cat.color,
-                onSelected: (v) async {
-                  await PublicParcelSettings.instance.setOn(cat, v);
-                  if (mounted) setState(() {});
-                  widget.onPublicParcelsChanged();
-                },
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-
   String _sectionTitle(_MenuSection section) {
     switch (section) {
       case _MenuSection.add:
         return 'Dodaj';
       case _MenuSection.measure:
         return 'Merjenje';
-      case _MenuSection.publicParcels:
-        return 'Javne parcele';
     }
   }
 
@@ -499,8 +441,6 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
         return _addSection();
       case _MenuSection.measure:
         return _measureSection();
-      case _MenuSection.publicParcels:
-        return _publicParcelsSection();
     }
   }
 

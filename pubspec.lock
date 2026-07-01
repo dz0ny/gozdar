@@ -273,14 +273,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.6"
-  executor_lib:
-    dependency: transitive
-    description:
-      name: executor_lib
-      sha256: "95ddf2957d9942d9702855b38dd49677f0ee6a8b77d7b16c0e509c7669d17386"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.2"
   fake_async:
     dependency: transitive
     description:
@@ -419,6 +411,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "8.3.0"
+  flutter_nsd:
+    dependency: "direct main"
+    description:
+      name: flutter_nsd
+      sha256: "06d9b77aa2aa1325c9137a2be8de0ce6bac80ce4e20f1dafb9542d854ff0fdc9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.6.0"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -570,14 +570,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
-  idb_shim:
-    dependency: transitive
-    description:
-      name: idb_shim
-      sha256: aabfe78d065fb7b40fffb337cc7c50757dd4eee3dec95cac2bd2692e7b874ef3
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.9.3"
   image:
     dependency: transitive
     description:
@@ -935,14 +927,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
-  pmtiles:
-    dependency: "direct main"
-    description:
-      name: pmtiles
-      sha256: "7e3135c64ec3647e1dd8929fd3c371c8e1c6809b24f1d910d3198a7f41e2068c"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.3.0"
   pointycastle:
     dependency: "direct main"
     description:
@@ -975,14 +959,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.0"
-  protobuf:
-    dependency: transitive
-    description:
-      name: protobuf
-      sha256: "68645b24e0716782e58948f8467fd42a880f255096a821f9e7d0ec625b00c84d"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.1.0"
   provider:
     dependency: "direct main"
     description:
@@ -1031,14 +1007,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.0"
-  sembast:
-    dependency: transitive
-    description:
-      name: sembast
-      sha256: "03cafeaf71ed2d0e297272af969c2d7c0c618dcd00e809d4b3217850162fd2d5"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.8.8"
   share_plus:
     dependency: "direct main"
     description:
@@ -1220,14 +1188,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.1"
-  synchronized:
-    dependency: transitive
-    description:
-      name: synchronized
-      sha256: "93b153dcb6a26dcddee6ca087dd634b53e38c10b5aa163e8e49501a776456153"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.4.1"
   term_glyph:
     dependency: transitive
     description:
@@ -1332,14 +1292,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.5.3"
-  vector_map_tiles:
-    dependency: "direct main"
-    description:
-      name: vector_map_tiles
-      sha256: ec9c59c9254f57930f514a523967d5e7082e956878dd9fec942b168b64270c1f
-      url: "https://pub.dev"
-    source: hosted
-    version: "9.0.0-beta.9"
   vector_math:
     dependency: transitive
     description:
@@ -1348,22 +1300,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
-  vector_tile:
-    dependency: transitive
-    description:
-      name: vector_tile
-      sha256: "7ae290246e3a8734422672dbe791d3f7b8ab631734489fc6d405f1cc2080e38c"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.1"
-  vector_tile_renderer:
-    dependency: "direct main"
-    description:
-      name: vector_tile_renderer
-      sha256: "982ae5d8f0ab285463a4cd62e711c8f9a36b9b3112b5a471ae8d4f4838f31537"
-      url: "https://pub.dev"
-    source: hosted
-    version: "6.1.0"
   vm_service:
     dependency: transitive
     description:
@@ -1453,5 +1389,5 @@ packages:
     source: hosted
     version: "3.1.3"
 sdks:
-  dart: ">=3.12.0 <4.0.0"
+  dart: ">=3.11.0 <4.0.0"
   flutter: ">=3.41.0"
