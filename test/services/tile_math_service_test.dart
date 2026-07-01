@@ -8,11 +8,11 @@ void main() {
       final (x, y) = TileMathService.latLonToTile(46.0569, 14.5058, 10);
 
       expect(x, 553);
-      expect(y, 365);
+      expect(y, 364);
     });
 
     test('computes tile bounds with north above south', () {
-      final bounds = TileMathService.tileBounds(553, 365, 10);
+      final bounds = TileMathService.tileBounds(553, 364, 10);
 
       expect(bounds.north, greaterThan(bounds.south));
       expect(bounds.east, greaterThan(bounds.west));

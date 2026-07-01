@@ -67,8 +67,8 @@ void main() {
         expect(MapLayer.appMaxZoom, 22);
         expect(MapLayer.esriWorldImagery.nativeMaxZoom, 19);
         expect(MapLayer.esriWorldImagery.downloadMaxZoom, 19);
-        expect(MapLayer.openTopoMap.nativeMaxZoom, 17);
-        expect(MapLayer.openTopoMap.downloadMaxZoom, 17);
+        expect(MapLayer.openTopoMap.nativeMaxZoom, 19);
+        expect(MapLayer.openTopoMap.downloadMaxZoom, 19);
       },
     );
   });
