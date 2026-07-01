@@ -11,7 +11,6 @@ class MapControls extends StatelessWidget {
   final VoidCallback onGpsPressed;
   final VoidCallback? onLocationsPressed;
   final VoidCallback onSearchPressed;
-  final VoidCallback? onRtkPressed;
 
   /// Hide the bottom-anchored controls (GPS + saved locations) so they don't
   /// overlap the measurement panel docked at the bottom of the map.
@@ -24,7 +23,6 @@ class MapControls extends StatelessWidget {
     required this.locationsCount,
     required this.onLayerSelectorPressed,
     required this.onGpsPressed,
-    this.onRtkPressed,
     required this.onSearchPressed,
     this.onLocationsPressed,
     this.hideBottomControls = false,
@@ -57,16 +55,6 @@ class MapControls extends StatelessWidget {
                 child: const Icon(Icons.search),
               ),
               const SizedBox(height: 8),
-              if (onRtkPressed != null) ...[
-                FloatingActionButton(
-                  heroTag: 'map_rtk',
-                  mini: true,
-                  onPressed: onRtkPressed,
-                  tooltip: 'RTK GNSS',
-                  child: const Icon(Icons.gps_fixed),
-                ),
-                const SizedBox(height: 8),
-              ],
               FloatingActionButton(
                 heroTag: 'map_zoom_in',
                 mini: true,

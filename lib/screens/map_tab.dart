@@ -28,8 +28,6 @@ import '../services/parcel_pdf_service.dart';
 import '../services/region_locator.dart';
 import '../services/owner_offline_settings_service.dart';
 import '../services/tile_cache_service.dart';
-import '../services/rtk_position_service.dart';
-import '../services/rtk_bridge_settings.dart';
 import '../services/vlake_service.dart';
 import '../services/vlake_settings.dart';
 import '../widgets/navigation_compass_dialog.dart';
@@ -134,10 +132,22 @@ class _MeasurementCrosshairPainter extends CustomPainter {
 
     // Cross arms (drawn with a gap over the centre so the ring/dot read clearly).
     final segments = <List<Offset>>[
-      [Offset(center.dx, center.dy - radius - arm), Offset(center.dx, center.dy - radius)],
-      [Offset(center.dx, center.dy + radius), Offset(center.dx, center.dy + radius + arm)],
-      [Offset(center.dx - radius - arm, center.dy), Offset(center.dx - radius, center.dy)],
-      [Offset(center.dx + radius, center.dy), Offset(center.dx + radius + arm, center.dy)],
+      [
+        Offset(center.dx, center.dy - radius - arm),
+        Offset(center.dx, center.dy - radius),
+      ],
+      [
+        Offset(center.dx, center.dy + radius),
+        Offset(center.dx, center.dy + radius + arm),
+      ],
+      [
+        Offset(center.dx - radius - arm, center.dy),
+        Offset(center.dx - radius, center.dy),
+      ],
+      [
+        Offset(center.dx + radius, center.dy),
+        Offset(center.dx + radius + arm, center.dy),
+      ],
     ];
     for (final s in segments) {
       canvas.drawLine(s[0], s[1], outline);
@@ -469,7 +479,6 @@ class MapTabState extends State<MapTab> {
       onShowTileDownloadDialog: showTileDownloadDialog,
       onResetOnboarding: null, // TODO: Implement onboarding reset
     );
-    rtkPositionService.addListener(_handleRtkPositionUpdate);
     _initializeData();
     _initializeLocationTracking();
   }
@@ -500,16 +509,9 @@ class MapTabState extends State<MapTab> {
   @override
   void dispose() {
     _offlineZoomDebounce?.cancel();
-    rtkPositionService.removeListener(_handleRtkPositionUpdate);
     _locationTracker.dispose();
     _mapController.dispose();
     super.dispose();
-  }
-
-  void _handleRtkPositionUpdate() {
-    if (mounted) {
-      setState(() {});
-    }
   }
 
   /// Initialize real-time location and compass tracking
@@ -556,26 +558,14 @@ class MapTabState extends State<MapTab> {
         return;
       }
 
-      final externalPosition = rtkPositionService.position;
-      LatLng target;
-      if (externalPosition != null) {
-        target = externalPosition.point;
-      } else {
-        // Get current position
-        final position = await Geolocator.getCurrentPosition(
-          locationSettings: GozdarLocationSettings.currentPosition,
-        );
-        target = LatLng(position.latitude, position.longitude);
-      }
-
-      // Animate map to current location (respect maxZoom), preserving the
-      // current rotation like every other camera move in this file.
-      final targetZoom = 15.0.clamp(7.0, MapLayer.appMaxZoom);
-      _mapController.moveAndRotate(
-        target,
-        targetZoom,
-        _mapController.camera.rotation,
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: GozdarLocationSettings.currentPosition,
       );
+      final target = LatLng(position.latitude, position.longitude);
+
+      // Locate without changing scale; reset rotation to north-up.
+      final currentZoom = _mapController.camera.zoom;
+      _mapController.moveAndRotate(target, currentZoom, 0);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -839,10 +829,7 @@ class MapTabState extends State<MapTab> {
       final owners = OwnerLookupService.instance;
       categories = {
         for (final p in parcels)
-          p.id: ?owners.publicCategory(
-            p.cadastralMunicipality,
-            p.parcelNumber,
-          ),
+          p.id: ?owners.publicCategory(p.cadastralMunicipality, p.parcelNumber),
       };
     }
 
@@ -1673,7 +1660,9 @@ class MapTabState extends State<MapTab> {
             ..clearSnackBars()
             ..showSnackBar(
               const SnackBar(
-                content: Text('Dolgo pritisnite na parcelo za prikaz mejnikov.'),
+                content: Text(
+                  'Dolgo pritisnite na parcelo za prikaz mejnikov.',
+                ),
               ),
             );
           return;
@@ -1899,73 +1888,6 @@ class MapTabState extends State<MapTab> {
     }).toList();
   }
 
-  String _rtkFixLabel(int? fixQuality) {
-    switch (fixQuality) {
-      case 4:
-        return 'RTK fixed';
-      case 5:
-        return 'RTK float';
-      case 2:
-        return 'DGPS';
-      case 1:
-        return 'GPS';
-      default:
-        return '-';
-    }
-  }
-
-  String _rtkAccuracyLabel(double? accuracyMeters) {
-    if (accuracyMeters == null) return '-';
-    if (accuracyMeters < 1) return '${(accuracyMeters * 100).round()} cm';
-    return '${accuracyMeters.toStringAsFixed(1)} m';
-  }
-
-  Color _rtkStatusColor(int? fixQuality, ColorScheme colorScheme) {
-    if (fixQuality == 4) return Colors.green;
-    if (fixQuality == 5) return Colors.orange;
-    if (fixQuality == 2) return Colors.amber;
-    return colorScheme.primary;
-  }
-
-  Widget _buildRtkAccuracyBadge(BuildContext context, RtkPosition position) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final statusColor = _rtkStatusColor(position.fixQuality, colorScheme);
-
-    return Material(
-      elevation: 5,
-      borderRadius: const BorderRadius.all(Radius.circular(8)),
-      color: colorScheme.surface.withValues(alpha: 0.94),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.gps_fixed, size: 18, color: statusColor),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '${_rtkFixLabel(position.fixQuality)}  ${_rtkAccuracyLabel(position.accuracyMeters)}',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: statusColor,
-                  ),
-                ),
-                Text(
-                  'Sat ${position.satellites ?? '-'}  HDOP ${position.hdop?.toStringAsFixed(1) ?? '-'}',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// Fixed crosshair drawn at the centre of the map viewport while measuring.
   /// It is a screen-space overlay (not a map marker): the user pans/zooms the
   /// map to aim it, then taps "Dodaj točko" to drop the point under it. Styled
@@ -2116,7 +2038,6 @@ class MapTabState extends State<MapTab> {
   Widget build(BuildContext context) {
     // Watch provider for changes (including worker URL, parcels, locations)
     final mapProvider = context.watch<MapProvider>();
-    final rtkBridgeSettings = context.watch<RtkBridgeSettings>();
     final vlakeEnabled = context.watch<VlakeSettings>().showOnMap;
     // Lazily load the embedded Vlake data the first time the overlay is on.
     if (vlakeEnabled && !VlakeService.instance.isLoaded) {
@@ -2124,15 +2045,12 @@ class MapTabState extends State<MapTab> {
         if (mounted) _refreshVlake();
       });
     }
-    final externalPosition = rtkPositionService.position;
-    final activeUserPosition =
-        externalPosition?.point ??
-        (_locationTracker.userPosition != null
-            ? LatLng(
-                _locationTracker.userPosition!.latitude,
-                _locationTracker.userPosition!.longitude,
-              )
-            : null);
+    final activeUserPosition = _locationTracker.userPosition != null
+        ? LatLng(
+            _locationTracker.userPosition!.latitude,
+            _locationTracker.userPosition!.longitude,
+          )
+        : null;
 
     // Create marker renderer using provider data directly
     final markerRenderer = MapMarkerRenderer(
@@ -2402,12 +2320,11 @@ class MapTabState extends State<MapTab> {
                 if (_measurement.points.length >= 2)
                   Builder(
                     builder: (ctx) {
-                      final isArea =
-                          _measurement.tool == _MeasurementTool.area;
+                      final isArea = _measurement.tool == _MeasurementTool.area;
                       final color = isArea ? Colors.deepPurple : Colors.teal;
                       // For an area, close the ring so the border is continuous.
-                      final linePoints = (isArea &&
-                              _measurement.points.length >= 3)
+                      final linePoints =
+                          (isArea && _measurement.points.length >= 3)
                           ? [..._measurement.points, _measurement.points.first]
                           : _measurement.points;
                       return PolylineLayer(
@@ -2425,22 +2342,6 @@ class MapTabState extends State<MapTab> {
                         ],
                       );
                     },
-                  ),
-                if (externalPosition != null &&
-                    externalPosition.accuracyMeters != null)
-                  CircleLayer(
-                    circles: [
-                      CircleMarker(
-                        point: externalPosition.point,
-                        radius: externalPosition.accuracyMeters!,
-                        useRadiusInMeter: true,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.16),
-                        borderColor: Theme.of(context).colorScheme.primary,
-                        borderStrokeWidth: 2,
-                      ),
-                    ],
                   ),
                 // All markers using the unified renderer
                 MarkerLayer(markers: markerRenderer.getAllMarkers()),
@@ -2565,16 +2466,8 @@ class MapTabState extends State<MapTab> {
               );
             },
           ),
-          if (externalPosition != null)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 16,
-              left: 16,
-              child: _buildRtkAccuracyBadge(context, externalPosition),
-            ),
-
           // Loading indicator for locations. Anchored to the right edge so it
-          // never overlaps the left-anchored RTK badge or the full-width region
-          // download overlay, which share the top area.
+          // never overlaps the full-width region download overlay.
           if (mapProvider.isLoadingLocations)
             Positioned(
               top: MediaQuery.of(context).padding.top + 16,
@@ -2740,9 +2633,6 @@ class MapTabState extends State<MapTab> {
         locationsCount: mapProvider.locations.length,
         onLayerSelectorPressed: _showLayerSelector,
         onSearchPressed: showParcelSearchDialog,
-        onRtkPressed: rtkBridgeSettings.enabled
-            ? () => context.push(AppRoutes.rtkBridge)
-            : null,
         onGpsPressed: _centerOnGpsLocation,
         onLocationsPressed: mapProvider.locations.isNotEmpty
             ? _showLocationsSheet
@@ -2939,9 +2829,9 @@ class MapTabState extends State<MapTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri uvozu: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu: $e')));
       }
     }
   }

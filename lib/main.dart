@@ -6,7 +6,6 @@ import 'config/distribution.dart';
 import 'router/app_router.dart';
 import 'router/navigation_notifier.dart';
 import 'services/database_service.dart';
-import 'services/rtk_bridge_settings.dart';
 import 'services/tile_cache_service.dart';
 import 'services/onboarding_service.dart';
 import 'services/owner_lookup_service.dart';
@@ -26,7 +25,6 @@ void main() async {
   await DatabaseService().initialize();
   await TileCacheService.initialize();
   await OnboardingService.initialize();
-  await RtkBridgeSettings.instance.load();
   await OwnerLookupService.instance.init();
   await OwnerLookupService.instance.initPublic();
   await ParcelLookupService.instance.init();
@@ -61,7 +59,9 @@ class _GozdarAppState extends State<GozdarApp> {
   void initState() {
     super.initState();
     _navigationNotifier = NavigationNotifier();
-    final initialRoute = _initialRouteDefine.isEmpty ? null : _initialRouteDefine;
+    final initialRoute = _initialRouteDefine.isEmpty
+        ? null
+        : _initialRouteDefine;
     _router = createRouter(
       showOnboarding: !OnboardingService.instance.isOnboardingCompleted,
       initialLocation: initialRoute,
@@ -94,7 +94,6 @@ class _GozdarAppState extends State<GozdarApp> {
             ..loadGeolocatedLogs(),
         ),
         ChangeNotifierProvider.value(value: _navigationNotifier),
-        ChangeNotifierProvider.value(value: RtkBridgeSettings.instance),
         ChangeNotifierProvider.value(value: VlakeSettings.instance),
         if (Platform.isAndroid && !isPlayDistribution)
           ChangeNotifierProvider.value(value: UpdateService()),

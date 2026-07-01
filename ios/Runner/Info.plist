@@ -28,8 +28,6 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Aplikacija uporablja Bluetooth za povezavo z GNSS sprejemnikom in pošiljanje RTK popravkov.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app may use the camera to capture photos when selecting or importing files.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

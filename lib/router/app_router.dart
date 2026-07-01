@@ -11,7 +11,6 @@ import '../screens/logs_tab.dart';
 import '../screens/map_tab.dart';
 import '../screens/parcel_detail_screen.dart';
 import '../screens/parcel_editor.dart';
-import '../screens/rtk_bridge_screen.dart';
 import '../widgets/log_entry_form.dart';
 import '../widgets/main_scaffold.dart';
 import 'route_names.dart';
@@ -19,7 +18,9 @@ import 'route_names.dart';
 /// Navigator keys for StatefulShellRoute branches
 final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _shellNavigatorMapKey = GlobalKey<NavigatorState>(debugLabel: 'map');
-final _shellNavigatorForestKey = GlobalKey<NavigatorState>(debugLabel: 'forest');
+final _shellNavigatorForestKey = GlobalKey<NavigatorState>(
+  debugLabel: 'forest',
+);
 final _shellNavigatorLogsKey = GlobalKey<NavigatorState>(debugLabel: 'logs');
 
 /// Global key to access MapTabState for operations like setNavigationTarget
@@ -45,10 +46,7 @@ class LogEntryFormParams {
 }
 
 /// Create the GoRouter configuration
-GoRouter createRouter({
-  required bool showOnboarding,
-  String? initialLocation,
-}) {
+GoRouter createRouter({required bool showOnboarding, String? initialLocation}) {
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation:
@@ -67,12 +65,6 @@ GoRouter createRouter({
         path: AppRoutes.about,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const AboutScreen(),
-      ),
-
-      GoRoute(
-        path: AppRoutes.rtkBridge,
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const RtkBridgeScreen(),
       ),
 
       // Main shell with tabs
@@ -144,10 +136,7 @@ GoRouter createRouter({
           final params = state.extra as ParcelEditorParams?;
           return MaterialPage(
             fullscreenDialog: true,
-            child: ParcelEditor(
-              parcel: params?.parcel,
-              onSave: params?.onSave,
-            ),
+            child: ParcelEditor(parcel: params?.parcel, onSave: params?.onSave),
           );
         },
       ),
@@ -160,10 +149,7 @@ GoRouter createRouter({
           final params = state.extra as ParcelEditorParams;
           return MaterialPage(
             fullscreenDialog: true,
-            child: ParcelEditor(
-              parcel: params.parcel,
-              onSave: params.onSave,
-            ),
+            child: ParcelEditor(parcel: params.parcel, onSave: params.onSave),
           );
         },
       ),

@@ -5,10 +5,8 @@ import 'package:provider/provider.dart';
 import '../config/distribution.dart';
 import '../router/app_router.dart';
 import '../router/navigation_notifier.dart';
-import '../router/route_names.dart';
 import '../screens/about_screen.dart';
 import '../services/onboarding_service.dart';
-import '../services/rtk_bridge_settings.dart';
 import '../services/update_service.dart';
 import 'map_long_press_menu.dart';
 import 'update_banner.dart';
@@ -39,17 +37,13 @@ class _MainScaffoldState extends State<MainScaffold> {
         button: true,
         selected: selected,
         label: semanticLabel,
-        child: ExcludeSemantics(
-          child: Icon(icon),
-        ),
+        child: ExcludeSemantics(child: Icon(icon)),
       ),
       selectedIcon: Semantics(
         button: true,
         selected: selected,
         label: semanticLabel,
-        child: ExcludeSemantics(
-          child: Icon(selectedIcon),
-        ),
+        child: ExcludeSemantics(child: Icon(selectedIcon)),
       ),
       label: label,
       tooltip: semanticLabel,
@@ -68,25 +62,23 @@ class _MainScaffoldState extends State<MainScaffold> {
         button: true,
         selected: selected,
         label: semanticLabel,
-        child: ExcludeSemantics(
-          child: Icon(icon),
-        ),
+        child: ExcludeSemantics(child: Icon(icon)),
       ),
       selectedIcon: Semantics(
         button: true,
         selected: selected,
         label: semanticLabel,
-        child: ExcludeSemantics(
-          child: Icon(selectedIcon),
-        ),
+        child: ExcludeSemantics(child: Icon(selectedIcon)),
       ),
       label: Text(label),
     );
   }
 
   /// Build the list of tab definitions shared by both the bottom bar and rail.
-  List<({String semanticLabel, String label, IconData icon, IconData selectedIcon})>
-      _tabDefinitions(bool rtkEnabled) {
+  List<
+    ({String semanticLabel, String label, IconData icon, IconData selectedIcon})
+  >
+  _tabDefinitions() {
     return [
       (
         semanticLabel: 'Tab Karta',
@@ -106,13 +98,6 @@ class _MainScaffoldState extends State<MainScaffold> {
         icon: Icons.forest_outlined,
         selectedIcon: Icons.forest,
       ),
-      if (rtkEnabled)
-        (
-          semanticLabel: 'RTK GNSS',
-          label: 'RTK',
-          icon: Icons.gps_fixed_outlined,
-          selectedIcon: Icons.gps_fixed,
-        ),
     ];
   }
 
@@ -183,12 +168,6 @@ class _MainScaffoldState extends State<MainScaffold> {
     // which stays alive in the IndexedStack).
     MapLongPressMenu.closeOpen();
 
-    final rtkBridgeSettings = context.read<RtkBridgeSettings>();
-    if (rtkBridgeSettings.enabled && index == 3) {
-      context.push(AppRoutes.rtkBridge);
-      return;
-    }
-
     // Track consecutive taps on the same tab for easter eggs
     // Only count taps on already-selected tab
     if (index == widget.navigationShell.currentIndex) {
@@ -235,9 +214,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   void _showAboutScreen() {
     // Use root navigator to push outside shell
     rootNavigatorKey.currentState?.push(
-      MaterialPageRoute(
-        builder: (context) => const AboutScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const AboutScreen()),
     );
   }
 
@@ -245,9 +222,8 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget build(BuildContext context) {
     // Listen to navigation notifier changes
     context.watch<NavigationNotifier>();
-    final rtkBridgeSettings = context.watch<RtkBridgeSettings>();
 
-    final tabs = _tabDefinitions(rtkBridgeSettings.enabled);
+    final tabs = _tabDefinitions();
     final currentIndex = widget.navigationShell.currentIndex;
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;

@@ -47,8 +47,6 @@ dependencies:
 
   # Location & Compass
   flutter_compass: any
-  flutter_blue_plus: any
-  flutter_blue_plus_winrt: any
   geolocator: any
 
   # Export & Share

@@ -3,13 +3,11 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/cache_settings.dart';
 import '../services/owner_offline_settings_service.dart';
 import '../services/parcel_lookup_service.dart';
-import '../services/rtk_bridge_settings.dart';
 import '../services/kataster_sharing_service.dart';
 import '../services/tile_cache_service.dart';
 import '../services/vlake_service.dart';
@@ -30,7 +28,6 @@ class _AboutScreenState extends State<AboutScreen> {
   PackageInfo? _packageInfo;
 
   /// Hidden developer options, revealed by long-pressing the version card.
-  /// Rendered inline under the RTK setting rather than in a separate sheet.
   bool _showDeveloperOptions = false;
 
   /// R2-hosted databases.
@@ -61,10 +58,10 @@ class _AboutScreenState extends State<AboutScreen> {
     _loadPackageInfo();
     _sharingKataster = KatasterSharingService.instance.isSharing;
     _katasterPeerCount = KatasterSharingService.instance.peers.length;
-    _katasterPeersSubscription =
-        KatasterSharingService.instance.peersStream.listen((peers) {
-      if (mounted) setState(() => _katasterPeerCount = peers.length);
-    });
+    _katasterPeersSubscription = KatasterSharingService.instance.peersStream
+        .listen((peers) {
+          if (mounted) setState(() => _katasterPeerCount = peers.length);
+        });
     KatasterSharingService.instance.startDiscovery();
   }
 
@@ -94,9 +91,7 @@ class _AboutScreenState extends State<AboutScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('O aplikaciji'),
-      ),
+      appBar: AppBar(title: const Text('O aplikaciji')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -167,16 +162,16 @@ class _AboutScreenState extends State<AboutScreen> {
         Text(
           'Gozdar',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           'Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
           textAlign: TextAlign.center,
         ),
       ],
@@ -189,44 +184,41 @@ class _AboutScreenState extends State<AboutScreen> {
 
     return GestureDetector(
       // Hidden developer options: long-press the version card to reveal them
-      // inline under the RTK setting below.
+      // inline in the settings card below.
       onLongPress: () =>
           setState(() => _showDeveloperOptions = !_showDeveloperOptions),
       child: Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.info_outline, color: colorScheme.primary),
-                const SizedBox(width: 12),
-                Text(
-                  'Informacije o aplikaciji',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            _buildInfoRow('Verzija', version),
-            _buildInfoRow('Številka gradnje', buildNumber),
-            _buildInfoRow('Paket', _packageInfo?.packageName ?? '...'),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.info_outline, color: colorScheme.primary),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Informacije o aplikaciji',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              _buildInfoRow('Verzija', version),
+              _buildInfoRow('Številka gradnje', buildNumber),
+              _buildInfoRow('Paket', _packageInfo?.packageName ?? '...'),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
 
-  /// Inline developer options (owners database import + Vlake), revealed under
-  /// the RTK setting by long-pressing the version card.
-  Widget _buildDeveloperOptions(
-    BuildContext context,
-    ColorScheme colorScheme,
-  ) {
+  /// Inline developer options (owners database import + Vlake), revealed by
+  /// long-pressing the version card.
+  Widget _buildDeveloperOptions(BuildContext context, ColorScheme colorScheme) {
     final service = OwnerLookupService.instance;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -239,8 +231,9 @@ class _AboutScreenState extends State<AboutScreen> {
               const SizedBox(width: 12),
               Text(
                 'Razvijalske moznosti',
-                style: Theme.of(context).textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -257,8 +250,8 @@ class _AboutScreenState extends State<AboutScreen> {
                 return Text(
                   'Ni uvozena.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 );
               }
               final size = snapshot.data;
@@ -268,8 +261,8 @@ class _AboutScreenState extends State<AboutScreen> {
               return Text(
                 '${_formatCount(service.rowCount)} lastnikov$sizeLabel',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                  color: colorScheme.onSurfaceVariant,
+                ),
               );
             },
           ),
@@ -291,7 +284,9 @@ class _AboutScreenState extends State<AboutScreen> {
                     onPressed: _downloadOwners,
                     icon: const Icon(Icons.cloud_download_outlined),
                     label: Text(
-                      service.isAvailable ? 'Posodobi (~300 MB)' : 'Prenesi (~300 MB)',
+                      service.isAvailable
+                          ? 'Posodobi (~300 MB)'
+                          : 'Prenesi (~300 MB)',
                     ),
                   ),
                 ),
@@ -315,7 +310,10 @@ class _AboutScreenState extends State<AboutScreen> {
             const Divider(height: 24),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              secondary: Icon(Icons.location_searching, color: colorScheme.primary),
+              secondary: Icon(
+                Icons.location_searching,
+                color: colorScheme.primary,
+              ),
               title: const Text('Iskanje lastnika brez povezave'),
               subtitle: const Text(
                 'Ko ni povezave, določi lastnika iz približnih mej parcel (lokalna baza).',
@@ -463,24 +461,27 @@ class _AboutScreenState extends State<AboutScreen> {
               return Text(
                 'Ni naložena — kataster se prikazuje prek spleta.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                  color: colorScheme.onSurfaceVariant,
+                ),
               );
             }
             final size = snapshot.data;
             final sizeLabel = size != null
                 ? ' • ${(size / (1024 * 1024)).toStringAsFixed(0)} MB'
                 : '';
-            final dateLabel =
-                service.dataDate != null ? ' • ${service.dataDate}' : '';
+            final dateLabel = service.dataDate != null
+                ? ' • ${service.dataDate}'
+                : '';
             final regions = service.loadedRegions;
-            final regionLabel = regions.isNotEmpty ? '${regions.join(', ')}\n' : '';
+            final regionLabel = regions.isNotEmpty
+                ? '${regions.join(', ')}\n'
+                : '';
             return Text(
               '$regionLabel${_formatCount(service.rowCount)} parcel'
               '$sizeLabel$dateLabel • brez spleta',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                color: colorScheme.onSurfaceVariant,
+              ),
             );
           },
         ),
@@ -527,8 +528,8 @@ class _AboutScreenState extends State<AboutScreen> {
           Text(
             'Prenesi le svojo statistično regijo — priporočena povezava Wi-Fi.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
         const Divider(height: 24),
@@ -625,9 +626,11 @@ class _AboutScreenState extends State<AboutScreen> {
                             ),
                             title: Text(region.name),
                             subtitle: region.sizeMb != null
-                                ? Text('${region.sizeMb!.toStringAsFixed(0)} MB'
+                                ? Text(
+                                    '${region.sizeMb!.toStringAsFixed(0)} MB'
                                     '${region.rows != null ? ' • ${_formatCount(region.rows!)} parcel' : ''}'
-                                    '${loadedFiles.contains(region.file) ? ' • naloženo' : ''}')
+                                    '${loadedFiles.contains(region.file) ? ' • naloženo' : ''}',
+                                  )
                                 : null,
                           ),
                       ],
@@ -643,11 +646,14 @@ class _AboutScreenState extends State<AboutScreen> {
                             : () => Navigator.of(sheetContext).pop(
                                 regions
                                     .where((r) => selected.contains(r.file))
-                                    .toList()),
+                                    .toList(),
+                              ),
                         icon: const Icon(Icons.cloud_download_outlined),
-                        label: Text(selected.isEmpty
-                            ? 'Prenesi'
-                            : 'Prenesi ${selected.length} (~$mb MB)'),
+                        label: Text(
+                          selected.isEmpty
+                              ? 'Prenesi'
+                              : 'Prenesi ${selected.length} (~$mb MB)',
+                        ),
                       ),
                     ),
                   ),
@@ -747,14 +753,11 @@ class _AboutScreenState extends State<AboutScreen> {
                 '$label $sizes'
                 '${pct != null ? ' • ${(pct * 100).toStringAsFixed(0)}%' : ''}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
-            TextButton(
-              onPressed: onCancel,
-              child: const Text('Prekliči'),
-            ),
+            TextButton(onPressed: onCancel, child: const Text('Prekliči')),
           ],
         ),
       ],
@@ -907,7 +910,9 @@ class _AboutScreenState extends State<AboutScreen> {
             ),
             OutlinedButton.icon(
               onPressed: () => _wipeData(_WipeScope.all),
-              style: OutlinedButton.styleFrom(foregroundColor: colorScheme.error),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colorScheme.error,
+              ),
               icon: const Icon(Icons.delete_forever, size: 18),
               label: const Text('Vse'),
             ),
@@ -928,7 +933,9 @@ class _AboutScreenState extends State<AboutScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Pobriši podatke'),
-        content: Text('Ali res želiš pobrisati $label? Tega ni mogoče razveljaviti.'),
+        content: Text(
+          'Ali res želiš pobrisati $label? Tega ni mogoče razveljaviti.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -962,9 +969,11 @@ class _AboutScreenState extends State<AboutScreen> {
     if (mounted) setState(() {});
     messenger.showSnackBar(
       SnackBar(
-        content: Text(removed == 0
-            ? 'Ni ustreznih baz za brisanje.'
-            : 'Pobrisanih baz: $removed.'),
+        content: Text(
+          removed == 0
+              ? 'Ni ustreznih baz za brisanje.'
+              : 'Pobrisanih baz: $removed.',
+        ),
       ),
     );
   }
@@ -981,19 +990,9 @@ class _AboutScreenState extends State<AboutScreen> {
   }
 
   Widget _buildSettingsCard(BuildContext context, ColorScheme colorScheme) {
-    final rtkBridgeSettings = context.watch<RtkBridgeSettings>();
-
     return Card(
       child: Column(
         children: [
-          SwitchListTile(
-            secondary: Icon(Icons.gps_fixed, color: colorScheme.primary),
-            title: const Text('RTK GNSS'),
-            subtitle: const Text('Prikaži RTK most v navigaciji in na karti'),
-            value: rtkBridgeSettings.enabled,
-            onChanged: rtkBridgeSettings.setEnabled,
-          ),
-          const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.all(16),
             child: _buildParcelsDbSection(context, colorScheme),
@@ -1030,9 +1029,9 @@ class _AboutScreenState extends State<AboutScreen> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+          fontWeight: FontWeight.w600,
+          color: Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }
@@ -1153,9 +1152,9 @@ class _AboutScreenState extends State<AboutScreen> {
           children: [
             Text(
               'Pogoji uporabe',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -1172,9 +1171,9 @@ class _AboutScreenState extends State<AboutScreen> {
             const SizedBox(height: 16),
             Text(
               'Omejitev odgovornosti',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -1191,9 +1190,9 @@ class _AboutScreenState extends State<AboutScreen> {
             const SizedBox(height: 16),
             Text(
               'Avtorske pravice',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -1209,9 +1208,9 @@ class _AboutScreenState extends State<AboutScreen> {
             const SizedBox(height: 16),
             Text(
               'Zasebnost',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
