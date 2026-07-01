@@ -109,6 +109,7 @@ class MapLayer {
   final Crs? crs;
   final bool queryable; // Supports GetFeatureInfo queries
   final OverlayCategory? category; // Category for overlay layers
+  final String? proxySlugOverride;
 
   /// Extra HTTP headers the tile source requires (e.g. mapy.cz rejects
   /// requests without a mapy.com Referer with 403).
@@ -131,6 +132,7 @@ class MapLayer {
     this.crs,
     this.queryable = false,
     this.category,
+    this.proxySlugOverride,
     this.httpHeaders = const {},
   });
 
@@ -148,15 +150,19 @@ class MapLayer {
       isWms && (wmsBaseUrl?.contains('prostor.zgs.gov.si') ?? false);
 
   /// Kebab-case slug used by the worker tile proxy.
-  String get proxySlug => type.name
-      .replaceAllMapped(
-        RegExp(r'(?<!^)(?=[A-Z])|(?<=[a-z])(?=[0-9])'),
-        (match) => '-',
-      )
-      .toLowerCase();
+  String get proxySlug =>
+      proxySlugOverride ??
+      type.name
+          .replaceAllMapped(
+            RegExp(r'(?<!^)(?=[A-Z])|(?<=[a-z])(?=[0-9])'),
+            (match) => '-',
+          )
+          .toLowerCase();
 
   int get nativeMaxZoom {
-    final cappedMaxZoom = maxZoom < tileSourceMaxZoom ? maxZoom : tileSourceMaxZoom;
+    final cappedMaxZoom = maxZoom < tileSourceMaxZoom
+        ? maxZoom
+        : tileSourceMaxZoom;
     return cappedMaxZoom.toInt();
   }
 
@@ -215,7 +221,7 @@ class MapLayer {
     maxZoom: 21,
   );
 
-/// Ortofoto 2024 - Aerial imagery (Slovenia)
+  /// Ortofoto 2024 - Aerial imagery (Slovenia)
   static const ortofoto = MapLayer(
     type: MapLayerType.ortofoto,
     name: 'Ortofoto 2024',
@@ -309,6 +315,7 @@ class MapLayer {
     isOverlay: true,
     queryable: true,
     category: OverlayCategory.administrativno,
+    proxySlugOverride: 'katastrske-obcine',
   );
 
   /// Kataster z nazivi - Cadastral parcels with names
@@ -402,6 +409,7 @@ class MapLayer {
     isTransparent: true,
     isOverlay: true,
     category: OverlayCategory.administrativno,
+    proxySlugOverride: 'hisne-stevilke',
   );
 
   /// Naselja - Settlements
@@ -514,6 +522,7 @@ class MapLayer {
     isOverlay: true,
     queryable: true,
     category: OverlayCategory.gozdnoGospodarstvo,
+    proxySlugOverride: 'odseki',
   );
 
   /// Revirji - Forest districts

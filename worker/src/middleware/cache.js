@@ -17,7 +17,7 @@ export const cache = () => {
 
     // Create versioned cache key
     const cacheUrl = new URL(c.req.url);
-    cacheUrl.searchParams.set('_v', 'v3');
+    cacheUrl.searchParams.set('_v', 'v4');
     const cacheKey = new Request(cacheUrl.toString(), c.req.raw);
 
     // Try cache first

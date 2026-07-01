@@ -1,9 +1,11 @@
 import proj4 from 'proj4';
 import { LAYERS } from './layers.js';
 
-// 1x1 transparent PNG — returned for tiles outside range or Slovenia bounds
+const CACHE_VERSION = 'v4';
+
+// 256x256 transparent PNG — returned for tiles outside range or Slovenia bounds
 const EMPTY_TILE = Uint8Array.from(atob(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQAABjE+ibYAAAAASUVORK5CYII='
+  'iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAABFUlEQVR42u3BMQEAAADCoPVP7WsIoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeAMBPAAB2ClDBAAAAABJRU5ErkJggg=='
 ), c => c.charCodeAt(0));
 
 function emptyTileResponse() {
@@ -140,7 +142,7 @@ function createTileResponse(buffer, contentType, layerSlug, z, x, y) {
     'Expires': new Date(now.getTime() + 86400000).toUTCString(),
     'Cache-Control': 'public, max-age=86400',
     'Access-Control-Allow-Origin': '*',
-    'ETag': `"v3-${layerSlug}-${z}-${x}-${y}"`
+    'ETag': `"${CACHE_VERSION}-${layerSlug}-${z}-${x}-${y}"`
   });
 
   return new Response(buffer, {
@@ -241,7 +243,7 @@ export async function handleTileRequest(c) {
 
         // Re-populate Edge Cache with versioned key
         const cacheUrl = new URL(c.req.url);
-        cacheUrl.searchParams.set('_v', 'v3');
+        cacheUrl.searchParams.set('_v', CACHE_VERSION);
         const cacheKey = new Request(cacheUrl.toString(), c.req.raw);
         c.executionCtx.waitUntil(caches.default.put(cacheKey, response.clone()));
 
@@ -283,7 +285,7 @@ export async function handleTileRequest(c) {
     // Store in edge cache (background) with versioned key - only valid tiles
     if (shouldCache) {
       const cacheUrl = new URL(c.req.url);
-      cacheUrl.searchParams.set('_v', 'v3');
+      cacheUrl.searchParams.set('_v', CACHE_VERSION);
       const cacheKey = new Request(cacheUrl.toString(), c.req.raw);
       c.executionCtx.waitUntil(caches.default.put(cacheKey, response.clone()));
     }

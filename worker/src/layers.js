@@ -126,6 +126,12 @@ export const LAYERS = {
     format: 'image/png',
     transparent: true,
   },
+  'katastrsk-obcine': {
+    baseUrl: GEOSERVER,
+    layers: 'pregledovalnik:KN_KATASTRSKE_OBCINE',
+    format: 'image/png',
+    transparent: true,
+  },
   'obcine': {
     baseUrl: GEOSERVER,
     layers: 'pregledovalnik:NEP_RPE_OBCINE',
@@ -151,6 +157,12 @@ export const LAYERS = {
     transparent: true,
   },
   'hisne-stevilke': {
+    baseUrl: GEOSERVER,
+    layers: 'pregledovalnik:NEP_HISNE_STEVILKE',
+    format: 'image/png',
+    transparent: true,
+  },
+  'hisnestevilke': {
     baseUrl: GEOSERVER,
     layers: 'pregledovalnik:NEP_HISNE_STEVILKE',
     format: 'image/png',
@@ -198,6 +210,12 @@ export const LAYERS = {
     transparent: true,
   },
   'odseki': {
+    baseUrl: GEOSERVER,
+    layers: 'pregledovalnik:odseki_gozdni',
+    format: 'image/png',
+    transparent: true,
+  },
+  'odseki-gozdni': {
     baseUrl: GEOSERVER,
     layers: 'pregledovalnik:odseki_gozdni',
     format: 'image/png',
