@@ -151,18 +151,68 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      - name: Build macOS release
-        run: flutter build macos --release
-
-      - name: Prepare macOS release asset
+      # Builds, signs with the Developer ID, notarizes, staples and zips. An
+      # unsigned build opens to "damaged and can't be opened" on any Mac that
+      # did not build it, which is what this asset used to be.
+      - name: Build, sign and notarize
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: ditto -c -k --sequesterRsrc --keepParent build/macos/Build/Products/Release/gozdar.app gozdar-${RELEASE_TAG}-macos.zip
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          MACOS_SIGN_ID: ${{ secrets.MACOS_SIGN_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: ./tool/release.sh macos
 
       - name: Upload macOS asset to GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: gozdar-${{ github.event.release.tag_name }}-macos.zip
+          files: dist/gozdar-*-macos.zip
+
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          pub-cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          working-directory: ios
+          bundler-cache: true
+
+      # Same script and the same ios/fastlane lanes `make release-ios` uses, so
+      # a release from a laptop and a release from CI are the same release.
+      - name: Build, sign and upload to TestFlight
+        env:
+          IOS_CERT_P12: ${{ secrets.IOS_CERT_P12 }}
+          IOS_CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: ./tool/release.sh ios
+
+      - name: Upload build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-logs
+          path: |
+            ios/fastlane/report.xml
+            ~/Library/Logs/gym/
+          retention-days: 7
 
   build-windows:
     runs-on: windows-latest

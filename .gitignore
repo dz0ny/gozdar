@@ -64,3 +64,10 @@ owners.sqlite
 ios/Runner.ipa
 ios/Runner.app.dSYM.zip
 ios/fastlane/report.xml
+
+# Release tooling (tool/release.sh, tool/secrets.sh)
+dist/
+tool/.release.env
+ios/vendor/bundle/
+ios/.bundle/
+ios/fastlane/report.xml
