@@ -229,14 +229,14 @@ class ForestTabState extends State<ForestTab> {
 
   Future<void> _importKml() async {
     try {
-      final result = await FilePicker.pickFiles(
+      final picked = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['kml', 'kmz'],
       );
 
-      if (result == null || result.files.isEmpty) return;
+      if (picked == null) return;
 
-      final file = File(result.files.first.path!);
+      final file = File(picked.path!);
       final content = await file.readAsString();
 
       // Try to import as full parcel export first (with logs, sečnja, locations)

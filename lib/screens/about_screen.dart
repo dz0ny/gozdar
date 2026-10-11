@@ -393,8 +393,8 @@ class _AboutScreenState extends State<AboutScreen> {
 
   Future<void> _importOwners() async {
     final messenger = ScaffoldMessenger.of(context);
-    final result = await FilePicker.pickFiles(type: FileType.any);
-    final path = result?.files.single.path;
+    final file = await FilePicker.pickFile(type: FileType.any);
+    final path = file?.path;
     if (path == null) return;
 
     final lower = path.toLowerCase();
@@ -848,8 +848,8 @@ class _AboutScreenState extends State<AboutScreen> {
 
   Future<void> _importParcels() async {
     final messenger = ScaffoldMessenger.of(context);
-    final result = await FilePicker.pickFiles(type: FileType.any);
-    final path = result?.files.single.path;
+    final file = await FilePicker.pickFile(type: FileType.any);
+    final path = file?.path;
     if (path == null) return;
 
     final lower = path.toLowerCase();

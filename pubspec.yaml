@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 2026.0701.4+88
 
 environment:
-  sdk: ^3.9.2
+  sdk: ^3.13.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -47,11 +47,11 @@ dependencies:
 
   # Location & Compass
   flutter_compass: any
-  geolocator: any
+  geolocator: ^14.1.1
 
   # Export & Share
   share_plus: any
-  file_picker: ^11.0.0
+  file_picker: ^13.1.0
   excel: any
   pdf: ^3.11.1
   open_filex: ^4.5.0

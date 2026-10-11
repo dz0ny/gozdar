@@ -1451,12 +1451,12 @@ class MapTabState extends State<MapTab> {
   /// Import geodata from file (KML or KMZ)
   Future<void> _importGeoFile() async {
     try {
-      final result = await FilePicker.pickFiles(
+      final picked = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['kml', 'kmz'],
       );
 
-      if (result == null || result.files.isEmpty) return;
+      if (picked == null) return;
 
       // TODO: Handle KML/KMZ import
       if (mounted) {

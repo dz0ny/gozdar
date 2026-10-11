@@ -83,7 +83,7 @@ class HttpCacheService {
   Future<int> clearExpired() async {
     try {
       final cutoff = DateTime.now().subtract(_cacheTtl);
-      return (_db.delete(_db.httpCache)..where((t) => t.cachedAt.isSmallerThanValue(cutoff))).go();
+      return await (_db.delete(_db.httpCache)..where((t) => t.cachedAt.isSmallerThanValue(cutoff))).go();
     } catch (e, st) {
       debugPrint('HttpCacheService.clearExpired error: $e\n$st');
       return 0;
