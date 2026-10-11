@@ -23,7 +23,9 @@ void main() {
         "(1700,'5',     'KOŠIR ŽIGA', 'ŠKOFJA LOKA 3',   'KOZARIŠČE', NULL),"
         "(1700,'6',     'JANKOVI?ć MILAN','ČRNOMELJ 1',  'KOZARIŠČE', NULL),"
         "(1700,'7',     'MAJ_50%',    NULL,              'KOZARIŠČE', NULL),"
-        "(1700,'8',     'Šuštar Čedo', NULL,             'KOZARIŠČE', NULL)",
+        "(1700,'8',     'Šuštar Čedo', NULL,             'KOZARIŠČE', NULL),"
+        "(1700,'9',     'ŠUŠTAR JANEZ', NULL,            'KOZARIŠČE', NULL),"
+        "(1700,'10',    'SUSTAR ANA',  NULL,             'KOZARIŠČE', NULL)",
       )
       ..close();
     OwnerLookupService.instance.openForTesting(path);
@@ -79,9 +81,16 @@ void main() {
       );
     });
 
+    test('sustar and šustar find the same owners', () {
+      const both = ['SUSTAR ANA', 'ŠUŠTAR JANEZ', 'Šuštar Čedo'];
+      for (final q in ['sustar', 'šustar', 'ŠUŠTAR', 'Sustar']) {
+        expect(owners(q)..sort(), both.toList()..sort(), reason: q);
+      }
+    });
+
     test('matches regardless of case in the data (ILIKE)', () {
       expect(owners('sustar ced'), ['Šuštar Čedo']);
-      expect(owners('ŠUŠTAR'), ['Šuštar Čedo']);
+      expect(owners('ŠUŠTAR ČEDO'), ['Šuštar Čedo']);
     });
 
     test('% and _ in the query are literal', () {
