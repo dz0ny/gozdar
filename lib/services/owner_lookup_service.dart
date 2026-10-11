@@ -618,15 +618,17 @@ class OwnerLookupService {
     final a = (address ?? '').trim().toUpperCase();
     if (n.isEmpty && a.isEmpty) return none;
 
+    // Case- and diacritic-insensitive (ILIKE-style): "kosir" finds KOŠIR,
+    // "novakovic" finds NOVAKOVIĆ, also when the source mangled a letter.
     final where = <String>[];
     final args = <Object?>[];
     if (n.isNotEmpty) {
-      where.add('lastnik LIKE ?');
-      args.add('%$n%');
+      where.add("${_foldSql('lastnik')} LIKE ? ESCAPE '\\'");
+      args.add('%${_likeEscape(foldForSearch(n))}%');
     }
     if (a.isNotEmpty) {
-      where.add('naslov LIKE ?');
-      args.add('%$a%');
+      where.add("${_foldSql('naslov')} LIKE ? ESCAPE '\\'");
+      args.add('%${_likeEscape(foldForSearch(a))}%');
     }
     // A parcel has one row per co-owner, so fetch extra rows to fill
     // [limit] parcels after grouping.
@@ -650,6 +652,56 @@ class OwnerLookupService {
       return none;
     }
   }
+
+  /// Letters folded to plain ASCII for search, including the mangled
+  /// two-character forms the source uses for some of them (see
+  /// [_repairEncoding]). Mangled forms come first so their '?' is consumed.
+  static const _searchFolds = [
+    ('?\u0107', 'C'), // ?ć -> Ć
+    ('?\u00EE', 'C'), // ?î -> Č
+    ('?á', 'S'),
+    ('?Ż', 'Z'),
+    ('?É', 'D'),
+    ('Č', 'C'),
+    ('Ć', 'C'),
+    ('Š', 'S'),
+    ('Ž', 'Z'),
+    ('Đ', 'D'),
+    // Lowercase too: SQLite's LIKE ignores case only for ASCII, so folding
+    // these makes the match behave like a case-insensitive ILIKE.
+    ('č', 'C'),
+    ('ć', 'C'),
+    ('š', 'S'),
+    ('ž', 'Z'),
+    ('đ', 'D'),
+  ];
+
+  /// Uppercases [s] and folds Slovenian/Croatian letters to ASCII, matching
+  /// what [_foldSql] does to the stored column.
+  @visibleForTesting
+  static String foldForSearch(String s) {
+    var out = s.toUpperCase();
+    for (final (from, to) in _searchFolds) {
+      out = out.replaceAll(from, to);
+    }
+    return out;
+  }
+
+  /// SQL expression folding [column] the same way as [foldForSearch]. Plain
+  /// nested REPLACE runs natively, so it adds little to the full-table scan
+  /// that LIKE '%…%' already does.
+  static String _foldSql(String column) {
+    var expr = column;
+    for (final (from, to) in _searchFolds) {
+      expr = "REPLACE($expr, '$from', '$to')";
+    }
+    return expr;
+  }
+
+  static String _likeEscape(String s) => s
+      .replaceAll('\\', '\\\\')
+      .replaceAll('%', '\\%')
+      .replaceAll('_', '\\_');
 
   /// Folds owner rows (one per co-owner) into one hit per KO + parcela,
   /// keeping the order in which each parcel first appears.
