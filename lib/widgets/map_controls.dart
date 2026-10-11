@@ -4,6 +4,11 @@ import '../models/map_layer.dart';
 
 /// Floating action buttons for map controls (zoom, GPS, layers)
 class MapControls extends StatelessWidget {
+  /// Width from the right edge of the map that the button column occupies,
+  /// including the floating-action-button slot margin. Overlays at the top
+  /// of the map must stay left of this.
+  static const double reservedRightInset = 80;
+
   final MapController mapController;
   final MapLayer currentBaseLayer;
   final int locationsCount;

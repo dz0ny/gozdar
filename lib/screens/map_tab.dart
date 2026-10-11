@@ -2411,171 +2411,15 @@ class MapTabState extends State<MapTab> {
               ],
             ),
           ),
-          ValueListenableBuilder<TileDownloadVisualState>(
-            valueListenable: _tileCacheService.downloadVisualStateListenable,
-            builder: (context, downloadState, _) {
-              if (!downloadState.isDownloading &&
-                  downloadState.overlays.isEmpty) {
-                return const SizedBox.shrink();
-              }
-
-              return Positioned(
-                left: 16,
-                right: 16,
-                bottom: MediaQuery.of(context).padding.bottom + 84,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surface.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Prenos kart ${(downloadState.percent * 100).toStringAsFixed(1)}%',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      LinearProgressIndicator(
-                        value: downloadState.total == 0
-                            ? null
-                            : downloadState.percent,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Preneseno ${downloadState.downloaded}, v predpomnilniku ${downloadState.skipped}, napake ${downloadState.failed} / ${downloadState.total}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+          // Status cards (downloads, lookups) share one column at the top so
+          // they stack instead of overlapping each other. The right inset
+          // keeps them clear of the layer/search/zoom button column.
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 16,
+            left: 16,
+            right: MapControls.reservedRightInset,
+            child: _buildStatusColumn(context, mapProvider),
           ),
-          // Loading indicator for locations. Anchored to the right edge so it
-          // never overlaps the full-width region download overlay.
-          if (mapProvider.isLoadingLocations)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 16,
-              right: 16,
-              child: Material(
-                elevation: 4,
-                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                color: Theme.of(context).colorScheme.surface,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: CircularProgressIndicator(
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              ),
-            ),
-
-          // Loading indicator for parcel query
-          if (mapProvider.isQueryingParcel)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 16,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Material(
-                  elevation: 4,
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
-                  color: Theme.of(context).colorScheme.surface,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Iskanje parcele...',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          // Region download progress (auto-prompt).
-          if (_downloadingRegionName != null)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 16,
-              left: 16,
-              right: 16,
-              child: Material(
-                elevation: 4,
-                borderRadius: const BorderRadius.all(Radius.circular(12)),
-                color: Theme.of(context).colorScheme.surface,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-                  child: Builder(
-                    builder: (context) {
-                      final total = _regionTotal;
-                      final pct = (total != null && total > 0)
-                          ? _regionReceived / total
-                          : null;
-                      final mb = (_regionReceived / (1024 * 1024))
-                          .toStringAsFixed(0);
-                      final totMb = total != null
-                          ? (total / (1024 * 1024)).toStringAsFixed(0)
-                          : '?';
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Prenašam $_downloadingRegionName… $mb/$totMb MB'
-                                  '${pct != null ? ' • ${(pct * 100).toStringAsFixed(0)}%' : ''}',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () => setState(
-                                  () => _cancelRegionDownload = true,
-                                ),
-                                child: const Text('Prekliči'),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          LinearProgressIndicator(value: pct),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
 
           if (_measurement.isActive && !_measurement.isFinished)
             _buildMeasurementCrosshair(context),
@@ -2639,6 +2483,185 @@ class MapTabState extends State<MapTab> {
             : null,
         hideBottomControls:
             _measurement.isActive || _pendingImportParcel != null,
+      ),
+    );
+  }
+
+  /// Progress/status cards shown over the top of the map, newest work first.
+  Widget _buildStatusColumn(BuildContext context, MapProvider mapProvider) {
+    return ValueListenableBuilder<TileDownloadVisualState>(
+      valueListenable: _tileCacheService.downloadVisualStateListenable,
+      builder: (context, downloadState, _) {
+        final cards = <Widget>[
+          if (_downloadingRegionName != null) _buildRegionDownloadCard(context),
+          if (downloadState.isDownloading)
+            _buildTileDownloadCard(context, downloadState),
+          if (mapProvider.isQueryingParcel) _buildParcelQueryPill(context),
+          if (mapProvider.isLoadingLocations) _buildLocationsLoadingPill(context),
+        ];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < cards.length; i++) ...[
+              if (i > 0) const SizedBox(height: 8),
+              cards[i],
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTileDownloadCard(
+    BuildContext context,
+    TileDownloadVisualState downloadState,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 10,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Prenos kart ${(downloadState.percent * 100).toStringAsFixed(1)}%',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: _tileCacheService.cancelDownload,
+                child: const Text('Prekliči'),
+              ),
+            ],
+          ),
+          LinearProgressIndicator(
+            value: downloadState.total == 0
+                ? null
+                : downloadState.percent,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Preneseno ${downloadState.downloaded}, v predpomnilniku ${downloadState.skipped}, napake ${downloadState.failed} / ${downloadState.total}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildParcelQueryPill(BuildContext context) {
+    return Material(
+      elevation: 4,
+      borderRadius: const BorderRadius.all(Radius.circular(8)),
+      color: Theme.of(context).colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Iskanje parcele...',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationsLoadingPill(BuildContext context) {
+    return Material(
+      elevation: 4,
+      borderRadius: const BorderRadius.all(Radius.circular(8)),
+      color: Theme.of(context).colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRegionDownloadCard(BuildContext context) {
+    return Material(
+      elevation: 4,
+      borderRadius: const BorderRadius.all(Radius.circular(12)),
+      color: Theme.of(context).colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+        child: Builder(
+          builder: (context) {
+            final total = _regionTotal;
+            final pct = (total != null && total > 0)
+                ? _regionReceived / total
+                : null;
+            final mb = (_regionReceived / (1024 * 1024))
+                .toStringAsFixed(0);
+            final totMb = total != null
+                ? (total / (1024 * 1024)).toStringAsFixed(0)
+                : '?';
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Prenašam $_downloadingRegionName… $mb/$totMb MB'
+                        '${pct != null ? ' • ${(pct * 100).toStringAsFixed(0)}%' : ''}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => setState(
+                        () => _cancelRegionDownload = true,
+                      ),
+                      child: const Text('Prekliči'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                LinearProgressIndicator(value: pct),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
