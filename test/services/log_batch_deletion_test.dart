@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gozdar/db/app_database.dart';
@@ -66,5 +69,28 @@ void main() {
     expect(repaired, 1);
     expect(await service.getUnassignedLogs(), hasLength(1));
     expect(await service.getLogsByBatch(keptId), hasLength(1));
+  });
+
+  test('upgrading from schema v3 returns orphaned logs to the list', () async {
+    final dir = await Directory.systemTemp.createTemp('gozdar-migration-');
+    addTearDown(() => dir.delete(recursive: true));
+    final file = File('${dir.path}/app.sqlite');
+
+    // A v3 database where the old deleteLogBatch left a log orphaned.
+    final old = AppDatabase(NativeDatabase(file));
+    final batchId = await old.into(old.logBatches).insert(
+          LogBatchesCompanion.insert(totalVolume: 1, logCount: 1, createdAt: DateTime.now()),
+        );
+    await old.into(old.logEntries).insert(
+          LogEntriesCompanion.insert(volume: 1, createdAt: DateTime.now(), batchId: Value(batchId)),
+        );
+    await (old.delete(old.logBatches)..where((t) => t.id.equals(batchId))).go();
+    await old.customStatement('PRAGMA user_version = 3');
+    await old.close();
+
+    final upgraded = AppDatabase(NativeDatabase(file));
+    service.setDatabaseForTesting(upgraded);
+
+    expect(await service.getUnassignedLogs(), hasLength(1));
   });
 }

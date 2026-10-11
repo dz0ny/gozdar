@@ -68,7 +68,7 @@ class TileDownloadService {
   static String tileUrl(String urlTemplate, int z, int x, int y) {
     const subdomains = ['a', 'b', 'c'];
     return urlTemplate
-        .replaceAll('{s}', subdomains[x % 3])
+        .replaceAll('{s}', subdomains[(x + y) % 3])
         .replaceAll('{z}', '$z')
         .replaceAll('{x}', '$x')
         .replaceAll('{y}', '$y');
