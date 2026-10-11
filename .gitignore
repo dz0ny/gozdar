@@ -71,3 +71,4 @@ tool/.release.env
 ios/vendor/bundle/
 ios/.bundle/
 ios/fastlane/report.xml
+test/screenshots/out/

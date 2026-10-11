@@ -116,6 +116,10 @@ class OwnerLookupService {
     return await file.exists() ? file.length() : null;
   }
 
+  /// Opens [path] directly, for tests and screenshots.
+  @visibleForTesting
+  void openForTesting(String path) => _open(path);
+
   /// Open the database if it exists. Safe to call on every app start.
   Future<void> init() async {
     try {
@@ -597,20 +601,22 @@ class OwnerLookupService {
   }
 
   /// Search owned parcels by owner [name] and/or [address] (both optional,
-  /// AND-combined). Returns parcels (KO + parcela) with full owner info, for
-  /// the owner-import flow. Returns empty when no database, or when both terms
-  /// are blank (to avoid dumping the whole table). Capped at [limit].
-  List<OwnerSearchHit> searchOwners({
+  /// AND-combined). Returns one hit per parcel (KO + parcela) listing all of
+  /// its matching co-owners, for the owner-import flow. Returns empty when no
+  /// database, or when both terms are blank (to avoid dumping the whole
+  /// table). Capped at [limit] parcels; `truncated` says more exist.
+  ({List<OwnerSearchHit> hits, bool truncated}) searchOwners({
     String? name,
     String? address,
     int limit = 300,
   }) {
+    const none = (hits: <OwnerSearchHit>[], truncated: false);
     final db = _db;
-    if (db == null) return const [];
+    if (db == null) return none;
     // Data is stored uppercase; uppercase the query so caron letters match.
     final n = (name ?? '').trim().toUpperCase();
     final a = (address ?? '').trim().toUpperCase();
-    if (n.isEmpty && a.isEmpty) return const [];
+    if (n.isEmpty && a.isEmpty) return none;
 
     final where = <String>[];
     final args = <Object?>[];
@@ -622,7 +628,10 @@ class OwnerLookupService {
       where.add('naslov LIKE ?');
       args.add('%$a%');
     }
-    args.add(limit);
+    // A parcel has one row per co-owner, so fetch extra rows to fill
+    // [limit] parcels after grouping.
+    final rowLimit = limit * 4;
+    args.add(rowLimit);
 
     try {
       final rows = db.select(
@@ -631,24 +640,50 @@ class OwnerLookupService {
         'ORDER BY lastnik, sifko, parcela LIMIT ?',
         args,
       );
-      return rows.map((r) {
-        final owner = _repairEncoding((r['lastnik'] as String?)?.trim()) ?? '';
-        final naslov = _normalizeAddress(r['naslov'] as String?);
-        final obcina = _normalizeAddress(r['obcina'] as String?);
-        final imeko = _normalizeAddress(r['imeko'] as String?);
-        final addr = [?naslov, ?obcina].join(', ');
-        return OwnerSearchHit(
-          sifko: r['sifko'] as int,
-          parcela: r['parcela'] as String,
-          owner: owner,
-          address: addr.isEmpty ? null : addr,
-          koName: imeko,
-        );
-      }).toList();
+      final hits = _groupByParcel(rows);
+      return (
+        hits: hits.length > limit ? hits.sublist(0, limit) : hits,
+        truncated: hits.length > limit || rows.length >= rowLimit,
+      );
     } catch (e) {
       debugPrint('OwnerLookupService.searchOwners failed: $e');
-      return const [];
+      return none;
     }
+  }
+
+  /// Folds owner rows (one per co-owner) into one hit per KO + parcela,
+  /// keeping the order in which each parcel first appears.
+  List<OwnerSearchHit> _groupByParcel(Iterable<Row> rows) {
+    final byParcel = <String, _HitBuilder>{};
+    for (final r in rows) {
+      final sifko = r['sifko'] as int;
+      final parcela = r['parcela'] as String;
+      final b = byParcel.putIfAbsent(
+        '$sifko/$parcela',
+        () => _HitBuilder(sifko, parcela),
+      );
+      final owner = _repairEncoding((r['lastnik'] as String?)?.trim());
+      if (owner != null && owner.isNotEmpty && !b.owners.contains(owner)) {
+        b.owners.add(owner);
+      }
+      if (b.address == null) {
+        final naslov = _normalizeAddress(r['naslov'] as String?);
+        final obcina = _normalizeAddress(r['obcina'] as String?);
+        final addr = [?naslov, ?obcina].join(', ');
+        if (addr.isNotEmpty) b.address = addr;
+      }
+      b.koName ??= _normalizeAddress(r['imeko'] as String?);
+    }
+    return [
+      for (final b in byParcel.values)
+        OwnerSearchHit(
+          sifko: b.sifko,
+          parcela: b.parcela,
+          owners: b.owners,
+          address: b.address,
+          koName: b.koName,
+        ),
+    ];
   }
 
   /// Reverse lookup: candidate parcels whose (rough) bounding box contains the
@@ -686,20 +721,7 @@ class OwnerLookupService {
         );
       }
 
-      return rows.map((r) {
-        final owner = _repairEncoding((r['lastnik'] as String?)?.trim()) ?? '';
-        final naslov = _normalizeAddress(r['naslov'] as String?);
-        final obcina = _normalizeAddress(r['obcina'] as String?);
-        final imeko = _normalizeAddress(r['imeko'] as String?);
-        final addr = [?naslov, ?obcina].join(', ');
-        return OwnerSearchHit(
-          sifko: r['sifko'] as int,
-          parcela: r['parcela'] as String,
-          owner: owner,
-          address: addr.isEmpty ? null : addr,
-          koName: imeko,
-        );
-      }).toList();
+      return _groupByParcel(rows);
     } catch (e) {
       debugPrint('OwnerLookupService.findOwnersAt failed: $e');
       return const [];
@@ -708,11 +730,11 @@ class OwnerLookupService {
 }
 
 /// One parcel result from an owner search: the cadastral key (KO + parcela)
-/// plus the owner's repaired name and full address.
+/// plus its co-owners' repaired names and the first known address.
 class OwnerSearchHit {
   final int sifko;
   final String parcela;
-  final String owner;
+  final List<String> owners;
   final String? address;
 
   /// Cadastral municipality (katastrska občina) name, e.g. "BABNO POLJE".
@@ -721,11 +743,24 @@ class OwnerSearchHit {
   const OwnerSearchHit({
     required this.sifko,
     required this.parcela,
-    required this.owner,
+    required this.owners,
     this.address,
     this.koName,
   });
 
+  /// All co-owners, comma separated (stored on an imported parcel).
+  String get owner => owners.join(', ');
+
   /// "BABNO POLJE (1651)" when the KO name is known, else "1651".
   String get koLabel => koName != null ? '$koName ($sifko)' : '$sifko';
+}
+
+class _HitBuilder {
+  _HitBuilder(this.sifko, this.parcela);
+
+  final int sifko;
+  final String parcela;
+  final owners = <String>[];
+  String? address;
+  String? koName;
 }

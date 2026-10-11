@@ -8,6 +8,7 @@ import '../providers/map_provider.dart';
 import '../services/cadastral_service.dart';
 import '../services/database_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../widgets/owner_hit_tile.dart';
 import '../widgets/parcel_map_preview.dart';
 
 enum _ImportState { idle, importing, imported, exists, notFound, error }
@@ -54,14 +55,14 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
   }
 
   void _runSearch() {
-    final hits = OwnerLookupService.instance.searchOwners(
+    final result = OwnerLookupService.instance.searchOwners(
       name: _nameController.text,
       address: _addressController.text,
       limit: _limit,
     );
     setState(() {
-      _hits = hits;
-      _truncated = hits.length >= _limit;
+      _hits = result.hits;
+      _truncated = result.truncated;
     });
   }
 
@@ -195,7 +196,7 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
                           ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 4),
-                    Text(hit.owner),
+                    Text(hit.owners.join('\n')),
                     if (hit.address != null) ...[
                       const SizedBox(height: 2),
                       Text(
@@ -348,7 +349,6 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
   }
 
   Widget _buildResults(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final hasQuery =
         _nameController.text.trim().isNotEmpty ||
         _addressController.text.trim().isNotEmpty;
@@ -367,39 +367,15 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
       itemBuilder: (context, i) {
         final hit = _hits[i];
         final previewing = _previewingKey == _key(hit);
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: cs.primaryContainer,
-            child: previewing
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: cs.onPrimaryContainer,
-                    ),
-                  )
-                : Icon(Icons.landscape, color: cs.onPrimaryContainer),
-          ),
-          title: Text(
-            'KO ${hit.koLabel} • Parcela ${hit.parcela}',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(hit.owner),
-              if (hit.address != null)
-                Text(
-                  hit.address!,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                ),
-            ],
-          ),
-          isThreeLine: hit.address != null,
-          trailing: _trailingFor(hit),
+        return OwnerHitTile(
+          hit: hit,
+          trailing: previewing
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : _trailingFor(hit),
           // Tap a result to fetch its geometry and preview the parcel outline.
           onTap: _previewingKey != null ? null : () => _previewHit(hit),
         );

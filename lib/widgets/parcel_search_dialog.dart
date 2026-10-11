@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
+import 'owner_hit_tile.dart';
 import '../services/parcel_search_history_service.dart';
 
 /// Bottom sheet for searching cadastral parcels. Always offers search by KO
@@ -162,15 +163,15 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   }
 
   void _runOwnerSearch() {
-    final hits = OwnerLookupService.instance.searchOwners(
+    final result = OwnerLookupService.instance.searchOwners(
       name: _nameController.text,
       address: _addressController.text,
       limit: _ownerLimit,
     );
     if (!mounted) return;
     setState(() {
-      _ownerHits = hits;
-      _ownerTruncated = hits.length >= _ownerLimit;
+      _ownerHits = result.hits;
+      _ownerTruncated = result.truncated;
     });
   }
 
@@ -223,31 +224,38 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
       );
     }
 
-    // Tabbed layout: parcel search + owner search.
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.7;
+    // Tabbed layout: parcel search + owner search. Size the whole sheet to
+    // the space left above the keyboard, so typing shrinks the results list
+    // instead of pushing the header off screen.
+    final media = MediaQuery.of(context);
+    final available =
+        media.size.height - media.viewInsets.bottom - media.padding.top - 24;
+    final maxHeight = available.clamp(0.0, media.size.height * 0.75);
     return DefaultTabController(
       length: 2,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _handleBar(),
-          _title('Iskanje', Icons.search),
-          const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.grid_on), text: 'Parcela'),
-              Tab(icon: Icon(Icons.person_search), text: 'Lastnik'),
-            ],
-          ),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: TabBarView(
-              children: [
-                SingleChildScrollView(child: _buildParcelForm(context)),
-                _buildOwnerSearch(context),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _handleBar(),
+            _title('Iskanje', Icons.search),
+            const TabBar(
+              tabs: [
+                Tab(icon: Icon(Icons.grid_on), text: 'Parcela'),
+                Tab(icon: Icon(Icons.person_search), text: 'Lastnik'),
               ],
             ),
-          ),
-        ],
+            Flexible(
+              child: TabBarView(
+                children: [
+                  SingleChildScrollView(child: _buildParcelForm(context)),
+                  _buildOwnerSearch(context),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -489,36 +497,15 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
       itemBuilder: (context, i) {
         final hit = _ownerHits[i];
         final locating = _locatingKey == _ownerKey(hit);
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: cs.primaryContainer,
-            child: Icon(Icons.landscape, color: cs.onPrimaryContainer),
-          ),
-          title: Text(
-            'KO ${hit.koLabel} • Parcela ${hit.parcela}',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(hit.owner),
-              if (hit.address != null)
-                Text(
-                  hit.address!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                ),
-            ],
-          ),
-          isThreeLine: hit.address != null,
+        return OwnerHitTile(
+          hit: hit,
           trailing: locating
               ? const SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Icon(Icons.my_location),
+              : Icon(Icons.my_location, color: cs.onSurfaceVariant),
           onTap: _locatingKey != null ? null : () => _locateOwnerHit(hit),
         );
       },
