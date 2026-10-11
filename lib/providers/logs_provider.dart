@@ -4,12 +4,21 @@ import '../models/log_batch.dart';
 import '../services/database_service.dart';
 import '../services/export_service.dart';
 
-/// State for conversion factors (m³ → PRM/NM)
+/// Conversion factors between solid wood (m³) and stacked/loose measures.
+///
+/// Each factor is the solid wood in one unit: 1 PRM × [prm] = m³ and
+/// 1 NM × [nm] = m³. So converting m³ to PRM/NM divides by the factor.
 class ConversionFactors {
   final double prm;
   final double nm;
 
   const ConversionFactors({this.prm = 0.65, this.nm = 0.40});
+
+  /// Stacked metres (PRM) holding [solidM3] of solid wood.
+  double toPrm(double solidM3) => prm > 0 ? solidM3 / prm : 0;
+
+  /// Loose metres (NM) holding [solidM3] of solid wood.
+  double toNm(double solidM3) => nm > 0 ? solidM3 / nm : 0;
 
   ConversionFactors copyWith({double? prm, double? nm}) {
     return ConversionFactors(prm: prm ?? this.prm, nm: nm ?? this.nm);
@@ -44,8 +53,8 @@ class LogsProvider extends ChangeNotifier {
   int get entryCount => _logEntries.length;
 
   // Computed values
-  double get prmVolume => _totalVolume * _conversionFactors.prm;
-  double get nmVolume => _totalVolume * _conversionFactors.nm;
+  double get prmVolume => _conversionFactors.toPrm(_totalVolume);
+  double get nmVolume => _conversionFactors.toNm(_totalVolume);
 
   /// Load unassigned log entries from database (logs not in any batch)
   Future<void> loadLogEntries() async {
@@ -212,7 +221,8 @@ class LogsProvider extends ChangeNotifier {
   Future<bool> deleteBatch(int batchId) async {
     try {
       await _databaseService.deleteLogBatch(batchId);
-      await loadBatches();
+      // The project's logs return to the working list.
+      await Future.wait([loadBatches(), loadLogEntries()]);
       return true;
     } catch (e) {
       _error = e.toString();

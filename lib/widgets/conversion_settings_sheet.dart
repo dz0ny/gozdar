@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/decimal_input.dart';
+import '../providers/logs_provider.dart';
 
 /// Bottom sheet for configuring volume conversion factors (m³ → PRM/NM)
 class ConversionSettingsSheet extends StatefulWidget {
@@ -105,7 +106,8 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${(widget.totalVolume * _prm).toStringAsFixed(2)} PRM  •  ${(widget.totalVolume * _nm).toStringAsFixed(2)} NM',
+                    '${ConversionFactors(prm: _prm, nm: _nm).toPrm(widget.totalVolume).toStringAsFixed(2)} PRM  •  '
+                    '${ConversionFactors(prm: _prm, nm: _nm).toNm(widget.totalVolume).toStringAsFixed(2)} NM',
                   ),
                 ],
               ),

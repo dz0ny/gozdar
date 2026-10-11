@@ -13,6 +13,14 @@ class CompassPainter extends CustomPainter {
   final Color targetColor;
   final ThemeData theme;
 
+  /// Canvas angle (radians, 0 = right, clockwise) at which a compass
+  /// direction [bearingDeg] appears when the device faces [headingDeg].
+  ///
+  /// The ring, its letters and the target dot all use this, so they always
+  /// rotate together: facing east, north is drawn on the left.
+  static double screenAngle(double bearingDeg, double headingDeg) =>
+      (bearingDeg - headingDeg) * pi / 180 - pi / 2;
+
   CompassPainter({
     required this.heading,
     required this.hasHeading,
@@ -52,7 +60,7 @@ class CompassPainter extends CustomPainter {
     // Draw degree markers with enhanced styling
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
     for (int i = 0; i < 360; i += 10) {
-      final angle = i * pi / 180 - pi / 2 + heading * pi / 180;
+      final angle = screenAngle(i.toDouble(), heading);
       final isCardinal = i % 90 == 0;
       final isMajor = i % 30 == 0;
 
@@ -81,7 +89,8 @@ class CompassPainter extends CustomPainter {
     }
 
     // Draw cardinal directions with theme colors
-    final directions = ['N', 'E', 'S', 'W'];
+    // Slovenian: sever, vzhod, jug, zahod.
+    final directions = ['S', 'V', 'J', 'Z'];
     final directionColors = [
       colorScheme.primary, // North - primary (warm wood tan)
       colorScheme.onSurfaceVariant, // East
@@ -90,7 +99,7 @@ class CompassPainter extends CustomPainter {
     ];
 
     for (int i = 0; i < 4; i++) {
-      final angle = i * pi / 2 - pi / 2 + heading * pi / 180;
+      final angle = screenAngle(i * 90.0, heading);
       final x = center.dx + (radius - 40) * cos(angle);
       final y = center.dy + (radius - 40) * sin(angle);
 
@@ -146,8 +155,7 @@ class CompassPainter extends CustomPainter {
       );
 
       // Adjust bearing relative to current heading
-      final relativeBearing = (bearing - heading + 360) % 360;
-      final angle = relativeBearing * pi / 180 - pi / 2;
+      final angle = screenAngle(bearing, heading);
 
       // Position target at 70% of radius
       final targetRadius = radius * 0.7;

@@ -168,7 +168,7 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
   }
 
   String _bearingToCardinal(double bearing) {
-    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    const directions = ['S', 'SV', 'V', 'JV', 'J', 'JZ', 'Z', 'SZ'];
     final index = ((bearing + 22.5) / 45).floor() % 8;
     return directions[index];
   }

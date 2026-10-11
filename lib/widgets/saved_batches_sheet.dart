@@ -41,7 +41,7 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
         title: const Text('Izbriši projekt'),
         content: const Text(
           'Ali ste prepričani, da želite izbrisati ta projekt?\n\n'
-          'Hlodi v projektu bodo ostali shranjeni.',
+          'Hlodi iz projekta se vrnejo na seznam Hlodi.',
         ),
         actions: [
           TextButton(
@@ -149,8 +149,8 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                     itemCount: batches.length,
                     itemBuilder: (context, index) {
                       final batch = batches[index];
-                      final prmVolume = batch.totalVolume * factors.prm;
-                      final nmVolume = batch.totalVolume * factors.nm;
+                      final prmVolume = factors.toPrm(batch.totalVolume);
+                      final nmVolume = factors.toNm(batch.totalVolume);
                       return Dismissible(
                         key: Key('batch_${batch.id}'),
                         direction: DismissDirection.endToStart,

@@ -136,7 +136,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -152,8 +152,24 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(offlineTileEntries, offlineTileEntries.relativePath);
         await m.addColumn(offlineTileEntries, offlineTileEntries.contentType);
       }
+      if (from < 4) {
+        // Deleting a project used to leave its logs pointing at a missing
+        // batch, hiding them everywhere. Return them to the working list.
+        await repairOrphanedLogs();
+      }
     },
   );
+
+  /// Returns logs whose project no longer exists to the working list.
+  Future<int> repairOrphanedLogs() {
+    return customUpdate(
+      'UPDATE log_entries SET batch_id = NULL '
+      'WHERE batch_id IS NOT NULL '
+      'AND batch_id NOT IN (SELECT id FROM log_batches)',
+      updates: {logEntries},
+      updateKind: UpdateKind.update,
+    );
+  }
 
   static QueryExecutor _openConnection() {
     return driftDatabase(

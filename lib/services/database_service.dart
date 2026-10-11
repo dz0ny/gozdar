@@ -188,8 +188,9 @@ class DatabaseService {
     await (db.delete(db.logEntries)..where((t) => t.id.equals(id))).go();
   }
 
-  Future<void> deleteAllLogs() async {
-    await db.delete(db.logEntries).go();
+  /// Deletes the logs on the working list. Logs saved into a project stay.
+  Future<int> deleteAllLogs() async {
+    return (db.delete(db.logEntries)..where((t) => t.batchId.isNull())).go();
   }
 
   Future<List<LogEntry>> getAllLogs() async {
@@ -287,8 +288,13 @@ class DatabaseService {
     await db.update(db.logBatches).replace(_batchToCompanion(batch));
   }
 
+  /// Deletes a project and returns its logs to the working list.
   Future<void> deleteLogBatch(int id) async {
-    await (db.delete(db.logBatches)..where((t) => t.id.equals(id))).go();
+    await db.transaction(() async {
+      await (db.update(db.logEntries)..where((t) => t.batchId.equals(id)))
+          .write(const LogEntriesCompanion(batchId: Value(null)));
+      await (db.delete(db.logBatches)..where((t) => t.id.equals(id))).go();
+    });
   }
 
   Future<List<LogBatch>> getAllLogBatches() async {

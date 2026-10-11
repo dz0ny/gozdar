@@ -69,8 +69,8 @@ keytool -genkey -v -keystore ~/android-keystores/gozdar-release-key.jks \
 
 ### Hlodi (Logs) Tab
 **Volume conversions:**
-- **PRM** (prostorninski meter) = m³ × 0.65 (stacked firewood)
-- **NM** (nasuti meter) = m³ × 0.40 (loose chips)
+- **PRM** (prostorninski meter) = m³ ÷ 0.65 (stacked firewood; 1 PRM holds 0.65 m³ solid)
+- **NM** (nasuti meter) = m³ ÷ 0.40 (loose chips; 1 NM holds 0.40 m³ solid)
 - Factors configurable via settings
 
 **Species tracking:**

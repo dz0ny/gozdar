@@ -144,7 +144,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
         title: const Text('Izbriši projekt'),
         content: Text(
           'Ali ste prepričani, da želite izbrisati "${_batch.owner ?? 'ta projekt'}"?\n\n'
-          'Hlodi (${_logs.length}) bodo ostali, vendar ne bodo več dodeljeni projektu.',
+          'Hlodi (${_logs.length}) se vrnejo na seznam Hlodi.',
         ),
         actions: [
           TextButton(
@@ -160,8 +160,8 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
       ),
     );
 
-    if (confirmed == true) {
-      await _databaseService.deleteLogBatch(_batch.id);
+    if (confirmed == true && mounted) {
+      await context.read<LogsProvider>().deleteBatch(_batch.id);
       if (mounted) {
         context.pop();
       }
@@ -277,8 +277,8 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Consumer<LogsProvider>(
               builder: (context, provider, _) {
-                final prmVolume = _totalVolume * provider.conversionFactors.prm;
-                final nmVolume = _totalVolume * provider.conversionFactors.nm;
+                final prmVolume = provider.conversionFactors.toPrm(_totalVolume);
+                final nmVolume = provider.conversionFactors.toNm(_totalVolume);
                 return Column(
                   children: [
                     // Summary card (tap for conversion dialog)

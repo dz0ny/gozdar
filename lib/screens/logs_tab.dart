@@ -197,6 +197,7 @@ class LogsTab extends StatelessWidget {
         content: Text(
           'Ali ste prepričani, da želite odstraniti vseh ${provider.entryCount} vnosov?\n\n'
           'Skupni volumen: ${provider.totalVolume.toStringAsFixed(2)} m³\n\n'
+          'Shranjeni projekti ostanejo nespremenjeni. '
           'To dejanje ni mogoče razveljaviti.',
         ),
         actions: [
