@@ -430,8 +430,31 @@ class _AboutScreenState extends State<AboutScreen> {
 
   Future<void> _clearFlutterMapCache() async {
     final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Počisti predpomnilnik karte?'),
+        content: const Text(
+          'Izbrisane bodo vse shranjene karte, tudi tiste, prenesene za delo '
+          'brez povezave. Brez signala jih ne bo mogoče prikazati, dokler jih '
+          'znova ne prenesete.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Prekliči'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Izbriši'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
-      await TileCacheService().clearFlutterMapCache();
+      await TileCacheService().clearCache();
       messenger.showSnackBar(
         const SnackBar(content: Text('Predpomnilnik karte počiščen.')),
       );

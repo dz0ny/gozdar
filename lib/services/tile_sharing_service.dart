@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:nsd/nsd.dart' as nsd;
 
 import 'offline_tile_cache_service.dart';
+import 'tile_download_service.dart';
 
 class TilePeer {
   final String ipAddress;
@@ -250,6 +252,39 @@ class TileSharingService {
     return controller.stream;
   }
 
+  /// Writes a synced tile into the cache the map displays from.
+  Future<void> _putOnMap(
+    String urlTemplate,
+    CachedTileCoord tile,
+    Uint8List bytes,
+  ) async {
+    if (urlTemplate.isEmpty) return;
+    await TileDownloadService.putMapTile(
+      TileDownloadService.tileUrl(urlTemplate, tile.z, tile.x, tile.y),
+      bytes,
+    );
+  }
+
+  /// Copies a tile already in the offline store into the map's cache if the
+  /// map doesn't have it yet.
+  Future<void> _ensureOnMap(
+    String urlTemplate,
+    String styleHash,
+    CachedTileCoord tile,
+  ) async {
+    if (urlTemplate.isEmpty) return;
+    final url = TileDownloadService.tileUrl(urlTemplate, tile.z, tile.x, tile.y);
+    try {
+      final onMap =
+          await BuiltInMapCachingProvider.getOrCreateInstance().getTile(url);
+      if (onMap != null) return;
+    } catch (_) {
+      return; // Built-in cache unavailable.
+    }
+    final data = await _cache.getTileData(styleHash, tile.z, tile.x, tile.y);
+    if (data != null) await TileDownloadService.putMapTile(url, data.bytes);
+  }
+
   Future<void> _runSync({
     required StreamController<PeerSyncEvent> controller,
     required List<TilePeer> peers,
@@ -310,6 +345,9 @@ class TileSharingService {
       final future = () async {
         try {
           if (await _cache.hasTile(styleHash, tile.z, tile.x, tile.y)) {
+            // Earlier syncs stored tiles only in the offline store, which the
+            // map never reads. Make sure this one is visible too.
+            await _ensureOnMap(styleMeta.urlTemplate, styleHash, tile);
             skipped++;
             controller.add(PeerSyncTileSkipped(skipped: skipped, total: total));
             return;
@@ -345,6 +383,7 @@ class TileSharingService {
               tileResponse.bytes,
               contentType: tileResponse.contentType,
             );
+            await _putOnMap(styleMeta.urlTemplate, tile, tileResponse.bytes);
             downloaded++;
             controller.add(PeerSyncTileDownloaded(downloaded: downloaded, total: total));
           } else {

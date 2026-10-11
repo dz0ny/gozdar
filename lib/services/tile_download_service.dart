@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
@@ -60,6 +61,36 @@ class TileDownloadComplete extends TileDownloadEvent {
 class TileDownloadCancelled extends TileDownloadEvent {}
 
 class TileDownloadService {
+  /// The URL the map requests for tile z/x/y of [urlTemplate].
+  ///
+  /// flutter_map's built-in cache is keyed by this URL, so any tile written
+  /// there must use exactly this form to be displayed offline.
+  static String tileUrl(String urlTemplate, int z, int x, int y) {
+    const subdomains = ['a', 'b', 'c'];
+    return urlTemplate
+        .replaceAll('{s}', subdomains[x % 3])
+        .replaceAll('{z}', '$z')
+        .replaceAll('{x}', '$x')
+        .replaceAll('{y}', '$y');
+  }
+
+  /// Stores [bytes] in the cache the map reads from, as a long-lived tile.
+  static Future<void> putMapTile(String url, Uint8List bytes) async {
+    try {
+      await BuiltInMapCachingProvider.getOrCreateInstance().putTile(
+        url: url,
+        metadata: CachedMapTileMetadata(
+          staleAt: DateTime.now().add(const Duration(days: 365)),
+          lastModified: null,
+          etag: null,
+        ),
+        bytes: bytes,
+      );
+    } catch (_) {
+      // Built-in cache unavailable (e.g. web) — offline store copy still kept.
+    }
+  }
+
   final OfflineTileCacheService _cache = OfflineTileCacheService.instance;
   final http.Client _httpClient = http.Client();
 
@@ -219,12 +250,7 @@ class TileDownloadService {
     String styleHash,
   ) async {
     final bounds = TileMathService.tileBounds(tile.x, tile.y, tile.z);
-    final subdomains = ['a', 'b', 'c'];
-    final url = urlTemplate
-        .replaceAll('{s}', subdomains[tile.x % 3])
-        .replaceAll('{z}', '${tile.z}')
-        .replaceAll('{x}', '${tile.x}')
-        .replaceAll('{y}', '${tile.y}');
+    final url = tileUrl(urlTemplate, tile.z, tile.x, tile.y);
 
     const maxRetries = 3;
     for (var attempt = 0; attempt < maxRetries; attempt++) {
@@ -251,20 +277,8 @@ class TileDownloadService {
 
         // Warm flutter_map's built-in cache with the exact tile URL so the map
         // serves it offline later (this is the serving path now). Keep the
-        // ObjectBox copy for the download-manager stats/delete UI.
-        try {
-          await BuiltInMapCachingProvider.getOrCreateInstance().putTile(
-            url: url,
-            metadata: CachedMapTileMetadata(
-              staleAt: DateTime.now().add(const Duration(days: 365)),
-              lastModified: null,
-              etag: null,
-            ),
-            bytes: response.bodyBytes,
-          );
-        } catch (_) {
-          // Built-in cache unavailable (e.g. web) — ObjectBox copy still kept.
-        }
+        // offline store copy for the download-manager stats/delete UI.
+        await putMapTile(url, response.bodyBytes);
         await _cache.putTile(
           styleHash,
           tile.z,

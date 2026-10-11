@@ -113,8 +113,15 @@ class TileCacheService {
     }
   }
 
+  /// Removes every stored map tile: the offline store (stats, manifests,
+  /// sharing) and flutter_map's cache (what the map displays).
+  ///
+  /// Always clear both together. Clearing only the displayed copy left the
+  /// manifests listing tiles as downloaded, so re-downloading skipped them and
+  /// the offline map stayed blank.
   Future<void> clearCache() async {
     await _offlineCache.clearCache();
+    await clearFlutterMapCache();
   }
 
   Future<void> clearFlutterMapCache() async {
