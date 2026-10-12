@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -70,6 +71,11 @@ class OwnerLookupService {
 
   Database? _db;
   String? _path;
+
+  /// Whether the open database has the trigram search tables built by
+  /// [_buildSearchIndex]. Until then searches fall back to a full scan.
+  bool _hasSearchIndex = false;
+  Future<void>? _indexBuild;
   int _rowCount = 0;
   String? _source; // 'imported' | 'downloaded'
 
@@ -120,12 +126,22 @@ class OwnerLookupService {
   @visibleForTesting
   void openForTesting(String path) => _open(path);
 
+  /// Builds the search index for the database opened with [openForTesting].
+  @visibleForTesting
+  Future<void> buildSearchIndexForTesting() async {
+    _scheduleSearchIndex();
+    await _indexBuild;
+  }
+
+  bool get hasSearchIndex => _hasSearchIndex;
+
   /// Open the database if it exists. Safe to call on every app start.
   Future<void> init() async {
     try {
       _path = await _targetPath();
       if (!File(_path!).existsSync()) return;
       _open(_path!);
+      _scheduleSearchIndex();
     } catch (e) {
       debugPrint('OwnerLookupService.init failed: $e');
       _close();
@@ -193,10 +209,105 @@ class OwnerLookupService {
       db.close();
       throw const FormatException('Datoteka ni veljavna baza lastnikov.');
     }
+    // The search index is built on a second connection; wait for its
+    // commit instead of failing lookups with SQLITE_BUSY.
+    db.execute('PRAGMA busy_timeout = 5000');
     _rowCount = _readRowCount(db);
     _hasGeometry = _detectGeometry(db);
+    _hasSearchIndex = _detectSearchIndex(db);
     _source = _readSource(path);
     _db = db;
+    _path = path;
+  }
+
+  static bool _detectSearchIndex(Database db) => db.select(
+    "SELECT name FROM sqlite_master WHERE name IN "
+    "('owner_name_search', 'owner_address_search')",
+  ).length == 2;
+
+  /// Builds the search index in a background isolate if the open database
+  /// lacks it. Runs once per database; searches use the slower full scan
+  /// until it is ready.
+  void _scheduleSearchIndex() {
+    final path = _path;
+    if (_db == null || path == null || _hasSearchIndex || _indexBuild != null) {
+      return;
+    }
+    _indexBuild = _buildSearchIndexInBackground(path)
+        .then((_) {
+          if (_path == path && _db != null) _hasSearchIndex = true;
+        })
+        .catchError((Object e) {
+          debugPrint('OwnerLookupService search index build failed: $e');
+        })
+        .whenComplete(() => _indexBuild = null);
+  }
+
+  // Static so the isolate closures capture only plain values, never this
+  // service and its open (unsendable) database connection.
+  static Future<void> _buildSearchIndexInBackground(String path) =>
+      Isolate.run(() => _buildSearchIndex(path));
+
+  static Future<OwnerSearchResult> _searchInBackground(
+    String path, {
+    required bool indexed,
+    String? name,
+    String? address,
+    required int limit,
+  }) => Isolate.run(() {
+    final db = sqlite3.open(path);
+    try {
+      db.execute('PRAGMA busy_timeout = 5000');
+      return _search(
+        db,
+        indexed: indexed,
+        name: name,
+        address: address,
+        limit: limit,
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  /// Adds trigram full-text tables over the distinct owner names and
+  /// addresses (folded like [foldForSearch]) plus B-tree indexes to fetch
+  /// their parcels. A substring search then touches ~100k short terms
+  /// instead of scanning every owner row. Built in one transaction, so an
+  /// interrupted build leaves nothing behind and is retried on next open.
+  static void _buildSearchIndex(String path) {
+    final db = sqlite3.open(path);
+    try {
+      db.execute('PRAGMA busy_timeout = 10000');
+      if (_detectSearchIndex(db)) return;
+      db.execute('BEGIN IMMEDIATE');
+      try {
+        for (final (table, column) in [
+          ('owner_name_search', 'lastnik'),
+          ('owner_address_search', 'naslov'),
+        ]) {
+          db.execute(
+            'CREATE INDEX IF NOT EXISTS idx_owners_$column ON owners($column)',
+          );
+          db.execute(
+            'CREATE VIRTUAL TABLE $table '
+            "USING fts5(term UNINDEXED, term_f, tokenize='trigram')",
+          );
+          db.execute(
+            'INSERT INTO $table(term, term_f) '
+            'SELECT $column, ${_foldSql('UPPER($column)')} FROM '
+            '(SELECT DISTINCT $column FROM owners '
+            "WHERE $column IS NOT NULL AND $column <> '')",
+          );
+        }
+        db.execute('COMMIT');
+      } catch (_) {
+        db.execute('ROLLBACK');
+        rethrow;
+      }
+    } finally {
+      db.close();
+    }
   }
 
   String? _readSource(String path) {
@@ -247,6 +358,7 @@ class OwnerLookupService {
   void _close() {
     _db?.close();
     _db = null;
+    _hasSearchIndex = false;
     _rowCount = 0;
     _hasGeometry = false;
     _source = null;
@@ -272,6 +384,7 @@ class OwnerLookupService {
       // Opens read-write and validates that the 'owners' table exists.
       _open(target);
       _writeSource(target, 'imported');
+      _scheduleSearchIndex();
     } on FormatException {
       await _deleteDbFiles(target);
       _path = null;
@@ -343,6 +456,7 @@ class OwnerLookupService {
       try {
         _open(target);
         _writeSource(target, 'downloaded');
+        _scheduleSearchIndex();
       } on FormatException {
         await _deleteDbFiles(target);
         _path = null;
@@ -600,35 +714,96 @@ class OwnerLookupService {
     return name;
   }
 
+  /// Shortest search term worth running; trigram indexes need 3 characters.
+  static const minQueryLength = 3;
+
   /// Search owned parcels by owner [name] and/or [address] (both optional,
   /// AND-combined). Returns one hit per parcel (KO + parcela) listing all of
-  /// its matching co-owners, for the owner-import flow. Returns empty when no
-  /// database, or when both terms are blank (to avoid dumping the whole
-  /// table). Capped at [limit] parcels; `truncated` says more exist.
-  ({List<OwnerSearchHit> hits, bool truncated}) searchOwners({
+  /// its matching co-owners, for the owner-import flow. Returns no hits when
+  /// no database is open, both terms are blank, or a term is shorter than
+  /// [minQueryLength] (`tooShort`). Capped at [limit] parcels; `truncated`
+  /// says more exist.
+  ///
+  /// Runs on the calling isolate; the UI uses [searchOwnersAsync].
+  OwnerSearchResult searchOwners({
     String? name,
     String? address,
     int limit = 300,
   }) {
-    const none = (hits: <OwnerSearchHit>[], truncated: false);
     final db = _db;
-    if (db == null) return none;
-    // Data is stored uppercase; uppercase the query so caron letters match.
-    final n = (name ?? '').trim().toUpperCase();
-    final a = (address ?? '').trim().toUpperCase();
-    if (n.isEmpty && a.isEmpty) return none;
+    if (db == null) return OwnerSearchResult.empty;
+    return _search(
+      db,
+      indexed: _hasSearchIndex,
+      name: name,
+      address: address,
+      limit: limit,
+    );
+  }
+
+  /// [searchOwners] on a background isolate with its own connection, so a
+  /// slow search never blocks the UI.
+  Future<OwnerSearchResult> searchOwnersAsync({
+    String? name,
+    String? address,
+    int limit = 300,
+  }) async {
+    final path = _path;
+    if (_db == null || path == null) return OwnerSearchResult.empty;
+    final terms = _searchTerms(name, address);
+    if (terms == null) return OwnerSearchResult.empty;
+    if (terms.tooShort) return OwnerSearchResult.short;
+    return _searchInBackground(
+      path,
+      indexed: _hasSearchIndex,
+      name: name,
+      address: address,
+      limit: limit,
+    );
+  }
+
+  /// Folded, uppercased terms, or null when both are blank. `tooShort` when
+  /// a given term is under [minQueryLength] characters.
+  static ({String n, String a, bool tooShort})? _searchTerms(
+    String? name,
+    String? address,
+  ) {
+    final n = foldForSearch((name ?? '').trim());
+    final a = foldForSearch((address ?? '').trim());
+    if (n.isEmpty && a.isEmpty) return null;
+    final tooShort = (n.isNotEmpty && n.length < minQueryLength) ||
+        (a.isNotEmpty && a.length < minQueryLength);
+    return (n: n, a: a, tooShort: tooShort);
+  }
+
+  static OwnerSearchResult _search(
+    Database db, {
+    required bool indexed,
+    String? name,
+    String? address,
+    required int limit,
+  }) {
+    final terms = _searchTerms(name, address);
+    if (terms == null) return OwnerSearchResult.empty;
+    if (terms.tooShort) return OwnerSearchResult.short;
 
     // Case- and diacritic-insensitive (ILIKE-style): "kosir" finds KOŠIR,
     // "novakovic" finds NOVAKOVIĆ, also when the source mangled a letter.
+    // With the index, the match runs over ~100k distinct folded terms; the
+    // fallback folds every owner row and is ~1000x slower.
     final where = <String>[];
     final args = <Object?>[];
-    if (n.isNotEmpty) {
-      where.add("${_foldSql('lastnik')} LIKE ? ESCAPE '\\'");
-      args.add('%${_likeEscape(foldForSearch(n))}%');
-    }
-    if (a.isNotEmpty) {
-      where.add("${_foldSql('naslov')} LIKE ? ESCAPE '\\'");
-      args.add('%${_likeEscape(foldForSearch(a))}%');
+    for (final (term, column, table) in [
+      (terms.n, 'lastnik', 'owner_name_search'),
+      (terms.a, 'naslov', 'owner_address_search'),
+    ]) {
+      if (term.isEmpty) continue;
+      where.add(
+        indexed
+            ? "$column IN (SELECT term FROM $table WHERE term_f LIKE ? ESCAPE '\\')"
+            : "${_foldSql(column)} LIKE ? ESCAPE '\\'",
+      );
+      args.add('%${_likeEscape(term)}%');
     }
     // A parcel has one row per co-owner, so fetch extra rows to fill
     // [limit] parcels after grouping.
@@ -643,13 +818,13 @@ class OwnerLookupService {
         args,
       );
       final hits = _groupByParcel(rows);
-      return (
+      return OwnerSearchResult(
         hits: hits.length > limit ? hits.sublist(0, limit) : hits,
         truncated: hits.length > limit || rows.length >= rowLimit,
       );
     } catch (e) {
       debugPrint('OwnerLookupService.searchOwners failed: $e');
-      return none;
+      return OwnerSearchResult.empty;
     }
   }
 
@@ -705,7 +880,7 @@ class OwnerLookupService {
 
   /// Folds owner rows (one per co-owner) into one hit per KO + parcela,
   /// keeping the order in which each parcel first appears.
-  List<OwnerSearchHit> _groupByParcel(Iterable<Row> rows) {
+  static List<OwnerSearchHit> _groupByParcel(Iterable<Row> rows) {
     final byParcel = <String, _HitBuilder>{};
     for (final r in rows) {
       final sifko = r['sifko'] as int;
@@ -805,6 +980,28 @@ class OwnerSearchHit {
 
   /// "BABNO POLJE (1651)" when the KO name is known, else "1651".
   String get koLabel => koName != null ? '$koName ($sifko)' : '$sifko';
+}
+
+/// Result of an owner search.
+class OwnerSearchResult {
+  const OwnerSearchResult({
+    required this.hits,
+    this.truncated = false,
+    this.tooShort = false,
+  });
+
+  static const empty = OwnerSearchResult(hits: []);
+  static const short = OwnerSearchResult(hits: [], tooShort: true);
+
+  /// One hit per parcel.
+  final List<OwnerSearchHit> hits;
+
+  /// More parcels matched than were returned.
+  final bool truncated;
+
+  /// A search term was under [OwnerLookupService.minQueryLength] characters,
+  /// so nothing was searched.
+  final bool tooShort;
 }
 
 class _HitBuilder {

@@ -5,6 +5,8 @@ import 'package:flutter_map/flutter_map.dart';
 import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
 import 'owner_hit_tile.dart';
+import 'owner_search_controller.dart';
+import 'owner_search_panel.dart';
 import '../services/parcel_search_history_service.dart';
 
 /// Bottom sheet for searching cadastral parcels. Always offers search by KO
@@ -63,15 +65,9 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   List<String> _parcelHistory = [];
 
   // Owner-search tab state (only used when the owners DB is available).
-  final _nameController = TextEditingController();
-  final _addressController = TextEditingController();
-  Timer? _ownerDebounce;
-  List<OwnerSearchHit> _ownerHits = const [];
-  bool _ownerTruncated = false;
+  final _ownerSearch = OwnerSearchController();
   String? _locatingKey;
   String? _ownerError;
-
-  static const _ownerLimit = 300;
 
   bool get _ownersAvailable => OwnerLookupService.instance.isAvailable;
 
@@ -97,9 +93,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   void dispose() {
     _koController.dispose();
     _parcelController.dispose();
-    _nameController.dispose();
-    _addressController.dispose();
-    _ownerDebounce?.cancel();
+    _ownerSearch.dispose();
     super.dispose();
   }
 
@@ -156,24 +150,6 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   }
 
   String _ownerKey(OwnerSearchHit h) => '${h.sifko}/${h.parcela}';
-
-  void _onOwnerQueryChanged() {
-    _ownerDebounce?.cancel();
-    _ownerDebounce = Timer(const Duration(milliseconds: 300), _runOwnerSearch);
-  }
-
-  void _runOwnerSearch() {
-    final result = OwnerLookupService.instance.searchOwners(
-      name: _nameController.text,
-      address: _addressController.text,
-      limit: _ownerLimit,
-    );
-    if (!mounted) return;
-    setState(() {
-      _ownerHits = result.hits;
-      _ownerTruncated = result.truncated;
-    });
-  }
 
   /// Fetch the parcel geometry for an owner hit and hand it to the map. The
   /// owners DB has no geometry, so we query the cadastral WFS by KO + parcela.
@@ -419,83 +395,15 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
 
   Widget _buildOwnerSearch(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Column(
-            children: [
-              TextField(
-                controller: _nameController,
-                textCapitalization: TextCapitalization.characters,
-                onChanged: (_) => _onOwnerQueryChanged(),
-                decoration: const InputDecoration(
-                  labelText: 'Ime lastnika',
-                  prefixIcon: Icon(Icons.person_search),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _addressController,
-                textCapitalization: TextCapitalization.characters,
-                onChanged: (_) => _onOwnerQueryChanged(),
-                decoration: const InputDecoration(
-                  labelText: 'Naslov',
-                  prefixIcon: Icon(Icons.home_outlined),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (_ownerError != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: _errorBox(_ownerError!),
-          ),
-        if (_ownerTruncated)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, size: 16, color: cs.onSurfaceVariant),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Prikazanih prvih $_ownerLimit zadetkov — natančneje določi iskanje.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
-                  ),
-                ),
-              ],
+    return OwnerSearchPanel(
+      controller: _ownerSearch,
+      message: _ownerError == null
+          ? null
+          : Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: _errorBox(_ownerError!),
             ),
-          ),
-        const Divider(height: 16),
-        Expanded(child: _buildOwnerResults(context)),
-      ],
-    );
-  }
-
-  Widget _buildOwnerResults(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final hasQuery = _nameController.text.trim().isNotEmpty ||
-        _addressController.text.trim().isNotEmpty;
-    if (!hasQuery) {
-      return _hint(
-        Icons.search,
-        'Vnesi ime lastnika in/ali naslov za iskanje parcel.',
-      );
-    }
-    if (_ownerHits.isEmpty) {
-      return _hint(Icons.person_off, 'Ni zadetkov.');
-    }
-    return ListView.separated(
-      itemCount: _ownerHits.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, i) {
-        final hit = _ownerHits[i];
+      itemBuilder: (context, hit) {
         final locating = _locatingKey == _ownerKey(hit);
         return OwnerHitTile(
           hit: hit,
@@ -509,29 +417,6 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
           onTap: _locatingKey != null ? null : () => _locateOwnerHit(hit),
         );
       },
-    );
-  }
-
-  Widget _hint(IconData icon, String text) {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 48, color: cs.onSurfaceVariant),
-            const SizedBox(height: 12),
-            Text(
-              text,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

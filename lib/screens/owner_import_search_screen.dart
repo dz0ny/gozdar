@@ -9,6 +9,8 @@ import '../services/cadastral_service.dart';
 import '../services/database_service.dart';
 import '../services/owner_lookup_service.dart';
 import '../widgets/owner_hit_tile.dart';
+import '../widgets/owner_search_controller.dart';
+import '../widgets/owner_search_panel.dart';
 import '../widgets/parcel_map_preview.dart';
 
 enum _ImportState { idle, importing, imported, exists, notFound, error }
@@ -24,47 +26,22 @@ class OwnerImportSearchScreen extends StatefulWidget {
 }
 
 class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
-  final _nameController = TextEditingController();
-  final _addressController = TextEditingController();
+  final _search = OwnerSearchController();
   final _databaseService = DatabaseService();
   final _cadastralService = CadastralService();
 
-  Timer? _debounce;
-  List<OwnerSearchHit> _hits = const [];
-  bool _truncated = false;
   final Map<String, _ImportState> _status = {};
 
   /// Key of the hit whose geometry is currently being fetched for preview.
   String? _previewingKey;
 
-  static const _limit = 300;
-
   @override
   void dispose() {
-    _debounce?.cancel();
-    _nameController.dispose();
-    _addressController.dispose();
+    _search.dispose();
     super.dispose();
   }
 
   String _key(OwnerSearchHit h) => '${h.sifko}/${h.parcela}';
-
-  void _onQueryChanged() {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), _runSearch);
-  }
-
-  void _runSearch() {
-    final result = OwnerLookupService.instance.searchOwners(
-      name: _nameController.text,
-      address: _addressController.text,
-      limit: _limit,
-    );
-    setState(() {
-      _hits = result.hits;
-      _truncated = result.truncated;
-    });
-  }
 
   Future<void> _import(OwnerSearchHit hit, {WfsParcel? prefetched}) async {
     final key = _key(hit);
@@ -286,122 +263,25 @@ class _OwnerImportSearchScreenState extends State<OwnerImportSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Uvoz po lastniku')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _nameController,
-                  textCapitalization: TextCapitalization.characters,
-                  onChanged: (_) => _onQueryChanged(),
-                  decoration: const InputDecoration(
-                    labelText: 'Ime lastnika',
-                    prefixIcon: Icon(Icons.person_search),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _addressController,
-                  textCapitalization: TextCapitalization.characters,
-                  onChanged: (_) => _onQueryChanged(),
-                  decoration: const InputDecoration(
-                    labelText: 'Naslov',
-                    prefixIcon: Icon(Icons.home_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (_truncated)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: cs.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Prikazanih prvih $_limit zadetkov — natančneje določi iskanje.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          const Divider(height: 16),
-          Expanded(child: _buildResults(context)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResults(BuildContext context) {
-    final hasQuery =
-        _nameController.text.trim().isNotEmpty ||
-        _addressController.text.trim().isNotEmpty;
-    if (!hasQuery) {
-      return _hint(
-        Icons.search,
-        'Vnesi ime lastnika in/ali naslov za iskanje parcel.',
-      );
-    }
-    if (_hits.isEmpty) {
-      return _hint(Icons.person_off, 'Ni zadetkov.');
-    }
-    return ListView.separated(
-      itemCount: _hits.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, i) {
-        final hit = _hits[i];
-        final previewing = _previewingKey == _key(hit);
-        return OwnerHitTile(
-          hit: hit,
-          trailing: previewing
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : _trailingFor(hit),
-          // Tap a result to fetch its geometry and preview the parcel outline.
-          onTap: _previewingKey != null ? null : () => _previewHit(hit),
-        );
-      },
-    );
-  }
-
-  Widget _hint(IconData icon, String text) {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 48, color: cs.onSurfaceVariant),
-            const SizedBox(height: 12),
-            Text(
-              text,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-            ),
-          ],
-        ),
+      body: OwnerSearchPanel(
+        controller: _search,
+        itemBuilder: (context, hit) {
+          final previewing = _previewingKey == _key(hit);
+          return OwnerHitTile(
+            hit: hit,
+            trailing: previewing
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : _trailingFor(hit),
+            // Tap a result to fetch its geometry and preview the parcel outline.
+            onTap: _previewingKey != null ? null : () => _previewHit(hit),
+          );
+        },
       ),
     );
   }

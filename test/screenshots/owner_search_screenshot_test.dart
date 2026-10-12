@@ -79,6 +79,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.widgetWithText(TextField, 'Ime lastnika'), 'nov');
       await tester.pump(const Duration(milliseconds: 400));
+      // The search runs on a real background isolate.
+      await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
       await tester.pumpAndSettle();
       await expectLater(
         find.byType(MaterialApp),
@@ -86,6 +88,23 @@ void main() {
       );
     });
   }
+
+  testWidgets('owner import screen, 2 letters', (tester) async {
+    await phone(tester);
+    await tester.pumpWidget(MaterialApp(
+      theme: AppTheme.greenTheme,
+      debugShowCheckedModeBanner: false,
+      home: const OwnerImportSearchScreen(),
+    ));
+    await tester.enterText(find.widgetWithText(TextField, 'Ime lastnika'), 'no');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('out/owner_import_short.png'),
+    );
+  });
 
   testWidgets('owner import screen', (tester) async {
     await phone(tester);
@@ -96,6 +115,7 @@ void main() {
     ));
     await tester.enterText(find.widgetWithText(TextField, 'Ime lastnika'), 'nov');
     await tester.pump(const Duration(milliseconds: 400));
+    await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
     await tester.pumpAndSettle();
     await expectLater(
       find.byType(MaterialApp),
