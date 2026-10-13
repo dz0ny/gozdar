@@ -9,6 +9,7 @@ import '../services/cache_settings.dart';
 import '../services/owner_offline_settings_service.dart';
 import '../services/parcel_lookup_service.dart';
 import '../services/kataster_sharing_service.dart';
+import '../services/kataster_update_service.dart';
 import '../services/tile_cache_service.dart';
 import '../services/vlake_service.dart';
 import '../services/vlake_settings.dart';
@@ -63,6 +64,10 @@ class _AboutScreenState extends State<AboutScreen> {
           if (mounted) setState(() => _katasterPeerCount = peers.length);
         });
     KatasterSharingService.instance.startDiscovery();
+    // Rate-limited (weekly) by the service; usually answers from cache.
+    KatasterUpdateService.instance.check().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -509,6 +514,7 @@ class _AboutScreenState extends State<AboutScreen> {
           },
         ),
         const SizedBox(height: 16),
+        if (!_downloadingParcels) _buildKatasterUpdateCard(context, colorScheme),
         if (_downloadingParcels)
           _buildDbDownloadProgress(
             context,
@@ -581,6 +587,113 @@ class _AboutScreenState extends State<AboutScreen> {
         ),
       ],
     );
+  }
+
+  /// "Newer kataster available" card with a one-tap update of everything that
+  /// is outdated on this device (loaded regions + public owners DB).
+  Widget _buildKatasterUpdateCard(BuildContext context, ColorScheme colorScheme) {
+    final update = KatasterUpdateService.instance.pending;
+    if (update == null) return const SizedBox.shrink();
+    final parts = <String>[
+      if (update.outdatedRegions.isNotEmpty)
+        update.outdatedRegions.map((r) => r.name).join(', '),
+      if (update.publicOwnersOutdated) 'javni lastniki',
+    ];
+    final mb = (update.bytes / (1024 * 1024)).toStringAsFixed(0);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 8, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Na voljo je novejši kataster (${update.manifest.date ?? ''})',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                'Zastarelo: ${parts.join(' • ')}'
+                '${update.bytes > 0 ? ' • ~$mb MB' : ''}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onPrimaryContainer,
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () async {
+                      await KatasterUpdateService.instance.dismiss();
+                      if (mounted) setState(() {});
+                    },
+                    child: const Text('Pozneje'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: () => _applyKatasterUpdate(update),
+                    icon: const Icon(Icons.system_update_alt),
+                    label: const Text('Posodobi'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Re-download every outdated region, then the public owners DB, then
+  /// re-evaluate so the card disappears once everything is current.
+  Future<void> _applyKatasterUpdate(KatasterUpdate update) async {
+    final messenger = ScaffoldMessenger.of(context);
+    var cancelled = false;
+    if (update.outdatedRegions.isNotEmpty) {
+      cancelled = await _downloadRegions(update.outdatedRegions);
+    }
+    if (update.publicOwnersOutdated && !cancelled && mounted) {
+      setState(() {
+        _downloadingParcels = true;
+        _cancelParcelDownload = false;
+        _parcelDownloadLabel = 'Javni lastniki…';
+        _parcelReceived = 0;
+        _parcelTotal = update.manifest.publicOwnersBytes;
+      });
+      try {
+        final ok = await OwnerLookupService.instance.refreshPublic(
+          isCancelled: () => _cancelParcelDownload,
+          onProgress: (received, total) {
+            if (!mounted) return;
+            if (received - _parcelReceived >= 4 * 1024 * 1024 ||
+                (total != null && received >= total)) {
+              setState(() {
+                _parcelReceived = received;
+                _parcelTotal = total ?? update.manifest.publicOwnersBytes;
+              });
+            }
+          },
+        );
+        if (!ok && !_cancelParcelDownload) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Prenos javnih lastnikov ni uspel.')),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _downloadingParcels = false;
+            _cancelParcelDownload = false;
+          });
+        }
+      }
+    }
+    KatasterUpdateService.instance.recompute();
+    if (mounted) setState(() {});
   }
 
   /// Fetch the region manifest, let the user pick one or more regions, then
@@ -692,7 +805,8 @@ class _AboutScreenState extends State<AboutScreen> {
     }
   }
 
-  Future<void> _downloadRegions(List<ParcelRegion> regions) async {
+  /// Returns true when the user cancelled part-way.
+  Future<bool> _downloadRegions(List<ParcelRegion> regions) async {
     final messenger = ScaffoldMessenger.of(context);
     setState(() {
       _downloadingParcels = true;
@@ -738,6 +852,7 @@ class _AboutScreenState extends State<AboutScreen> {
       final msg = StringBuffer('Prenesenih regij: $done.');
       if (failures.isNotEmpty) msg.write(' Neuspešno: ${failures.join(', ')}.');
       messenger.showSnackBar(SnackBar(content: Text(msg.toString())));
+      return _cancelParcelDownload;
     } finally {
       if (mounted) {
         setState(() {

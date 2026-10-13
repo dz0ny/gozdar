@@ -1,5 +1,4 @@
 import 'dart:collection';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -10,6 +9,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 import 'cadastral_service.dart';
 import 'kataster_sharing_service.dart';
+import 'kataster_update_service.dart';
 
 /// Thrown when a download is cancelled by the caller.
 class ParcelDownloadCancelled implements Exception {
@@ -128,6 +128,10 @@ class ParcelLookupService {
   /// The GURS source date of the loaded data (they share one), or null.
   String? get dataDate => _dbs.isNotEmpty ? _dbs.first.dataDate : null;
 
+  /// GURS data date per loaded database file (null when the DB has none).
+  Map<String, String?> get loadedDataDates =>
+      {for (final d in _dbs) d.fileName: d.dataDate};
+
   Future<String> _dirPath() async =>
       (await getApplicationSupportDirectory()).path;
 
@@ -234,18 +238,8 @@ class ParcelLookupService {
   }
 
   /// Fetch the list of downloadable regions from a `regions.json` manifest.
-  static Future<List<ParcelRegion>> fetchRegions(String manifestUrl) async {
-    final resp = await http.get(Uri.parse(manifestUrl));
-    if (resp.statusCode != 200) {
-      throw FormatException(
-          'Seznama regij ni bilo mogoče naložiti (HTTP ${resp.statusCode}).');
-    }
-    final data = jsonDecode(resp.body);
-    final list = (data is Map ? data['regions'] : data) as List<dynamic>;
-    return list
-        .map((e) => ParcelRegion.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
+  static Future<List<ParcelRegion>> fetchRegions(String manifestUrl) async =>
+      (await KatasterManifest.fetch(manifestUrl)).regions;
 
   bool _detectRtree(Database db) {
     try {

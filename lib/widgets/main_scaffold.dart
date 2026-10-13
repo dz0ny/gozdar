@@ -6,6 +6,7 @@ import '../config/distribution.dart';
 import '../router/app_router.dart';
 import '../router/navigation_notifier.dart';
 import '../screens/about_screen.dart';
+import '../services/kataster_update_service.dart';
 import '../services/onboarding_service.dart';
 import '../services/update_service.dart';
 import 'map_long_press_menu.dart';
@@ -107,7 +108,42 @@ class _MainScaffoldState extends State<MainScaffold> {
     // Listen to navigation notifier for cross-tab navigation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handlePendingNavigation();
+      _checkKatasterUpdate();
     });
+  }
+
+  /// Weekly check for newer kataster data on R2 (the service rate-limits the
+  /// network call); offers to re-download outdated regions via the about screen.
+  Future<void> _checkKatasterUpdate() async {
+    final update = await KatasterUpdateService.instance.check();
+    if (update == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final mb = (update.bytes / (1024 * 1024)).toStringAsFixed(0);
+    messenger.showMaterialBanner(
+      MaterialBanner(
+        leading: const Icon(Icons.map_outlined),
+        content: Text(
+          'Na voljo je novejši kataster (${update.manifest.date ?? ''}'
+          '${update.bytes > 0 ? ', ~$mb MB' : ''}).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              messenger.hideCurrentMaterialBanner();
+              KatasterUpdateService.instance.dismiss();
+            },
+            child: const Text('Pozneje'),
+          ),
+          FilledButton(
+            onPressed: () {
+              messenger.hideCurrentMaterialBanner();
+              _showAboutScreen();
+            },
+            child: const Text('Posodobi'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

@@ -81,9 +81,14 @@ class OwnerLookupService {
 
   Database? _publicDb;
   int _publicRowCount = 0;
+  String? _publicBuilt;
 
   /// Number of rows in the embedded public-owners DB (0 when unavailable).
   int get publicRowCount => _publicRowCount;
+
+  /// Build timestamp (`meta.built`, ISO-8601) of the open public-owners DB, or
+  /// null when it is not open or carries none.
+  String? get publicBuilt => _publicBuilt;
 
   /// How the loaded database was obtained: `'imported'` (file picker) or
   /// `'downloaded'` (R2), or null when unavailable. Tracked via a `.src` marker.
@@ -176,6 +181,43 @@ class OwnerLookupService {
     }
   }
 
+  /// Re-download the public-owners DB from R2 and swap it in. The current DB
+  /// keeps serving lookups until the new file has fully arrived. Returns false
+  /// when the download failed (the old DB stays open).
+  Future<bool> refreshPublic({
+    void Function(int received, int? total)? onProgress,
+    bool Function()? isCancelled,
+  }) async {
+    final path = await RemoteAsset.ensure(
+      _publicUrl,
+      _publicFileName,
+      onProgress: onProgress,
+      refresh: true,
+      beforeSwap: () async => _closePublic(),
+      isCancelled: isCancelled,
+    );
+    if (path == null) {
+      // Download failed before the swap (DB still open) or the swap itself
+      // failed after we closed it — in the latter case reopen the old copy.
+      if (_publicDb == null) await initPublic();
+      return false;
+    }
+    try {
+      _openPublic(path);
+      return true;
+    } catch (e) {
+      debugPrint('OwnerLookupService.refreshPublic open failed: $e');
+      return false;
+    }
+  }
+
+  void _closePublic() {
+    _publicDb?.close();
+    _publicDb = null;
+    _publicRowCount = 0;
+    _publicBuilt = null;
+  }
+
   void _openPublic(String path) {
     final db = sqlite3.open(path);
     final ok = db.select(
@@ -193,6 +235,13 @@ class OwnerLookupService {
     } catch (_) {
       _publicRowCount = 0;
     }
+    try {
+      final built = db.select("SELECT v FROM meta WHERE k='built'");
+      _publicBuilt = built.isEmpty ? null : built.first['v']?.toString();
+    } catch (_) {
+      _publicBuilt = null;
+    }
+    _publicDb?.close();
     _publicDb = db;
   }
 

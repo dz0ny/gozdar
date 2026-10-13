@@ -27,15 +27,25 @@ class RemoteAsset {
   /// Streams to a `.part` file and only commits on success, so a failed or
   /// interrupted download never leaves a corrupt file. Returns the local path,
   /// or null when no copy exists and the download failed.
+  ///
+  /// With [refresh] an existing copy is re-downloaded and replaced on success
+  /// (the old file stays intact until then). Callers must close any handle on
+  /// the old file before the swap — see [beforeSwap]. [isCancelled] is polled
+  /// per chunk; a cancelled download returns null and leaves the old copy open.
   static Future<String?> ensure(
     String url,
     String fileName, {
     void Function(int received, int? total)? onProgress,
+    bool refresh = false,
+    Future<void> Function()? beforeSwap,
+    bool Function()? isCancelled,
   }) async {
     try {
       final target = await localPath(fileName);
       final targetFile = File(target);
-      if (await targetFile.exists() && await targetFile.length() > 0) {
+      if (!refresh &&
+          await targetFile.exists() &&
+          await targetFile.length() > 0) {
         return target;
       }
       final part = File('$target.part');
@@ -54,6 +64,7 @@ class RemoteAsset {
         final sink = part.openWrite();
         try {
           await for (final chunk in resp.stream) {
+            if (isCancelled?.call() ?? false) return null;
             sink.add(chunk);
             received += chunk.length;
             onProgress?.call(received, total);
@@ -61,6 +72,9 @@ class RemoteAsset {
         } finally {
           await sink.close();
         }
+        if (isCancelled?.call() ?? false) return null;
+        await beforeSwap?.call();
+        if (await targetFile.exists()) await targetFile.delete();
         await part.rename(target);
         return target;
       } finally {

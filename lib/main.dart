@@ -10,6 +10,7 @@ import 'services/tile_cache_service.dart';
 import 'services/onboarding_service.dart';
 import 'services/owner_lookup_service.dart';
 import 'services/parcel_lookup_service.dart';
+import 'services/kataster_update_service.dart';
 import 'services/cache_settings.dart';
 import 'services/public_parcel_settings.dart';
 import 'services/owner_offline_settings_service.dart';
@@ -28,6 +29,7 @@ void main() async {
   await OwnerLookupService.instance.init();
   await OwnerLookupService.instance.initPublic();
   await ParcelLookupService.instance.init();
+  await KatasterUpdateService.instance.init();
   await OwnerOfflineSettingsService.instance.init();
   await CacheSettings.instance.load();
   await PublicParcelSettings.instance.load();
