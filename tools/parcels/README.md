@@ -18,6 +18,18 @@ cd tools/parcels
 uv run --script convert.py inspect /path/to/PARCELE.shp
 ```
 
+## 0. Download the whole-Slovenia shapefile
+
+```bash
+./fetch_slo_parcels.sh work/slo     # ~1.5 GB from the JGP portal, extracts to work/slo/shp/
+```
+
+JGP group 122 (parcele), composite product 25 ("Parcele za območje Slovenije",
+filter `DRZAVA=1`). The package is refreshed weekly; the date in the nested zip
+name (`KN_SLO_PARCELE_SLO_parcele_<YYYYMMDD>.zip`) is the data date to pass as
+`--date` below. The product's `compositeProductResultTimestamp` at
+`.../groups/122/composite-products` tells you if there is a newer build.
+
 ## 1. Inspect the shapefile (map the columns)
 
 The GURS attribute names have changed between releases, so check first:
@@ -99,10 +111,13 @@ The whole-Slovenia DB is ~1.6 GB. Split it into the 12 statistical regions so
 the app downloads only the user's region (39–219 MB each):
 
 ```bash
-./convert.py build work/KN_SLO_PARCELE_SLO_PARCELE_poligon.shp -o work/regions \
-  --eid-field EID_PARCEL --source "GURS KN parcele (SLO)" --date 2026-05-31 \
+./convert.py build work/slo/shp/KN_SLO_PARCELE_SLO_PARCELE_poligon.shp -o work/regions \
+  --eid-field EID_PARCEL --source "GURS KN parcele (SLO)" --date 2026-10-11 \
   --regions regije.geojson
 ```
+
+(`--eid-field EID_PARCEL` is needed because the DBF truncates `EID_PARCELA` to
+10 characters and the auto-detection would otherwise pick `FEATUREID`.)
 
 - `regije.geojson` = Slovenia's 12 statistical regions (GURS RPE 2020, CC-BY),
   from sledilnik `statistical-regions-gurs-simplified.geojson`. Tracked in repo.
@@ -119,8 +134,8 @@ everything to the `gozdar-kataster` R2 bucket (served at
 caps at ~300 MiB (single PUT, no multipart):
 
 ```bash
-# manifest (see the inline script in git history / regenerate from the *.sqlite meta)
-# then:
+./manifest.py work/regions -o work/regions/regions.json \
+    --public-owners work/public_owners.sqlite   # reads each DB's meta
 rclone copy work/regions/ cloudflare:gozdar-kataster/ \
   --transfers 4 --s3-chunk-size 64M --s3-upload-concurrency 4
 # owners DB:
@@ -130,6 +145,18 @@ rclone copyto owners.sqlite cloudflare:gozdar-kataster/owners.sqlite \
 
 The `cloudflare:` rclone remote (S3/Cloudflare provider) holds the R2 API
 credentials — it lives in the local rclone config, **never in this repo**.
+
+Without rclone, a logged-in `wrangler` works for the region DBs (each is under
+the ~300 MiB single-PUT cap). Upload the DBs first and `regions.json` last so no
+client ever sees a manifest pointing at a file that is not there yet:
+
+```bash
+for f in work/regions/parcels-*.sqlite; do
+  bunx wrangler r2 object put "gozdar-kataster/$(basename "$f")" --file "$f" --remote
+done
+bunx wrangler r2 object put gozdar-kataster/regions.json --file work/regions/regions.json \
+  --content-type application/json --remote
+```
 
 ## 4b. Encrypt the owners DB (transport encryption)
 
@@ -169,5 +196,8 @@ DB — together they make the kataster fully offline.
 
 - **Privacy**: only **legal-person** (pravne osebe) owners are public in this
   dataset; natural-person owners are absent. Don't ship anything else.
-- **Updates**: GURS refreshes weekly — re-run the build to refresh, bump the
-  `--date`, re-upload, and update `regions.json`. Ship date-stamped data.
+- **Updates**: GURS refreshes weekly — re-run steps 0, 3, 4 (and
+  `fetch_public_owners.py` + `build_public_owners.py` for `public_owners.sqlite`),
+  bump the `--date`, re-upload, and upload `regions.json` last. Ship date-stamped
+  data. Installed apps only download a file when it is missing locally, so users
+  pick up a new build by re-downloading from the about screen / region picker.
