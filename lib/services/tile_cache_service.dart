@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart';
+import 'package:http/retry.dart';
 import 'package:flutter/painting.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -17,6 +19,8 @@ class TileCacheService {
   static bool _ignoreDownloadEvents = false;
   static TileDownloadService? _downloadService;
   static BuiltInMapCachingProvider? _builtInCachingProvider;
+  /// App-lifetime HTTP client for tile fetches (see [initialize]).
+  static late final Client _httpClient;
   static NetworkTileProvider? _tileProvider;
   static final Map<String, NetworkTileProvider> _headeredTileProviders = {};
   static final ValueNotifier<TileDownloadVisualState> _downloadVisualState =
@@ -48,7 +52,16 @@ class TileCacheService {
       maxCacheSize: 10_000_000_000,
       overrideFreshAge: const Duration(days: 365),
     );
+    // The providers are shared by every FlutterMap in the app (main map, parcel
+    // previews). flutter_map calls `tileProvider.dispose()` whenever a
+    // TileLayer is disposed, and NetworkTileProvider then closes the HTTP
+    // client *it created* — so a shared provider died the first time a parcel
+    // preview was closed and every later network tile silently failed
+    // (cached tiles kept showing, which hid it). Hand in our own client: a
+    // provider never closes a client it did not create.
+    _httpClient = RetryClient(Client());
     _tileProvider = NetworkTileProvider(
+      httpClient: _httpClient,
       cachingProvider: _ToggleableCachingProvider(
         () => _builtInCachingProvider!,
       ),
@@ -85,6 +98,7 @@ class TileCacheService {
       // Mutable copy: TileLayer putIfAbsents a User-Agent into this map.
       () => NetworkTileProvider(
         headers: Map.of(layer.httpHeaders),
+        httpClient: _httpClient,
         cachingProvider: _ToggleableCachingProvider(
           () => _builtInCachingProvider!,
         ),

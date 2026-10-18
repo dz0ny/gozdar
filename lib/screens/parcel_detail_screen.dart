@@ -776,8 +776,6 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                           workerUrl: mapProvider.workerUrl,
                           outlineColor:
                               getForestTypeIcon(_parcel.forestType).$2,
-                          onTap: () =>
-                              _navigateToPoint(_parcel.center, _parcel.name),
                         );
                       },
                     ),
