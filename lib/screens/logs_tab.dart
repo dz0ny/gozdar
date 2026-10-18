@@ -8,7 +8,7 @@ import '../router/app_router.dart';
 import '../router/route_names.dart';
 import '../utils/sl_plural.dart';
 import '../widgets/log_card.dart';
-import '../widgets/add_log_sheet.dart';
+import '../widgets/inline_add_log.dart';
 import '../widgets/conversion_settings_sheet.dart';
 import '../widgets/save_batch_sheet.dart';
 import '../widgets/saved_batches_sheet.dart';
@@ -44,32 +44,18 @@ class LogsTab extends StatelessWidget {
     );
   }
 
-  Future<void> _addLogEntry(BuildContext context) async {
+  /// Inline quick-add bar pinned under the list (no popup).
+  Widget _buildInlineAdd(BuildContext context) {
     final provider = context.read<LogsProvider>();
     final mapProvider = context.read<MapProvider>();
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useRootNavigator: false,
-      builder: (context) => Container(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: AddLogSheet(
-          onAdd: (entry) async {
-            await provider.addLogEntry(entry);
-            // Refresh map markers if log has location
-            if (entry.hasLocation) {
-              mapProvider.loadGeolocatedLogs();
-            }
-          },
-        ),
-      ),
+    return InlineAddLog(
+      onAdd: (entry) async {
+        await provider.addLogEntry(entry);
+        // Refresh map markers if log has location
+        if (entry.hasLocation) {
+          mapProvider.loadGeolocatedLogs();
+        }
+      },
     );
   }
 
@@ -197,7 +183,7 @@ class LogsTab extends StatelessWidget {
         content: Text(
           'Ali ste prepričani, da želite odstraniti vseh ${provider.entryCount} vnosov?\n\n'
           'Skupni volumen: ${provider.totalVolume.toStringAsFixed(2)} m³\n\n'
-          'Shranjeni projekti ostanejo nespremenjeni. '
+          'Shranjeni hlodi ostanejo nespremenjeni. '
           'To dejanje ni mogoče razveljaviti.',
         ),
         actions: [
@@ -257,7 +243,7 @@ class LogsTab extends StatelessWidget {
               );
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Napaka pri shranjevanju projekta')),
+                const SnackBar(content: Text('Napaka pri shranjevanju')),
               );
             }
           }
@@ -401,16 +387,13 @@ class LogsTab extends StatelessWidget {
                       ? _buildEmptyState(context)
                       : _buildGroupedLogsList(context, provider),
                 ),
+
+                // Quick-add bar (always visible, no popup)
+                _buildInlineAdd(context),
               ],
             ),
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'logs_add',
-        tooltip: 'Dodaj hlod',
-        onPressed: () => _addLogEntry(context),
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -527,7 +510,7 @@ class LogsTab extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Tapnite + za dodajanje hloda',
+                'Vnesite premer in dolžino spodaj',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],
                     ),
