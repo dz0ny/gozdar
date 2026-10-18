@@ -13,7 +13,7 @@ enum _MenuSection { add, measure }
 /// options stay readable regardless of the underlying imagery.
 ///
 /// The sheet is a small drill-down menu: the top level shows grouped icons
-/// (Dodaj, Merjenje) plus direct actions (Uvozi/Parcela,
+/// (Dodaj, Merjenje) plus direct actions (Navigiraj, Uvozi/Parcela,
 /// Natisni, Mejniki); tapping a group replaces the row with its sub-icons.
 class MapLongPressMenu extends StatefulWidget {
   final VoidCallback onAddLocation;
@@ -41,6 +41,9 @@ class MapLongPressMenu extends StatefulWidget {
   /// parcela), shown as a coloured badge. Null for private parcels.
   final PublicOwnerCategory? parcelPublicCategory;
 
+  /// Navigate (compass) straight to the long-pressed point.
+  final VoidCallback onNavigate;
+
   /// Start a distance / area measurement from the long-press menu.
   final VoidCallback onMeasureDistance;
   final VoidCallback onMeasureArea;
@@ -67,6 +70,7 @@ class MapLongPressMenu extends StatefulWidget {
     this.parcelOwner,
     this.parcelAddress,
     this.parcelPublicCategory,
+    required this.onNavigate,
     required this.onMeasureDistance,
     required this.onMeasureArea,
     required this.mejnikiAvailable,
@@ -100,6 +104,7 @@ class MapLongPressMenu extends StatefulWidget {
     String? parcelOwner,
     String? parcelAddress,
     PublicOwnerCategory? parcelPublicCategory,
+    required VoidCallback onNavigate,
     required VoidCallback onMeasureDistance,
     required VoidCallback onMeasureArea,
     required bool mejnikiAvailable,
@@ -128,6 +133,7 @@ class MapLongPressMenu extends StatefulWidget {
           parcelOwner: parcelOwner,
           parcelAddress: parcelAddress,
           parcelPublicCategory: parcelPublicCategory,
+          onNavigate: onNavigate,
           onMeasureDistance: onMeasureDistance,
           onMeasureArea: onMeasureArea,
           mejnikiAvailable: mejnikiAvailable,
@@ -233,6 +239,12 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
           label: 'Merjenje',
           color: Colors.teal,
           section: _MenuSection.measure,
+        ),
+        _action(
+          icon: Icons.navigation,
+          label: 'Navigiraj',
+          color: Colors.indigo,
+          onTap: widget.onNavigate,
         ),
         if (widget.existingParcel != null)
           _action(

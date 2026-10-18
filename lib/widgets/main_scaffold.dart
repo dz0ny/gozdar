@@ -170,9 +170,10 @@ class _MainScaffoldState extends State<MainScaffold> {
     if (navNotifier.pendingNavigationTarget != null) {
       widget.navigationShell.goBranch(0); // Switch to map tab
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        mapTabKey.currentState?.setNavigationTarget(
-          navNotifier.pendingNavigationTarget!,
-        );
+        final target = navNotifier.pendingNavigationTarget!;
+        final map = mapTabKey.currentState;
+        map?.setNavigationTarget(target);
+        if (target.startNavigation) map?.showCompassForTarget();
         navNotifier.clearNavigationTarget();
       });
     }

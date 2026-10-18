@@ -22,6 +22,7 @@ import '../services/parcel_pdf_service.dart';
 import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
 import '../utils/decimal_input.dart';
+import '../widgets/navigate_to_sheet.dart';
 import '../widgets/notes_editor_sheet.dart';
 import '../widgets/parcel_info_widgets.dart';
 import '../widgets/parcel_map_preview.dart';
@@ -682,9 +683,17 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     }
   }
 
-  /// Navigate to map with target point
-  void _navigateToPoint(LatLng point, String name) {
-    final target = NavigationTarget(location: point, name: name);
+  /// Show [point] on the map; with [startNavigation] the compass opens too.
+  void _navigateToPoint(
+    LatLng point,
+    String name, {
+    bool startNavigation = false,
+  }) {
+    final target = NavigationTarget(
+      location: point,
+      name: name,
+      startNavigation: startNavigation,
+    );
 
     // Set navigation target and switch to map
     context.read<NavigationNotifier>().navigateToMapWithTarget(target);
@@ -808,16 +817,36 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                     onLogTreesCut: _logTreesCut,
                   ),
 
-                  // See on map button
+                  // See on map / navigate buttons
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () =>
-                          _navigateToPoint(_parcel.center, _parcel.name),
-                      icon: const Icon(Icons.map),
-                      label: const Text('Poglej na karti'),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () =>
+                              _navigateToPoint(_parcel.center, _parcel.name),
+                          icon: const Icon(Icons.map),
+                          label: const Text('Poglej na karti'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => NavigateToSheet.show(
+                            context,
+                            destination: _parcel.center,
+                            name: _parcel.name,
+                            onInAppNavigation: () => _navigateToPoint(
+                              _parcel.center,
+                              _parcel.name,
+                              startNavigation: true,
+                            ),
+                          ),
+                          icon: const Icon(Icons.navigation),
+                          label: const Text('Navigiraj'),
+                        ),
+                      ),
+                    ],
                   ),
 
                   // Logs Card (logs geolocated within parcel)

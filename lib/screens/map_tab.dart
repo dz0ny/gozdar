@@ -33,6 +33,7 @@ import '../services/vlake_settings.dart';
 import '../widgets/navigation_compass_dialog.dart';
 import '../widgets/tile_download_dialog.dart';
 import '../widgets/map_long_press_menu.dart';
+import '../widgets/navigate_to_sheet.dart';
 import '../widgets/map_controls.dart';
 import '../widgets/map_layer_selector.dart';
 import '../widgets/map_dialogs.dart';
@@ -280,7 +281,7 @@ class MapTabState extends State<MapTab> {
             ),
             zoomIn: false,
           );
-          _showCompassForTarget();
+          showCompassForTarget();
         },
         child: Center(
           child: Container(
@@ -415,8 +416,9 @@ class MapTabState extends State<MapTab> {
     context.read<MapProvider>().clearNavigationTarget();
   }
 
-  /// Show compass dialog for navigation target
-  void _showCompassForTarget() {
+  /// Show the compass dialog for the current navigation target (public so the
+  /// scaffold can open it for a target that asked to start navigating).
+  void showCompassForTarget() {
     final navigationTarget = context.read<MapProvider>().navigationTarget;
     if (navigationTarget == null) return;
     showModalBottomSheet(
@@ -1650,6 +1652,26 @@ class MapTabState extends State<MapTab> {
       parcelPublicCategory: parcelPublicCategory,
       onMeasureDistance: () => _startMeasurement(_MeasurementTool.distance),
       onMeasureArea: () => _startMeasurement(_MeasurementTool.area),
+      onNavigate: () {
+        // Navigate straight to the pressed point; name it after the parcel
+        // under the press when there is one.
+        final name = parcelAtPosition?.name ??
+            (offlineParcelAtPosition != null
+                ? 'Parc. ${offlineParcelAtPosition.parcelNumber}'
+                : 'Izbrana točka');
+        NavigateToSheet.show(
+          context,
+          destination: position,
+          name: name,
+          onInAppNavigation: () {
+            setNavigationTarget(
+              NavigationTarget(location: position, name: name),
+              zoomIn: false,
+            );
+            showCompassForTarget();
+          },
+        );
+      },
       // Show Mejniki whenever the offline kataster is loaded (a permanent
       // toolbar item like Info); it acts on the parcel under the press.
       mejnikiAvailable: ParcelLookupService.instance.isAvailable,
@@ -2078,7 +2100,7 @@ class MapTabState extends State<MapTab> {
           NavigationTarget(location: point, name: name),
           zoomIn: false,
         );
-        _showCompassForTarget();
+        showCompassForTarget();
       },
     );
 
@@ -2377,7 +2399,7 @@ class MapTabState extends State<MapTab> {
                             width: navSize,
                             height: navSize,
                             child: GestureDetector(
-                              onTap: _showCompassForTarget,
+                              onTap: showCompassForTarget,
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: Colors.orange,
