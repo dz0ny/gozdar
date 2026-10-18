@@ -38,10 +38,10 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Izbriši projekt'),
+        title: const Text('Izbriši shranjene hlode'),
         content: const Text(
-          'Ali ste prepričani, da želite izbrisati ta projekt?\n\n'
-          'Hlodi iz projekta se vrnejo na seznam Hlodi.',
+          'Ali ste prepričani, da želite izbrisati ta zapis?\n\n'
+          'Hlodi se vrnejo na seznam Hlodi.',
         ),
         actions: [
           TextButton(
@@ -215,15 +215,15 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                                   // Metadata row
                                   Row(
                                     children: [
-                                      Icon(Icons.person, size: 14, color: Colors.grey[500]),
+                                      Icon(Icons.label_outline, size: 14, color: Colors.grey[500]),
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
-                                          batch.owner ?? 'Brez lastnika',
+                                          batch.name ?? 'Brez imena',
                                           style: TextStyle(
                                             fontSize: 13,
-                                            fontStyle: batch.owner == null ? FontStyle.italic : FontStyle.normal,
-                                            color: batch.owner == null ? Colors.grey : null,
+                                            fontStyle: batch.name == null ? FontStyle.italic : FontStyle.normal,
+                                            color: batch.name == null ? Colors.grey : null,
                                           ),
                                           overflow: TextOverflow.ellipsis,
                                         ),

@@ -43,7 +43,7 @@ LogEntry _logFromDb(DbLogEntry r) => LogEntry(
 
 LogBatch _batchFromDb(DbLogBatch r) => LogBatch(
       id: r.id,
-      owner: r.owner,
+      name: r.owner,
       notes: r.notes,
       latitude: r.latitude,
       longitude: r.longitude,
@@ -108,7 +108,7 @@ LogEntriesCompanion _logToCompanion(LogEntry e) => LogEntriesCompanion(
 
 LogBatchesCompanion _batchToCompanion(LogBatch b) => LogBatchesCompanion(
       id: b.id == 0 ? const Value.absent() : Value(b.id),
-      owner: Value(b.owner),
+      owner: Value(b.name),
       notes: Value(b.notes),
       latitude: Value(b.latitude),
       longitude: Value(b.longitude),

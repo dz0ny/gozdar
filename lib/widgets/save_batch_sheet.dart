@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import '../models/log_batch.dart';
-import '../services/location_settings.dart';
+import '../utils/sl_plural.dart';
 
-/// Bottom sheet for saving logs as a batch/project
+/// "Shrani hlode": name the current working list and file it away. One field,
+/// one button — notes and a location can be added later from the saved entry.
 class SaveBatchSheet extends StatefulWidget {
   final double totalVolume;
   final int logCount;
@@ -16,248 +17,108 @@ class SaveBatchSheet extends StatefulWidget {
     required this.onSave,
   });
 
+  /// Default name offered in the field: "Hlodi 18. 10. 2026".
+  static String defaultName(DateTime now) =>
+      'Hlodi ${DateFormat('d. M. yyyy').format(now)}';
+
   @override
   State<SaveBatchSheet> createState() => _SaveBatchSheetState();
 }
 
 class _SaveBatchSheetState extends State<SaveBatchSheet> {
-  final _ownerController = TextEditingController();
-  final _notesController = TextEditingController();
-  double? _latitude;
-  double? _longitude;
-  bool _isLoadingLocation = false;
+  late final TextEditingController _nameController;
   bool _isSaving = false;
 
   @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(
+      text: SaveBatchSheet.defaultName(DateTime.now()),
+    );
+  }
+
+  @override
   void dispose() {
-    _ownerController.dispose();
-    _notesController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
-  Future<void> _getLocation() async {
-    setState(() => _isLoadingLocation = true);
-
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Dovoljenje za lokacijo zavrnjeno')),
-          );
-        }
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: GozdarLocationSettings.currentPosition,
-      );
-      if (!mounted) return;
-      setState(() {
-        _latitude = position.latitude;
-        _longitude = position.longitude;
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingLocation = false);
-      }
-    }
-  }
-
   Future<void> _save() async {
+    final name = _nameController.text.trim();
     setState(() => _isSaving = true);
-
     try {
-      final batch = LogBatch(
-        owner: _ownerController.text.isEmpty ? null : _ownerController.text,
-        notes: _notesController.text.isEmpty ? null : _notesController.text,
-        latitude: _latitude,
-        longitude: _longitude,
+      await widget.onSave(LogBatch(
+        name: name.isEmpty ? null : name,
         totalVolume: widget.totalVolume,
         logCount: widget.logCount,
-      );
-
-      await widget.onSave(batch);
-      if (mounted) {
-        Navigator.pop(context);
-      }
+      ));
+      if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Napaka pri shranjevanju projekta')),
+          const SnackBar(content: Text('Napaka pri shranjevanju')),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
+      padding: EdgeInsets.fromLTRB(
+        16,
+        8,
+        16,
+        16 + MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-            Row(
-              children: [
-                const Text(
-                  'Nov projekt',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
+          Text(
+            'Shrani hlode',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${widget.totalVolume.toStringAsFixed(2)} m³ • '
+            '${slCount(widget.logCount, 'hlod', 'hloda', 'hlodi', 'hlodov')}',
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _nameController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Ime',
+              hintText: 'npr. Smreka za Novaka',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.label_outline),
             ),
-            const SizedBox(height: 12),
-
-            // Summary card
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  Column(
-                    children: [
-                      Text(
-                        '${widget.totalVolume.toStringAsFixed(2)} m³',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      Text(
-                        'Volumen',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                  Column(
-                    children: [
-                      Text(
-                        '${widget.logCount}',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      Text(
-                        'Hlodov',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Owner field
-            TextField(
-              controller: _ownerController,
-              decoration: const InputDecoration(
-                labelText: 'Lastnik',
-                hintText: 'Ime lastnika',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person),
-                isDense: true,
-              ),
-              textCapitalization: TextCapitalization.words,
-            ),
-            const SizedBox(height: 12),
-
-            // Notes field
-            TextField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Opombe',
-                hintText: 'Dodatne opombe',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.note),
-                isDense: true,
-              ),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 12),
-
-            // Location
-            Row(
-              children: [
-                if (_latitude != null)
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            '${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, size: 16),
-                          onPressed: () => setState(() {
-                            _latitude = null;
-                            _longitude = null;
-                          }),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ],
-                    ),
+            textCapitalization: TextCapitalization.sentences,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _isSaving ? null : _save(),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: _isSaving ? null : _save,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                else
-                  TextButton.icon(
-                    onPressed: _isLoadingLocation ? null : _getLocation,
-                    icon: _isLoadingLocation
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.my_location, size: 16),
-                    label: const Text('Dodaj lokacijo'),
-                  ),
-                const Spacer(),
-                FilledButton(
-                  onPressed: _isSaving ? null : _save,
-                  child: _isSaving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Ustvari'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
+                : const Icon(Icons.save_outlined),
+            label: const Text('Shrani'),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -141,9 +141,9 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Izbriši projekt'),
+        title: const Text('Izbriši shranjene hlode'),
         content: Text(
-          'Ali ste prepričani, da želite izbrisati "${_batch.owner ?? 'ta projekt'}"?\n\n'
+          'Ali ste prepričani, da želite izbrisati "${_batch.name ?? 'shranjene hlode'}"?\n\n'
           'Hlodi (${_logs.length}) se vrnejo na seznam Hlodi.',
         ),
         actions: [
@@ -254,7 +254,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_batch.owner ?? 'Projekt'),
+        title: Text(_batch.name ?? 'Shranjeni hlodi'),
         actions: [
           IconButton(
             icon: const Icon(Icons.file_download),
@@ -748,7 +748,7 @@ class _EditBatchInfoSheet extends StatefulWidget {
 }
 
 class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
-  final _ownerController = TextEditingController();
+  final _nameController = TextEditingController();
   final _notesController = TextEditingController();
   double? _latitude;
   double? _longitude;
@@ -757,7 +757,7 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
   @override
   void initState() {
     super.initState();
-    _ownerController.text = widget.batch.owner ?? '';
+    _nameController.text = widget.batch.name ?? '';
     _notesController.text = widget.batch.notes ?? '';
     _latitude = widget.batch.latitude;
     _longitude = widget.batch.longitude;
@@ -765,7 +765,7 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
 
   @override
   void dispose() {
-    _ownerController.dispose();
+    _nameController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -799,11 +799,11 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
 
   void _save() {
     final updated = widget.batch.copyWith(
-      owner: _ownerController.text.isEmpty ? null : _ownerController.text,
+      name: _nameController.text.isEmpty ? null : _nameController.text,
       notes: _notesController.text.isEmpty ? null : _notesController.text,
       latitude: _latitude,
       longitude: _longitude,
-      clearOwner: _ownerController.text.isEmpty,
+      clearName: _nameController.text.isEmpty,
       clearNotes: _notesController.text.isEmpty,
       clearLocation: _latitude == null || _longitude == null,
     );
@@ -828,7 +828,7 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
             Row(
               children: [
                 const Text(
-                  'Uredi projekt',
+                  'Uredi',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
@@ -841,15 +841,15 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
             const SizedBox(height: 16),
 
             TextField(
-              controller: _ownerController,
+              controller: _nameController,
               decoration: const InputDecoration(
-                labelText: 'Lastnik',
-                hintText: 'Ime lastnika',
+                labelText: 'Ime',
+                hintText: 'npr. Smreka za Novaka',
                 border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person),
+                prefixIcon: Icon(Icons.label_outline),
                 isDense: true,
               ),
-              textCapitalization: TextCapitalization.words,
+              textCapitalization: TextCapitalization.sentences,
             ),
             const SizedBox(height: 12),
 
