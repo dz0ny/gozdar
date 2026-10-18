@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/parcel.dart';
 import '../providers/map_provider.dart';
-import '../router/app_router.dart';
 import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
 import '../services/database_service.dart';
@@ -100,30 +99,6 @@ class ForestTabState extends State<ForestTab> {
     }
   }
 
-  Future<void> _addParcel() async {
-    context.push(
-      AppRoutes.parcelNew,
-      extra: ParcelEditorParams(
-        onSave: (parcel) async {
-          try {
-            await _databaseService.insertParcel(parcel);
-            await _loadData();
-            if (mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Parcela dodana')));
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('Napaka pri dodajanju: $e')));
-            }
-          }
-        },
-      ),
-    );
-  }
 
   /// Public method to open a specific parcel detail (can be called from outside)
   Future<void> openParcelDetail(Parcel parcel) async {
@@ -131,11 +106,13 @@ class ForestTabState extends State<ForestTab> {
   }
 
   Future<void> _openParcelDetail(Parcel parcel) async {
-    context.push(
+    // push() completes when the detail screen pops — only then reload, so a
+    // parcel deleted or edited there disappears/updates without a pull-down.
+    await context.push(
       AppRoutes.parcelDetail(parcel.id),
       extra: parcel,
     );
-    // Always refresh when returning (parcel may have been modified)
+    if (!mounted) return;
     await _loadData();
   }
 
@@ -588,26 +565,13 @@ class ForestTabState extends State<ForestTab> {
             tooltip: 'Več možnosti gozda',
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
-              if (value == 'draw') {
-                _addParcel();
-              } else if (value == 'import') {
+              if (value == 'import') {
                 _importKml();
               } else if (value == 'export') {
                 _exportKml();
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'draw',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit_location_alt),
-                    SizedBox(width: 8),
-                    Text('Nariši parcelo'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
               const PopupMenuItem(
                 value: 'import',
                 child: Row(
@@ -732,7 +696,7 @@ class ForestTabState extends State<ForestTab> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Narišite parcelo ali\niščite parcelo v katastru',
+                                        'Poiščite parcelo v katastru\nali jo uvozite iz KML',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyMedium
@@ -750,12 +714,6 @@ class ForestTabState extends State<ForestTab> {
                                           icon: const Icon(Icons.search),
                                           label: const Text('Išči parcelo'),
                                         ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      OutlinedButton.icon(
-                                        onPressed: _addParcel,
-                                        icon: const Icon(Icons.add),
-                                        label: const Text('Dodaj parcelo'),
                                       ),
                                     ],
                                   ),

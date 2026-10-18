@@ -12,7 +12,6 @@ class AppRoutes {
   static const logs = '/logs';
 
   // Parcel routes
-  static const parcelNew = '/parcel/new';
   static String parcelDetail(int id) => '/forest/parcel/$id';
   static String parcelEdit(int id) => '/forest/parcel/$id/edit';
 

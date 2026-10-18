@@ -129,17 +129,6 @@ GoRouter createRouter({required bool showOnboarding, String? initialLocation}) {
       ),
 
       // Full screen routes (outside tabs, use root navigator)
-      GoRoute(
-        path: AppRoutes.parcelNew,
-        parentNavigatorKey: rootNavigatorKey,
-        pageBuilder: (context, state) {
-          final params = state.extra as ParcelEditorParams?;
-          return MaterialPage(
-            fullscreenDialog: true,
-            child: ParcelEditor(parcel: params?.parcel, onSave: params?.onSave),
-          );
-        },
-      ),
 
       // Parcel edit (full screen, uses parcel ID from path)
       GoRoute(
