@@ -2,19 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/log_entry.dart';
 import '../services/location_settings.dart';
-import '../services/species_service.dart';
+import '../services/log_input_prefs_service.dart';
 import '../utils/decimal_input.dart';
 
 /// Always-visible quick-add bar at the bottom of the Hlodi tab: diameter,
-/// length, species and an optional GPS fix, then "Dodaj". Replaces the modal
-/// add sheet so logging a pile of timber is a steady type → Dodaj → type loop
-/// without a popup in between. Stays put after each add (fields cleared, focus
-/// back on the diameter) and counts what was added in this sitting.
+/// length and an optional GPS fix, then "Dodaj". Replaces the modal add sheet
+/// so logging a pile of timber is a steady type → Dodaj → type loop without a
+/// popup in between. Diameter and length are prefilled from the last added
+/// log and kept after each add (focus back on the diameter with its text
+/// selected), so a run of similar logs is just repeated "Dodaj". The species
+/// is not chosen here; it comes from [species], picked via the total card.
 class InlineAddLog extends StatefulWidget {
   final Future<void> Function(LogEntry entry) onAdd;
   final int? batchId;
+  final String? species;
 
-  const InlineAddLog({super.key, required this.onAdd, this.batchId});
+  const InlineAddLog({
+    super.key,
+    required this.onAdd,
+    this.batchId,
+    this.species,
+  });
 
   @override
   State<InlineAddLog> createState() => _InlineAddLogState();
@@ -34,22 +42,47 @@ class _InlineAddLogState extends State<InlineAddLog> {
   bool _isSaving = false;
   int _addedCount = 0;
 
-  final _speciesService = SpeciesService();
-  List<String> _availableSpecies = [];
-  String? _selectedSpecies;
+  final _inputPrefs = LogInputPrefsService();
 
   @override
   void initState() {
     super.initState();
-    _loadSpecies();
     _diameterController.addListener(_updateVolume);
     _lengthController.addListener(_updateVolume);
+    _loadLastDimensions();
   }
 
-  Future<void> _loadSpecies() async {
-    final species = await _speciesService.getSpecies();
+  Future<void> _loadLastDimensions() async {
+    final diameter = await _inputPrefs.getLastDiameter();
+    final length = await _inputPrefs.getLastLength();
     if (!mounted) return;
-    setState(() => _availableSpecies = species);
+    // Don't overwrite anything the user already started typing.
+    if (diameter != null && _diameterController.text.isEmpty) {
+      _diameterController.text = _formatDimension(diameter);
+    }
+    if (length != null && _lengthController.text.isEmpty) {
+      _lengthController.text = _formatDimension(length);
+    }
+  }
+
+  /// Shortest decimal form: 30 -> "30", 4.5 -> "4.5", 0.123 -> "0.12".
+  String _formatDimension(double value) {
+    if (value == value.roundToDouble()) return value.toInt().toString();
+    var text = value.toStringAsFixed(2);
+    while (text.endsWith('0')) {
+      text = text.substring(0, text.length - 1);
+    }
+    return text;
+  }
+
+  /// Focus the diameter field with its text selected so typing replaces the
+  /// retained value instead of appending to it.
+  void _selectAllDiameter() {
+    _diameterFocus.requestFocus();
+    _diameterController.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _diameterController.text.length,
+    );
   }
 
   @override
@@ -117,7 +150,7 @@ class _InlineAddLogState extends State<InlineAddLog> {
       volume: _calculatedVolume!,
       latitude: _latitude,
       longitude: _longitude,
-      species: _selectedSpecies,
+      species: widget.species,
       batchId: widget.batchId,
     );
   }
@@ -128,14 +161,13 @@ class _InlineAddLogState extends State<InlineAddLog> {
     setState(() => _isSaving = true);
     try {
       await widget.onAdd(entry);
+      if (entry.diameter != null && entry.length != null) {
+        await _inputPrefs.saveLastDimensions(entry.diameter!, entry.length!);
+      }
       if (!mounted) return;
-      setState(() {
-        _addedCount++;
-        _diameterController.clear();
-        _lengthController.clear();
-        _calculatedVolume = null;
-      });
-      _diameterFocus.requestFocus();
+      // Keep diameter/length (and the computed volume) for the next log.
+      setState(() => _addedCount++);
+      _selectAllDiameter();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -205,29 +237,6 @@ class _InlineAddLogState extends State<InlineAddLog> {
                         inputFormatters: [DecimalTextInputFormatter()],
                         validator: (v) =>
                             v == null || v.isEmpty ? 'Vnesi' : null,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 4,
-                      child: DropdownButtonFormField<String>(
-                        // ignore: deprecated_member_use
-                        value: _selectedSpecies,
-                        isExpanded: true,
-                        decoration: _decoration('Vrsta'),
-                        items: [
-                          const DropdownMenuItem<String>(
-                            value: null,
-                            child: Text('—'),
-                          ),
-                          ..._availableSpecies.map(
-                            (s) => DropdownMenuItem<String>(
-                              value: s,
-                              child: Text(s, overflow: TextOverflow.ellipsis),
-                            ),
-                          ),
-                        ],
-                        onChanged: (v) => setState(() => _selectedSpecies = v),
                       ),
                     ),
                   ],

@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 import '../utils/decimal_input.dart';
 import '../providers/logs_provider.dart';
 
-/// Bottom sheet for configuring volume conversion factors (m³ → PRM/NM)
+/// Bottom sheet for configuring volume conversion factors (m³ → PRM/NM).
+///
+/// When [availableSpecies] and [onSpeciesChanged] are given, it also lets the
+/// user pick the species that newly added logs get (Hlodi tab only).
 class ConversionSettingsSheet extends StatefulWidget {
   final double totalVolume;
   final double prmFactor;
   final double nmFactor;
   final void Function(double prm, double nm) onChanged;
+  final List<String>? availableSpecies;
+  final String? selectedSpecies;
+  final void Function(String? species)? onSpeciesChanged;
 
   const ConversionSettingsSheet({
     super.key,
@@ -15,6 +21,9 @@ class ConversionSettingsSheet extends StatefulWidget {
     required this.prmFactor,
     required this.nmFactor,
     required this.onChanged,
+    this.availableSpecies,
+    this.selectedSpecies,
+    this.onSpeciesChanged,
   });
 
   @override
@@ -24,6 +33,7 @@ class ConversionSettingsSheet extends StatefulWidget {
 class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
   late double _prm;
   late double _nm;
+  String? _species;
   late final TextEditingController _prmController;
   late final TextEditingController _nmController;
 
@@ -32,6 +42,10 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
     super.initState();
     _prm = widget.prmFactor;
     _nm = widget.nmFactor;
+    // A species removed via "Upravljanje vrst" falls back to none.
+    _species = widget.availableSpecies?.contains(widget.selectedSpecies) == true
+        ? widget.selectedSpecies
+        : null;
     _prmController = TextEditingController(text: _formatFactor(_prm));
     _nmController = TextEditingController(text: _formatFactor(_nm));
   }
@@ -114,6 +128,36 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
             ),
             const SizedBox(height: 16),
 
+            // Species for new logs
+            if (widget.availableSpecies != null &&
+                widget.onSpeciesChanged != null) ...[
+              Text('Drevesna vrsta', style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                'Vrsta, ki jo dobijo novo dodani hlodi.',
+                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _Chip(
+                    label: 'Ni izbrano',
+                    selected: _species == null,
+                    onTap: () => setState(() => _species = null),
+                  ),
+                  ...widget.availableSpecies!.map(
+                    (species) => _Chip(
+                      label: species,
+                      selected: _species == species,
+                      onTap: () => setState(() => _species = species),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // PRM presets
             Text('PRM - Prostorninski meter drv', style: Theme.of(context).textTheme.titleSmall),
             Text(
@@ -167,6 +211,7 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
               child: FilledButton(
                 onPressed: () {
                   widget.onChanged(_prm, _nm);
+                  widget.onSpeciesChanged?.call(_species);
                   Navigator.pop(context);
                 },
                 child: const Text('Potrdi'),
@@ -194,6 +239,24 @@ class _FactorChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _Chip(label: '$label ($value)', selected: selected, onTap: onTap);
+  }
+}
+
+/// Plain selectable chip
+class _Chip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _Chip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
@@ -206,7 +269,7 @@ class _FactorChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          '$label ($value)',
+          label,
           style: TextStyle(
             fontSize: 12,
             color: selected ? colorScheme.onPrimary : colorScheme.onSurface,

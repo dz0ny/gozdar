@@ -3,6 +3,7 @@ import '../models/log_entry.dart';
 import '../models/log_batch.dart';
 import '../services/database_service.dart';
 import '../services/export_service.dart';
+import '../services/log_input_prefs_service.dart';
 
 /// Conversion factors between solid wood (m³) and stacked/loose measures.
 ///
@@ -29,8 +30,15 @@ class ConversionFactors {
 class LogsProvider extends ChangeNotifier {
   final DatabaseService _databaseService;
 
-  LogsProvider({DatabaseService? databaseService})
-    : _databaseService = databaseService ?? DatabaseService();
+  final LogInputPrefsService _inputPrefs;
+
+  LogsProvider({
+    DatabaseService? databaseService,
+    LogInputPrefsService? inputPrefs,
+  }) : _databaseService = databaseService ?? DatabaseService(),
+       _inputPrefs = inputPrefs ?? LogInputPrefsService() {
+    _loadCurrentSpecies();
+  }
 
   // State
   List<LogEntry> _logEntries = [];
@@ -40,6 +48,7 @@ class LogsProvider extends ChangeNotifier {
   bool _isBatchesLoading = false;
   String? _error;
   ConversionFactors _conversionFactors = const ConversionFactors();
+  String? _currentSpecies;
 
   // Getters
   List<LogEntry> get logEntries => List.unmodifiable(_logEntries);
@@ -49,6 +58,9 @@ class LogsProvider extends ChangeNotifier {
   bool get isBatchesLoading => _isBatchesLoading;
   String? get error => _error;
   ConversionFactors get conversionFactors => _conversionFactors;
+
+  /// Species assigned to logs added from the Hlodi tab (null = none).
+  String? get currentSpecies => _currentSpecies;
   bool get hasEntries => _logEntries.isNotEmpty;
   int get entryCount => _logEntries.length;
 
@@ -148,6 +160,18 @@ class LogsProvider extends ChangeNotifier {
   void setConversionFactors(double prm, double nm) {
     _conversionFactors = ConversionFactors(prm: prm, nm: nm);
     notifyListeners();
+  }
+
+  Future<void> _loadCurrentSpecies() async {
+    _currentSpecies = await _inputPrefs.getCurrentSpecies();
+    notifyListeners();
+  }
+
+  /// Set the species that newly added logs get; persisted across restarts.
+  Future<void> setCurrentSpecies(String? species) async {
+    _currentSpecies = species;
+    notifyListeners();
+    await _inputPrefs.saveCurrentSpecies(species);
   }
 
   /// Export logs to Excel

@@ -6,6 +6,7 @@ import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
 import '../router/app_router.dart';
 import '../router/route_names.dart';
+import '../services/species_service.dart';
 import '../utils/sl_plural.dart';
 import '../widgets/log_card.dart';
 import '../widgets/inline_add_log.dart';
@@ -17,9 +18,11 @@ import '../widgets/species_management_sheet.dart';
 class LogsTab extends StatelessWidget {
   const LogsTab({super.key});
 
-  void _showConversionDialog(BuildContext context) {
+  Future<void> _showConversionDialog(BuildContext context) async {
     final provider = context.read<LogsProvider>();
-    showModalBottomSheet(
+    final species = await SpeciesService().getSpecies();
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: false,
@@ -39,6 +42,9 @@ class LogsTab extends StatelessWidget {
           onChanged: (prm, nm) {
             provider.setConversionFactors(prm, nm);
           },
+          availableSpecies: species,
+          selectedSpecies: provider.currentSpecies,
+          onSpeciesChanged: provider.setCurrentSpecies,
         ),
       ),
     );
@@ -49,6 +55,7 @@ class LogsTab extends StatelessWidget {
     final provider = context.read<LogsProvider>();
     final mapProvider = context.read<MapProvider>();
     return InlineAddLog(
+      species: provider.currentSpecies,
       onAdd: (entry) async {
         await provider.addLogEntry(entry);
         // Refresh map markers if log has location
@@ -369,11 +376,30 @@ class LogsTab extends StatelessWidget {
                             ],
                           ),
                           const Spacer(),
-                          Text(
-                            slCount(provider.entryCount, 'hlod', 'hloda', 'hlodi', 'hlodov'),
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey[500],
-                                ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                slCount(provider.entryCount, 'hlod', 'hloda', 'hlodi', 'hlodov'),
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.grey[500],
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.forest, size: 14, color: Colors.green[400]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    provider.currentSpecies ?? 'Vrsta ni izbrana',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: Colors.grey[500],
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ],
                       ),
