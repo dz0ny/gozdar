@@ -129,7 +129,7 @@ release-ios: ## Build iOS and upload to TestFlight
 	@echo "Building iOS and uploading to TestFlight..."
 	@echo "Refreshing Generated.xcconfig from pubspec (build number/version)..."
 	flutter build ios --release --no-codesign --config-only
-	cd ios && fastlane release
+	cd ios && bundle exec fastlane release
 	@echo "iOS release uploaded!"
 
 clean: ## Clean build artifacts
