@@ -361,7 +361,7 @@ class LogsTab extends StatelessWidget {
                             children: [
                               Text(
                                 '${provider.totalVolume.toStringAsFixed(2)} m³',
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.green[400],
                                     ),
@@ -369,7 +369,7 @@ class LogsTab extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 '${provider.prmVolume.toStringAsFixed(2)} PRM  •  ${provider.nmVolume.toStringAsFixed(2)} NM',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                       color: Colors.grey[500],
                                     ),
                               ),
@@ -381,7 +381,7 @@ class LogsTab extends StatelessWidget {
                             children: [
                               Text(
                                 slCount(provider.entryCount, 'hlod', 'hloda', 'hlodi', 'hlodov'),
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                       color: Colors.grey[500],
                                     ),
                               ),
@@ -389,11 +389,11 @@ class LogsTab extends StatelessWidget {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.forest, size: 14, color: Colors.green[400]),
+                                  Icon(Icons.forest, size: 18, color: Colors.green[400]),
                                   const SizedBox(width: 4),
                                   Text(
                                     provider.currentSpecies ?? 'Vrsta ni izbrana',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                           color: Colors.grey[500],
                                         ),
                                   ),

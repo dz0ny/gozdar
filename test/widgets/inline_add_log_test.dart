@@ -22,39 +22,36 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // Nothing entered: Dodaj disabled, hint shown.
-    expect(find.text('Vnesi premer in dolžino'), findsOneWidget);
-    expect(
-      tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Dodaj')).onPressed,
-      isNull,
-    );
+    // Nothing entered: the round "+" (= Dodaj) is disabled, no volume yet.
+    expect(find.text('–'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'Premer (cm)'), '40');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Dolžina (m)'), '4');
+    await tester.enterText(find.byType(TextFormField).first, '40');
+    await tester.enterText(find.byType(TextFormField).last, '4');
     await tester.pump();
     // V = π × (0.4/2)² × 4 = 0.5027 m³
-    expect(find.text('0.5027 m³'), findsOneWidget);
+    expect(find.text('0.503'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Dodaj'));
+    await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
 
     expect(added, hasLength(1));
     expect(added.single.volume, closeTo(0.5027, 0.0001));
     // Still on screen, counting, and the last values stay put so a run of
     // similar logs is just repeated "Dodaj".
-    expect(find.text('Dodaj (+1)'), findsOneWidget);
-    expect(find.text('0.5027 m³'), findsOneWidget);
+    expect(find.text('Dodano: 1'), findsOneWidget);
+    expect(find.text('0.503'), findsOneWidget);
     final diameter = tester
-        .widget<TextFormField>(find.widgetWithText(TextFormField, 'Premer (cm)'))
+        .widget<TextFormField>(find.byType(TextFormField).first)
         .controller!;
     expect(diameter.text, '40');
     // Diameter is focused with its text selected so typing replaces it.
     expect(diameter.selection, const TextSelection(baseOffset: 0, extentOffset: 2));
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Dodaj (+1)'));
+    await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
     expect(added, hasLength(2));
-    expect(find.text('Dodaj (+2)'), findsOneWidget);
+    expect(find.text('Dodano: 2'), findsOneWidget);
   });
 
   testWidgets('last diameter and length survive a remount', (tester) async {
@@ -71,30 +68,26 @@ void main() {
 
     await tester.pumpWidget(build());
     await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextFormField, 'Premer (cm)'), '32.5');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Dolžina (m)'), '4');
+    await tester.enterText(find.byType(TextFormField).first, '32.5');
+    await tester.enterText(find.byType(TextFormField).last, '4');
     await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, 'Dodaj'));
+    await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
 
     // Fresh widget (e.g. after an app restart) is prefilled from the last add.
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(build());
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextFormField, 'Premer (cm)'), findsOneWidget);
     expect(
-      tester.widget<TextFormField>(find.widgetWithText(TextFormField, 'Premer (cm)')).controller!.text,
+      tester.widget<TextFormField>(find.byType(TextFormField).first).controller!.text,
       '32.5',
     );
     expect(
-      tester.widget<TextFormField>(find.widgetWithText(TextFormField, 'Dolžina (m)')).controller!.text,
+      tester.widget<TextFormField>(find.byType(TextFormField).last).controller!.text,
       '4',
     );
-    expect(find.text('Dodaj'), findsOneWidget);
-    expect(
-      tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Dodaj')).onPressed,
-      isNotNull,
-    );
+    expect(find.text('Dodano: 1'), findsNothing);
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNotNull);
   });
 
   testWidgets('species comes from the widget, not a dropdown', (tester) async {
@@ -112,10 +105,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(DropdownButtonFormField<String>), findsNothing);
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'Premer (cm)'), '40');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Dolžina (m)'), '4');
+    await tester.enterText(find.byType(TextFormField).first, '40');
+    await tester.enterText(find.byType(TextFormField).last, '4');
     await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, 'Dodaj'));
+    await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
     expect(added.single.species, 'Bukev');
   });

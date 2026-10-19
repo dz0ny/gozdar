@@ -179,109 +179,150 @@ class _InlineAddLogState extends State<InlineAddLog> {
     }
   }
 
-  InputDecoration _decoration(String label) => InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
+  /// Big underlined number field, as on a pocket calculator: no label, the
+  /// unit sits next to it as plain text.
+  Widget _numberField({
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required TextInputAction action,
+    required void Function(String) onSubmitted,
+    required TextStyle style,
+    required Color underline,
+  }) {
+    return TextFormField(
+      controller: controller,
+      focusNode: focusNode,
+      style: style,
+      textAlign: TextAlign.right,
+      decoration: InputDecoration(
         isDense: true,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-      );
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        enabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: underline, width: 1.5),
+        ),
+        focusedBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.green[600]!, width: 2.5),
+        ),
+        errorStyle: const TextStyle(height: 0, fontSize: 0),
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      textInputAction: action,
+      onFieldSubmitted: onSubmitted,
+      inputFormatters: [DecimalTextInputFormatter()],
+      validator: (v) => v == null || v.isEmpty ? '' : null,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final canAdd = _calculatedVolume != null && !_isSaving;
+
+    final numberStyle = textTheme.displaySmall!.copyWith(
+      fontSize: 40,
+      fontWeight: FontWeight.bold,
+      color: cs.onSurface,
+    );
+    final unitStyle = textTheme.headlineSmall!.copyWith(
+      fontSize: 26,
+      color: cs.onSurfaceVariant,
+    );
+    final underline = cs.onSurfaceVariant.withValues(alpha: 0.5);
+
     return Material(
       color: cs.surface,
       elevation: 4,
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: Form(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // 39 cm  ×  8 m
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
                     Expanded(
-                      flex: 3,
-                      child: TextFormField(
+                      flex: 5,
+                      child: _numberField(
                         controller: _diameterController,
                         focusNode: _diameterFocus,
-                        decoration: _decoration('Premer (cm)'),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        textInputAction: TextInputAction.next,
-                        onFieldSubmitted: (_) => _lengthFocus.requestFocus(),
-                        inputFormatters: [DecimalTextInputFormatter()],
-                        validator: (v) =>
-                            v == null || v.isEmpty ? 'Vnesi' : null,
+                        action: TextInputAction.next,
+                        onSubmitted: (_) => _lengthFocus.requestFocus(),
+                        style: numberStyle,
+                        underline: underline,
                       ),
                     ),
                     const SizedBox(width: 8),
+                    Text('cm', style: unitStyle),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Text('×', style: unitStyle),
+                    ),
                     Expanded(
-                      flex: 3,
-                      child: TextFormField(
+                      flex: 4,
+                      child: _numberField(
                         controller: _lengthController,
                         focusNode: _lengthFocus,
-                        decoration: _decoration('Dolžina (m)'),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) {
+                        action: TextInputAction.done,
+                        onSubmitted: (_) {
                           if (canAdd) _saveAndContinue();
                         },
-                        inputFormatters: [DecimalTextInputFormatter()],
-                        validator: (v) =>
-                            v == null || v.isEmpty ? 'Vnesi' : null,
+                        style: numberStyle,
+                        underline: underline,
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Text('m', style: unitStyle),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
+                // Volumen  =  0.955 m³
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text('Volumen', style: unitStyle),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Text('=', style: unitStyle),
+                    ),
+                    Expanded(
+                      child: Text(
+                        _calculatedVolume != null
+                            ? _calculatedVolume!.toStringAsFixed(3)
+                            : '–',
+                        textAlign: TextAlign.right,
+                        style: numberStyle.copyWith(
+                          color: _calculatedVolume != null
+                              ? cs.onSurface
+                              : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('m³', style: unitStyle),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // location + added counter  ...  big round "+" (= Dodaj)
                 Row(
                   children: [
-                    Expanded(
-                      child: _calculatedVolume != null
-                          ? Row(
-                              children: [
-                                const Icon(Icons.calculate,
-                                    color: Colors.green, size: 18),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    '${_calculatedVolume!.toStringAsFixed(4)} m³',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : Text(
-                              'Vnesi premer in dolžino',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(color: cs.onSurfaceVariant),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                    ),
                     if (_latitude != null)
                       TextButton.icon(
                         onPressed: () => setState(() {
                           _latitude = null;
                           _longitude = null;
                         }),
-                        icon: const Icon(Icons.location_on, size: 16),
+                        icon: const Icon(Icons.location_on, size: 22),
                         label: Text(
                           '${_latitude!.toStringAsFixed(3)}, ${_longitude!.toStringAsFixed(3)}',
-                          style: const TextStyle(fontSize: 12),
                         ),
                       )
                     else
@@ -289,19 +330,40 @@ class _InlineAddLogState extends State<InlineAddLog> {
                         onPressed: _isLoadingLocation ? null : _getLocation,
                         icon: _isLoadingLocation
                             ? const SizedBox(
-                                width: 16,
-                                height: 16,
+                                width: 18,
+                                height: 18,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Icon(Icons.my_location, size: 16),
-                        label: const Text('Lokacija'),
+                            : const Icon(Icons.my_location, size: 22),
+                        label: const Text('Lokacija', style: TextStyle(fontSize: 16)),
                       ),
-                    const SizedBox(width: 4),
-                    FilledButton.icon(
-                      onPressed: canAdd ? _saveAndContinue : null,
-                      icon: const Icon(Icons.add),
-                      label: Text(
-                          _addedCount > 0 ? 'Dodaj (+$_addedCount)' : 'Dodaj'),
+                    const Spacer(),
+                    if (_addedCount > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Text(
+                          'Dodano: $_addedCount',
+                          style: textTheme.titleMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    SizedBox(
+                      width: 76,
+                      height: 76,
+                      child: FilledButton(
+                        onPressed: canAdd ? _saveAndContinue : null,
+                        style: FilledButton.styleFrom(
+                          shape: const CircleBorder(),
+                          padding: EdgeInsets.zero,
+                          backgroundColor: Colors.green[700],
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Tooltip(
+                          message: 'Dodaj',
+                          child: Icon(Icons.add, size: 44),
+                        ),
+                      ),
                     ),
                   ],
                 ),
