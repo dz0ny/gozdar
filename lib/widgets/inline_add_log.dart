@@ -6,10 +6,10 @@ import '../utils/decimal_input.dart';
 /// Always-visible quick-add bar at the bottom of the Hlodi tab: diameter,
 /// length, then the round "+". Replaces the modal add sheet
 /// so logging a pile of timber is a steady type → Dodaj → type loop without a
-/// popup in between. Diameter and length are prefilled from the last added
-/// log and kept after each add (focus back on the diameter with its text
-/// selected), so a run of similar logs is just repeated "Dodaj". The species
-/// is not chosen here; it comes from [species], picked via the total card.
+/// popup in between. The length is remembered (prefilled from the last added
+/// log and kept after each add); the diameter is cleared after each add and
+/// gets the focus, since it is what changes from log to log. The species is
+/// not chosen here; it comes from [species], picked via the total card.
 class InlineAddLog extends StatefulWidget {
   final Future<void> Function(LogEntry entry) onAdd;
   final int? batchId;
@@ -48,13 +48,9 @@ class _InlineAddLogState extends State<InlineAddLog> {
   }
 
   Future<void> _loadLastDimensions() async {
-    final diameter = await _inputPrefs.getLastDiameter();
     final length = await _inputPrefs.getLastLength();
     if (!mounted) return;
     // Don't overwrite anything the user already started typing.
-    if (diameter != null && _diameterController.text.isEmpty) {
-      _diameterController.text = _formatDimension(diameter);
-    }
     if (length != null && _lengthController.text.isEmpty) {
       _lengthController.text = _formatDimension(length);
     }
@@ -68,25 +64,6 @@ class _InlineAddLogState extends State<InlineAddLog> {
       text = text.substring(0, text.length - 1);
     }
     return text;
-  }
-
-  /// Focus the diameter field with its text selected so typing replaces the
-  /// retained value instead of appending to it.
-  void _selectAllDiameter() {
-    _diameterFocus.requestFocus();
-    _diameterController.selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: _diameterController.text.length,
-    );
-  }
-
-  @override
-  void dispose() {
-    _diameterController.dispose();
-    _lengthController.dispose();
-    _diameterFocus.dispose();
-    _lengthFocus.dispose();
-    super.dispose();
   }
 
   void _updateVolume() {
@@ -123,9 +100,12 @@ class _InlineAddLogState extends State<InlineAddLog> {
         await _inputPrefs.saveLastDimensions(entry.diameter!, entry.length!);
       }
       if (!mounted) return;
-      // Keep diameter/length (and the computed volume) for the next log.
-      setState(() => _addedCount++);
-      _selectAllDiameter();
+      // Keep the length for the next log; the diameter is what changes.
+      setState(() {
+        _addedCount++;
+        _diameterController.clear();
+      });
+      _diameterFocus.requestFocus();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -37,24 +37,35 @@ void main() {
 
     expect(added, hasLength(1));
     expect(added.single.volume, closeTo(0.5027, 0.0001));
-    // Still on screen, counting, and the last values stay put so a run of
-    // similar logs is just repeated "Dodaj".
+    // Still on screen and counting. The length stays for the next log; the
+    // diameter is cleared and focused, so the "+" waits for a new one.
     expect(find.text('Dodano: 1'), findsOneWidget);
-    expect(find.text('0.503'), findsOneWidget);
-    final diameter = tester
-        .widget<TextFormField>(find.byType(TextFormField).first)
-        .controller!;
-    expect(diameter.text, '40');
-    // Diameter is focused with its text selected so typing replaces it.
-    expect(diameter.selection, const TextSelection(baseOffset: 0, extentOffset: 2));
+    expect(find.text('0.503'), findsNothing);
+    expect(
+      tester.widget<TextFormField>(find.byType(TextFormField).first).controller!.text,
+      isEmpty,
+    );
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText).first).focusNode.hasFocus,
+      isTrue,
+    );
+    expect(
+      tester.widget<TextFormField>(find.byType(TextFormField).last).controller!.text,
+      '4',
+    );
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
 
+    await tester.enterText(find.byType(TextFormField).first, '30');
+    await tester.pump();
     await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
     expect(added, hasLength(2));
+    expect(added.last.diameter, 30);
+    expect(added.last.length, 4);
     expect(find.text('Dodano: 2'), findsOneWidget);
   });
 
-  testWidgets('last diameter and length survive a remount', (tester) async {
+  testWidgets('last length survives a remount; diameter starts empty', (tester) async {
     Widget build() => MaterialApp(
           home: Scaffold(
             body: Column(
@@ -74,20 +85,20 @@ void main() {
     await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
 
-    // Fresh widget (e.g. after an app restart) is prefilled from the last add.
+    // Fresh widget (e.g. after an app restart): length prefilled, diameter empty.
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(build());
     await tester.pumpAndSettle();
     expect(
       tester.widget<TextFormField>(find.byType(TextFormField).first).controller!.text,
-      '32.5',
+      isEmpty,
     );
     expect(
       tester.widget<TextFormField>(find.byType(TextFormField).last).controller!.text,
       '4',
     );
     expect(find.text('Dodano: 1'), findsNothing);
-    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNotNull);
+    expect(tester.widget<FilledButton>(find.byType(FilledButton)).onPressed, isNull);
   });
 
   testWidgets('species comes from the widget, not a dropdown', (tester) async {
