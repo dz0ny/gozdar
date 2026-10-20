@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import '../models/log_entry.dart';
-import '../services/location_settings.dart';
 import '../services/log_input_prefs_service.dart';
 import '../utils/decimal_input.dart';
 
 /// Always-visible quick-add bar at the bottom of the Hlodi tab: diameter,
-/// length and an optional GPS fix, then "Dodaj". Replaces the modal add sheet
+/// length, then the round "+". Replaces the modal add sheet
 /// so logging a pile of timber is a steady type → Dodaj → type loop without a
 /// popup in between. Diameter and length are prefilled from the last added
 /// log and kept after each add (focus back on the diameter with its text
@@ -36,9 +34,6 @@ class _InlineAddLogState extends State<InlineAddLog> {
   final _lengthFocus = FocusNode();
 
   double? _calculatedVolume;
-  double? _latitude;
-  double? _longitude;
-  bool _isLoadingLocation = false;
   bool _isSaving = false;
   int _addedCount = 0;
 
@@ -105,41 +100,6 @@ class _InlineAddLogState extends State<InlineAddLog> {
     });
   }
 
-  Future<void> _getLocation() async {
-    setState(() => _isLoadingLocation = true);
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Dovoljenje za lokacijo zavrnjeno')),
-          );
-        }
-        return;
-      }
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: GozdarLocationSettings.currentPosition,
-      );
-      if (!mounted) return;
-      setState(() {
-        _latitude = position.latitude;
-        _longitude = position.longitude;
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoadingLocation = false);
-    }
-  }
-
   LogEntry? _createEntry() {
     if (!_formKey.currentState!.validate() || _calculatedVolume == null) {
       return null;
@@ -148,8 +108,6 @@ class _InlineAddLogState extends State<InlineAddLog> {
       diameter: parseDecimal(_diameterController.text),
       length: parseDecimal(_lengthController.text),
       volume: _calculatedVolume!,
-      latitude: _latitude,
-      longitude: _longitude,
       species: widget.species,
       batchId: widget.batchId,
     );
@@ -243,10 +201,9 @@ class _InlineAddLogState extends State<InlineAddLog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 39 cm  ×  8 m
+                // 39 cm  ×  8 m   (+)
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       flex: 5,
@@ -262,7 +219,7 @@ class _InlineAddLogState extends State<InlineAddLog> {
                     const SizedBox(width: 8),
                     Text('cm', style: unitStyle),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: Text('×', style: unitStyle),
                     ),
                     Expanded(
@@ -280,74 +237,7 @@ class _InlineAddLogState extends State<InlineAddLog> {
                     ),
                     const SizedBox(width: 8),
                     Text('m', style: unitStyle),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                // Volumen  =  0.955 m³
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text('Volumen', style: unitStyle),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Text('=', style: unitStyle),
-                    ),
-                    Expanded(
-                      child: Text(
-                        _calculatedVolume != null
-                            ? _calculatedVolume!.toStringAsFixed(3)
-                            : '–',
-                        textAlign: TextAlign.right,
-                        style: numberStyle.copyWith(
-                          color: _calculatedVolume != null
-                              ? cs.onSurface
-                              : cs.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text('m³', style: unitStyle),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                // location + added counter  ...  big round "+" (= Dodaj)
-                Row(
-                  children: [
-                    if (_latitude != null)
-                      TextButton.icon(
-                        onPressed: () => setState(() {
-                          _latitude = null;
-                          _longitude = null;
-                        }),
-                        icon: const Icon(Icons.location_on, size: 22),
-                        label: Text(
-                          '${_latitude!.toStringAsFixed(3)}, ${_longitude!.toStringAsFixed(3)}',
-                        ),
-                      )
-                    else
-                      TextButton.icon(
-                        onPressed: _isLoadingLocation ? null : _getLocation,
-                        icon: _isLoadingLocation
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.my_location, size: 22),
-                        label: const Text('Lokacija', style: TextStyle(fontSize: 16)),
-                      ),
-                    const Spacer(),
-                    if (_addedCount > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Text(
-                          'Dodano: $_addedCount',
-                          style: textTheme.titleMedium?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
+                    const SizedBox(width: 16),
                     SizedBox(
                       width: 76,
                       height: 76,
@@ -365,6 +255,41 @@ class _InlineAddLogState extends State<InlineAddLog> {
                         ),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // Volumen  =  0.955 m³      (Dodano: N on the left when > 0)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text('Volumen', style: unitStyle),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Text('=', style: unitStyle),
+                    ),
+                    if (_addedCount > 0)
+                      Text(
+                        'Dodano: $_addedCount',
+                        style: textTheme.titleMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    Expanded(
+                      child: Text(
+                        _calculatedVolume != null
+                            ? _calculatedVolume!.toStringAsFixed(3)
+                            : '–',
+                        textAlign: TextAlign.right,
+                        style: numberStyle.copyWith(
+                          color: _calculatedVolume != null
+                              ? cs.onSurface
+                              : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('m³', style: unitStyle),
                   ],
                 ),
               ],
