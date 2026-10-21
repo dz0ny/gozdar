@@ -12,7 +12,6 @@ import '../services/kml_service.dart';
 import '../services/owner_lookup_service.dart';
 import '../utils/sl_plural.dart';
 import '../widgets/parcel_silhouette.dart';
-import 'owner_import_search_screen.dart';
 
 /// Get icon and color for forest type
 (IconData, Color) getForestTypeIcon(ForestType type) {
@@ -392,47 +391,6 @@ class ForestTabState extends State<ForestTab> {
   /// Person-icon action: when the GURS owners DB is imported, offer a choice
   /// between filtering own parcels by owner and searching/importing from GURS;
   /// otherwise filter own parcels by owner directly.
-  Future<void> _onOwnerButtonPressed() async {
-    if (!OwnerLookupService.instance.isAvailable) {
-      await _showOwnerFilterDialog();
-      return;
-    }
-
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.filter_list),
-              title: const Text('Filtriraj po lastniku'),
-              onTap: () => Navigator.of(context).pop('filter'),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.person_search),
-              title: const Text('Uvoz po lastniku'),
-              onTap: () => Navigator.of(context).pop('import'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (!mounted || choice == null) return;
-
-    if (choice == 'filter') {
-      await _showOwnerFilterDialog();
-    } else if (choice == 'import') {
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const OwnerImportSearchScreen()),
-      );
-      // Refresh in case parcels were imported.
-      await _loadData();
-    }
-  }
-
   Future<void> _showOwnerFilterDialog() async {
     final owners = _uniqueOwners;
 
@@ -549,17 +507,15 @@ class ForestTabState extends State<ForestTab> {
       appBar: AppBar(
         title: const Text('Moj Gozd'),
         actions: [
-          // Owner button: search-and-import from the GURS owners DB when it's
-          // imported, otherwise filter own parcels by owner.
+          // Filter own parcels by owner. Importing parcels is done from the
+          // map's parcel search.
           IconButton(
             icon: Badge(
               isLabelVisible: _selectedOwnerFilter != null,
               child: const Icon(Icons.person),
             ),
-            tooltip: OwnerLookupService.instance.isAvailable
-                ? 'Uvoz po lastniku'
-                : 'Filtriraj po lastniku',
-            onPressed: _onOwnerButtonPressed,
+            tooltip: 'Filtriraj po lastniku',
+            onPressed: _showOwnerFilterDialog,
           ),
           PopupMenuButton<String>(
             tooltip: 'Več možnosti gozda',

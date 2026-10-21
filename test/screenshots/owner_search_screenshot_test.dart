@@ -11,7 +11,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gozdar/screens/owner_import_search_screen.dart';
 import 'package:gozdar/services/owner_lookup_service.dart';
 import 'package:gozdar/theme/app_theme.dart';
 import 'package:gozdar/widgets/parcel_search_dialog.dart';
@@ -86,38 +85,4 @@ void main() {
       );
     });
   }
-
-  testWidgets('owner import screen, 2 letters', (tester) async {
-    await phone(tester);
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.greenTheme,
-      debugShowCheckedModeBanner: false,
-      home: const OwnerImportSearchScreen(),
-    ));
-    await tester.enterText(find.widgetWithText(TextField, 'Ime lastnika'), 'no');
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
-    await tester.pumpAndSettle();
-    await expectLater(
-      find.byType(MaterialApp),
-      matchesGoldenFile('out/owner_import_short.png'),
-    );
-  });
-
-  testWidgets('owner import screen', (tester) async {
-    await phone(tester);
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.greenTheme,
-      debugShowCheckedModeBanner: false,
-      home: const OwnerImportSearchScreen(),
-    ));
-    await tester.enterText(find.widgetWithText(TextField, 'Ime lastnika'), 'nov');
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
-    await tester.pumpAndSettle();
-    await expectLater(
-      find.byType(MaterialApp),
-      matchesGoldenFile('out/owner_import.png'),
-    );
-  });
 }
