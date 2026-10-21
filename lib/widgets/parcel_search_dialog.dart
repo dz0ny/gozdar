@@ -34,6 +34,13 @@ class ParcelSearchDialog extends StatefulWidget {
   @override
   State<ParcelSearchDialog> createState() => _ParcelSearchDialogState();
 
+  /// Forget the remembered query (tests).
+  @visibleForTesting
+  static void forgetLastSearch() {
+    _LastSearch.text = '';
+    _LastSearch.ko = null;
+  }
+
   static Future<void> show({
     required BuildContext context,
     required MapController mapController,
@@ -61,6 +68,13 @@ class ParcelSearchDialog extends StatefulWidget {
   }
 }
 
+/// The last query and KO, kept for the app session so reopening the search
+/// (e.g. after looking at a found parcel on the map) shows the same results.
+class _LastSearch {
+  static String text = '';
+  static KoInfo? ko;
+}
+
 class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   final _controller = ParcelSearchController();
   final _cadastralService = CadastralService();
@@ -77,11 +91,31 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   @override
   void initState() {
     super.initState();
-    _prefillKo();
+    if (_LastSearch.text.trim().isNotEmpty) {
+      // Restore the previous search, selected so typing replaces it.
+      _koTouched = true;
+      _controller.text.value = TextEditingValue(
+        text: _LastSearch.text,
+        selection: TextSelection(
+          baseOffset: 0,
+          extentOffset: _LastSearch.text.length,
+        ),
+      );
+      _controller.setKo(_LastSearch.ko);
+    } else {
+      _prefillKo();
+    }
+    _controller.addListener(_remember);
+  }
+
+  void _remember() {
+    _LastSearch.text = _controller.text.text;
+    _LastSearch.ko = _controller.ko;
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_remember);
     _controller.dispose();
     super.dispose();
   }

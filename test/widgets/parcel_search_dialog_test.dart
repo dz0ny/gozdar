@@ -21,6 +21,7 @@ void main() {
   const babnoCenter = LatLng(45.655, 14.555);
 
   Future<void> open(WidgetTester tester, {LatLng? center = babnoCenter}) async {
+    ParcelSearchDialog.forgetLastSearch();
     tester.view.physicalSize = const Size(1080, 2200);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -111,6 +112,25 @@ void main() {
     await open(tester, center: null);
     await type(tester, '55/1');
     expect(find.textContaining('izberite katastrsko občino'), findsWidgets);
+  });
+
+  testWidgets('reopening restores the last query and its suggestions',
+      (tester) async {
+    await open(tester);
+    await type(tester, '123/4');
+    expect(find.text('Parcela 123/4'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Prekliči'));
+    await tester.pumpAndSettle();
+    expect(find.text('Parcela 123/4'), findsNothing);
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        '123/4');
+    expect(find.text('Parcela 123/4'), findsOneWidget);
+    expect(find.widgetWithText(InputChip, 'KO BABNO POLJE (1651)'),
+        findsOneWidget);
   });
 
   testWidgets('no matches shows the empty state', (tester) async {
