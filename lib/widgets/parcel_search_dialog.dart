@@ -2,25 +2,33 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import '../services/cadastral_service.dart';
-import '../services/owner_lookup_service.dart';
-import 'owner_hit_tile.dart';
-import 'owner_search_controller.dart';
-import 'owner_search_panel.dart';
-import '../services/parcel_search_history_service.dart';
+import 'package:latlong2/latlong.dart';
 
-/// Bottom sheet for searching cadastral parcels. Always offers search by KO
-/// number + parcel number. When an owners database is imported, a second tab
-/// lets the user search by owner name and/or address; selecting a result
-/// fetches the parcel geometry and reuses the same [onParcelFound] flow.
+import '../services/cadastral_service.dart';
+import '../services/ko_locator.dart';
+import '../services/parcel_search_service.dart';
+import 'parcel_search_controller.dart';
+
+/// Bottom sheet for finding a cadastral parcel with a single search field.
+///
+/// The field autocompletes cadastral municipality names and codes, parcel
+/// numbers (`123`, `123/4`) and owner names. The KO the map is looking at is
+/// preselected as a removable chip; typing a KO name switches it. Tapping a
+/// parcel or owner suggestion fetches the geometry and hands it to
+/// [onParcelFound].
 class ParcelSearchDialog extends StatefulWidget {
   final MapController mapController;
   final Function(WfsParcel) onParcelFound;
+
+  /// Where the map is looking, to preselect its KO. Defaults to the
+  /// controller's camera centre.
+  final LatLng? center;
 
   const ParcelSearchDialog({
     super.key,
     required this.mapController,
     required this.onParcelFound,
+    this.center,
   });
 
   @override
@@ -30,421 +38,372 @@ class ParcelSearchDialog extends StatefulWidget {
     required BuildContext context,
     required MapController mapController,
     required Function(WfsParcel) onParcelFound,
+    LatLng? center,
   }) {
+    if (center == null) {
+      try {
+        center = mapController.camera.center;
+      } catch (_) {
+        // Controller not attached to a map yet: no prefill.
+      }
+    }
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useRootNavigator: false,
-      builder: (context) => Container(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: ParcelSearchDialog(
-          mapController: mapController,
-          onParcelFound: onParcelFound,
-        ),
+      showDragHandle: true,
+      builder: (context) => ParcelSearchDialog(
+        mapController: mapController,
+        onParcelFound: onParcelFound,
+        center: center,
       ),
     );
   }
 }
 
 class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _koController = TextEditingController();
-  final _parcelController = TextEditingController();
+  final _controller = ParcelSearchController();
   final _cadastralService = CadastralService();
-  final _historyService = ParcelSearchHistoryService();
-  bool _isSearching = false;
-  String? _errorMessage;
-  List<String> _koHistory = [];
-  List<String> _parcelHistory = [];
 
-  // Owner-search tab state (only used when the owners DB is available).
-  final _ownerSearch = OwnerSearchController();
+  /// The user picked or removed the KO, so a late map-position prefill must
+  /// not overwrite it.
+  bool _koTouched = false;
+  bool _koFromMap = false;
+
+  /// Key of the suggestion whose geometry is being fetched.
   String? _locatingKey;
-  String? _ownerError;
-
-  bool get _ownersAvailable => OwnerLookupService.instance.isAvailable;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadHistory();
-  }
-
-  /// Load search history for autocomplete
-  Future<void> _loadHistory() async {
-    final koHistory = await _historyService.getKoHistory();
-    final parcelHistory = await _historyService.getParcelHistory();
-    if (mounted) {
-      setState(() {
-        _koHistory = koHistory;
-        _parcelHistory = parcelHistory;
-      });
-    }
+    _prefillKo();
   }
 
   @override
   void dispose() {
-    _koController.dispose();
-    _parcelController.dispose();
-    _ownerSearch.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _searchParcel() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() {
-      _isSearching = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final koNumber = _koController.text.trim();
-      final parcelNumber = _parcelController.text.trim();
-
-      final parcel = await _cadastralService.queryParcelByKoAndNumber(
-        koNumber,
-        parcelNumber,
-      );
-
-      if (!mounted) return;
-
-      if (parcel != null && parcel.polygon.isNotEmpty) {
-        // Save to search history
-        await _historyService.addKoToHistory(koNumber);
-        await _historyService.addParcelToHistory(parcelNumber);
-
-        if (!mounted) return;
-
-        // Close dialog
-        Navigator.of(context).pop();
-
-        // Call callback to handle parcel display
-        widget.onParcelFound(parcel);
-      } else {
-        setState(() {
-          _errorMessage = 'Parcela ni najdena';
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = 'Napaka pri iskanju: $e';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSearching = false;
-        });
-      }
-    }
+  Future<void> _prefillKo() async {
+    final center = widget.center;
+    if (center == null) return;
+    final ko = await ParcelSearchService.koForPoint(center);
+    if (!mounted || _koTouched || ko == null) return;
+    setState(() => _koFromMap = true);
+    _controller.setKo(ko);
   }
 
-  String _ownerKey(OwnerSearchHit h) => '${h.sifko}/${h.parcela}';
-
-  /// Fetch the parcel geometry for an owner hit and hand it to the map. The
-  /// owners DB has no geometry, so we query the cadastral WFS by KO + parcela.
-  Future<void> _locateOwnerHit(OwnerSearchHit hit) async {
-    final key = _ownerKey(hit);
+  void _setKo(KoInfo? ko, {String? keepText}) {
+    _koTouched = true;
     setState(() {
-      _locatingKey = key;
-      _ownerError = null;
+      _koFromMap = false;
+      _error = null;
     });
+    if (keepText != null) {
+      _controller.text.value = TextEditingValue(
+        text: keepText,
+        selection: TextSelection.collapsed(offset: keepText.length),
+      );
+    }
+    _controller.setKo(ko);
+    _controller.focus.requestFocus();
+  }
 
+  String _key(ParcelSuggestion s) => '${s.sifko}/${s.parcela}';
+
+  Future<void> _open(ParcelSuggestion s) async {
+    setState(() {
+      _locatingKey = _key(s);
+      _error = null;
+    });
     try {
       final parcel = await _cadastralService.queryParcelByKoAndNumber(
-        hit.sifko.toString(),
-        hit.parcela,
+        s.sifko.toString(),
+        s.parcela!,
       );
-
       if (!mounted) return;
-
       if (parcel != null && parcel.polygon.isNotEmpty) {
         Navigator.of(context).pop();
         widget.onParcelFound(parcel);
-      } else {
-        setState(() {
-          _locatingKey = null;
-          _ownerError =
-              'Geometrije za parcelo ${hit.parcela} ni bilo mogoče najti.';
-        });
+        return;
       }
+      setState(() {
+        _locatingKey = null;
+        _error = 'Parcela ${s.parcela} ni najdena.';
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _locatingKey = null;
-        _ownerError = 'Napaka pri iskanju: $e';
+        _error = 'Napaka pri iskanju: $e';
       });
     }
   }
 
+  void _onSuggestionTap(ParcelSuggestion s) {
+    if (s.kind == ParcelSuggestionKind.ko) {
+      // Keep a typed parcel number, drop the words that named the KO.
+      final number = ParsedParcelQuery.parse(_controller.text.text).parcelNumber;
+      _setKo(s.ko, keepText: number ?? '');
+    } else {
+      _open(s);
+    }
+  }
+
+  /// Keyboard "search": open the first parcel/owner row, else take the KO.
+  void _submit() {
+    if (_locatingKey != null) return;
+    final rows = _controller.suggestions;
+    if (rows.isEmpty) return;
+    final target = rows.firstWhere(
+      (s) => s.kind != ParcelSuggestionKind.ko,
+      orElse: () => rows.first,
+    );
+    _onSuggestionTap(target);
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (!_ownersAvailable) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _handleBar(),
-          _title('Iskanje parcele', Icons.search),
-          _buildParcelForm(context),
-        ],
-      );
-    }
-
-    // Tabbed layout: parcel search + owner search. Size the whole sheet to
-    // the space left above the keyboard, so typing shrinks the results list
-    // instead of pushing the header off screen.
+    // Size the sheet to the space above the keyboard so typing shrinks the
+    // list instead of pushing the field off screen.
     final media = MediaQuery.of(context);
     final available =
-        media.size.height - media.viewInsets.bottom - media.padding.top - 24;
-    final maxHeight = available.clamp(0.0, media.size.height * 0.75);
-    return DefaultTabController(
-      length: 2,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _handleBar(),
-            _title('Iskanje', Icons.search),
-            const TabBar(
-              tabs: [
-                Tab(icon: Icon(Icons.grid_on), text: 'Parcela'),
-                Tab(icon: Icon(Icons.person_search), text: 'Lastnik'),
-              ],
-            ),
-            Flexible(
-              child: TabBarView(
-                children: [
-                  SingleChildScrollView(child: _buildParcelForm(context)),
-                  _buildOwnerSearch(context),
-                ],
+        media.size.height - media.viewInsets.bottom - media.padding.top - 56;
+    final height = available.clamp(240.0, media.size.height * 0.92);
+    return Padding(
+      padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
+      child: SizedBox(
+        height: height,
+        child: ListenableBuilder(
+          listenable: _controller,
+          builder: (context, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _header(context),
+              _koChip(context),
+              _field(context),
+              SizedBox(
+                height: 2,
+                child: (_controller.searchingOwners || _locatingKey != null)
+                    ? const LinearProgressIndicator()
+                    : const Divider(height: 1),
               ),
-            ),
-          ],
+              if (_error != null) _errorBox(context, _error!),
+              Expanded(child: _body(context)),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _handleBar() {
-    return Container(
-      margin: const EdgeInsets.only(top: 8, bottom: 4),
-      width: 40,
-      height: 4,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(2),
-      ),
-    );
-  }
-
-  Widget _title(String text, IconData icon) {
+  Widget _header(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 0, 4, 0),
       child: Row(
         children: [
-          Icon(icon, color: Theme.of(context).colorScheme.primary),
+          Icon(Icons.search, color: theme.colorScheme.primary),
           const SizedBox(width: 12),
-          Text(
-            text,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+          Expanded(
+            child: Text(
+              'Iskanje parcele',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Prekliči',
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildParcelForm(BuildContext context) {
+  Widget _koChip(BuildContext context) {
+    final ko = _controller.ko;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Autocomplete<String>(
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                if (textEditingValue.text.isEmpty) {
-                  return _koHistory;
-                }
-                return _koHistory.where((String option) {
-                  return option.contains(textEditingValue.text);
-                });
-              },
-              onSelected: (String selection) {
-                _koController.text = selection;
-              },
-              fieldViewBuilder: (BuildContext context,
-                  TextEditingController fieldController,
-                  FocusNode focusNode,
-                  VoidCallback onFieldSubmitted) {
-                // Sync with our controller
-                _koController.text = fieldController.text;
-                fieldController.addListener(() {
-                  _koController.text = fieldController.text;
-                });
-
-                return TextFormField(
-                  controller: fieldController,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'KO številka',
-                    hintText: 'npr. 2361',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.tag),
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Vnesite KO številko';
-                    }
-                    return null;
-                  },
-                  enabled: !_isSearching,
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            Autocomplete<String>(
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                if (textEditingValue.text.isEmpty) {
-                  return _parcelHistory;
-                }
-                return _parcelHistory.where((String option) {
-                  return option.contains(textEditingValue.text);
-                });
-              },
-              onSelected: (String selection) {
-                _parcelController.text = selection;
-              },
-              fieldViewBuilder: (BuildContext context,
-                  TextEditingController fieldController,
-                  FocusNode focusNode,
-                  VoidCallback onFieldSubmitted) {
-                // Sync with our controller
-                _parcelController.text = fieldController.text;
-                fieldController.addListener(() {
-                  _parcelController.text = fieldController.text;
-                });
-
-                return TextFormField(
-                  controller: fieldController,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Parcela',
-                    hintText: 'npr. 42 ali 1/1',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.grid_on),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Vnesite številko parcele';
-                    }
-                    return null;
-                  },
-                  enabled: !_isSearching,
-                  onFieldSubmitted: (_) => _searchParcel(),
-                );
-              },
-            ),
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 8),
-              _errorBox(_errorMessage!),
-            ],
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed:
-                      _isSearching ? null : () => Navigator.of(context).pop(),
-                  child: const Text('Prekliči'),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: ko == null
+            ? Chip(
+                avatar: const Icon(Icons.place_outlined, size: 18),
+                label: const Text('Vse katastrske občine'),
+              )
+            : InputChip(
+                avatar: Icon(
+                  _koFromMap ? Icons.my_location : Icons.place,
+                  size: 18,
                 ),
-                const SizedBox(width: 8),
-                FilledButton.icon(
-                  onPressed: _isSearching ? null : _searchParcel,
-                  icon: _isSearching
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.search),
-                  label: Text(_isSearching ? 'Iskanje...' : 'Išči'),
+                label: Text(
+                  'KO ${ko.label}',
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
-          ],
+                tooltip: _koFromMap ? 'Po legi na zemljevidu' : null,
+                deleteButtonTooltipMessage: 'Odstrani katastrsko občino',
+                onDeleted: () => _setKo(null),
+              ),
+      ),
+    );
+  }
+
+  Widget _field(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: TextField(
+        controller: _controller.text,
+        focusNode: _controller.focus,
+        autofocus: true,
+        textInputAction: TextInputAction.search,
+        style: Theme.of(context).textTheme.titleMedium,
+        onChanged: (_) {
+          if (_error != null) setState(() => _error = null);
+          _controller.queryChanged();
+        },
+        onSubmitted: (_) => _submit(),
+        decoration: InputDecoration(
+          hintText: 'Parcela, lastnik ali katastrska občina',
+          helperText: 'npr. 123/4, Novak ali Babno polje',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _controller.hasQuery
+              ? IconButton(
+                  tooltip: 'Počisti',
+                  icon: Icon(Icons.clear, color: cs.onSurfaceVariant),
+                  onPressed: () {
+                    _controller.text.clear();
+                    _controller.queryChanged();
+                  },
+                )
+              : null,
         ),
       ),
     );
   }
 
-  Widget _buildOwnerSearch(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return OwnerSearchPanel(
-      controller: _ownerSearch,
-      message: _ownerError == null
-          ? null
-          : Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: _errorBox(_ownerError!),
+  Widget _body(BuildContext context) {
+    final rows = _controller.suggestions;
+    final parsed = ParsedParcelQuery.parse(_controller.text.text);
+    final needsKo = parsed.parcelNumber != null &&
+        _controller.ko == null &&
+        !rows.any((s) => s.kind == ParcelSuggestionKind.parcel);
+
+    if (!_controller.hasQuery) {
+      return _hint(
+        context,
+        Icons.travel_explore,
+        _controller.ko == null
+            ? 'Vnesite številko parcele, ime lastnika ali katastrsko občino.'
+            : 'Vnesite številko parcele (npr. 123/4) ali ime lastnika.',
+      );
+    }
+    if (rows.isEmpty) {
+      if (_controller.searchingOwners) return const SizedBox.shrink();
+      return _hint(
+        context,
+        needsKo ? Icons.place_outlined : Icons.search_off,
+        needsKo
+            ? 'Za parcelo ${parsed.parcelNumber} izberite katastrsko občino: '
+                'vnesite njeno ime.'
+            : 'Ni zadetkov.',
+      );
+    }
+    return ListView.separated(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      itemCount: rows.length + (needsKo ? 1 : 0),
+      separatorBuilder: (_, _) => const Divider(height: 1),
+      itemBuilder: (context, i) {
+        if (needsKo && i == 0) {
+          return ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: Text(
+              'Za parcelo ${parsed.parcelNumber} izberite katastrsko občino.',
             ),
-      itemBuilder: (context, hit) {
-        final locating = _locatingKey == _ownerKey(hit);
-        return OwnerHitTile(
-          hit: hit,
-          trailing: locating
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Icon(Icons.my_location, color: cs.onSurfaceVariant),
-          onTap: _locatingKey != null ? null : () => _locateOwnerHit(hit),
-        );
+          );
+        }
+        return _tile(context, rows[i - (needsKo ? 1 : 0)]);
       },
     );
   }
 
-  Widget _errorBox(String message) {
+  Widget _tile(BuildContext context, ParcelSuggestion s) {
+    final cs = Theme.of(context).colorScheme;
+    final locating = _locatingKey == _key(s);
+    final (icon, trailing) = switch (s.kind) {
+      ParcelSuggestionKind.parcel => (Icons.grid_on, Icons.my_location),
+      ParcelSuggestionKind.owner => (Icons.person_search, Icons.my_location),
+      ParcelSuggestionKind.ko => (Icons.place_outlined, Icons.add),
+    };
+    return ListTile(
+      minVerticalPadding: 10,
+      leading: Icon(icon, color: cs.primary),
+      title: Text(
+        s.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+      subtitle: s.subtitle == null
+          ? null
+          : Text(s.subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: locating
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(trailing, color: cs.onSurfaceVariant),
+      onTap: _locatingKey != null ? null : () => _onSuggestionTap(s),
+    );
+  }
+
+  Widget _hint(BuildContext context, IconData icon, String text) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 48, color: cs.onSurfaceVariant),
+            const SizedBox(height: 12),
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _errorBox(BuildContext context, String message) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer,
+        color: cs.errorContainer,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
-        ),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.error_outline,
-            color: Theme.of(context).colorScheme.error,
-            size: 20,
-          ),
+          Icon(Icons.error_outline, color: cs.error, size: 20),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              message,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onErrorContainer,
-              ),
-            ),
+            child: Text(message, style: TextStyle(color: cs.onErrorContainer)),
           ),
         ],
       ),

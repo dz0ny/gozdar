@@ -75,9 +75,7 @@ void main() {
       ));
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Lastnik'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.widgetWithText(TextField, 'Ime lastnika'), 'nov');
+      await tester.enterText(find.byType(TextField), 'nov');
       await tester.pump(const Duration(milliseconds: 400));
       // The search runs on a real background isolate.
       await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));

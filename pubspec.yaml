@@ -130,6 +130,7 @@ flutter:
   assets:
     - icon.png
     - assets/regije.geojson
+    - assets/ko_index.json
     - assets/fonts/Roboto-Regular.ttf
     - assets/fonts/Roboto-Bold.ttf
 
