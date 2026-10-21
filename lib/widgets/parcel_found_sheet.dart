@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import '../models/parcel.dart';
 import '../services/cadastral_service.dart';
+import '../services/ko_locator.dart';
 import '../services/owner_lookup_service.dart';
 import 'parcel_silhouette.dart';
 
-/// Bottom sheet displayed when a parcel is found from search
-/// Shows parcel details and allows viewing or importing the parcel
+/// Compact details of a parcel found by search, with one action (import or
+/// open). Shown as a non-modal sheet, so the map behind it stays usable and
+/// the found parcel's outline remains visible.
 class ParcelFoundSheet extends StatelessWidget {
   final WfsParcel wfsParcel;
   final Parcel? existingParcel;
+
+  /// Close button.
   final VoidCallback onHide;
+
+  /// Primary button (import a new parcel / open an existing one).
   final VoidCallback onAction;
 
   const ParcelFoundSheet({
@@ -20,239 +26,138 @@ class ParcelFoundSheet extends StatelessWidget {
     required this.onAction,
   });
 
-  /// Show the parcel found sheet as a modal bottom sheet
-  static Future<void> show({
-    required BuildContext context,
+  /// Show the sheet anchored to [scaffold] without a backdrop. The returned
+  /// controller's `closed` future completes however the sheet goes away.
+  static PersistentBottomSheetController show({
+    required ScaffoldState scaffold,
     required WfsParcel wfsParcel,
     required Parcel? existingParcel,
     required VoidCallback onHide,
     required VoidCallback onAction,
   }) {
-    return showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => ParcelFoundSheet(
+    late final PersistentBottomSheetController controller;
+    controller = scaffold.showBottomSheet(
+      (context) => ParcelFoundSheet(
         wfsParcel: wfsParcel,
         existingParcel: existingParcel,
-        onHide: onHide,
-        onAction: onAction,
+        onHide: () {
+          controller.close();
+          onHide();
+        },
+        onAction: () {
+          controller.close();
+          onAction();
+        },
       ),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      enableDrag: false,
     );
+    return controller;
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final sifko = int.tryParse(wfsParcel.koNumber);
     final ownerInfo = OwnerLookupService.instance.lookup(
-      int.tryParse(wfsParcel.koNumber),
+      sifko,
       wfsParcel.parcelNumber,
     );
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Success header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.check_circle,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Parcela najdena',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      existingParcel != null
-                          ? 'Vaša parcela'
-                          : 'Pregled meje parcele',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Card with parcel preview
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.outline.withValues(
-                  alpha: 0.3,
-                ),
-                width: 1,
-              ),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ParcelSilhouette(
-                  polygon: wfsParcel.polygon,
-                  size: 56,
-                  fillColor: Theme.of(context).colorScheme.primary.withValues(
-                    alpha: 0.3,
+    final ko = KoLocator.instance.bySifko(sifko);
+    final koLabel = ko?.label ??
+        (ownerInfo?.koName != null
+            ? '${ownerInfo!.koName} (${wfsParcel.koNumber})'
+            : wfsParcel.koNumber);
+    final muted = theme.textTheme.bodyLarge?.copyWith(
+      color: cs.onSurfaceVariant,
+    );
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+        padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: cs.outline.withValues(alpha: 0.3)),
+          boxShadow: const [
+            BoxShadow(color: Colors.black38, blurRadius: 12, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  strokeColor: Theme.of(context).colorScheme.primary,
-                  strokeWidth: 2.5,
+                  child: ParcelSilhouette(
+                    polygon: wfsParcel.polygon,
+                    size: 52,
+                    fillColor: cs.primary.withValues(alpha: 0.3),
+                    strokeColor: cs.primary,
+                    strokeWidth: 2.5,
+                  ),
                 ),
-              ),
-              title: Text(
-                'Parcela ${wfsParcel.label}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.map,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Parcela ${wfsParcel.label}',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'KO ${wfsParcel.nationalCadastralReference}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.square_foot,
-                          size: 16,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          wfsParcel.formattedArea,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (ownerInfo != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.person,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              ownerInfo.address != null
-                                  ? '${ownerInfo.displayOwners} • ${ownerInfo.address}'
-                                  : ownerInfo.displayOwners,
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ),
-                        ],
                       ),
+                      Text('KO $koLabel', style: muted),
+                      Text(wfsParcel.formattedArea, style: muted),
+                      if (ownerInfo != null)
+                        Text(
+                          ownerInfo.address != null
+                              ? '${ownerInfo.displayOwners} • ${ownerInfo.address}'
+                              : ownerInfo.displayOwners,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyLarge,
+                        ),
                     ],
-                  ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Skrij',
+                  icon: const Icon(Icons.close),
+                  onPressed: onHide,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: FilledButton.icon(
+                onPressed: onAction,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                icon: Icon(
+                  existingParcel != null ? Icons.visibility : Icons.download,
+                ),
+                label: Text(
+                  existingParcel != null ? 'Odpri parcelo' : 'Uvozi parcelo',
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    onHide();
-                    Navigator.of(context).pop();
-                  },
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: const Icon(Icons.close),
-                  label: const Text('Skrij'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    onAction();
-                  },
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: Icon(
-                    existingParcel != null
-                        ? Icons.visibility
-                        : Icons.download,
-                  ),
-                  label: Text(
-                    existingParcel != null
-                        ? 'Odpri parcelo'
-                        : 'Uvozi parcelo',
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

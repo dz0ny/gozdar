@@ -183,6 +183,7 @@ class MapTab extends StatefulWidget {
 class MapTabState extends State<MapTab> {
   // Map controller for programmatic map control
   final MapController _mapController = MapController();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TileCacheService _tileCacheService = TileCacheService();
 
   // User location tracking
@@ -2139,6 +2140,7 @@ class MapTabState extends State<MapTab> {
     }
 
     return Scaffold(
+      key: _scaffoldKey,
       body: Stack(
         children: [
           // Map widget
@@ -2757,45 +2759,37 @@ class MapTabState extends State<MapTab> {
 
     if (!mounted) return;
 
-    // Show bottom sheet with conditional action
-    if (mounted) {
-      await ParcelFoundSheet.show(
-        context: context,
-        wfsParcel: parcel,
-        existingParcel: existingParcel,
-        onHide: () {
-          setState(() {
-            _searchedParcel = null;
-          });
-        },
-        onAction: () async {
-          // Clear the blue overlay
-          setState(() {
-            _searchedParcel = null;
-          });
-          if (existingParcel != null) {
-            // Parcel already exists - navigate to Forest tab
-            context.read<NavigationNotifier>().navigateToForestWithParcel(
-              existingParcel,
-            );
-            context.go(AppRoutes.parcelDetail(existingParcel.id));
-          } else {
-            // Parcel doesn't exist - import it
-            await _importSearchedParcel(parcel);
-          }
-        },
-      ).whenComplete(() {
-        // Clear the temporary blue overlay whenever the sheet closes, including
-        // swipe-down / scrim dismissals that never fire onHide. This is
-        // idempotent with onHide/onAction (which clear it too); after an import
-        // the overlay is already gone and the imported parcel draws its own.
-        if (mounted && _searchedParcel != null) {
-          setState(() {
-            _searchedParcel = null;
-          });
+    // Non-modal sheet: no backdrop, so the map stays usable under it.
+    final scaffold = _scaffoldKey.currentState;
+    if (scaffold == null) return;
+    final controller = ParcelFoundSheet.show(
+      scaffold: scaffold,
+      wfsParcel: parcel,
+      existingParcel: existingParcel,
+      onHide: () {},
+      onAction: () async {
+        if (existingParcel != null) {
+          // Parcel already exists - navigate to Forest tab
+          context.read<NavigationNotifier>().navigateToForestWithParcel(
+            existingParcel,
+          );
+          context.go(AppRoutes.parcelDetail(existingParcel.id));
+        } else {
+          // Parcel doesn't exist - import it
+          await _importSearchedParcel(parcel);
         }
-      });
-    }
+      },
+    );
+    // Clear the temporary blue overlay however the sheet goes away (after an
+    // import the imported parcel draws its own outline).
+    controller.closed.whenComplete(() {
+      // A newer search may already have replaced this parcel and sheet.
+      if (mounted && identical(_searchedParcel, parcel)) {
+        setState(() {
+          _searchedParcel = null;
+        });
+      }
+    });
   }
 
   /// Import the searched parcel into the database
