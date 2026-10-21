@@ -303,8 +303,8 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         },
         onSubmitted: (_) => _submit(),
         decoration: InputDecoration(
-          hintText: 'Parcela, lastnik ali katastrska občina',
-          helperText: 'npr. 123/4, Novak ali Babno polje',
+          hintText: 'Parcela, lastnik, naslov ali k.o.',
+          helperText: 'npr. 123/4, Novak Babno ali Škofja Loka',
           prefixIcon: const Icon(Icons.search),
           suffixIcon: _controller.hasQuery
               ? IconButton(
@@ -333,8 +333,8 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         context,
         Icons.travel_explore,
         _controller.ko == null
-            ? 'Vnesite številko parcele, ime lastnika ali katastrsko občino.'
-            : 'Vnesite številko parcele (npr. 123/4) ali ime lastnika.',
+            ? 'Vnesite številko parcele, ime lastnika, naslov ali katastrsko občino.'
+            : 'Vnesite številko parcele (npr. 123/4), ime lastnika ali naslov.',
       );
     }
     if (rows.isEmpty) {

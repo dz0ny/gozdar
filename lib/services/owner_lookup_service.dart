@@ -811,6 +811,100 @@ class OwnerLookupService {
     );
   }
 
+  /// Free-text search over every owner field. Each word of [words] must match
+  /// the owner name, the address, or (when it names a KO, see
+  /// [OwnerSearchTerm.sifkos]) the KO, in any order and as a substring,
+  /// ignoring case and diacritics ("skofja" finds ŠKOFJA LOKA). Words under
+  /// [minQueryLength] characters are ignored. [onlySifko] restricts to one KO.
+  /// Runs on a background isolate.
+  Future<OwnerSearchResult> searchAnyAsync(
+    List<OwnerSearchTerm> words, {
+    int? onlySifko,
+    int limit = 300,
+  }) async {
+    final path = _path;
+    if (_db == null || path == null) return OwnerSearchResult.empty;
+    final folded = _foldTerms(words);
+    if (folded.isEmpty) {
+      return words.isEmpty ? OwnerSearchResult.empty : OwnerSearchResult.short;
+    }
+    final indexed = _hasSearchIndex;
+    return Isolate.run(() {
+      final db = sqlite3.open(path);
+      try {
+        db.execute('PRAGMA busy_timeout = 5000');
+        return _searchAny(
+          db,
+          indexed: indexed,
+          terms: folded,
+          onlySifko: onlySifko,
+          limit: limit,
+        );
+      } finally {
+        db.close();
+      }
+    });
+  }
+
+  static List<OwnerSearchTerm> _foldTerms(List<OwnerSearchTerm> words) => [
+        for (final w in words)
+          if (foldForSearch(w.text.trim()).length >= minQueryLength)
+            OwnerSearchTerm(foldForSearch(w.text.trim()), w.sifkos),
+      ];
+
+  static OwnerSearchResult _searchAny(
+    Database db, {
+    required bool indexed,
+    required List<OwnerSearchTerm> terms,
+    int? onlySifko,
+    required int limit,
+  }) {
+    final where = <String>[];
+    final args = <Object?>[];
+    for (final t in terms) {
+      final like = '%${_likeEscape(t.text)}%';
+      final ko = t.sifkos.isEmpty
+          ? ''
+          : ' OR sifko IN (${t.sifkos.map((k) => k.toString()).join(',')})';
+      if (indexed) {
+        where.add(
+          "(lastnik IN (SELECT term FROM owner_name_search "
+          "WHERE term_f LIKE ? ESCAPE '\\') "
+          "OR naslov IN (SELECT term FROM owner_address_search "
+          "WHERE term_f LIKE ? ESCAPE '\\')$ko)",
+        );
+      } else {
+        where.add(
+          "(${_foldSql('lastnik')} LIKE ? ESCAPE '\\' "
+          "OR ${_foldSql('naslov')} LIKE ? ESCAPE '\\'$ko)",
+        );
+      }
+      args..add(like)..add(like);
+    }
+    if (onlySifko != null) {
+      where.add('sifko = ?');
+      args.add(onlySifko);
+    }
+    final rowLimit = limit * 4;
+    args.add(rowLimit);
+    try {
+      final rows = db.select(
+        'SELECT DISTINCT sifko, parcela, lastnik, naslov, imeko, obcina '
+        'FROM owners WHERE ${where.join(' AND ')} '
+        'ORDER BY lastnik, sifko, parcela LIMIT ?',
+        args,
+      );
+      final hits = _groupByParcel(rows);
+      return OwnerSearchResult(
+        hits: hits.length > limit ? hits.sublist(0, limit) : hits,
+        truncated: hits.length > limit || rows.length >= rowLimit,
+      );
+    } catch (e) {
+      debugPrint('OwnerLookupService.searchAny failed: $e');
+      return OwnerSearchResult.empty;
+    }
+  }
+
   /// Folded, uppercased terms, or null when both are blank. `tooShort` when
   /// a given term is under [minQueryLength] characters.
   static ({String n, String a, bool tooShort})? _searchTerms(
@@ -1003,6 +1097,14 @@ class OwnerLookupService {
       return const [];
     }
   }
+}
+
+/// One word of a free-text owner search. [sifkos] are the KOs the word names,
+/// so a word like "babno" also matches parcels in that KO.
+class OwnerSearchTerm {
+  final String text;
+  final List<int> sifkos;
+  const OwnerSearchTerm(this.text, [this.sifkos = const []]);
 }
 
 /// One parcel result from an owner search: the cadastral key (KO + parcela)

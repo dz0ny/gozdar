@@ -114,8 +114,10 @@ class ParcelSearchService {
     return out;
   }
 
-  /// Owner matches for the free-text part of [query]. Empty when no owners
-  /// database is open, the text is too short, or a parcel number was typed.
+  /// Owner matches for the free text of [query]: every word may match the
+  /// owner name, the address or (with several words) the KO name, in any
+  /// order. Empty when no owners database is open, nothing long enough was
+  /// typed, or a parcel number was typed.
   static Future<List<ParcelSuggestion>> owners(
     String query, {
     KoInfo? ko,
@@ -127,13 +129,24 @@ class ParcelSearchService {
         !OwnerLookupService.instance.isAvailable) {
       return const [];
     }
-    final result = await OwnerLookupService.instance.searchOwnersAsync(
-      name: parsed.words,
-      limit: ko == null ? limit : 300,
+    final words = parsed.words.split(RegExp(r'\s+'));
+    final terms = [
+      for (final w in words)
+        OwnerSearchTerm(
+          w,
+          // A lone word is better served by the KO suggestion row.
+          words.length > 1 && w.length >= 3
+              ? [for (final k in KoLocator.instance.search(w, limit: 40)) k.sifko]
+              : const [],
+        ),
+    ];
+    final result = await OwnerLookupService.instance.searchAnyAsync(
+      terms,
+      onlySifko: ko?.sifko,
+      limit: limit,
     );
     final out = <ParcelSuggestion>[];
     for (final hit in result.hits) {
-      if (ko != null && hit.sifko != ko.sifko) continue;
       final koName = hit.koName ?? KoLocator.instance.bySifko(hit.sifko)?.name;
       final owners = hit.owners.take(2).join(', ');
       out.add(ParcelSuggestion(
@@ -142,6 +155,7 @@ class ParcelSearchService {
         subtitle: [
           if (koName != null) 'KO $koName' else 'KO ${hit.sifko}',
           if (owners.isNotEmpty) owners,
+          if (hit.address != null) hit.address!,
         ].join(' • '),
         sifko: hit.sifko,
         parcela: hit.parcela,

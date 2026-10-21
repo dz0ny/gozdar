@@ -162,7 +162,7 @@ void main() {
 
     // Only the owner in the preselected KO.
     expect(find.text('Parcela 1234/2'), findsOneWidget);
-    expect(find.text('KO BABNO POLJE • NOVAK JANEZ'), findsOneWidget);
+    expect(find.text('KO BABNO POLJE • NOVAK JANEZ • BABNO POLJE 12'), findsOneWidget);
     expect(find.text('Parcela 5'), findsNothing);
 
     // Dropping the KO filter shows both.

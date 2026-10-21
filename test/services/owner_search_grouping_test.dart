@@ -116,6 +116,56 @@ void main() {
         expect(owners('novak', address: 'skofja'), isEmpty);
       });
 
+      group('free text over every field', () {
+        Future<List<String>> any(
+          List<String> words, {
+          Map<String, List<int>> kos = const {},
+          int? onlySifko,
+        }) async {
+          final r = await service.searchAnyAsync([
+            for (final w in words) OwnerSearchTerm(w, kos[w] ?? const []),
+          ], onlySifko: onlySifko);
+          return r.hits.map((h) => '${h.sifko}/${h.parcela}').toList();
+        }
+
+        test('a word may match the address, with š/s replacement', () async {
+          expect(await any(['skofja']), ['1700/5']);
+          expect(await any(['ŠKOFJA']), ['1700/5']);
+          expect(await any(['crnomelj']), ['1700/6']);
+        });
+
+        test('words match in any order, one per field', () async {
+          expect(await any(['ziga', 'kosir']), ['1700/5']);
+          expect(await any(['skofja', 'kosir']), ['1700/5']);
+          expect(await any(['loka', 'ziga']), ['1700/5']);
+          expect(await any(['skofja', 'novak']), isEmpty);
+        });
+
+        test('partial words match anywhere in the field', () async {
+          expect(await any(['ust', 'ced']), ['1700/8']);
+          expect(await any(['abno', 'olje']), ['1651/1234/2', '1651/88']);
+        });
+
+        test('a word that names a KO also matches parcels in it', () async {
+          const kos = {'kozarisce': [1700]};
+          expect(await any(['ziga', 'kozarisce'], kos: kos), ['1700/5']);
+          expect(await any(['novak', 'kozarisce'], kos: kos), isEmpty);
+        });
+
+        test('words under 3 characters are ignored; none left is too short',
+            () async {
+          expect(await any(['novak', '12']), ['1651/1234/2', '1651/88']);
+          final r = await service.searchAnyAsync([const OwnerSearchTerm('no')]);
+          expect(r.tooShort, isTrue);
+        });
+
+        test('onlySifko restricts to one KO', () async {
+          expect(await any(['novak'], onlySifko: 1700), isEmpty);
+          expect(await any(['novak'], onlySifko: 1651),
+              ['1651/1234/2', '1651/88']);
+        });
+      });
+
       test('% and _ in the query are literal', () {
         expect(owners('aj_50%'), ['MAJ_50%']);
         expect(owners('j_5'), ['MAJ_50%']);
