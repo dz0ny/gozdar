@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/parcel.dart';
@@ -203,194 +201,6 @@ class ForestTabState extends State<ForestTab> {
     }
   }
 
-  Future<void> _importKml() async {
-    try {
-      final picked = await FilePicker.pickFile(
-        type: FileType.custom,
-        allowedExtensions: ['kml', 'kmz'],
-      );
-
-      if (picked == null) return;
-
-      final file = File(picked.path!);
-      final content = await file.readAsString();
-
-      // Try to import as full parcel export first (with logs, sečnja, locations)
-      final fullImport = KmlService.importParcelWithData(content);
-
-      if (fullImport != null && fullImport.totalItems > 0) {
-        // This is a full parcel export
-        await _importFullParcel(fullImport);
-        return;
-      }
-
-      // Fall back to simple parcel import
-      final parcels = KmlService.importFromKml(content);
-
-      if (parcels.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('V datoteki ni veljavnih parcel')),
-          );
-        }
-        return;
-      }
-
-      // Ask user to confirm import
-      if (!mounted) return;
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Uvozi parcele'),
-          content: Text(
-            'Najdenih ${slCount(parcels.length, 'parcela', 'parceli', 'parcele', 'parcel')}. Jih uvozim?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Prekliči'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Uvozi'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirmed == true) {
-        for (final parcel in parcels) {
-          await _databaseService.insertParcel(parcel);
-        }
-        await _loadData();
-        if (mounted) {
-          final totalArea = parcels.fold(
-            0.0,
-            (double sum, p) => sum + p.areaM2,
-          );
-          final areaFormatted = totalArea >= 10000
-              ? '${(totalArea / 10000).toStringAsFixed(2)} ha'
-              : '${totalArea.toStringAsFixed(0)} m²';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Uvoženih ${slCount(parcels.length, 'parcela', 'parceli', 'parcele', 'parcel')} ($areaFormatted)',
-              ),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu: $e')));
-      }
-    }
-  }
-
-  Future<void> _importFullParcel(ParcelImportData data) async {
-    if (!mounted) return;
-
-    // Build description of what will be imported
-    final items = <String>[];
-    items.add('Parcela: ${data.parcel.name}');
-    if (data.logs.isNotEmpty) {
-      items.add(slCount(data.logs.length, 'hlod', 'hloda', 'hlodi', 'hlodov'));
-    }
-    if (data.secnja.isNotEmpty) {
-      items.add('${data.secnja.length} sečenj');
-    }
-    if (data.locations.isNotEmpty) {
-      items.add(
-        slCount(data.locations.length, 'točka', 'točki', 'točke', 'točk'),
-      );
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Uvozi parcelo s podatki'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Najdeno:'),
-            const SizedBox(height: 8),
-            ...items.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(left: 16, bottom: 4),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check, size: 16, color: Colors.green),
-                    const SizedBox(width: 8),
-                    Text(item),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text('Uvozim vse podatke?'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Uvozi'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    try {
-      // Insert parcel and get ID
-      final parcelId = await _databaseService.insertParcel(data.parcel);
-
-      // Insert logs with parcel ID
-      for (final log in data.logs) {
-        final logWithParcel = log.copyWith(parcelId: parcelId);
-        await _databaseService.insertLog(logWithParcel);
-      }
-
-      // Insert sečnja locations
-      for (final loc in data.secnja) {
-        await _databaseService.insertLocation(loc);
-      }
-
-      // Insert regular locations
-      for (final loc in data.locations) {
-        await _databaseService.insertLocation(loc);
-      }
-
-      await _loadData();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Uvožena parcela "${data.parcel.name}" z ${data.totalItems} elementi',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu: $e')));
-      }
-    }
-  }
-
-  /// Person-icon action: when the GURS owners DB is imported, offer a choice
-  /// between filtering own parcels by owner and searching/importing from GURS;
-  /// otherwise filter own parcels by owner directly.
   Future<void> _showOwnerFilterDialog() async {
     final owners = _uniqueOwners;
 
@@ -521,23 +331,11 @@ class ForestTabState extends State<ForestTab> {
             tooltip: 'Več možnosti gozda',
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
-              if (value == 'import') {
-                _importKml();
-              } else if (value == 'export') {
+              if (value == 'export') {
                 _exportKml();
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'import',
-                child: Row(
-                  children: [
-                    Icon(Icons.file_upload),
-                    SizedBox(width: 8),
-                    Text('Uvozi KML'),
-                  ],
-                ),
-              ),
               const PopupMenuItem(
                 value: 'export',
                 child: Row(
