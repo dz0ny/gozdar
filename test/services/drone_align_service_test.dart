@@ -136,6 +136,44 @@ void main() {
     });
   });
 
+  test('features recover a shift far beyond the correlation range', () {
+    // Value noise with 6 cell blobs. Shift of (30, -18) cells, radius is 14.
+    double noise(num x, num y) {
+      double lattice(int ix, int iy) {
+        var h = ix * 374761393 + iy * 668265263;
+        h = (h ^ (h >> 13)) * 1274126177;
+        return ((h ^ (h >> 16)) & 0xFFFF) / 0xFFFF;
+      }
+
+      final gx = x / 6, gy = y / 6;
+      final ix = gx.floor(), iy = gy.floor();
+      final fx = gx - ix, fy = gy - iy;
+      final sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+      final top = lattice(ix, iy) * (1 - sx) + lattice(ix + 1, iy) * sx;
+      final bot = lattice(ix, iy + 1) * (1 - sx) + lattice(ix + 1, iy + 1) * sx;
+      return top * (1 - sy) + bot * sy;
+    }
+
+    const size = 160, sx = 30, sy = -18;
+    Float32List make(int dx, int dy) {
+      final g = Float32List(size * size);
+      for (var v = 0; v < size; v++) {
+        for (var u = 0; u < size; u++) {
+          g[v * size + u] = noise(u + dx, v + dy).toDouble();
+        }
+      }
+      return g;
+    }
+
+    final a = AlignPatch(gray: make(0, 0), w: size, h: size, ox: 0, oy: 0);
+    // B(u, v) = A(u + s), so the true relative shift is s cells.
+    final b = AlignPatch(gray: make(sx, sy), w: size, h: size, ox: 0, oy: 0);
+    final res = solveAlign(AlignJob([a, b], 1, 14));
+    expect(res.pairsUsed, 1);
+    expect(res.dx[1] - res.dx[0], closeTo(sx, 2));
+    expect(res.dy[1] - res.dy[0], closeTo(sy, 2));
+  });
+
   test('flat patches give no constraint and keep the GPS position', () {
     final flat = Float32List(40 * 40)..fillRange(0, 40 * 40, 0.5);
     AlignPatch p(int ox) => AlignPatch(gray: flat, w: 40, h: 40, ox: ox, oy: 0);

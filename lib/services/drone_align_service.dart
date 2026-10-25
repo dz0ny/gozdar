@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'drone_features.dart';
 import 'drone_photo_service.dart';
 
 /// One photo resampled onto a north-up ground grid. Invalid cells hold -1.
@@ -67,6 +68,8 @@ AlignResult solveAlign(AlignJob job) {
   final r = job.radius;
   final constraints = <_Constraint>[];
   var tried = 0;
+  final cache = List<List<Keypoint>?>.filled(n, null);
+  List<Keypoint> keypoints(int i) => cache[i] ??= _globalKeypoints(patches[i]);
 
   for (var i = 0; i < n; i++) {
     // Rank later photos by the size of the grid overlap and keep the best.
@@ -80,7 +83,10 @@ AlignResult solveAlign(AlignJob job) {
     candidates.sort((x, y) => y.$1.compareTo(x.$1));
     for (final c in candidates.take(5)) {
       tried++;
-      final res = _correlate(patches[i], patches[c.$2], r);
+      // Features first. They work for large shifts. Correlation is the backup.
+      final res =
+          _featureShift(keypoints(i), keypoints(c.$2)) ??
+          _correlate(patches[i], patches[c.$2], r);
       if (res != null) {
         constraints.add(
           _Constraint(
@@ -97,8 +103,8 @@ AlignResult solveAlign(AlignJob job) {
 
   final dx = List<double>.filled(n, 0);
   final dy = List<double>.filled(n, 0);
-  const prior = 0.05;
-  for (var iter = 0; iter < 60; iter++) {
+  const prior = 0.01;
+  for (var iter = 0; iter < 200; iter++) {
     for (var i = 0; i < n; i++) {
       var numX = 0.0, numY = 0.0, den = prior;
       for (final c in constraints) {
@@ -119,6 +125,20 @@ AlignResult solveAlign(AlignJob job) {
   return AlignResult(dx, dy, tried, constraints.length);
 }
 
+/// Keypoints of [p] in global grid cells, so that two patches compare directly.
+List<Keypoint> _globalKeypoints(AlignPatch p) => [
+  for (final k in detectKeypoints(p.gray, p.w, p.h))
+    Keypoint(k.x + p.ox, k.y + p.oy, k.score, k.descriptor),
+];
+
+/// Returns (shiftX, shiftY, weight) in cells from matched features, or null.
+(double, double, double)? _featureShift(List<Keypoint> a, List<Keypoint> b) {
+  if (a.length < 12 || b.length < 12) return null;
+  final fm = robustSimilarity(a, b, matchKeypoints(a, b));
+  if (fm == null) return null;
+  return (fm.shiftX, fm.shiftY, (fm.inliers / 80).clamp(0.1, 1.0));
+}
+
 int _overlapArea(AlignPatch a, AlignPatch b) {
   final int w = math.min<int>(a.ox + a.w, b.ox + b.w) - math.max<int>(a.ox, b.ox);
   final int h = math.min<int>(a.oy + a.h, b.oy + b.h) - math.max<int>(a.oy, b.oy);
@@ -127,7 +147,7 @@ int _overlapArea(AlignPatch a, AlignPatch b) {
 
 /// Returns (shiftX, shiftY, weight) in cells, or null when not trustworthy.
 (double, double, double)? _correlate(AlignPatch a, AlignPatch b, int r) {
-  const stride = 2;
+  const stride = 3;
   final side = 2 * r + 1;
   final score = Float64List(side * side)..fillRange(0, side * side, -2);
 
@@ -239,8 +259,8 @@ class DroneAlignService {
   DroneAlignService._();
   static final DroneAlignService instance = DroneAlignService._();
 
-  static const _cells = 96;
-  static const _radiusCells = 10;
+  static const _cells = 192;
+  static const _radiusCells = 14;
   static const _earthR = 6378137.0;
 
   /// Returns [photos] with positions corrected by the overlap with neighbours.
@@ -322,7 +342,7 @@ class DroneAlignService {
     final bytes = await photo.file.readAsBytes();
     final codec = await ui.instantiateImageCodec(
       bytes,
-      targetWidth: landscape ? 192 : (192 * ratio).round().clamp(16, 192),
+      targetWidth: landscape ? 288 : (288 * ratio).round().clamp(16, 288),
     );
     final img = (await codec.getNextFrame()).image;
     codec.dispose();
