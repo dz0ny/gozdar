@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/parcel.dart';
 import '../models/map_location.dart';
 import '../models/log_entry.dart';
@@ -15,6 +16,8 @@ import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
 import '../services/cadastral_service.dart';
 import '../services/database_service.dart';
+import '../services/drone_mission_service.dart';
+import '../services/drone_settings.dart';
 import '../services/kml_service.dart';
 import '../services/map_preferences_service.dart';
 import '../services/owner_lookup_service.dart';
@@ -209,6 +212,47 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(content: Text('Napaka pri pripravi PDF: $e')),
+        );
+      }
+    }
+  }
+
+  /// Exports a lawnmower survey mission (DJI WPML KMZ) covering the parcel.
+  Future<void> _exportDroneMission() async {
+    final messenger = ScaffoldMessenger.of(context);
+    const options = DroneMissionOptions();
+    final svc = DroneMissionService.instance;
+    final waypoints = svc.planGrid(_parcel.polygon, options);
+    if (waypoints.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Parcela nima veljavne oblike.')),
+      );
+      return;
+    }
+    try {
+      final bytes = svc.buildKmz(
+        name: _parcel.name,
+        waypoints: waypoints,
+        options: options,
+      );
+      final safeName = _parcel.name.replaceAll(RegExp(r'[^0-9A-Za-z]+'), '-');
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/polet-$safeName.kmz');
+      await file.writeAsBytes(bytes, flush: true);
+      final km = svc.pathLengthM(waypoints) / 1000;
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Načrt poleta ${_parcel.name}',
+          text:
+              '${waypoints.length} točk, ${km.toStringAsFixed(1)} km, '
+              '${options.altitudeM.round()} m',
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Napaka pri izvozu poleta: $e')),
         );
       }
     }
@@ -718,6 +762,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                 _printParcel();
               } else if (value == 'export') {
                 _exportParcel();
+              } else if (value == 'drone') {
+                _exportDroneMission();
               } else if (value == 'delete') {
                 _deleteParcel();
               }
@@ -743,6 +789,17 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                   ],
                 ),
               ),
+              if (DroneSettings.instance.enabled)
+                const PopupMenuItem(
+                  value: 'drone',
+                  child: Row(
+                    children: [
+                      Icon(Icons.flight),
+                      SizedBox(width: 8),
+                      Text('Načrt poleta (dron)'),
+                    ],
+                  ),
+                ),
               PopupMenuItem(
                 value: 'delete',
                 child: Row(

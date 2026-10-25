@@ -6,6 +6,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/cache_settings.dart';
+import '../services/drone_settings.dart';
 import '../services/owner_offline_settings_service.dart';
 import '../services/parcel_lookup_service.dart';
 import '../services/kataster_sharing_service.dart';
@@ -346,6 +347,19 @@ class _AboutScreenState extends State<AboutScreen> {
             onChanged: (v) async {
               await VlakeSettings.instance.setEnabled(v);
               if (v) VlakeService.instance.ensureLoaded();
+              if (mounted) setState(() {});
+            },
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: Icon(Icons.flight, color: colorScheme.primary),
+            title: const Text('Dron (eksperimentalno)'),
+            subtitle: const Text(
+              'Omogoči izvoz načrta poleta (DJI KMZ) za pregled parcele, npr. iskanje sušic.',
+            ),
+            value: DroneSettings.instance.enabled,
+            onChanged: (v) async {
+              await DroneSettings.instance.setEnabled(v);
               if (mounted) setState(() {});
             },
           ),

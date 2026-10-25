@@ -13,6 +13,7 @@ import 'services/parcel_lookup_service.dart';
 import 'services/kataster_update_service.dart';
 import 'services/cache_settings.dart';
 import 'services/public_parcel_settings.dart';
+import 'services/drone_settings.dart';
 import 'services/owner_offline_settings_service.dart';
 import 'services/update_service.dart';
 import 'services/vlake_settings.dart';
@@ -31,6 +32,7 @@ void main() async {
   await ParcelLookupService.instance.init();
   await KatasterUpdateService.instance.init();
   await OwnerOfflineSettingsService.instance.init();
+  await DroneSettings.instance.init();
   await CacheSettings.instance.load();
   await PublicParcelSettings.instance.load();
   await VlakeSettings.instance.load();
