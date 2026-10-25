@@ -64,18 +64,21 @@ platform :ios do
   # as authentication flags pointing at a file. Only the archive needs them:
   # gym adds the same flags to the export itself, and xcodebuild rejects a
   # repeated -authenticationKeyPath.
-  def with_archive_args(build_number = nil)
+  def with_archive_args(build_number = nil, provisioning = true)
     return yield(nil) unless ENV["ASC_KEY_ID"] && ENV["ASC_KEY_P8"]
 
     path = File.join(Dir.tmpdir, "AuthKey_#{ENV.fetch('ASC_KEY_ID')}.p8")
     File.binwrite(path, ENV.fetch("ASC_KEY_P8").unpack1("m"))
     File.chmod(0o600, path)
-    args = [
-      "-allowProvisioningUpdates",
-      "-authenticationKeyPath", Shellwords.escape(path),
-      "-authenticationKeyID", Shellwords.escape(ENV.fetch("ASC_KEY_ID")),
-      "-authenticationKeyIssuerID", Shellwords.escape(ENV.fetch("ASC_ISSUER_ID")),
-    ]
+    args = []
+    if provisioning
+      args += [
+        "-allowProvisioningUpdates",
+        "-authenticationKeyPath", Shellwords.escape(path),
+        "-authenticationKeyID", Shellwords.escape(ENV.fetch("ASC_KEY_ID")),
+        "-authenticationKeyIssuerID", Shellwords.escape(ENV.fetch("ASC_ISSUER_ID")),
+      ]
+    end
     # A build setting on the command line outranks any xcconfig, so the number
     # the caller decided survives the archive regenerating Generated.xcconfig.
     if ENV["RELEASE_VERSION"]
@@ -86,6 +89,64 @@ platform :ios do
       yield(args.join(" "))
     ensure
       File.delete(path) if File.exist?(path)
+    end
+  end
+
+  # Automatic signing makes xcodebuild want an iOS *Development* certificate,
+  # and a CI runner has none, so every run asked Apple for a new one until the
+  # account hit its certificate cap. The release is signed with the one Apple
+  # Distribution certificate release.sh imports instead: fetch (or create) the
+  # App Store profile for it, and point the Runner target at both. Nothing
+  # here creates a certificate. The edit is to the checkout's project file
+  # only, put back afterwards so a laptop release leaves the tree clean.
+  def with_distribution_signing(key)
+    return yield(nil) if key.nil? || ENV["IOS_AUTOMATIC_SIGNING"]
+
+    bundle_id = "dev.dz0ny.gozdar"
+    team = ENV.fetch("APPLE_TEAM_ID", "JND55328G8")
+    pbxproj = File.join(project_root, "ios", "Runner.xcodeproj", "project.pbxproj")
+    original = File.binread(pbxproj)
+
+    get_provisioning_profile(
+      api_key: key,
+      app_identifier: bundle_id,
+      team_id: team,
+      provisioning_name: "Gozdar App Store",
+    )
+    profile = lane_context[SharedValues::SIGH_NAME]
+
+    begin
+      update_code_signing_settings(
+        use_automatic_signing: false,
+        path: File.join(project_root, "ios", "Runner.xcodeproj"),
+        team_id: team,
+        targets: ["Runner"],
+        build_configurations: ["Release"],
+        code_sign_identity: "Apple Distribution",
+        profile_name: profile,
+      )
+      yield({
+        export_method: "app-store",
+        export_options: {
+          signingStyle: "manual",
+          provisioningProfiles: { bundle_id => profile },
+        },
+      })
+    ensure
+      File.binwrite(pbxproj, original)
+    end
+  end
+
+  def build_signed(key, build)
+    with_distribution_signing(key) do |signing|
+      # With a fixed identity the archive must not ask Apple for anything, so
+      # only the version flags are kept; the auth flags stay for the
+      # interactive/automatic fallback.
+      with_archive_args(build, signing.nil?) do |args|
+        opts = { workspace: "Runner.xcworkspace", scheme: "Runner", xcargs: args }
+        opts.merge!(signing) if signing
+        build_app(opts)
+      end
     end
   end
 
@@ -122,7 +183,7 @@ platform :ios do
     key = asc_key
     build = next_build_number(key)
     UI.message("building #{ENV['RELEASE_VERSION'] || 'pubspec version'} (#{build})")
-    with_archive_args(build) { |args| build_app(workspace: "Runner.xcworkspace", scheme: "Runner", xcargs: args) }
+    build_signed(key, build)
     upload_to_testflight(
       api_key: key,
       skip_waiting_for_build_processing: true,
@@ -140,7 +201,7 @@ platform :ios do
     key = asc_key
     build = next_build_number(key)
     UI.message("building #{ENV['RELEASE_VERSION'] || 'pubspec version'} (#{build})")
-    with_archive_args(build) { |args| build_app(workspace: "Runner.xcworkspace", scheme: "Runner", xcargs: args) }
+    build_signed(key, build)
     upload_to_testflight(
       api_key: key,
       skip_waiting_for_build_processing: true,
