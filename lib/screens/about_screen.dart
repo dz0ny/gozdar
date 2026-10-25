@@ -848,6 +848,7 @@ class _AboutScreenState extends State<AboutScreen> {
             },
             isCancelled: () => _cancelParcelDownload,
           );
+          OwnerLookupService.instance.initPublicHr().ignore();
           done++;
         } on ParcelDownloadCancelled {
           break;

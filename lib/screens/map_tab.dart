@@ -1014,6 +1014,7 @@ class MapTabState extends State<MapTab> {
         },
         isCancelled: () => _cancelRegionDownload,
       );
+      OwnerLookupService.instance.initPublicHr().ignore();
       if (mounted) {
         setState(() {});
         // A new region's parcels just loaded — drop the remembered query rect so

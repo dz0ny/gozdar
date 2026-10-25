@@ -33,6 +33,7 @@ void main() async {
   await OwnerLookupService.instance.init();
   await OwnerLookupService.instance.initPublic();
   await ParcelLookupService.instance.init();
+  OwnerLookupService.instance.initPublicHr().ignore();
   await KatasterUpdateService.instance.init();
   await OwnerOfflineSettingsService.instance.init();
   await CacheSettings.instance.load();
