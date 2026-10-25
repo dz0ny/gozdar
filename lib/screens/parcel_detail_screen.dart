@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -16,6 +17,8 @@ import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
 import '../services/cadastral_service.dart';
 import '../services/database_service.dart';
+import '../models/map_layer.dart';
+import '../services/drone_bundle_service.dart';
 import '../services/drone_mission_service.dart';
 import '../services/drone_settings.dart';
 import '../services/kml_service.dart';
@@ -253,6 +256,112 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(content: Text('Napaka pri izvozu poleta: $e')),
+        );
+      }
+    }
+  }
+
+  /// Builds a ZIP with flight plan, parcel boundary, reference orthophoto and
+  /// (optionally) the flown photos, then opens the share sheet.
+  Future<void> _exportDroneBundle() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final mapProvider = context.read<MapProvider>();
+    const options = DroneMissionOptions();
+    final svc = DroneMissionService.instance;
+    final waypoints = svc.planGrid(_parcel.polygon, options);
+    if (waypoints.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Parcela nima veljavne oblike.')),
+      );
+      return;
+    }
+
+    final attach = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Paket za dron'),
+        content: const Text(
+          'Paket vsebuje načrt poleta, mejo parcele in referenčni ortofoto. '
+          'Želite dodati tudi fotografije z drona (JPG/DNG s GPS podatki)?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Brez fotografij'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Dodaj fotografije'),
+          ),
+        ],
+      ),
+    );
+    if (attach == null || !mounted) return;
+
+    var photos = <File>[];
+    if (attach) {
+      // Custom extensions avoid the iOS photo-library path that strips GPS EXIF.
+      final picked = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'dng', 'tif', 'tiff'],
+      );
+      photos = [
+        for (final f in picked)
+          if (f.path != null) File(f.path!),
+      ];
+      if (!mounted) return;
+    }
+
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Pripravljam paket …'),
+        duration: Duration(minutes: 2),
+      ),
+    );
+    try {
+      final workerUrl =
+          mapProvider.workerUrl ?? MapPreferencesService.defaultWorkerUrl;
+      // Prefer the national orthophoto; fall back to the current base layer
+      // where it has no Web Mercator tile URL (e.g. outside Slovenia).
+      final orthoLayer =
+          MapLayer.ortofoto.resolveUrlTemplate(workerUrl) != null
+              ? MapLayer.ortofoto
+              : mapProvider.currentBaseLayer;
+      final ortho = await ParcelPdfService.instance.renderReferenceImage(
+        polygon: _parcel.polygon,
+        baseLayer: orthoLayer,
+        workerUrl: workerUrl,
+      );
+      final kmz = svc.buildKmz(
+        name: _parcel.name,
+        waypoints: waypoints,
+        options: options,
+      );
+      final safeName = _parcel.name.replaceAll(RegExp(r'[^0-9A-Za-z]+'), '-');
+      final dir = await getTemporaryDirectory();
+      final file = await DroneBundleService.instance.writeBundle(
+        outPath: '${dir.path}/paket-$safeName.zip',
+        parcelName: _parcel.name,
+        cadastralId: _parcel.cadastralId,
+        polygon: _parcel.polygon,
+        options: options,
+        waypoints: waypoints,
+        kmz: kmz,
+        referenceOrtho: ortho,
+        photos: photos,
+      );
+      messenger.hideCurrentSnackBar();
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Paket za dron ${_parcel.name}',
+        ),
+      );
+    } catch (e) {
+      messenger.hideCurrentSnackBar();
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Napaka pri pripravi paketa: $e')),
         );
       }
     }
@@ -764,6 +873,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                 _exportParcel();
               } else if (value == 'drone') {
                 _exportDroneMission();
+              } else if (value == 'drone_bundle') {
+                _exportDroneBundle();
               } else if (value == 'delete') {
                 _deleteParcel();
               }
@@ -797,6 +908,17 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                       Icon(Icons.flight),
                       SizedBox(width: 8),
                       Text('Načrt poleta (dron)'),
+                    ],
+                  ),
+                ),
+              if (DroneSettings.instance.enabled)
+                const PopupMenuItem(
+                  value: 'drone_bundle',
+                  child: Row(
+                    children: [
+                      Icon(Icons.folder_zip_outlined),
+                      SizedBox(width: 8),
+                      Text('Paket za dron (ZIP)'),
                     ],
                   ),
                 ),

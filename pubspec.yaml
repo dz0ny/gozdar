@@ -54,6 +54,7 @@ dependencies:
   file_picker: ^13.1.0
   excel: any
   archive: any
+  path: any
   pdf: ^3.11.1
   open_filex: ^4.5.0
 

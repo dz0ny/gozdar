@@ -51,14 +51,14 @@ class ParcelPdfService {
       parcel.parcelNumber,
     );
 
-    final mapPng = await _renderMapImage(
+    final map = await _renderMapImage(
       polygon: parcel.polygon,
       baseLayer: baseLayer,
       activeOverlays: activeOverlays,
       workerUrl: workerUrl,
     );
 
-    return _buildDocument(parcel: parcel, owner: owner, mapPng: mapPng);
+    return _buildDocument(parcel: parcel, owner: owner, mapPng: map?.png);
   }
 
   // ---------------------------------------------------------------------------
@@ -82,11 +82,30 @@ class ParcelPdfService {
     ];
   }
 
-  Future<Uint8List?> _renderMapImage({
+  /// Renders the plain base layer (no outline, tight padding) around [polygon]
+  /// together with the Web Mercator georeferencing needed for a world file.
+  Future<GeoreferencedImage?> renderReferenceImage({
+    required List<LatLng> polygon,
+    required MapLayer baseLayer,
+    required String workerUrl,
+  }) {
+    return _renderMapImage(
+      polygon: polygon,
+      baseLayer: baseLayer,
+      activeOverlays: const {},
+      workerUrl: workerUrl,
+      drawOutline: false,
+      padFraction: 0.1,
+    );
+  }
+
+  Future<GeoreferencedImage?> _renderMapImage({
     required List<LatLng> polygon,
     required MapLayer baseLayer,
     required Set<MapLayerType> activeOverlays,
     required String workerUrl,
+    bool drawOutline = true,
+    double padFraction = 0.35,
   }) async {
     if (polygon.isEmpty) return null;
 
@@ -99,8 +118,8 @@ class ParcelPdfService {
       minLng = math.min(minLng, p.longitude);
       maxLng = math.max(maxLng, p.longitude);
     }
-    final padLat = math.max((maxLat - minLat) * 0.35, 0.0004);
-    final padLng = math.max((maxLng - minLng) * 0.35, 0.0004);
+    final padLat = math.max((maxLat - minLat) * padFraction, 0.0004);
+    final padLng = math.max((maxLng - minLng) * padFraction, 0.0004);
     minLat -= padLat;
     maxLat += padLat;
     minLng -= padLng;
@@ -111,10 +130,10 @@ class ParcelPdfService {
     final maxZoom = baseLayer.nativeMaxZoom;
     var zoom = maxZoom;
     while (zoom > _minZoom) {
-      final w = (_lonToTileX(maxLng, zoom) - _lonToTileX(minLng, zoom)) *
-          _tileSize;
-      final h = (_latToTileY(minLat, zoom) - _latToTileY(maxLat, zoom)) *
-          _tileSize;
+      final w =
+          (_lonToTileX(maxLng, zoom) - _lonToTileX(minLng, zoom)) * _tileSize;
+      final h =
+          (_latToTileY(minLat, zoom) - _latToTileY(maxLat, zoom)) * _tileSize;
       if (w <= _maxImagePx && h <= _maxImagePx) break;
       zoom--;
     }
@@ -160,9 +179,7 @@ class ParcelPdfService {
           final dx = tx * _tileSize - x0;
           final dy = ty * _tileSize - y0;
           fetches.add(
-            _fetchTileImage(url).then(
-              (img) => (dx: dx, dy: dy, image: img),
-            ),
+            _fetchTileImage(url).then((img) => (dx: dx, dy: dy, image: img)),
           );
         }
       }
@@ -171,54 +188,68 @@ class ParcelPdfService {
       for (final tile in tiles) {
         final image = tile.image;
         if (image == null) continue;
-        canvas.drawImage(
-          image,
-          ui.Offset(tile.dx, tile.dy),
-          ui.Paint(),
-        );
+        canvas.drawImage(image, ui.Offset(tile.dx, tile.dy), ui.Paint());
         image.dispose();
       }
     }
 
     // Draw the parcel boundary.
-    final points = polygon
-        .map(
-          (p) => ui.Offset(
-            _lonToTileX(p.longitude, zoom) * _tileSize - x0,
-            _latToTileY(p.latitude, zoom) * _tileSize - y0,
-          ),
-        )
-        .toList();
-    final path = ui.Path()..addPolygon(points, true);
-    canvas.drawPath(
-      path,
-      ui.Paint()
-        ..style = ui.PaintingStyle.fill
-        ..color = const ui.Color(0x33E53935),
-    );
-    canvas.drawPath(
-      path,
-      ui.Paint()
-        ..style = ui.PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..strokeJoin = ui.StrokeJoin.round
-        ..color = const ui.Color(0xFFE53935),
-    );
+    if (drawOutline) {
+      final points = polygon
+          .map(
+            (p) => ui.Offset(
+              _lonToTileX(p.longitude, zoom) * _tileSize - x0,
+              _latToTileY(p.latitude, zoom) * _tileSize - y0,
+            ),
+          )
+          .toList();
+      final path = ui.Path()..addPolygon(points, true);
+      canvas.drawPath(
+        path,
+        ui.Paint()
+          ..style = ui.PaintingStyle.fill
+          ..color = const ui.Color(0x33E53935),
+      );
+      canvas.drawPath(
+        path,
+        ui.Paint()
+          ..style = ui.PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..strokeJoin = ui.StrokeJoin.round
+          ..color = const ui.Color(0xFFE53935),
+      );
+    }
 
     final picture = recorder.endRecording();
     final image = await picture.toImage(imgW, imgH);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose();
     picture.dispose();
-    return bytes?.buffer.asUint8List();
+    if (bytes == null) return null;
+
+    // Web Mercator (EPSG:3857) metres of the image's top-left corner.
+    const halfWorld = math.pi * 6378137.0;
+    final worldPx = _tileSize * (1 << zoom);
+    final pixelSize = 2 * halfWorld / worldPx;
+    return GeoreferencedImage(
+      png: bytes.buffer.asUint8List(),
+      width: imgW,
+      height: imgH,
+      zoom: zoom,
+      originX: x0 / worldPx * 2 * halfWorld - halfWorld,
+      originY: halfWorld - y0 / worldPx * 2 * halfWorld,
+      pixelSize: pixelSize,
+    );
   }
 
   Future<ui.Image?> _fetchTileImage(String url) async {
     try {
-      final response = await http.get(
-        Uri.parse(url),
-        headers: const {'User-Agent': 'dev.dz0ny.gozdar'},
-      ).timeout(const Duration(seconds: 20));
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: const {'User-Agent': 'dev.dz0ny.gozdar'},
+          )
+          .timeout(const Duration(seconds: 20));
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
         debugPrint(
           'PDF TILE HTTP ${response.statusCode} '
@@ -266,8 +297,7 @@ class ParcelPdfService {
       (label: 'Površina', value: parcel.formattedArea),
       if (owner != null && owner.displayOwners.isNotEmpty)
         (label: 'Lastnik', value: owner.displayOwners),
-      if (owner?.address != null)
-        (label: 'Naslov', value: owner!.address!),
+      if (owner?.address != null) (label: 'Naslov', value: owner!.address!),
       if (owner?.municipality != null)
         (label: 'Občina', value: owner!.municipality!),
     ];
@@ -297,10 +327,7 @@ class ParcelPdfService {
                     border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
                   ),
                   child: mapPng != null
-                      ? pw.Image(
-                          pw.MemoryImage(mapPng),
-                          fit: pw.BoxFit.contain,
-                        )
+                      ? pw.Image(pw.MemoryImage(mapPng), fit: pw.BoxFit.contain)
                       : pw.Container(
                           height: 120,
                           alignment: pw.Alignment.center,
@@ -353,23 +380,52 @@ class ParcelPdfService {
             width: 140,
             child: pw.Text(
               label,
-              style: const pw.TextStyle(
-                fontSize: 11,
-                color: PdfColors.grey700,
-              ),
+              style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700),
             ),
           ),
           pw.Expanded(
             child: pw.Text(
               value,
-              style: pw.TextStyle(
-                fontSize: 13,
-                fontWeight: pw.FontWeight.bold,
-              ),
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+/// A rendered map image with Web Mercator (EPSG:3857) georeferencing.
+class GeoreferencedImage {
+  final Uint8List png;
+  final int width;
+  final int height;
+  final int zoom;
+
+  /// Top-left corner in EPSG:3857 metres.
+  final double originX;
+  final double originY;
+
+  /// Metres per pixel (square pixels).
+  final double pixelSize;
+
+  const GeoreferencedImage({
+    required this.png,
+    required this.width,
+    required this.height,
+    required this.zoom,
+    required this.originX,
+    required this.originY,
+    required this.pixelSize,
+  });
+
+  /// ESRI world file lines (pixel centre of the top-left pixel).
+  String get worldFile => [
+    pixelSize,
+    0,
+    0,
+    -pixelSize,
+    originX + pixelSize / 2,
+    originY - pixelSize / 2,
+  ].map((v) => v.toStringAsFixed(6)).join('\n');
 }
