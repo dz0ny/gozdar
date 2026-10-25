@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/log_entry.dart';
@@ -7,7 +8,6 @@ import '../providers/map_provider.dart';
 import '../router/app_router.dart';
 import '../router/route_names.dart';
 import '../services/species_service.dart';
-import '../utils/sl_plural.dart';
 import '../widgets/log_card.dart';
 import '../widgets/inline_add_log.dart';
 import '../widgets/conversion_settings_sheet.dart';
@@ -83,11 +83,11 @@ class LogsTab extends StatelessWidget {
               mapProvider.loadGeolocatedLogs();
             }
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Vnos posodobljen')),
+              SnackBar(content: Text(context.l10n.logsEntryUpdated)),
             );
           } else if (!success && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Napaka: ${provider.error}')),
+              SnackBar(content: Text(context.l10n.logsErrorWithDetail('${provider.error}'))),
             );
           }
         },
@@ -107,9 +107,9 @@ class LogsTab extends StatelessWidget {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Vnos izbrisan'),
+          content: Text(context.l10n.logsEntryDeleted),
           action: SnackBarAction(
-            label: 'Razveljavi',
+            label: context.l10n.logsUndo,
             onPressed: () async {
               await provider.restoreLogEntry(entry);
               // Refresh map markers if log had location
@@ -122,7 +122,7 @@ class LogsTab extends StatelessWidget {
       );
     } else if (!success && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Napaka: ${provider.error}')),
+        SnackBar(content: Text(context.l10n.logsErrorWithDetail('${provider.error}'))),
       );
     }
   }
@@ -132,18 +132,18 @@ class LogsTab extends StatelessWidget {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Izvozi hlode'),
+        title: Text(context.l10n.logsExportTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.table_chart),
-              title: const Text('Izvozi kot Excel'),
+              title: Text(context.l10n.logsExportExcel),
               onTap: () => Navigator.of(context).pop('excel'),
             ),
             ListTile(
               leading: const Icon(Icons.code),
-              title: const Text('Izvozi kot JSON'),
+              title: Text(context.l10n.logsExportJson),
               onTap: () => Navigator.of(context).pop('json'),
             ),
           ],
@@ -162,11 +162,11 @@ class LogsTab extends StatelessWidget {
       if (context.mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Izvoz uspešen')),
+            SnackBar(content: Text(context.l10n.logsExportSuccess)),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka: ${provider.error}')),
+            SnackBar(content: Text(context.l10n.logsErrorWithDetail('${provider.error}'))),
           );
         }
       }
@@ -178,7 +178,7 @@ class LogsTab extends StatelessWidget {
 
     if (!provider.hasEntries) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ni vnosov za brisanje')),
+        SnackBar(content: Text(context.l10n.logsNoEntriesToDelete)),
       );
       return;
     }
@@ -186,24 +186,24 @@ class LogsTab extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Odstrani vse hlode'),
+        title: Text(context.l10n.logsDeleteAllTitle),
         content: Text(
-          'Ali ste prepričani, da želite odstraniti vseh ${provider.entryCount} vnosov?\n\n'
-          'Skupni volumen: ${provider.totalVolume.toStringAsFixed(2)} m³\n\n'
-          'Shranjeni hlodi ostanejo nespremenjeni. '
-          'To dejanje ni mogoče razveljaviti.',
+          context.l10n.logsDeleteAllConfirm(
+            provider.entryCount,
+            provider.totalVolume.toStringAsFixed(2),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: const Text('Odstrani vse'),
+            child: Text(context.l10n.logsMenuDeleteAll),
           ),
         ],
       ),
@@ -214,11 +214,11 @@ class LogsTab extends StatelessWidget {
       if (context.mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Vsi vnosi odstranjeni')),
+            SnackBar(content: Text(context.l10n.logsAllEntriesRemoved)),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka: ${provider.error}')),
+            SnackBar(content: Text(context.l10n.logsErrorWithDetail('${provider.error}'))),
           );
         }
       }
@@ -230,7 +230,7 @@ class LogsTab extends StatelessWidget {
 
     if (!provider.hasEntries) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ni vnosov za shranjevanje')),
+        SnackBar(content: Text(context.l10n.logsNoEntriesToSave)),
       );
       return;
     }
@@ -246,11 +246,11 @@ class LogsTab extends StatelessWidget {
           if (context.mounted) {
             if (success) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Shranjeno')),
+                SnackBar(content: Text(context.l10n.logsSaved)),
               );
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Napaka pri shranjevanju')),
+                SnackBar(content: Text(context.l10n.logsSaveError)),
               );
             }
           }
@@ -275,22 +275,22 @@ class LogsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hlodi'),
+        title: Text(context.l10n.logsHeaderTitle),
         actions: [
           Consumer<LogsProvider>(
             builder: (context, provider, _) => IconButton(
               icon: const Icon(Icons.save),
-              tooltip: 'Shrani',
+              tooltip: context.l10n.commonSave,
               onPressed: provider.hasEntries ? () => _saveBatch(context) : null,
             ),
           ),
           IconButton(
             icon: const Icon(Icons.folder),
-            tooltip: 'Shranjeno',
+            tooltip: context.l10n.logsSavedTooltip,
             onPressed: () => _showSavedBatches(context),
           ),
           PopupMenuButton<String>(
-            tooltip: 'Več možnosti hlodov',
+            tooltip: context.l10n.logsMoreOptionsTooltip,
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
               if (value == 'export') {
@@ -302,33 +302,33 @@ class LogsTab extends StatelessWidget {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'manage_species',
                 child: Row(
                   children: [
-                    Icon(Icons.forest, color: Colors.green),
-                    SizedBox(width: 8),
-                    Text('Upravljanje vrst'),
+                    const Icon(Icons.forest, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.logsMenuManageSpecies),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'export',
                 child: Row(
                   children: [
-                    Icon(Icons.file_download),
-                    SizedBox(width: 8),
-                    Text('Izvozi'),
+                    const Icon(Icons.file_download),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.logsMenuExport),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'delete_all',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_forever, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Odstrani vse'),
+                    const Icon(Icons.delete_forever, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.logsMenuDeleteAll),
                   ],
                 ),
               ),
@@ -380,7 +380,7 @@ class LogsTab extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                slCount(provider.entryCount, 'hlod', 'hloda', 'hlodi', 'hlodov'),
+                                context.l10n.logsCountLogs(provider.entryCount),
                                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                       color: Colors.grey[500],
                                     ),
@@ -392,7 +392,7 @@ class LogsTab extends StatelessWidget {
                                   Icon(Icons.forest, size: 18, color: Colors.green[400]),
                                   const SizedBox(width: 4),
                                   Text(
-                                    provider.currentSpecies ?? 'Vrsta ni izbrana',
+                                    provider.currentSpecies ?? context.l10n.logsSpeciesNotSelected,
                                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                           color: Colors.grey[500],
                                         ),
@@ -426,9 +426,10 @@ class LogsTab extends StatelessWidget {
 
   Widget _buildGroupedLogsList(BuildContext context, LogsProvider provider) {
     // Group logs by species
+    final unknownSpecies = context.l10n.logsUnknownSpecies;
     final groupedLogs = <String, List<LogEntry>>{};
     for (final entry in provider.logEntries) {
-      final species = entry.species ?? 'Neznana vrsta';
+      final species = entry.species ?? unknownSpecies;
       if (!groupedLogs.containsKey(species)) {
         groupedLogs[species] = [];
       }
@@ -453,8 +454,8 @@ class LogsTab extends StatelessWidget {
     // Sort species alphabetically, but put "Neznana vrsta" at the end
     final sortedSpecies = groupedLogs.keys.toList()
       ..sort((a, b) {
-        if (a == 'Neznana vrsta') return 1;
-        if (b == 'Neznana vrsta') return -1;
+        if (a == unknownSpecies) return 1;
+        if (b == unknownSpecies) return -1;
         return a.compareTo(b);
       });
 
@@ -490,7 +491,7 @@ class LogsTab extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    '${slCount(count, 'hlod', 'hloda', 'hlodi', 'hlodov')} • ${totalVolume.toStringAsFixed(2)} m³',
+                    context.l10n.logsGroupSummary(count, totalVolume.toStringAsFixed(2)),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -529,14 +530,14 @@ class LogsTab extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Ni še hlodov',
+                context.l10n.logsEmptyTitle,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: Colors.grey[500],
                     ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Vnesite premer in dolžino spodaj',
+                context.l10n.logsEmptyHint,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],
                     ),

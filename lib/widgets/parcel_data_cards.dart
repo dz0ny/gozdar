@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/log_entry.dart';
 import '../models/map_location.dart';
+import '../l10n/l10n.dart';
 
 /// Card displaying logs within a parcel
 class ParcelLogsCard extends StatelessWidget {
@@ -32,7 +33,7 @@ class ParcelLogsCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Hlodovina na parceli (${logs.length})',
+                    context.l10n.parcelLogsCardTitle(logs.length),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -82,7 +83,7 @@ class ParcelLogsCard extends StatelessWidget {
                       )
                     else
                       Text(
-                        'Ročni vnos',
+                        context.l10n.parcelManualEntry,
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     if (log.hasLocation) ...[
@@ -122,10 +123,10 @@ class ParcelLogsCard extends StatelessWidget {
                 trailing: log.hasLocation
                     ? IconButton(
                         icon: const Icon(Icons.navigation, color: Colors.blue),
-                        tooltip: 'Navigiraj',
+                        tooltip: context.l10n.parcelNavigate,
                         onPressed: () => onNavigateToPoint(
                           LatLng(log.latitude!, log.longitude!),
-                          'Hlod ${log.id}',
+                          context.l10n.parcelLogName(log.id),
                         ),
                       )
                     : null,
@@ -137,7 +138,7 @@ class ParcelLogsCard extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               child: Center(
                 child: Text(
-                  '... in še ${logs.length - 5} hlodov',
+                  context.l10n.parcelMoreLogs(logs.length - 5),
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ),
@@ -174,7 +175,7 @@ class ParcelLocationsCard extends StatelessWidget {
                 const Icon(Icons.location_on, color: Colors.orange),
                 const SizedBox(width: 8),
                 Text(
-                  'Shranjene točke (${locations.length})',
+                  context.l10n.parcelSavedPointsTitle(locations.length),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -214,7 +215,7 @@ class ParcelLocationsCard extends StatelessWidget {
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.navigation, color: Colors.blue),
-                  tooltip: 'Navigiraj',
+                  tooltip: context.l10n.parcelNavigate,
                   onPressed: () => onNavigateToPoint(
                     LatLng(location.latitude, location.longitude),
                     location.name,
@@ -259,7 +260,7 @@ class ParcelSecnjaCard extends StatelessWidget {
                 const Icon(Icons.carpenter, color: Colors.deepOrange),
                 const SizedBox(width: 8),
                 Text(
-                  'Sečnja (${secnja.length})',
+                  context.l10n.parcelSecnjaTitle(secnja.length),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -299,7 +300,7 @@ class ParcelSecnjaCard extends StatelessWidget {
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.navigation, color: Colors.blue),
-                  tooltip: 'Navigiraj',
+                  tooltip: context.l10n.parcelNavigate,
                   onPressed: () => onNavigateToPoint(
                     LatLng(location.latitude, location.longitude),
                     location.name,

@@ -1,0 +1,88 @@
+{
+  "svcKmlExportSubject": "Gozdar Parcels Export",
+  "svcKmlExportText": "Exported {count} parcels",
+  "@svcKmlExportText": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "svcKmlParcelShareSubject": "Parcela {name}",
+  "@svcKmlParcelShareSubject": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "svcKmlParcelShareText": "Izvoz parcele {name} z {logs} hlodi, {fellings} sečnjami in {points} točkami",
+  "@svcKmlParcelShareText": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "logs": {
+        "type": "int"
+      },
+      "fellings": {
+        "type": "int"
+      },
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "svcDownloadFailedHttp": "Prenos ni uspel (HTTP {status}).",
+  "@svcDownloadFailedHttp": {
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "svcParcelDisplayName": "Parcela {number} (KO {ko})",
+  "@svcParcelDisplayName": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      },
+      "ko": {
+        "type": "int"
+      }
+    }
+  },
+  "svcParcelDisplayNameRef": "Parcela {label} ({ref})",
+  "@svcParcelDisplayNameRef": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "svcLayerParcel": "Parcela",
+  "svcLayerStand": "Sestoj",
+  "svcLayerSection": "Odsek",
+  "svcLayerDistrict": "Revir",
+  "svcLayerGge": "GGE",
+  "svcLayerGgo": "GGO",
+  "svcLayerForestReserve": "Gozdni rezervat",
+  "svcLayerProtectiveForest": "Varovalni gozd",
+  "svcLayerProtectedArea": "Zavarovano območje",
+  "svcLayerNaturalValue": "Naravna vrednota",
+  "svcLayerEpo": "EPO",
+  "svcLayerHuntingGround": "Lovišče",
+  "svcLayerFireRisk": "Požarna ogroženost",
+  "svcLayerMunicipality": "Občina",
+  "svcLayerCadastralMunicipality": "Katastrska občina",
+  "svcAesBadFormat": "Datoteka ni v pričakovani obliki (napačna glava).",
+  "svcAesCorrupt": "Datoteka je okvarjena ali nepopolna.",
+  "svcAesWrongPassword": "Napačno geslo.",
+  "svcNetTimeout": "Povezava je potekla. Prosimo, poskusite znova.",
+  "svcNetNoConnection": "Ni internetne povezave. Preverite omrežje.",
+  "svcNetServerError": "Strežnik ni dosegljiv. Poskusite pozneje.",
+  "svcNetUnknown": "Prišlo je do napake. Poskusite znova."
+}

@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gozdar/l10n/l10n.dart';
 import 'package:gozdar/services/owner_lookup_service.dart';
 import 'package:gozdar/theme/app_theme.dart';
 import 'package:gozdar/widgets/parcel_search_dialog.dart';
@@ -22,7 +23,9 @@ const _fonts = String.fromEnvironment('MATERIAL_FONTS');
 Future<void> _loadFonts() async {
   Future<void> load(String family, String path) async {
     final loader = FontLoader(family)
-      ..addFont(Future.value(ByteData.sublistView(File(path).readAsBytesSync())));
+      ..addFont(
+        Future.value(ByteData.sublistView(File(path).readAsBytesSync())),
+      );
     await loader.load();
   }
 
@@ -43,7 +46,8 @@ void main() {
   Future<void> phone(WidgetTester tester, {double keyboard = 0}) async {
     // Keep rendering through layout errors so they show up in the PNG.
     final original = FlutterError.onError;
-    FlutterError.onError = (d) => debugPrint('LAYOUT: ${d.exceptionAsString().split('\n').first}');
+    FlutterError.onError = (d) =>
+        debugPrint('LAYOUT: ${d.exceptionAsString().split('\n').first}');
     addTearDown(() => FlutterError.onError = original);
     tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3;
@@ -54,24 +58,29 @@ void main() {
   for (final keyboard in [0.0, 300.0]) {
     testWidgets('search dialog owner tab (keyboard $keyboard)', (tester) async {
       await phone(tester, keyboard: keyboard);
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.greenTheme,
-        debugShowCheckedModeBanner: false,
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: FilledButton(
-                onPressed: () => ParcelSearchDialog.show(
-                  context: context,
-                  mapController: MapController(),
-                  onParcelFound: (_) {},
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('sl'),
+          theme: AppTheme.greenTheme,
+          debugShowCheckedModeBanner: false,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () => ParcelSearchDialog.show(
+                    context: context,
+                    mapController: MapController(),
+                    onParcelFound: (_) {},
+                  ),
+                  child: const Text('open'),
                 ),
-                child: const Text('open'),
               ),
             ),
           ),
         ),
-      ));
+      );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'nov');

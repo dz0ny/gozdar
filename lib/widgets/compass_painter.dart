@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import '../l10n/l10n.dart';
 
 /// Large compass painter that shows direction to a target location
 class CompassPainter extends CustomPainter {
@@ -89,8 +90,13 @@ class CompassPainter extends CustomPainter {
     }
 
     // Draw cardinal directions with theme colors
-    // Slovenian: sever, vzhod, jug, zahod.
-    final directions = ['S', 'V', 'J', 'Z'];
+    final l10n = L10n.current;
+    final directions = [
+      l10n.mapwCompassN,
+      l10n.mapwCompassE,
+      l10n.mapwCompassS,
+      l10n.mapwCompassW,
+    ];
     final directionColors = [
       colorScheme.primary, // North - primary (warm wood tan)
       colorScheme.onSurfaceVariant, // East

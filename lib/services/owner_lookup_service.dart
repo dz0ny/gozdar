@@ -11,6 +11,7 @@ import 'aes_file_decryptor.dart';
 import 'parcel_lookup_service.dart';
 import 'public_parcel_settings.dart';
 import 'remote_asset.dart';
+import '../l10n/l10n.dart';
 
 /// Thrown when an owners-database download is cancelled by the caller.
 class OwnerDownloadCancelled implements Exception {
@@ -466,7 +467,9 @@ class OwnerLookupService {
     try {
       final response = await client.send(http.Request('GET', Uri.parse(url)));
       if (response.statusCode != 200) {
-        throw FormatException('Prenos ni uspel (HTTP ${response.statusCode}).');
+        throw FormatException(
+          L10n.current.svcDownloadFailedHttp(response.statusCode),
+        );
       }
       final total = response.contentLength;
       final sink = part.openWrite();

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/log_batch.dart';
 import '../providers/logs_provider.dart';
 import '../screens/batch_detail_screen.dart';
-import '../utils/sl_plural.dart';
 
 /// Bottom sheet displaying saved log batches/projects
 class SavedBatchesSheet extends StatefulWidget {
@@ -38,20 +38,17 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Izbriši shranjene hlode'),
-        content: const Text(
-          'Ali ste prepričani, da želite izbrisati ta zapis?\n\n'
-          'Hlodi se vrnejo na seznam Hlodi.',
-        ),
+        title: Text(context.l10n.logsSavedDeleteTitle),
+        content: Text(context.l10n.logsSavedDeleteConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Izbriši'),
+            child: Text(context.l10n.commonDelete),
           ),
         ],
       ),
@@ -109,7 +106,7 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                     Icon(Icons.folder, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 12),
                     Text(
-                      'Shranjene meritve',
+                      context.l10n.logsSavedSheetTitle,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -134,7 +131,7 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                           Icon(Icons.folder_open, size: 48, color: Colors.grey[600]),
                           const SizedBox(height: 16),
                           Text(
-                            'Ni shranjenih meritev',
+                            context.l10n.logsSavedSheetEmpty,
                             style: TextStyle(color: Colors.grey[500]),
                           ),
                         ],
@@ -202,7 +199,7 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                                       ),
                                       const Spacer(),
                                       Text(
-                                        slCount(batch.logCount, 'hlod', 'hloda', 'hlodi', 'hlodov'),
+                                        context.l10n.logsCountLogs(batch.logCount),
                                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                               color: Colors.grey[500],
                                             ),
@@ -219,7 +216,7 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
-                                          batch.name ?? 'Brez imena',
+                                          batch.name ?? context.l10n.logsSavedSheetNoName,
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontStyle: batch.name == null ? FontStyle.italic : FontStyle.normal,

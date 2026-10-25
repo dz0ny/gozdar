@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:ota_update/ota_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../config/distribution.dart';
+import '../l10n/l10n.dart';
 
 /// Update status enum
 enum UpdateStatus {
@@ -233,27 +234,27 @@ class UpdateService extends ChangeNotifier {
               break;
             case OtaStatus.ALREADY_RUNNING_ERROR:
               _status = UpdateStatus.error;
-              _errorMessage = 'Download already in progress';
+              _errorMessage = L10n.current.updateErrorAlreadyRunning;
               notifyListeners();
               break;
             case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
               _status = UpdateStatus.error;
-              _errorMessage = 'Permission denied for installation';
+              _errorMessage = L10n.current.updateErrorPermission;
               notifyListeners();
               break;
             case OtaStatus.INTERNAL_ERROR:
               _status = UpdateStatus.error;
-              _errorMessage = event.value ?? 'Internal error';
+              _errorMessage = event.value ?? L10n.current.updateErrorInternal;
               notifyListeners();
               break;
             case OtaStatus.DOWNLOAD_ERROR:
               _status = UpdateStatus.error;
-              _errorMessage = event.value ?? 'Download failed';
+              _errorMessage = event.value ?? L10n.current.updateErrorDownload;
               notifyListeners();
               break;
             case OtaStatus.CHECKSUM_ERROR:
               _status = UpdateStatus.error;
-              _errorMessage = 'Checksum verification failed';
+              _errorMessage = L10n.current.updateErrorChecksum;
               notifyListeners();
               break;
             case OtaStatus.INSTALLATION_DONE:
@@ -263,7 +264,7 @@ class UpdateService extends ChangeNotifier {
               break;
             case OtaStatus.INSTALLATION_ERROR:
               _status = UpdateStatus.error;
-              _errorMessage = event.value ?? 'Installation failed';
+              _errorMessage = event.value ?? L10n.current.updateErrorInstall;
               notifyListeners();
               break;
             case OtaStatus.CANCELED:

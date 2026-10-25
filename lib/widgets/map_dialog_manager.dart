@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import '../models/map_location.dart';
 import '../services/database_service.dart';
 
@@ -21,16 +22,16 @@ class MapDialogManager {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Izbriši lokacijo'),
-        content: Text('Ali res želite izbrisati lokacijo "${location.name}"?'),
+        title: Text(context.l10n.mapwDeleteLocationTitle),
+        content: Text(context.l10n.mapwDeleteLocationQuestion(location.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Izbriši'),
+            child: Text(context.l10n.commonDelete),
           ),
         ],
       ),
@@ -47,18 +48,16 @@ class MapDialogManager {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Ponastavi uvodni vodič'),
-        content: const Text(
-          'Ali res želite ponastaviti uvodni vodič? Ponovno zaženite aplikacijo.',
-        ),
+        title: Text(context.l10n.mapwResetOnboardingTitle),
+        content: Text(context.l10n.mapwResetOnboardingBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Ponastavi'),
+            child: Text(context.l10n.mapwReset),
           ),
         ],
       ),

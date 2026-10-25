@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import '../models/map_layer.dart';
 import '../services/public_parcel_settings.dart';
 
@@ -164,7 +165,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
               children: [
                 Expanded(
                   child: Text(
-                    'Sloji karte',
+                    context.l10n.mapwLayersTitle,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -217,18 +218,18 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
               indicatorSize: TabBarIndicatorSize.tab,
               splashFactory: NoSplash.splashFactory,
               overlayColor: WidgetStateProperty.all(Colors.transparent),
-              tabs: const [
+              tabs: [
                 Tab(
                   height: 56,
-                  icon: Icon(Icons.layers, size: 22),
-                  iconMargin: EdgeInsets.only(bottom: 4),
-                  text: 'Podlaga',
+                  icon: const Icon(Icons.layers, size: 22),
+                  iconMargin: const EdgeInsets.only(bottom: 4),
+                  text: context.l10n.mapwTabBase,
                 ),
                 Tab(
                   height: 56,
-                  icon: Icon(Icons.tune, size: 22),
-                  iconMargin: EdgeInsets.only(bottom: 4),
-                  text: 'Prekrivni sloji',
+                  icon: const Icon(Icons.tune, size: 22),
+                  iconMargin: const EdgeInsets.only(bottom: 4),
+                  text: context.l10n.mapwTabOverlays,
                 ),
               ],
             ),
@@ -251,7 +252,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
         // International base layers
-        _buildBaseLayerSection('Mednarodne karte', [
+        _buildBaseLayerSection(context.l10n.mapwInternationalMaps, [
           MapLayer.openStreetMap,
           MapLayer.openTopoMap,
           MapLayer.esriWorldImagery,
@@ -259,7 +260,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
         ]),
         const SizedBox(height: 16),
         // Slovenian base layers
-        _buildBaseLayerSection('Slovenske karte', [
+        _buildBaseLayerSection(context.l10n.mapwSlovenianMaps, [
           MapLayer.ortofoto,
           MapLayer.ortofoto2023,
           MapLayer.ortofoto2022,
@@ -277,7 +278,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                 widget.onDownloadTiles!();
               },
               icon: const Icon(Icons.download, size: 20),
-              label: const Text('Prenesi za delo brez povezave'),
+              label: Text(context.l10n.mapwDownloadOffline),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
@@ -414,7 +415,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                 widget.onImportFile!();
               },
               icon: const Icon(Icons.file_upload, size: 20),
-              label: const Text('Uvozi geodatke (KML, KMZ)'),
+              label: Text(context.l10n.mapwImportGeodata),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
@@ -460,7 +461,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
             ),
             const SizedBox(height: 16),
             Text(
-              'Ni rezultatov',
+              context.l10n.mapwNoResults,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -556,7 +557,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                         if (activeCount > 0) ...[
                           const SizedBox(height: 2),
                           Text(
-                            '$activeCount aktivnih',
+                            context.l10n.mapwActiveCount(activeCount),
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: Theme.of(context).colorScheme.primary,
@@ -598,7 +599,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Javne parcele',
+              context.l10n.mapwPublicParcels,
               style: Theme.of(context).textTheme.bodyMedium
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
@@ -692,7 +693,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Vlake (pri večji povečavi)',
+                    context.l10n.mapwVlakeHint,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),

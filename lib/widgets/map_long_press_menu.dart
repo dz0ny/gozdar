@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import '../l10n/l10n.dart';
 import '../models/parcel.dart';
 import '../services/public_parcel_settings.dart';
 
@@ -230,33 +231,33 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
       children: [
         _group(
           icon: Icons.add_circle_outline,
-          label: 'Dodaj',
+          label: context.l10n.commonAdd,
           color: Colors.red,
           section: _MenuSection.add,
         ),
         _group(
           icon: Icons.straighten,
-          label: 'Merjenje',
+          label: context.l10n.mapwMenuMeasure,
           color: Colors.teal,
           section: _MenuSection.measure,
         ),
         _action(
           icon: Icons.navigation,
-          label: 'Navigiraj',
+          label: context.l10n.mapwMenuNavigate,
           color: Colors.indigo,
           onTap: widget.onNavigate,
         ),
         if (widget.existingParcel != null)
           _action(
             icon: Icons.visibility,
-            label: 'Parcela',
+            label: context.l10n.mapwMenuParcel,
             color: Colors.blue,
             onTap: () => widget.onViewParcel?.call(),
           )
         else
           _action(
             icon: Icons.download,
-            label: 'Uvozi',
+            label: context.l10n.mapwMenuImport,
             color: Colors.blue,
             onTap: widget.onImportParcel,
           ),
@@ -367,7 +368,7 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Javna parcela • ${cat.label}',
+                    context.l10n.mapwPublicParcel(cat.label),
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: cat.color,
                       fontWeight: FontWeight.w700,
@@ -389,19 +390,19 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
       children: [
         _action(
           icon: Icons.add_location_alt,
-          label: 'Točka',
+          label: context.l10n.mapwMenuPoint,
           color: Colors.red,
           onTap: widget.onAddLocation,
         ),
         _action(
           icon: Icons.forest,
-          label: 'Hlodovina',
+          label: context.l10n.mapwMenuLogs,
           color: Colors.brown,
           onTap: widget.onAddLog,
         ),
         _action(
           icon: Icons.carpenter,
-          label: 'Sečnja',
+          label: context.l10n.mapwMenuFelling,
           color: Colors.deepOrange,
           onTap: widget.onAddSecnja,
         ),
@@ -417,20 +418,20 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
       children: [
         _action(
           icon: Icons.route,
-          label: 'Razdalja',
+          label: context.l10n.mapwMenuDistance,
           color: Colors.teal,
           onTap: widget.onMeasureDistance,
         ),
         _action(
           icon: Icons.square_foot,
-          label: 'Površina',
+          label: context.l10n.mapwArea,
           color: Colors.deepPurple,
           onTap: widget.onMeasureArea,
         ),
         if (widget.mejnikiAvailable)
           _action(
             icon: Icons.scatter_plot,
-            label: 'Mejniki',
+            label: context.l10n.mapwMenuBoundaries,
             color: widget.showMejniki ? Colors.orange : Colors.green,
             onTap: () => widget.onToggleMejniki(!widget.showMejniki),
           ),
@@ -441,9 +442,9 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
   String _sectionTitle(_MenuSection section) {
     switch (section) {
       case _MenuSection.add:
-        return 'Dodaj';
+        return context.l10n.commonAdd;
       case _MenuSection.measure:
-        return 'Merjenje';
+        return context.l10n.mapwMenuMeasure;
     }
   }
 
@@ -479,7 +480,7 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.arrow_back),
-                        tooltip: 'Nazaj',
+                        tooltip: context.l10n.commonBack,
                         onPressed: () => setState(() => _section = null),
                       ),
                       Text(

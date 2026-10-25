@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/l10n.dart';
+
 /// "Navigiraj" chooser: hand the destination to the phone's navigation app
 /// (Google Maps, Apple Maps), use the in-app compass, or copy the coordinates.
 ///
@@ -75,6 +77,7 @@ class NavigateToSheet extends StatelessWidget {
 
   Future<void> _launchFirst(BuildContext context, List<Uri> uris) async {
     final messenger = ScaffoldMessenger.of(context);
+    final failedText = context.l10n.mapwNavAppOpenFailed;
     for (final uri in uris) {
       try {
         if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
@@ -83,9 +86,7 @@ class NavigateToSheet extends StatelessWidget {
       }
     }
     messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Aplikacije za navigacijo ni bilo mogoče odpreti.'),
-      ),
+      SnackBar(content: Text(failedText)),
     );
   }
 
@@ -114,8 +115,8 @@ class NavigateToSheet extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.directions),
-              title: const Text('Google Zemljevidi'),
-              subtitle: const Text('Navigacija po cesti'),
+              title: Text(context.l10n.mapwGoogleMaps),
+              subtitle: Text(context.l10n.mapwRoadNavigation),
               onTap: () {
                 Navigator.pop(context);
                 _launchFirst(context, googleMapsUris(destination));
@@ -124,8 +125,8 @@ class NavigateToSheet extends StatelessWidget {
             if (_hasAppleMaps)
               ListTile(
                 leading: const Icon(Icons.map_outlined),
-                title: const Text('Apple Zemljevidi'),
-                subtitle: const Text('Navigacija po cesti'),
+                title: Text(context.l10n.mapwAppleMaps),
+                subtitle: Text(context.l10n.mapwRoadNavigation),
                 onTap: () {
                   Navigator.pop(context);
                   _launchFirst(context, [appleMapsUri(destination)]);
@@ -133,10 +134,8 @@ class NavigateToSheet extends StatelessWidget {
               ),
             ListTile(
               leading: const Icon(Icons.explore),
-              title: const Text('Kompas v aplikaciji'),
-              subtitle: const Text(
-                'Smer in razdalja do cilja, tudi brez spleta',
-              ),
+              title: Text(context.l10n.mapwInAppCompass),
+              subtitle: Text(context.l10n.mapwInAppCompassHint),
               onTap: () {
                 Navigator.pop(context);
                 onInAppNavigation();
@@ -144,7 +143,7 @@ class NavigateToSheet extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('Kopiraj koordinate'),
+              title: Text(context.l10n.mapwCopyCoordinates),
               onTap: () {
                 final messenger = ScaffoldMessenger.of(context);
                 Clipboard.setData(
@@ -152,9 +151,9 @@ class NavigateToSheet extends StatelessWidget {
                 );
                 Navigator.pop(context);
                 messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Koordinate kopirane'),
-                    duration: Duration(seconds: 2),
+                  SnackBar(
+                    content: Text(context.l10n.mapwCoordinatesCopied),
+                    duration: const Duration(seconds: 2),
                   ),
                 );
               },

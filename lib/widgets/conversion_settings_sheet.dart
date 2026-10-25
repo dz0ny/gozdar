@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import '../utils/decimal_input.dart';
 import '../providers/logs_provider.dart';
 
@@ -89,8 +90,8 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
         children: [
             Row(
               children: [
-                const Text(
-                  'Pretvorba volumna',
+                Text(
+                  context.l10n.logsConvTitle,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
@@ -131,9 +132,9 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
             // Species for new logs
             if (widget.availableSpecies != null &&
                 widget.onSpeciesChanged != null) ...[
-              Text('Drevesna vrsta', style: Theme.of(context).textTheme.titleSmall),
+              Text(context.l10n.logsSpeciesLabel, style: Theme.of(context).textTheme.titleSmall),
               Text(
-                'Vrsta, ki jo dobijo novo dodani hlodi.',
+                context.l10n.logsConvSpeciesHint,
                 style: TextStyle(fontSize: 11, color: Colors.grey[500]),
               ),
               const SizedBox(height: 8),
@@ -142,7 +143,7 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
                 runSpacing: 8,
                 children: [
                   _Chip(
-                    label: 'Ni izbrano',
+                    label: context.l10n.logsNotSelected,
                     selected: _species == null,
                     onTap: () => setState(() => _species = null),
                   ),
@@ -159,9 +160,9 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
             ],
 
             // PRM presets
-            Text('PRM - Prostorninski meter drv', style: Theme.of(context).textTheme.titleSmall),
+            Text(context.l10n.logsConvPrmTitle, style: Theme.of(context).textTheme.titleSmall),
             Text(
-              'Zložena drva (polena). 1 PRM × faktor = m³ trdne mase.',
+              context.l10n.logsConvPrmDesc,
               style: TextStyle(fontSize: 11, color: Colors.grey[500]),
             ),
             const SizedBox(height: 8),
@@ -169,10 +170,10 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _FactorChip(label: 'Privzeto', value: 0.65, selected: _prm == 0.65, onTap: () => _setPrm(0.65)),
-                _FactorChip(label: 'Bukev/Hrast', value: 0.67, selected: _prm == 0.67, onTap: () => _setPrm(0.67)),
-                _FactorChip(label: 'Smreka/Jelka', value: 0.57, selected: _prm == 0.57, onTap: () => _setPrm(0.57)),
-                _FactorChip(label: 'Mehki listavci', value: 0.60, selected: _prm == 0.60, onTap: () => _setPrm(0.60)),
+                _FactorChip(label: context.l10n.logsConvDefault, value: 0.65, selected: _prm == 0.65, onTap: () => _setPrm(0.65)),
+                _FactorChip(label: context.l10n.logsConvBeechOak, value: 0.67, selected: _prm == 0.67, onTap: () => _setPrm(0.67)),
+                _FactorChip(label: context.l10n.logsConvSpruceFir, value: 0.57, selected: _prm == 0.57, onTap: () => _setPrm(0.57)),
+                _FactorChip(label: context.l10n.logsConvSoftHardwood, value: 0.60, selected: _prm == 0.60, onTap: () => _setPrm(0.60)),
               ],
             ),
             const SizedBox(height: 8),
@@ -183,9 +184,9 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
             const SizedBox(height: 12),
 
             // NM presets
-            Text('NM - Nasuti meter', style: Theme.of(context).textTheme.titleSmall),
+            Text(context.l10n.logsConvNmTitle, style: Theme.of(context).textTheme.titleSmall),
             Text(
-              'Nasut les (sekanci, odpadki). 1 NM × faktor = m³ trdne mase.',
+              context.l10n.logsConvNmDesc,
               style: TextStyle(fontSize: 11, color: Colors.grey[500]),
             ),
             const SizedBox(height: 8),
@@ -193,9 +194,9 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _FactorChip(label: 'Privzeto', value: 0.40, selected: _nm == 0.40, onTap: () => _setNm(0.40)),
-                _FactorChip(label: 'Trdi les', value: 0.45, selected: _nm == 0.45, onTap: () => _setNm(0.45)),
-                _FactorChip(label: 'Mehki les', value: 0.35, selected: _nm == 0.35, onTap: () => _setNm(0.35)),
+                _FactorChip(label: context.l10n.logsConvDefault, value: 0.40, selected: _nm == 0.40, onTap: () => _setNm(0.40)),
+                _FactorChip(label: context.l10n.logsConvHardWood, value: 0.45, selected: _nm == 0.45, onTap: () => _setNm(0.45)),
+                _FactorChip(label: context.l10n.logsConvSoftWood, value: 0.35, selected: _nm == 0.35, onTap: () => _setNm(0.35)),
               ],
             ),
             const SizedBox(height: 8),
@@ -214,7 +215,7 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
                   widget.onSpeciesChanged?.call(_species);
                   Navigator.pop(context);
                 },
-                child: const Text('Potrdi'),
+                child: Text(context.l10n.logsConvConfirm),
               ),
             ),
           ],
@@ -298,8 +299,8 @@ class _CustomFactorField extends StatelessWidget {
         controller: controller,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         inputFormatters: [DecimalTextInputFormatter()],
-        decoration: const InputDecoration(
-          labelText: 'Faktor po meri',
+        decoration: InputDecoration(
+          labelText: context.l10n.logsConvCustomFactor,
           isDense: true,
           border: OutlineInputBorder(),
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../l10n/l10n.dart';
 import '../router/route_names.dart';
 import '../services/onboarding_service.dart';
 
@@ -65,7 +66,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                 child: TextButton(
                   onPressed: _completeOnboarding,
                   child: Text(
-                    'Preskoči',
+                    context.l10n.introSkip,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                     ),
@@ -116,7 +117,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                       ? TextButton.icon(
                           onPressed: _previousPage,
                           icon: const Icon(Icons.arrow_back),
-                          label: const Text('Nazaj'),
+                          label: Text(context.l10n.commonBack),
                         )
                       : const SizedBox(width: 100),
                   FilledButton.icon(
@@ -127,7 +128,9 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                           : Icons.arrow_forward,
                     ),
                     label: Text(
-                      _currentPage == _totalPages - 1 ? 'Začni' : 'Naprej',
+                      _currentPage == _totalPages - 1
+                          ? context.l10n.introStart
+                          : context.l10n.commonContinue,
                     ),
                   ),
                 ],
@@ -160,7 +163,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           ),
           const SizedBox(height: 32),
           Text(
-            'Dobrodošli v Gozdar',
+            context.l10n.introWelcomeTitle,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -168,8 +171,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           ),
           const SizedBox(height: 20),
           Text(
-            'Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji.\n\n'
-            'Sledite poseku, belezite hlodovino in uporabljajte GPS za delo na terenu.',
+            context.l10n.introWelcomeBody,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.6),
             textAlign: TextAlign.center,
           ),
@@ -185,7 +187,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Navigacija',
+            context.l10n.introNavTitle,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -200,30 +202,30 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
             child: NavigationBar(
               selectedIndex: 1,
               onDestinationSelected: (_) {},
-              destinations: const [
+              destinations: [
                 NavigationDestination(
                   icon: Icon(Icons.map_outlined),
                   selectedIcon: Icon(Icons.map),
-                  label: 'Karta',
+                  label: context.l10n.navTabMap,
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.park_outlined),
                   selectedIcon: Icon(Icons.park),
-                  label: 'Gozd',
+                  label: context.l10n.navTabForest,
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.forest_outlined),
                   selectedIcon: Icon(Icons.forest),
-                  label: 'Hlodi',
+                  label: context.l10n.navTabLogs,
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
           _buildInfoCard([
-            _buildInfoRow(Icons.map, 'Karta', 'Interaktivni zemljevid z vašimi parcelami'),
-            _buildInfoRow(Icons.park, 'Gozd', 'Seznam parcel in iskanje v katastru'),
-            _buildInfoRow(Icons.forest, 'Hlodi', 'Beleženje hlodovine z izračunom volumna'),
+            _buildInfoRow(Icons.map, context.l10n.navTabMap, context.l10n.introNavMapDesc),
+            _buildInfoRow(Icons.park, context.l10n.navTabForest, context.l10n.introNavForestDesc),
+            _buildInfoRow(Icons.forest, context.l10n.navTabLogs, context.l10n.introNavLogsDesc),
           ]),
         ],
       ),
@@ -237,7 +239,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Beleženje hlodovine',
+            context.l10n.introLogsTitle,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -256,7 +258,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                   children: [
                     Icon(Icons.straighten, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 8),
-                    const Text('Premer: 45 cm'),
+                    Text(context.l10n.introLogsDiameter),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -264,7 +266,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                   children: [
                     Icon(Icons.height, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 8),
-                    const Text('Dolžina: 4.5 m'),
+                    Text(context.l10n.introLogsLength),
                   ],
                 ),
                 const Divider(height: 20),
@@ -273,7 +275,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                     Icon(Icons.calculate, color: Colors.green[700]),
                     const SizedBox(width: 8),
                     Text(
-                      'Volumen: 0.716 m³',
+                      context.l10n.introLogsVolume,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.green[800],
@@ -288,23 +290,23 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           _buildInfoCard([
             _buildInfoRow(
               Icons.forest,
-              'Drevesne vrste',
-              'Beležite vrsto lesa (Smreka, Bukev, Jelka, ...)',
+              context.l10n.introLogsSpecies,
+              context.l10n.introLogsSpeciesDesc,
             ),
             _buildInfoRow(
               Icons.calculate,
-              'Samodejni izračun',
-              'Aplikacija izračuna volumen iz premera in dolžine',
+              context.l10n.introLogsAutoCalc,
+              context.l10n.introLogsAutoCalcDesc,
             ),
             _buildInfoRow(
               Icons.group,
-              'Razvrščanje',
-              'Hlodi se samodejno razvrstijo po vrstah',
+              context.l10n.introLogsGrouping,
+              context.l10n.introLogsGroupingDesc,
             ),
             _buildInfoRow(
               Icons.settings,
-              'Upravljanje vrst',
-              'Dodajte ali odstranite vrste v meniju ⋮',
+              context.l10n.introLogsManage,
+              context.l10n.introLogsManageDesc,
             ),
           ]),
         ],
@@ -319,7 +321,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Dolg pritisk na karti',
+            context.l10n.introLongPressTitle,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -343,26 +345,26 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           _buildInfoCard([
             _buildInfoRow(
               Icons.add_location_alt,
-              'Dodaj točko',
-              'Shrani lokacijo (mejnik, skladišče)',
+              context.l10n.introLongPressAddPoint,
+              context.l10n.introLongPressAddPointDesc,
               iconColor: Colors.red,
             ),
             _buildInfoRow(
               Icons.forest,
-              'Dodaj hlodovino',
-              'Beleženje hloda z GPS koordinatami',
+              context.l10n.introLongPressAddLogs,
+              context.l10n.introLongPressAddLogsDesc,
               iconColor: Colors.brown,
             ),
             _buildInfoRow(
               Icons.carpenter,
-              'Označi sečnjo',
-              'Označi drevo za posek na karti',
+              context.l10n.introLongPressMarkCut,
+              context.l10n.introLongPressMarkCutDesc,
               iconColor: Colors.deepOrange,
             ),
             _buildInfoRow(
               Icons.download,
-              'Uvozi parcelo',
-              'Pridobi parcelo iz katastra na trenutni lokaciji',
+              context.l10n.introLongPressImport,
+              context.l10n.introLongPressImportDesc,
               iconColor: Colors.blue,
             ),
           ]),
@@ -382,7 +384,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Držite prst na karti za prikaz menija',
+                    context.l10n.introLongPressHint,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -405,7 +407,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Označbe na karti',
+            context.l10n.introMarkersTitle,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -415,20 +417,20 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildMarkerExample(Icons.location_on, Colors.red, 'Točka'),
-              _buildMarkerExample(Icons.circle, Colors.brown, 'Hlod'),
-              _buildMarkerExample(Icons.carpenter, Colors.deepOrange, 'Sečnja'),
+              _buildMarkerExample(Icons.location_on, Colors.red, context.l10n.introMarkerPoint),
+              _buildMarkerExample(Icons.circle, Colors.brown, context.l10n.introMarkerLog),
+              _buildMarkerExample(Icons.carpenter, Colors.deepOrange, context.l10n.introMarkerCut),
             ],
           ),
           const SizedBox(height: 32),
           _buildInfoCard([
-            _buildInfoRow(Icons.location_on, 'Rdeče', 'Shranjene lokacije (mejniki, skladišča)'),
-            _buildInfoRow(Icons.circle, 'Rjave', 'Hlodovina z GPS lokacijo'),
-            _buildInfoRow(Icons.carpenter, 'Oranžne', 'Drevesa označena za sečnjo'),
+            _buildInfoRow(Icons.location_on, context.l10n.introMarkersRed, context.l10n.introMarkersRedDesc),
+            _buildInfoRow(Icons.circle, context.l10n.introMarkersBrown, context.l10n.introMarkersBrownDesc),
+            _buildInfoRow(Icons.carpenter, context.l10n.introMarkersOrange, context.l10n.introMarkersOrangeDesc),
           ]),
           const SizedBox(height: 16),
           Text(
-            'Hlodi in sečnje se samodejno povežejo s parcelo',
+            context.l10n.introMarkersLinked,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -446,7 +448,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Sloji na karti',
+            context.l10n.introLayersTitle,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -468,16 +470,16 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                   child: const Icon(Icons.layers),
                 ),
                 const SizedBox(width: 16),
-                const Text('Pritisnite za izbiro slojev'),
+                Text(context.l10n.introLayersButtonHint),
               ],
             ),
           ),
           const SizedBox(height: 24),
           _buildInfoCard([
-            _buildInfoRow(Icons.satellite_alt, 'Ortofoto', 'Satelitski posnetki Slovenije'),
-            _buildInfoRow(Icons.grid_on, 'Kataster', 'Meje parcel iz katastra'),
-            _buildInfoRow(Icons.park, 'Gozdni sestoji', 'Podatki Zavoda za gozdove'),
-            _buildInfoRow(Icons.map, 'Topografija', 'DTK in druge karte'),
+            _buildInfoRow(Icons.satellite_alt, 'Ortofoto', context.l10n.introLayersOrthoDesc),
+            _buildInfoRow(Icons.grid_on, 'Kataster', context.l10n.introLayersCadastreDesc),
+            _buildInfoRow(Icons.park, context.l10n.introLayersStands, context.l10n.introLayersStandsDesc),
+            _buildInfoRow(Icons.map, context.l10n.introLayersTopo, context.l10n.introLayersTopoDesc),
           ]),
         ],
       ),
@@ -491,7 +493,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Delo brez povezave',
+            context.l10n.introOfflineTitle,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -515,18 +517,18 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           _buildInfoCard([
             _buildInfoRow(
               Icons.cached,
-              'Samodejno predpomnjenje',
-              'Ogledane karte se shranijo za kasnejšo uporabo',
+              context.l10n.introOfflineAutoCache,
+              context.l10n.introOfflineAutoCacheDesc,
             ),
             _buildInfoRow(
               Icons.search,
-              'Ob iskanju parcele',
-              'Karte za območje parcele se prenesejo samodejno',
+              context.l10n.introOfflineOnSearch,
+              context.l10n.introOfflineOnSearchDesc,
             ),
             _buildInfoRow(
               Icons.download_for_offline,
-              'Ročni prenos',
-              'Uporabite gumb za sloje na karti za prenos območja',
+              context.l10n.introOfflineManual,
+              context.l10n.introOfflineManualDesc,
             ),
           ]),
           const SizedBox(height: 16),
@@ -545,7 +547,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Karte delujejo tudi v gozdu brez signala!',
+                    context.l10n.introOfflineHint,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -568,7 +570,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Navigacija do mejnika',
+            context.l10n.introCompassTitle,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -597,14 +599,14 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                   color: Colors.deepOrange,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.navigation, color: Colors.white, size: 20),
-                    SizedBox(width: 8),
+                    const Icon(Icons.navigation, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
                     Text(
-                      'Mejnik 1 • 45m',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      context.l10n.introCompassMarker,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -615,23 +617,23 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           _buildInfoCard([
             _buildInfoRow(
               Icons.forest,
-              'Odprite parcelo',
-              'V zavihku Gozd izberite parcelo',
+              context.l10n.introCompassStep1,
+              context.l10n.introCompassStep1Desc,
             ),
             _buildInfoRow(
               Icons.location_on,
-              'Tapnite mejno točko',
-              'Izberite točko na karti parcele',
+              context.l10n.introCompassStep2,
+              context.l10n.introCompassStep2Desc,
             ),
             _buildInfoRow(
               Icons.navigation,
-              'Aktivirajte kompas',
-              'Tapnite oranžni navigacijski trak',
+              context.l10n.introCompassStep3,
+              context.l10n.introCompassStep3Desc,
             ),
             _buildInfoRow(
               Icons.explore,
-              'Sledite smeri',
-              'Kompas kaže smer in razdaljo do točke',
+              context.l10n.introCompassStep4,
+              context.l10n.introCompassStep4Desc,
             ),
           ]),
         ],
@@ -656,7 +658,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           ),
           const SizedBox(height: 32),
           Text(
-            'Pogoji uporabe',
+            context.l10n.introTermsTitle,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -675,10 +677,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
               text: TextSpan(
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.7),
                 children: [
-                  const TextSpan(
-                    text: 'Aplikacija uporablja javne podatke Zavoda za gozdove Slovenije.\n\n'
-                        'Z uporabo te aplikacije se strinjate s pogoji uporabe podatkov:\n\n',
-                  ),
+                  TextSpan(text: context.l10n.introTermsBody),
                   TextSpan(
                     text: 'prostor.zgs.gov.si/pregledovalnik',
                     style: TextStyle(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import '../l10n/l10n.dart';
 import '../models/map_layer.dart';
 
 /// Floating action buttons for map controls (zoom, GPS, layers)
@@ -48,7 +49,7 @@ class MapControls extends StatelessWidget {
                 heroTag: 'map_layers',
                 mini: true,
                 onPressed: onLayerSelectorPressed,
-                tooltip: 'Izberi sloj',
+                tooltip: context.l10n.mapwSelectLayer,
                 child: const Icon(Icons.layers),
               ),
               const SizedBox(height: 8),
@@ -56,7 +57,7 @@ class MapControls extends StatelessWidget {
                 heroTag: 'map_search',
                 mini: true,
                 onPressed: onSearchPressed,
-                tooltip: 'Išči parcelo po KO',
+                tooltip: context.l10n.mapwSearchParcelByKo,
                 child: const Icon(Icons.search),
               ),
               const SizedBox(height: 8),
@@ -64,7 +65,7 @@ class MapControls extends StatelessWidget {
                 heroTag: 'map_zoom_in',
                 mini: true,
                 onPressed: _zoomIn,
-                tooltip: 'Povečaj karto',
+                tooltip: context.l10n.mapwZoomIn,
                 child: const Icon(Icons.add),
               ),
               const SizedBox(height: 8),
@@ -72,7 +73,7 @@ class MapControls extends StatelessWidget {
                 heroTag: 'map_zoom_out',
                 mini: true,
                 onPressed: _zoomOut,
-                tooltip: 'Pomanjšaj karto',
+                tooltip: context.l10n.mapwZoomOut,
                 child: const Icon(Icons.remove),
               ),
             ],
@@ -86,7 +87,7 @@ class MapControls extends StatelessWidget {
             child: FloatingActionButton(
               heroTag: 'map_gps',
               onPressed: onGpsPressed,
-              tooltip: 'Centriraj na GPS lokacijo',
+              tooltip: context.l10n.mapwCenterOnGps,
               child: const Icon(Icons.my_location),
             ),
           ),
@@ -100,7 +101,7 @@ class MapControls extends StatelessWidget {
             child: FloatingActionButton(
               heroTag: 'map_locations',
               onPressed: onLocationsPressed,
-              tooltip: 'Shranjene lokacije',
+              tooltip: context.l10n.mapwSavedLocations,
               child: Badge(
                 label: Text('$locationsCount'),
                 backgroundColor: Theme.of(context).colorScheme.tertiary,

@@ -1,0 +1,330 @@
+{
+  "parcelPointUnknown": "Točka ?",
+  "parcelPointNumbered": "Točka {number}",
+  "parcelDetailUpdateError": "Napaka pri posodabljanju: {error}",
+  "parcelDetailPreparingPdf": "Pripravljam PDF …",
+  "parcelDetailPdfOpenError": "PDF ni mogoče odpreti: {message}",
+  "parcelDetailPdfError": "Napaka pri pripravi PDF: {error}",
+  "parcelDetailPreparingExport": "Pripravljam izvoz …",
+  "parcelDetailExportDone": "Izvoz zaključen",
+  "parcelDetailExportError": "Napaka pri izvozu: {error}",
+  "parcelForestTypeTitle": "Vrsta gozda",
+  "parcelForestTypeDeciduous": "Listavci",
+  "parcelForestTypeMixed": "Mešani gozd",
+  "parcelForestTypeConiferous": "Iglavci",
+  "parcelOwnerTitle": "Lastnik",
+  "parcelOwnerNameLabel": "Ime lastnika",
+  "parcelOwnerNameHint": "Vnesite ime lastnika",
+  "parcelNotesTitle": "Opombe",
+  "parcelAllowanceTitle": "Dovoljen posek",
+  "parcelAllowanceAmountLabel": "Količina (m³)",
+  "parcelAllowanceAmountHint": "Vnesite dovoljeno količino",
+  "parcelInvalidNumber": "Neveljavna številka",
+  "parcelLogCutTitle": "Zabeleži posek",
+  "parcelCutCurrent": "Trenutno posekano: {volume} m³",
+  "parcelCutRemaining": "Še na voljo: {volume} m³",
+  "parcelCutAddLabel": "Dodaj posek (m³)",
+  "parcelCutAddHint": "Vnesite količino",
+  "parcelTreesCountLabel": "Število dreves",
+  "parcelTreesCountHint": "Vnesite število",
+  "parcelTreesUnit": "dreves",
+  "parcelCutInvalidAmount": "Vnesite veljavno količino poseka",
+  "parcelCutAddedWithTrees": "Dodano {volume} m³ poseka ({trees} dreves)",
+  "parcelCutAdded": "Dodano {volume} m³ poseka",
+  "parcelResetCutTitle": "Ponastavi posek",
+  "parcelResetCutMessage": "Ali ste prepričani, da želite ponastaviti količino posekanega lesa na 0?",
+  "parcelReset": "Ponastavi",
+  "parcelAddTreesTitle": "Dodaj posekana drevesa",
+  "parcelResetTreesTitle": "Ponastavi drevesa",
+  "parcelResetTreesMessage": "Ali ste prepričani, da želite ponastaviti število posekanih dreves na 0?",
+  "parcelDeleteTitle": "Izbriši parcelo",
+  "parcelDeleteMessage": "Ali ste prepričani, da želite izbrisati \"{name}\"?\n\nIzbrisane bodo tudi vse točke, sečnje in hlodovina znotraj parcele.",
+  "parcelDeletedLogsExtra": "{count} hlodov",
+  "parcelDeletedPointsExtra": "{count} točk",
+  "parcelDeleted": "Parcela izbrisana",
+  "parcelDeletedWithExtras": "Parcela izbrisana ({extras})",
+  "parcelDeleteError": "Napaka pri brisanju: {error}",
+  "parcelEditShape": "Uredi obliko",
+  "parcelPrint": "Natisni",
+  "parcelExportKml": "Izvozi KML",
+  "parcelViewOnMap": "Poglej na karti",
+  "parcelNavigate": "Navigiraj",
+  "@parcelPointNumbered": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelDetailUpdateError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelDetailPdfOpenError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelDetailPdfError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelDetailExportError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelCutCurrent": {
+    "placeholders": {
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelCutRemaining": {
+    "placeholders": {
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelCutAddedWithTrees": {
+    "placeholders": {
+      "volume": {
+        "type": "String"
+      },
+      "trees": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelCutAdded": {
+    "placeholders": {
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelDeleteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelDeletedLogsExtra": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelDeletedPointsExtra": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelDeletedWithExtras": {
+    "placeholders": {
+      "extras": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelDeleteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelEditorNeedThreePoints": "Narišite vsaj 3 točke",
+  "parcelEditorNameRequired": "Prosim vnesite ime",
+  "parcelEditorBaseLayer": "Osnovni sloj",
+  "parcelEditorOverlayLayers": "Prekrivni sloji",
+  "parcelEditorAddTitle": "Dodaj parcelo",
+  "parcelEditorEditTitle": "Uredi parcelo",
+  "parcelEditorNameLabel": "Ime parcele",
+  "parcelForestTypeMixedShort": "Mešani",
+  "parcelEditorTapToAdd": "Tapnite na zemljevid za dodajanje točk ({count} točk)",
+  "parcelEditorDrawingDone": "Risanje zaključeno",
+  "parcelEditorArea": "Površina: {area}",
+  "parcelEditorClear": "Počisti",
+  "@parcelEditorTapToAdd": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelEditorArea": {
+    "placeholders": {
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelLogsCardTitle": "Hlodovina na parceli ({count})",
+  "parcelManualEntry": "Ročni vnos",
+  "parcelLogName": "Hlod {id}",
+  "parcelMoreLogs": "... in še {count} hlodov",
+  "parcelSavedPointsTitle": "Shranjene točke ({count})",
+  "parcelSecnjaTitle": "Sečnja ({count})",
+  "parcelFoundTitle": "Parcela {label}",
+  "parcelFoundKo": "KO {ko}",
+  "parcelFoundHide": "Skrij",
+  "parcelFoundOpen": "Odpri parcelo",
+  "parcelFoundImport": "Uvozi parcelo",
+  "@parcelLogsCardTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelLogName": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelMoreLogs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelSavedPointsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelSecnjaTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelFoundTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelFoundKo": {
+    "placeholders": {
+      "ko": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelPointsCount": "{count} točk",
+  "parcelInfoAdded": "Dodano",
+  "parcelInfoParcel": "Parcela",
+  "parcelNotSet": "Ni določen",
+  "parcelFromCadastre": "iz katastra (GURS)",
+  "parcelNoNotes": "Ni opomb",
+  "parcelWoodTitle": "Posek lesa",
+  "parcelCutLabel": "Posekano",
+  "parcelWoodUsed": "{percent}% izkoriščeno",
+  "parcelTreesCutLabel": "Posekanih dreves",
+  "parcelLogCutButton": "Posek m³",
+  "parcelTreeButton": "Drevo",
+  "@parcelPointsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelWoodUsed": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelSearchNotFound": "Parcela {number} ni najdena.",
+  "parcelSearchError": "Napaka pri iskanju: {error}",
+  "parcelSearchTitle": "Iskanje parcele",
+  "parcelSearchAllKo": "Vse katastrske občine",
+  "parcelSearchByMapPosition": "Po legi na zemljevidu",
+  "parcelSearchRemoveKo": "Odstrani katastrsko občino",
+  "parcelSearchHint": "Parcela, lastnik, naslov ali k.o.",
+  "parcelSearchHelper": "npr. 123/4, Novak Babno ali Škofja Loka",
+  "parcelSearchPromptNoKo": "Vnesite številko parcele, ime lastnika, naslov ali katastrsko občino.",
+  "parcelSearchPromptWithKo": "Vnesite številko parcele (npr. 123/4), ime lastnika ali naslov.",
+  "parcelSearchNeedsKoHint": "Za parcelo {number} izberite katastrsko občino: vnesite njeno ime.",
+  "parcelSearchNoResults": "Ni zadetkov.",
+  "parcelSearchNeedsKo": "Za parcelo {number} izberite katastrsko občino.",
+  "@parcelSearchNotFound": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelSearchError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelSearchNeedsKoHint": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelSearchNeedsKo": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelMapPreviewLabel": "Karta",
+  "parcelPdfKo": "Katastrska občina",
+  "parcelPdfNumber": "Parcelna številka",
+  "parcelPdfArea": "Površina",
+  "parcelPdfAddress": "Naslov",
+  "parcelPdfMunicipality": "Občina",
+  "parcelPdfMapFailed": "Zemljevida ni bilo mogoče naložiti",
+  "parcelPdfFooter": "Gozdar • Izpisano: {date}",
+  "parcelPdfSource": "Vir: © GURS, © ZGS",
+  "@parcelPdfFooter": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelSearchKoSubtitle": "Katastrska občina {sifko}",
+  "@parcelSearchKoSubtitle": {
+    "placeholders": {
+      "sifko": {
+        "type": "int"
+      }
+    }
+  }
+}

@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../models/map_layer.dart';
 import 'map_layer_renderer.dart';
+import '../l10n/l10n.dart';
 
 /// Non-interactive embedded map preview of a parcel, using the same base layer
 /// and overlays currently enabled on the main map. The parcel polygon is drawn
@@ -150,7 +151,7 @@ class ParcelMapPreview extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Karta',
+                          context.l10n.parcelMapPreviewLabel,
                           style: Theme.of(context).textTheme.labelMedium
                               ?.copyWith(
                                 color: Theme.of(context).colorScheme.primary,

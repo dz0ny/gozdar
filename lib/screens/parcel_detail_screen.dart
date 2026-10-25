@@ -29,6 +29,7 @@ import '../widgets/parcel_map_preview.dart';
 import '../widgets/parcel_wood_tracking_card.dart';
 import '../widgets/parcel_data_cards.dart';
 import 'forest_tab.dart' show getForestTypeIcon;
+import '../l10n/l10n.dart';
 
 class ParcelDetailScreen extends StatefulWidget {
   final Parcel parcel;
@@ -148,7 +149,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Napaka pri posodabljanju: $e')));
+        ).showSnackBar(SnackBar(content: Text(context.l10n.parcelDetailUpdateError('$e'))));
       }
     }
   }
@@ -160,19 +161,19 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     // PDF generation fetches map tiles and is slow; show progress feedback
     // since the popup menu has already closed.
     messenger.showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 16,
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-            SizedBox(width: 16),
-            Text('Pripravljam PDF …'),
+            const SizedBox(width: 16),
+            Text(context.l10n.parcelDetailPreparingPdf),
           ],
         ),
-        duration: Duration(minutes: 1),
+        duration: const Duration(minutes: 1),
       ),
     );
     final cadastral = CadastralParcel(
@@ -201,14 +202,14 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       final result = await OpenFilex.open(file.path);
       if (result.type != ResultType.done && mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('PDF ni mogoče odpreti: ${result.message}')),
+          SnackBar(content: Text(L10n.current.parcelDetailPdfOpenError(result.message))),
         );
       }
     } catch (e) {
       messenger.hideCurrentSnackBar();
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Napaka pri pripravi PDF: $e')),
+          SnackBar(content: Text(L10n.current.parcelDetailPdfError('$e'))),
         );
       }
     }
@@ -218,19 +219,19 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
     // Export can be slow; show progress since the popup menu has closed.
     messenger.showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 16,
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-            SizedBox(width: 16),
-            Text('Pripravljam izvoz …'),
+            const SizedBox(width: 16),
+            Text(context.l10n.parcelDetailPreparingExport),
           ],
         ),
-        duration: Duration(minutes: 1),
+        duration: const Duration(minutes: 1),
       ),
     );
     try {
@@ -243,14 +244,14 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       messenger.hideCurrentSnackBar();
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Izvoz zaključen')),
+          SnackBar(content: Text(L10n.current.parcelDetailExportDone)),
         );
       }
     } catch (e) {
       messenger.hideCurrentSnackBar();
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Napaka pri izvozu: $e')),
+          SnackBar(content: Text(L10n.current.parcelDetailExportError('$e'))),
         );
       }
     }
@@ -260,7 +261,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     final result = await showDialog<ForestType>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Vrsta gozda'),
+        title: Text(context.l10n.parcelForestTypeTitle),
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(ForestType.deciduous),
@@ -268,7 +269,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
               children: [
                 Icon(Icons.nature, color: Colors.green.shade600),
                 const SizedBox(width: 16),
-                const Text('Listavci'),
+                Text(context.l10n.parcelForestTypeDeciduous),
               ],
             ),
           ),
@@ -279,7 +280,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                 Icon(Icons.nature, size: 20, color: Colors.green.shade600),
                 Icon(Icons.park, size: 20, color: Colors.green.shade800),
                 const SizedBox(width: 12),
-                const Text('Mešani gozd'),
+                Text(context.l10n.parcelForestTypeMixed),
               ],
             ),
           ),
@@ -289,7 +290,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
               children: [
                 Icon(Icons.park, color: Colors.green.shade800),
                 const SizedBox(width: 16),
-                const Text('Iglavci'),
+                Text(context.l10n.parcelForestTypeConiferous),
               ],
             ),
           ),
@@ -308,13 +309,13 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Lastnik'),
+        title: Text(context.l10n.parcelOwnerTitle),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Ime lastnika',
-            hintText: 'Vnesite ime lastnika',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: context.l10n.parcelOwnerNameLabel,
+            hintText: context.l10n.parcelOwnerNameHint,
+            border: const OutlineInputBorder(),
           ),
           autofocus: true,
           textCapitalization: TextCapitalization.words,
@@ -322,11 +323,11 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Shrani'),
+            child: Text(context.l10n.commonSave),
           ),
         ],
       ),
@@ -346,7 +347,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       context: context,
       isScrollControlled: true,
       builder: (context) =>
-          NotesEditorSheet(initialNotes: _parcel.notes, title: 'Opombe'),
+          NotesEditorSheet(initialNotes: _parcel.notes, title: context.l10n.parcelNotesTitle),
     );
 
     if (result != null) {
@@ -369,12 +370,12 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Dovoljen posek'),
+            title: Text(context.l10n.parcelAllowanceTitle),
             content: TextField(
               controller: controller,
               decoration: InputDecoration(
-                labelText: 'Količina (m³)',
-                hintText: 'Vnesite dovoljeno količino',
+                labelText: context.l10n.parcelAllowanceAmountLabel,
+                hintText: context.l10n.parcelAllowanceAmountHint,
                 border: const OutlineInputBorder(),
                 suffixText: 'm³',
                 errorText: errorText,
@@ -388,7 +389,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Prekliči'),
+                child: Text(context.l10n.commonCancel),
               ),
               FilledButton(
                 onPressed: () {
@@ -400,13 +401,13 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                   final value = parseDecimal(text);
                   if (value == null) {
                     setDialogState(
-                      () => errorText = 'Neveljavna številka',
+                      () => errorText = context.l10n.parcelInvalidNumber,
                     );
                     return;
                   }
                   Navigator.of(context).pop(value);
                 },
-                child: const Text('Shrani'),
+                child: Text(context.l10n.commonSave),
               ),
             ],
           );
@@ -426,19 +427,19 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     final result = await showDialog<({double? volume, int trees})>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Zabeleži posek'),
+        title: Text(context.l10n.parcelLogCutTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Trenutno posekano: ${_parcel.woodCut.toStringAsFixed(2)} m³',
+              context.l10n.parcelCutCurrent(_parcel.woodCut.toStringAsFixed(2)),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             if (_parcel.woodAllowance > 0) ...[
               const SizedBox(height: 4),
               Text(
-                'Še na voljo: ${_parcel.woodRemaining.toStringAsFixed(2)} m³',
+                context.l10n.parcelCutRemaining(_parcel.woodRemaining.toStringAsFixed(2)),
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium?.copyWith(color: Colors.green),
@@ -447,10 +448,10 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: volumeController,
-              decoration: const InputDecoration(
-                labelText: 'Dodaj posek (m³)',
-                hintText: 'Vnesite količino',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: context.l10n.parcelCutAddLabel,
+                hintText: context.l10n.parcelCutAddHint,
+                border: const OutlineInputBorder(),
                 suffixText: 'm³',
               ),
               autofocus: true,
@@ -462,11 +463,11 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: treesController,
-              decoration: const InputDecoration(
-                labelText: 'Število dreves',
-                hintText: 'Vnesite število',
-                border: OutlineInputBorder(),
-                suffixText: 'dreves',
+              decoration: InputDecoration(
+                labelText: context.l10n.parcelTreesCountLabel,
+                hintText: context.l10n.parcelTreesCountHint,
+                border: const OutlineInputBorder(),
+                suffixText: context.l10n.parcelTreesUnit,
               ),
               keyboardType: TextInputType.number,
             ),
@@ -475,7 +476,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () {
@@ -483,7 +484,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
               final trees = int.tryParse(treesController.text) ?? 0;
               Navigator.of(context).pop((volume: volume, trees: trees));
             },
-            child: const Text('Dodaj'),
+            child: Text(context.l10n.commonAdd),
           ),
         ],
       ),
@@ -495,7 +496,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     if (volume == null || volume <= 0) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Vnesite veljavno količino poseka')),
+          SnackBar(content: Text(context.l10n.parcelCutInvalidAmount)),
         );
       }
       return;
@@ -509,8 +510,11 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
 
     if (mounted) {
       final message = result.trees > 0
-          ? 'Dodano ${volume.toStringAsFixed(2)} m³ poseka (${result.trees} dreves)'
-          : 'Dodano ${volume.toStringAsFixed(2)} m³ poseka';
+          ? context.l10n.parcelCutAddedWithTrees(
+              volume.toStringAsFixed(2),
+              result.trees,
+            )
+          : context.l10n.parcelCutAdded(volume.toStringAsFixed(2));
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
@@ -521,19 +525,17 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Ponastavi posek'),
-        content: const Text(
-          'Ali ste prepričani, da želite ponastaviti količino posekanega lesa na 0?',
-        ),
+        title: Text(context.l10n.parcelResetCutTitle),
+        content: Text(context.l10n.parcelResetCutMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('Ponastavi'),
+            child: Text(context.l10n.parcelReset),
           ),
         ],
       ),
@@ -550,28 +552,28 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     final result = await showDialog<int>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Dodaj posekana drevesa'),
+        title: Text(context.l10n.parcelAddTreesTitle),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Število dreves',
-            suffixText: 'dreves',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: context.l10n.parcelTreesCountLabel,
+            suffixText: context.l10n.parcelTreesUnit,
+            border: const OutlineInputBorder(),
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () {
               final value = int.tryParse(controller.text);
               Navigator.of(context).pop(value);
             },
-            child: const Text('Dodaj'),
+            child: Text(context.l10n.commonAdd),
           ),
         ],
       ),
@@ -588,19 +590,17 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Ponastavi drevesa'),
-        content: const Text(
-          'Ali ste prepričani, da želite ponastaviti število posekanih dreves na 0?',
-        ),
+        title: Text(context.l10n.parcelResetTreesTitle),
+        content: Text(context.l10n.parcelResetTreesMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('Ponastavi'),
+            child: Text(context.l10n.parcelReset),
           ),
         ],
       ),
@@ -629,20 +629,17 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Izbriši parcelo'),
-        content: Text(
-          'Ali ste prepričani, da želite izbrisati "${_parcel.name}"?\n\n'
-          'Izbrisane bodo tudi vse točke, sečnje in hlodovina znotraj parcele.',
-        ),
+        title: Text(context.l10n.parcelDeleteTitle),
+        content: Text(context.l10n.parcelDeleteMessage(_parcel.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Izbriši'),
+            child: Text(context.l10n.commonDelete),
           ),
         ],
       ),
@@ -664,12 +661,17 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
           final logsCount = deleted['logs'] ?? 0;
           final locationsCount = deleted['locations'] ?? 0;
           final extras = <String>[];
-          if (logsCount > 0) extras.add('$logsCount hlodov');
-          if (locationsCount > 0) extras.add('$locationsCount točk');
-          final extraText = extras.isNotEmpty ? ' (${extras.join(', ')})' : '';
+          final l10n = context.l10n;
+          if (logsCount > 0) extras.add(l10n.parcelDeletedLogsExtra(logsCount));
+          if (locationsCount > 0) {
+            extras.add(l10n.parcelDeletedPointsExtra(locationsCount));
+          }
+          final message = extras.isNotEmpty
+              ? l10n.parcelDeletedWithExtras(extras.join(', '))
+              : l10n.parcelDeleted;
 
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Parcela izbrisana$extraText')),
+            SnackBar(content: Text(message)),
           );
           context.pop();
         }
@@ -677,7 +679,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('Napaka pri brisanju: $e')));
+          ).showSnackBar(SnackBar(content: Text(context.l10n.parcelDeleteError('$e'))));
         }
       }
     }
@@ -708,7 +710,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Uredi obliko',
+            tooltip: context.l10n.parcelEditShape,
             onPressed: _editPolygon,
           ),
           PopupMenuButton<String>(
@@ -723,23 +725,23 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'print',
                 child: Row(
                   children: [
-                    Icon(Icons.print),
-                    SizedBox(width: 8),
-                    Text('Natisni'),
+                    const Icon(Icons.print),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.parcelPrint),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'export',
                 child: Row(
                   children: [
-                    Icon(Icons.file_download),
-                    SizedBox(width: 8),
-                    Text('Izvozi KML'),
+                    const Icon(Icons.file_download),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.parcelExportKml),
                   ],
                 ),
               ),
@@ -747,9 +749,12 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                 value: 'delete',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_outline, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Izbriši', style: TextStyle(color: Colors.red)),
+                    const Icon(Icons.delete_outline, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Text(
+                      context.l10n.commonDelete,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ],
                 ),
               ),
@@ -824,7 +829,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                           onPressed: () =>
                               _navigateToPoint(_parcel.center, _parcel.name),
                           icon: const Icon(Icons.map),
-                          label: const Text('Poglej na karti'),
+                          label: Text(context.l10n.parcelViewOnMap),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -841,7 +846,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                             ),
                           ),
                           icon: const Icon(Icons.navigation),
-                          label: const Text('Navigiraj'),
+                          label: Text(context.l10n.parcelNavigate),
                         ),
                       ),
                     ],

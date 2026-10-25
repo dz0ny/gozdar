@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import '../services/update_service.dart';
 
 /// Banner displayed when an app update is available
@@ -61,19 +62,19 @@ class UpdateBanner extends StatelessWidget {
   Widget _buildContent(BuildContext context, UpdateStatus status) {
     switch (status) {
       case UpdateStatus.available:
-        return _buildAvailableContent();
+        return _buildAvailableContent(context);
       case UpdateStatus.downloading:
-        return _buildDownloadingContent();
+        return _buildDownloadingContent(context);
       case UpdateStatus.readyToInstall:
-        return _buildReadyContent();
+        return _buildReadyContent(context);
       case UpdateStatus.error:
-        return _buildErrorContent();
+        return _buildErrorContent(context);
       default:
         return const SizedBox.shrink();
     }
   }
 
-  Widget _buildAvailableContent() {
+  Widget _buildAvailableContent(BuildContext context) {
     final release = updateService.latestRelease;
     return Row(
       children: [
@@ -84,8 +85,8 @@ class UpdateBanner extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Nova posodobitev na voljo',
+              Text(
+                context.l10n.updateAvailableTitle,
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -94,7 +95,7 @@ class UpdateBanner extends StatelessWidget {
               ),
               if (release != null)
                 Text(
-                  'Verzija ${release.version}',
+                  context.l10n.updateVersion(release.version),
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
@@ -109,7 +110,7 @@ class UpdateBanner extends StatelessWidget {
             backgroundColor: Colors.white,
             foregroundColor: Colors.blue.shade700,
           ),
-          child: const Text('Prenesi'),
+          child: Text(context.l10n.commonDownload),
         ),
         const SizedBox(width: 4),
         IconButton(
@@ -118,7 +119,7 @@ class UpdateBanner extends StatelessWidget {
             updateService.dismiss();
             onDismiss?.call();
           },
-          tooltip: 'Zapri',
+          tooltip: context.l10n.commonClose,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
@@ -126,7 +127,7 @@ class UpdateBanner extends StatelessWidget {
     );
   }
 
-  Widget _buildDownloadingContent() {
+  Widget _buildDownloadingContent(BuildContext context) {
     final progress = updateService.downloadProgress;
     final percent = (progress * 100).toStringAsFixed(0);
     return Row(
@@ -146,8 +147,8 @@ class UpdateBanner extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Prenašanje posodobitve...',
+              Text(
+                context.l10n.updateDownloading,
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -175,18 +176,18 @@ class UpdateBanner extends StatelessWidget {
     );
   }
 
-  Widget _buildReadyContent() {
+  Widget _buildReadyContent(BuildContext context) {
     return Row(
       children: [
         const Icon(Icons.check_circle, color: Colors.white),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Posodobitev pripravljena',
+                context.l10n.updateReadyTitle,
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -194,7 +195,7 @@ class UpdateBanner extends StatelessWidget {
                 ),
               ),
               Text(
-                'Tapni za namestitev',
+                context.l10n.updateReadyHint,
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: 12,
@@ -209,13 +210,13 @@ class UpdateBanner extends StatelessWidget {
             backgroundColor: Colors.white,
             foregroundColor: Colors.green.shade700,
           ),
-          child: const Text('Namesti'),
+          child: Text(context.l10n.updateInstall),
         ),
       ],
     );
   }
 
-  Widget _buildErrorContent() {
+  Widget _buildErrorContent(BuildContext context) {
     return Row(
       children: [
         const Icon(Icons.error_outline, color: Colors.white),
@@ -225,8 +226,8 @@ class UpdateBanner extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Napaka pri posodobitvi',
+              Text(
+                context.l10n.updateErrorTitle,
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -252,7 +253,7 @@ class UpdateBanner extends StatelessWidget {
             backgroundColor: Colors.white,
             foregroundColor: Colors.red.shade700,
           ),
-          child: const Text('Ponovi'),
+          child: Text(context.l10n.updateRetry),
         ),
         const SizedBox(width: 4),
         IconButton(
@@ -261,7 +262,7 @@ class UpdateBanner extends StatelessWidget {
             updateService.reset();
             onDismiss?.call();
           },
-          tooltip: 'Zapri',
+          tooltip: context.l10n.commonClose,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),

@@ -4,6 +4,7 @@ import 'package:excel/excel.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../l10n/l10n.dart';
 import '../models/log_entry.dart';
 
 class ExportService {
@@ -13,13 +14,23 @@ class ExportService {
   static Future<void> exportToExcel(List<LogEntry> logs) async {
     try {
       final excel = Excel.createExcel();
-      final sheet = excel['Hlodi'];
+      final l10n = L10n.current;
+      final sheet = excel[l10n.logsExportSheetName];
 
       // Remove default sheet
       excel.delete('Sheet1');
 
       // Add headers
-      final headers = ['ID', 'Premer (cm)', 'Dolžina (m)', 'Volumen (m³)', 'Lat', 'Lon', 'Opombe', 'Datum'];
+      final headers = [
+        'ID',
+        l10n.logsExportHeaderDiameter,
+        l10n.logsExportHeaderLength,
+        l10n.logsExportHeaderVolume,
+        'Lat',
+        'Lon',
+        l10n.logsExportHeaderNotes,
+        l10n.logsExportHeaderDate,
+      ];
       for (var i = 0; i < headers.length; i++) {
         sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0)).value = TextCellValue(headers[i]);
       }
@@ -53,8 +64,8 @@ class ExportService {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(filePath)],
-          subject: 'Gozdar Hlodi Export',
-          text: 'Izvoženih ${logs.length} vnosov',
+          subject: l10n.logsExportShareSubject,
+          text: l10n.logsExportShareText(logs.length),
         ),
       );
     } catch (e) {

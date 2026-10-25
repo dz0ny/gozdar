@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gozdar/l10n/l10n.dart';
 import 'package:gozdar/services/cadastral_service.dart';
 import 'package:gozdar/widgets/parcel_found_sheet.dart';
 import 'package:latlong2/latlong.dart';
@@ -13,21 +14,27 @@ void main() {
     polygon: [LatLng(46, 14), LatLng(46, 14.001), LatLng(46.001, 14.001)],
   );
 
-  testWidgets('shows only details, keeps the map tappable, one action',
-      (tester) async {
+  testWidgets('shows only details, keeps the map tappable, one action', (
+    tester,
+  ) async {
     final key = GlobalKey<ScaffoldState>();
     var hidden = 0, acted = 0;
     var mapTaps = 0;
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        key: key,
-        body: GestureDetector(
-          key: const Key('map'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => mapTaps++,
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('sl'),
+        home: Scaffold(
+          key: key,
+          body: GestureDetector(
+            key: const Key('map'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => mapTaps++,
+          ),
         ),
       ),
-    ));
+    );
     final controller = ParcelFoundSheet.show(
       scaffold: key.currentState!,
       wfsParcel: parcel,
@@ -39,8 +46,13 @@ void main() {
 
     expect(find.text('Parcela 1092'), findsOneWidget);
     expect(find.text('Parcela najdena'), findsNothing);
-    expect(find.byType(ModalBarrier).evaluate().where(
-        (e) => (e.widget as ModalBarrier).dismissible), isEmpty);
+    expect(
+      find
+          .byType(ModalBarrier)
+          .evaluate()
+          .where((e) => (e.widget as ModalBarrier).dismissible),
+      isEmpty,
+    );
 
     // The map above the sheet still receives taps (no backdrop).
     await tester.tapAt(const Offset(400, 40));

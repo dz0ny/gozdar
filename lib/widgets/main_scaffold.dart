@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../config/distribution.dart';
+import '../l10n/l10n.dart';
 import '../router/app_router.dart';
 import '../router/navigation_notifier.dart';
 import '../screens/about_screen.dart';
@@ -82,20 +83,20 @@ class _MainScaffoldState extends State<MainScaffold> {
   _tabDefinitions() {
     return [
       (
-        semanticLabel: 'Tab Karta',
-        label: 'Karta',
+        semanticLabel: context.l10n.navTabSemantic(context.l10n.navTabMap),
+        label: context.l10n.navTabMap,
         icon: Icons.map_outlined,
         selectedIcon: Icons.map,
       ),
       (
-        semanticLabel: 'Tab Gozd',
-        label: 'Gozd',
+        semanticLabel: context.l10n.navTabSemantic(context.l10n.navTabForest),
+        label: context.l10n.navTabForest,
         icon: Icons.park_outlined,
         selectedIcon: Icons.park,
       ),
       (
-        semanticLabel: 'Tab Hlodi',
-        label: 'Hlodi',
+        semanticLabel: context.l10n.navTabSemantic(context.l10n.navTabLogs),
+        label: context.l10n.navTabLogs,
         icon: Icons.forest_outlined,
         selectedIcon: Icons.forest,
       ),
@@ -123,8 +124,10 @@ class _MainScaffoldState extends State<MainScaffold> {
       MaterialBanner(
         leading: const Icon(Icons.map_outlined),
         content: Text(
-          'Na voljo je novejši kataster (${update.manifest.date ?? ''}'
-          '${update.bytes > 0 ? ', ~$mb MB' : ''}).',
+          L10n.current.updateKatasterBanner(
+          update.manifest.date ?? '',
+          update.bytes > 0 ? ', ~$mb MB' : '',
+        ),
         ),
         actions: [
           TextButton(
@@ -132,14 +135,14 @@ class _MainScaffoldState extends State<MainScaffold> {
               messenger.hideCurrentMaterialBanner();
               KatasterUpdateService.instance.dismiss();
             },
-            child: const Text('Pozneje'),
+            child: Text(L10n.current.updateLater),
           ),
           FilledButton(
             onPressed: () {
               messenger.hideCurrentMaterialBanner();
               _showAboutScreen();
             },
-            child: const Text('Posodobi'),
+            child: Text(L10n.current.updateNow),
           ),
         ],
       ),
@@ -238,11 +241,9 @@ class _MainScaffoldState extends State<MainScaffold> {
     await OnboardingService.instance.resetOnboarding();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Uvodni vodič ponastavljen. Ponovno zaženi aplikacijo.',
-          ),
-          duration: Duration(seconds: 3),
+        SnackBar(
+          content: Text(context.l10n.navOnboardingReset),
+          duration: const Duration(seconds: 3),
         ),
       );
     }

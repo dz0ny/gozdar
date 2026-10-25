@@ -4,6 +4,7 @@ import '../services/cadastral_service.dart';
 import '../services/ko_locator.dart';
 import '../services/owner_lookup_service.dart';
 import 'parcel_silhouette.dart';
+import '../l10n/l10n.dart';
 
 /// Compact details of a parcel found by search, with one action (import or
 /// open). Shown as a non-modal sheet, so the map behind it stays usable and
@@ -114,12 +115,12 @@ class ParcelFoundSheet extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Parcela ${wfsParcel.label}',
+                        context.l10n.parcelFoundTitle(wfsParcel.label),
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text('KO $koLabel', style: muted),
+                      Text(context.l10n.parcelFoundKo(koLabel), style: muted),
                       Text(wfsParcel.formattedArea, style: muted),
                       if (ownerInfo != null)
                         Text(
@@ -134,7 +135,7 @@ class ParcelFoundSheet extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Skrij',
+                  tooltip: context.l10n.parcelFoundHide,
                   icon: const Icon(Icons.close),
                   onPressed: onHide,
                 ),
@@ -152,7 +153,9 @@ class ParcelFoundSheet extends StatelessWidget {
                   existingParcel != null ? Icons.visibility : Icons.download,
                 ),
                 label: Text(
-                  existingParcel != null ? 'Odpri parcelo' : 'Uvozi parcelo',
+                  existingParcel != null
+                      ? context.l10n.parcelFoundOpen
+                      : context.l10n.parcelFoundImport,
                 ),
               ),
             ),

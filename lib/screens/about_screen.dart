@@ -4,6 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../l10n/l10n.dart';
+import '../services/locale_settings.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/cache_settings.dart';
 import '../services/owner_offline_settings_service.dart';
@@ -41,7 +43,7 @@ class _AboutScreenState extends State<AboutScreen> {
   bool _cancelParcelDownload = false;
   int _parcelReceived = 0;
   int? _parcelTotal;
-  String _parcelDownloadLabel = 'Prenašam regijo…';
+  String? _parcelDownloadLabel;
 
   // Owners database download progress.
   bool _downloadingOwners = false;
@@ -96,7 +98,7 @@ class _AboutScreenState extends State<AboutScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('O aplikaciji')),
+      appBar: AppBar(title: Text(context.l10n.aboutTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -109,27 +111,27 @@ class _AboutScreenState extends State<AboutScreen> {
           const SizedBox(height: 16),
 
           // Settings
-          _buildSectionTitle(context, 'Nastavitve'),
+          _buildSectionTitle(context, context.l10n.commonSettings),
           _buildSettingsCard(context, colorScheme),
           const SizedBox(height: 16),
 
           // Map sources
-          _buildSectionTitle(context, 'Viri kartografskih podatkov'),
+          _buildSectionTitle(context, context.l10n.aboutSectionMapSources),
           _buildMapSourcesCard(context, colorScheme),
           const SizedBox(height: 16),
 
           // Legal section
-          _buildSectionTitle(context, 'Pravne informacije'),
+          _buildSectionTitle(context, context.l10n.aboutSectionLegal),
           _buildLegalCard(context, colorScheme),
           const SizedBox(height: 16),
 
           // Open source libraries
-          _buildSectionTitle(context, 'Odprtokodne knjižnice'),
+          _buildSectionTitle(context, context.l10n.aboutSectionOpenSource),
           _buildOpenSourceCard(context, colorScheme),
           const SizedBox(height: 16),
 
           // Contact & Support
-          _buildSectionTitle(context, 'Podpora'),
+          _buildSectionTitle(context, context.l10n.aboutSectionSupport),
           _buildSupportCard(context, colorScheme),
           const SizedBox(height: 32),
         ],
@@ -173,7 +175,7 @@ class _AboutScreenState extends State<AboutScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji',
+          context.l10n.aboutTagline,
           style: Theme.of(
             context,
           ).textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
@@ -203,7 +205,7 @@ class _AboutScreenState extends State<AboutScreen> {
                   Icon(Icons.info_outline, color: colorScheme.primary),
                   const SizedBox(width: 12),
                   Text(
-                    'Informacije o aplikaciji',
+                    context.l10n.aboutInfoTitle,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -211,9 +213,9 @@ class _AboutScreenState extends State<AboutScreen> {
                 ],
               ),
               const Divider(height: 24),
-              _buildInfoRow('Verzija', version),
-              _buildInfoRow('Številka gradnje', buildNumber),
-              _buildInfoRow('Paket', _packageInfo?.packageName ?? '...'),
+              _buildInfoRow(context.l10n.aboutVersion, version),
+              _buildInfoRow(context.l10n.aboutBuildNumber, buildNumber),
+              _buildInfoRow(context.l10n.aboutPackage, _packageInfo?.packageName ?? '...'),
             ],
           ),
         ),
@@ -235,7 +237,7 @@ class _AboutScreenState extends State<AboutScreen> {
               Icon(Icons.developer_mode, color: colorScheme.primary),
               const SizedBox(width: 12),
               Text(
-                'Razvijalske moznosti',
+                context.l10n.aboutDeveloperOptions,
                 style: Theme.of(
                   context,
                 ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -244,7 +246,7 @@ class _AboutScreenState extends State<AboutScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Baza lastnikov (kataster)',
+            context.l10n.aboutOwnersDb,
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 4),
@@ -253,7 +255,7 @@ class _AboutScreenState extends State<AboutScreen> {
             builder: (context, snapshot) {
               if (!service.isAvailable) {
                 return Text(
-                  'Ni uvozena.',
+                  context.l10n.aboutNotImported,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -264,7 +266,7 @@ class _AboutScreenState extends State<AboutScreen> {
                   ? ' • ${(size / (1024 * 1024)).toStringAsFixed(1)} MB'
                   : '';
               return Text(
-                '${_formatCount(service.rowCount)} lastnikov$sizeLabel',
+                context.l10n.aboutOwnersCount(_formatCount(service.rowCount), sizeLabel),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -278,7 +280,7 @@ class _AboutScreenState extends State<AboutScreen> {
               colorScheme,
               received: _ownerReceived,
               total: _ownerTotal,
-              label: 'Prenašam bazo lastnikov…',
+              label: context.l10n.aboutOwnersDownloading,
               onCancel: () => setState(() => _cancelOwnerDownload = true),
             )
           else
@@ -290,8 +292,8 @@ class _AboutScreenState extends State<AboutScreen> {
                     icon: const Icon(Icons.cloud_download_outlined),
                     label: Text(
                       service.isAvailable
-                          ? 'Posodobi (~300 MB)'
-                          : 'Prenesi (~300 MB)',
+                          ? context.l10n.aboutOwnersUpdateButton
+                          : context.l10n.aboutOwnersDownloadButton,
                     ),
                   ),
                 ),
@@ -299,14 +301,14 @@ class _AboutScreenState extends State<AboutScreen> {
                 IconButton.outlined(
                   onPressed: _importOwners,
                   icon: const Icon(Icons.file_open),
-                  tooltip: 'Uvozi iz datoteke (.sqlite)',
+                  tooltip: context.l10n.aboutImportFromFile,
                 ),
                 if (service.isAvailable) ...[
                   const SizedBox(width: 8),
                   IconButton.outlined(
                     onPressed: _removeOwners,
                     icon: const Icon(Icons.delete_outline),
-                    tooltip: 'Odstrani',
+                    tooltip: context.l10n.aboutRemove,
                   ),
                 ],
               ],
@@ -319,9 +321,9 @@ class _AboutScreenState extends State<AboutScreen> {
                 Icons.location_searching,
                 color: colorScheme.primary,
               ),
-              title: const Text('Iskanje lastnika brez povezave'),
-              subtitle: const Text(
-                'Ko ni povezave, določi lastnika iz približnih mej parcel (lokalna baza).',
+              title: Text(context.l10n.aboutOfflineOwnerSearch),
+              subtitle: Text(
+                context.l10n.aboutOfflineOwnerSearchDesc,
               ),
               value: OwnerOfflineSettingsService.instance.enabled,
               onChanged: (v) async {
@@ -338,9 +340,9 @@ class _AboutScreenState extends State<AboutScreen> {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             secondary: Icon(Icons.forest, color: colorScheme.primary),
-            title: const Text('Vlake (gozdne vlake)'),
-            subtitle: const Text(
-              'Omogoči sloj — prikaže se v izbiri slojev (Infrastruktura)',
+            title: Text(context.l10n.aboutVlake),
+            subtitle: Text(
+              context.l10n.aboutVlakeDesc,
             ),
             value: VlakeSettings.instance.enabled,
             onChanged: (v) async {
@@ -361,9 +363,9 @@ class _AboutScreenState extends State<AboutScreen> {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           secondary: Icon(Icons.http, color: colorScheme.primary),
-          title: const Text('Predpomnilnik HTTP'),
-          subtitle: const Text(
-            'Predpomni odgovore državnih API-jev (prostor.zgs.gov.si).',
+          title: Text(context.l10n.aboutHttpCache),
+          subtitle: Text(
+            context.l10n.aboutHttpCacheDesc,
           ),
           value: CacheSettings.instance.httpEnabled,
           onChanged: (v) async {
@@ -374,9 +376,9 @@ class _AboutScreenState extends State<AboutScreen> {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           secondary: Icon(Icons.map, color: colorScheme.primary),
-          title: const Text('Predpomnilnik ploščic'),
-          subtitle: const Text(
-            'Predpomni karte (ločeno od HTTP predpomnilnika).',
+          title: Text(context.l10n.aboutTileCache),
+          subtitle: Text(
+            context.l10n.aboutTileCacheDesc,
           ),
           value: CacheSettings.instance.tileEnabled,
           onChanged: (v) async {
@@ -389,7 +391,7 @@ class _AboutScreenState extends State<AboutScreen> {
           child: OutlinedButton.icon(
             onPressed: _clearFlutterMapCache,
             icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-            label: const Text('Počisti predpomnilnik karte'),
+            label: Text(context.l10n.aboutClearMapCache),
           ),
         ),
       ],
@@ -405,7 +407,7 @@ class _AboutScreenState extends State<AboutScreen> {
     final lower = path.toLowerCase();
     if (!lower.endsWith('.sqlite') && !lower.endsWith('.db')) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Izberi datoteko .sqlite.')),
+        SnackBar(content: Text(L10n.current.aboutPickSqlite)),
       );
       return;
     }
@@ -415,11 +417,11 @@ class _AboutScreenState extends State<AboutScreen> {
       if (mounted) setState(() {});
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Uvozenih ${_formatCount(imported.rows)} lastnikov.'),
+          content: Text(L10n.current.aboutOwnersImported(_formatCount(imported.rows))),
         ),
       );
     } catch (e) {
-      final message = e is FormatException ? e.message : 'Uvoz ni uspel: $e';
+      final message = e is FormatException ? e.message : L10n.current.aboutImportFailed('$e');
       messenger.showSnackBar(SnackBar(content: Text(message)));
     }
   }
@@ -429,7 +431,7 @@ class _AboutScreenState extends State<AboutScreen> {
     await OwnerLookupService.instance.remove();
     if (mounted) setState(() {});
     messenger.showSnackBar(
-      const SnackBar(content: Text('Baza lastnikov odstranjena.')),
+      SnackBar(content: Text(L10n.current.aboutOwnersRemoved)),
     );
   }
 
@@ -438,21 +440,17 @@ class _AboutScreenState extends State<AboutScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Počisti predpomnilnik karte?'),
-        content: const Text(
-          'Izbrisane bodo vse shranjene karte, tudi tiste, prenesene za delo '
-          'brez povezave. Brez signala jih ne bo mogoče prikazati, dokler jih '
-          'znova ne prenesete.',
-        ),
+        title: Text(context.l10n.aboutClearCacheTitle),
+        content: Text(context.l10n.aboutClearCacheBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Izbriši'),
+            child: Text(context.l10n.commonDelete),
           ),
         ],
       ),
@@ -461,11 +459,11 @@ class _AboutScreenState extends State<AboutScreen> {
     try {
       await TileCacheService().clearCache();
       messenger.showSnackBar(
-        const SnackBar(content: Text('Predpomnilnik karte počiščen.')),
+        SnackBar(content: Text(L10n.current.aboutCacheCleared)),
       );
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Brisanje predpomnilnika ni uspelo: $e')),
+        SnackBar(content: Text(L10n.current.aboutCacheClearFailed('$e'))),
       );
     }
   }
@@ -478,7 +476,7 @@ class _AboutScreenState extends State<AboutScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Offline kataster (parcele)',
+          context.l10n.aboutOfflineKataster,
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 4),
@@ -487,7 +485,7 @@ class _AboutScreenState extends State<AboutScreen> {
           builder: (context, snapshot) {
             if (!service.isAvailable) {
               return Text(
-                'Ni naložena — kataster se prikazuje prek spleta.',
+                context.l10n.aboutKatasterNotLoaded,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -505,8 +503,12 @@ class _AboutScreenState extends State<AboutScreen> {
                 ? '${regions.join(', ')}\n'
                 : '';
             return Text(
-              '$regionLabel${_formatCount(service.rowCount)} parcel'
-              '$sizeLabel$dateLabel • brez spleta',
+              context.l10n.aboutParcelsSummary(
+              regionLabel,
+              _formatCount(service.rowCount),
+              sizeLabel,
+              dateLabel,
+            ),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -521,7 +523,7 @@ class _AboutScreenState extends State<AboutScreen> {
             colorScheme,
             received: _parcelReceived,
             total: _parcelTotal,
-            label: _parcelDownloadLabel,
+            label: _parcelDownloadLabel ?? context.l10n.aboutDownloadingRegion,
             onCancel: () => setState(() => _cancelParcelDownload = true),
           )
         else
@@ -532,7 +534,7 @@ class _AboutScreenState extends State<AboutScreen> {
                   onPressed: _pickAndDownloadRegion,
                   icon: const Icon(Icons.cloud_download_outlined),
                   label: Text(
-                    service.isAvailable ? 'Dodaj regijo' : 'Prenesi regijo',
+                    service.isAvailable ? context.l10n.aboutAddRegion : context.l10n.aboutDownloadRegion,
                   ),
                 ),
               ),
@@ -540,14 +542,14 @@ class _AboutScreenState extends State<AboutScreen> {
               IconButton.outlined(
                 onPressed: _importParcels,
                 icon: const Icon(Icons.file_open),
-                tooltip: 'Uvozi iz datoteke (.sqlite)',
+                tooltip: context.l10n.aboutImportFromFile,
               ),
               if (service.isAvailable) ...[
                 const SizedBox(width: 8),
                 IconButton.outlined(
                   onPressed: _removeParcels,
                   icon: const Icon(Icons.delete_outline),
-                  tooltip: 'Odstrani',
+                  tooltip: context.l10n.aboutRemove,
                 ),
               ],
             ],
@@ -555,7 +557,7 @@ class _AboutScreenState extends State<AboutScreen> {
         if (!_downloadingParcels && !service.isAvailable) ...[
           const SizedBox(height: 6),
           Text(
-            'Prenesi le svojo statistično regijo — priporočena povezava Wi-Fi.',
+            context.l10n.aboutDownloadRegionHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -565,11 +567,11 @@ class _AboutScreenState extends State<AboutScreen> {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           secondary: Icon(Icons.lan, color: colorScheme.primary),
-          title: const Text('Deli offline kataster'),
+          title: Text(context.l10n.aboutShareKataster),
           subtitle: Text(
             _sharingKataster
-                ? 'Na voljo v lokalnem omrežju • najdenih naprav: $_katasterPeerCount'
-                : 'Dovoli drugim napravam v istem omrežju prenos naloženih regij.',
+                ? context.l10n.aboutShareKatasterActive(_katasterPeerCount)
+                : context.l10n.aboutShareKatasterDesc,
           ),
           value: _sharingKataster,
           onChanged: (enabled) async {
@@ -597,7 +599,7 @@ class _AboutScreenState extends State<AboutScreen> {
     final parts = <String>[
       if (update.outdatedRegions.isNotEmpty)
         update.outdatedRegions.map((r) => r.name).join(', '),
-      if (update.publicOwnersOutdated) 'javni lastniki',
+      if (update.publicOwnersOutdated) L10n.current.aboutPublicOwners,
     ];
     final mb = (update.bytes / (1024 * 1024)).toStringAsFixed(0);
     return Padding(
@@ -611,15 +613,17 @@ class _AboutScreenState extends State<AboutScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Na voljo je novejši kataster (${update.manifest.date ?? ''})',
+                context.l10n.aboutKatasterUpdateAvailable(update.manifest.date ?? ''),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               Text(
-                'Zastarelo: ${parts.join(' • ')}'
-                '${update.bytes > 0 ? ' • ~$mb MB' : ''}',
+                context.l10n.aboutKatasterOutdated(
+                  parts.join(' • '),
+                  update.bytes > 0 ? ' • ~$mb MB' : '',
+                ),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onPrimaryContainer,
                 ),
@@ -632,12 +636,12 @@ class _AboutScreenState extends State<AboutScreen> {
                       await KatasterUpdateService.instance.dismiss();
                       if (mounted) setState(() {});
                     },
-                    child: const Text('Pozneje'),
+                    child: Text(context.l10n.updateLater),
                   ),
                   FilledButton.icon(
                     onPressed: () => _applyKatasterUpdate(update),
                     icon: const Icon(Icons.system_update_alt),
-                    label: const Text('Posodobi'),
+                    label: Text(context.l10n.updateNow),
                   ),
                 ],
               ),
@@ -660,7 +664,7 @@ class _AboutScreenState extends State<AboutScreen> {
       setState(() {
         _downloadingParcels = true;
         _cancelParcelDownload = false;
-        _parcelDownloadLabel = 'Javni lastniki…';
+        _parcelDownloadLabel = L10n.current.aboutPublicOwnersLabel;
         _parcelReceived = 0;
         _parcelTotal = update.manifest.publicOwnersBytes;
       });
@@ -680,7 +684,7 @@ class _AboutScreenState extends State<AboutScreen> {
         );
         if (!ok && !_cancelParcelDownload) {
           messenger.showSnackBar(
-            const SnackBar(content: Text('Prenos javnih lastnikov ni uspel.')),
+            SnackBar(content: Text(L10n.current.aboutPublicOwnersFailed)),
           );
         }
       } finally {
@@ -704,7 +708,7 @@ class _AboutScreenState extends State<AboutScreen> {
     try {
       regions = await ParcelLookupService.fetchRegions(_regionsManifestUrl);
     } catch (e) {
-      final message = e is FormatException ? e.message : 'Napaka: $e';
+      final message = e is FormatException ? e.message : L10n.current.aboutErrorWithDetail('$e');
       messenger.showSnackBar(SnackBar(content: Text(message)));
       return;
     }
@@ -733,7 +737,7 @@ class _AboutScreenState extends State<AboutScreen> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Izberi statistične regije',
+                        context.l10n.aboutPickRegionsTitle,
                         style: Theme.of(sheetContext).textTheme.titleMedium,
                       ),
                     ),
@@ -764,8 +768,8 @@ class _AboutScreenState extends State<AboutScreen> {
                             subtitle: region.sizeMb != null
                                 ? Text(
                                     '${region.sizeMb!.toStringAsFixed(0)} MB'
-                                    '${region.rows != null ? ' • ${_formatCount(region.rows!)} parcel' : ''}'
-                                    '${loadedFiles.contains(region.file) ? ' • naloženo' : ''}',
+                                    '${region.rows != null ? context.l10n.aboutRegionParcels(_formatCount(region.rows!)) : ''}'
+                                    '${loadedFiles.contains(region.file) ? context.l10n.aboutRegionLoaded : ''}',
                                   )
                                 : null,
                           ),
@@ -787,8 +791,11 @@ class _AboutScreenState extends State<AboutScreen> {
                         icon: const Icon(Icons.cloud_download_outlined),
                         label: Text(
                           selected.isEmpty
-                              ? 'Prenesi'
-                              : 'Prenesi ${selected.length} (~$mb MB)',
+                              ? context.l10n.commonDownload
+                              : context.l10n.aboutDownloadSelected(
+                                  selected.length,
+                                  mb,
+                                ),
                         ),
                       ),
                     ),
@@ -821,7 +828,7 @@ class _AboutScreenState extends State<AboutScreen> {
         if (_cancelParcelDownload) break;
         final region = regions[i];
         setState(() {
-          _parcelDownloadLabel = '${region.name} (${i + 1}/${regions.length})…';
+          _parcelDownloadLabel = L10n.current.aboutRegionProgress(region.name, i + 1, regions.length);
           _parcelReceived = 0;
           _parcelTotal = region.bytes;
         });
@@ -849,8 +856,10 @@ class _AboutScreenState extends State<AboutScreen> {
         }
       }
       if (mounted) setState(() {});
-      final msg = StringBuffer('Prenesenih regij: $done.');
-      if (failures.isNotEmpty) msg.write(' Neuspešno: ${failures.join(', ')}.');
+      final msg = StringBuffer(L10n.current.aboutRegionsDownloaded(done));
+      if (failures.isNotEmpty) {
+        msg.write(L10n.current.aboutRegionsFailed(failures.join(', ')));
+      }
       messenger.showSnackBar(SnackBar(content: Text(msg.toString())));
       return _cancelParcelDownload;
     } finally {
@@ -895,7 +904,10 @@ class _AboutScreenState extends State<AboutScreen> {
                 ),
               ),
             ),
-            TextButton(onPressed: onCancel, child: const Text('Prekliči')),
+            TextButton(
+              onPressed: onCancel,
+              child: Text(context.l10n.commonCancel),
+            ),
           ],
         ),
       ],
@@ -913,20 +925,20 @@ class _AboutScreenState extends State<AboutScreen> {
           controller: controller,
           obscureText: true,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Geslo',
-            prefixIcon: Icon(Icons.lock_outline),
+          decoration: InputDecoration(
+            labelText: context.l10n.aboutPasswordLabel,
+            prefixIcon: const Icon(Icons.lock_outline),
           ),
           onSubmitted: (v) => Navigator.of(ctx).pop(v),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: const Text('Odkleni'),
+            child: Text(context.l10n.aboutUnlock),
           ),
         ],
       ),
@@ -937,7 +949,7 @@ class _AboutScreenState extends State<AboutScreen> {
     final messenger = ScaffoldMessenger.of(context);
     // The owners DB is AES-encrypted in transit; ask for the password to
     // decrypt it as it streams in.
-    final password = await _promptPassword('Geslo za bazo lastnikov');
+    final password = await _promptPassword(context.l10n.aboutOwnersPasswordTitle);
     if (password == null || password.isEmpty) return;
     setState(() {
       _downloadingOwners = true;
@@ -964,15 +976,15 @@ class _AboutScreenState extends State<AboutScreen> {
       if (mounted) setState(() {});
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Prenesenih ${_formatCount(result.rows)} lastnikov.'),
+          content: Text(L10n.current.aboutOwnersDownloaded(_formatCount(result.rows))),
         ),
       );
     } on OwnerDownloadCancelled {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Prenos preklican.')),
+        SnackBar(content: Text(L10n.current.aboutDownloadCancelled)),
       );
     } catch (e) {
-      final message = e is FormatException ? e.message : 'Prenos ni uspel: $e';
+      final message = e is FormatException ? e.message : L10n.current.aboutDownloadFailed('$e');
       messenger.showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) {
@@ -993,7 +1005,7 @@ class _AboutScreenState extends State<AboutScreen> {
     final lower = path.toLowerCase();
     if (!lower.endsWith('.sqlite') && !lower.endsWith('.db')) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Izberi datoteko .sqlite.')),
+        SnackBar(content: Text(L10n.current.aboutPickSqlite)),
       );
       return;
     }
@@ -1003,11 +1015,11 @@ class _AboutScreenState extends State<AboutScreen> {
       if (mounted) setState(() {});
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Uvoženih ${_formatCount(imported.rows)} parcel.'),
+          content: Text(L10n.current.aboutParcelsImported(_formatCount(imported.rows))),
         ),
       );
     } catch (e) {
-      final message = e is FormatException ? e.message : 'Uvoz ni uspel: $e';
+      final message = e is FormatException ? e.message : L10n.current.aboutImportFailed('$e');
       messenger.showSnackBar(SnackBar(content: Text(message)));
     }
   }
@@ -1017,7 +1029,7 @@ class _AboutScreenState extends State<AboutScreen> {
     await ParcelLookupService.instance.removeAll();
     if (mounted) setState(() {});
     messenger.showSnackBar(
-      const SnackBar(content: Text('Baze parcel odstranjene.')),
+      SnackBar(content: Text(L10n.current.aboutParcelsRemoved)),
     );
   }
 
@@ -1028,7 +1040,7 @@ class _AboutScreenState extends State<AboutScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Pobriši podatke (baze parcel + lastnikov)',
+          context.l10n.aboutWipeSection,
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 8),
@@ -1039,12 +1051,12 @@ class _AboutScreenState extends State<AboutScreen> {
             OutlinedButton.icon(
               onPressed: () => _wipeData(_WipeScope.imported),
               icon: const Icon(Icons.file_open_outlined, size: 18),
-              label: const Text('Uvožene'),
+              label: Text(context.l10n.aboutWipeImported),
             ),
             OutlinedButton.icon(
               onPressed: () => _wipeData(_WipeScope.downloaded),
               icon: const Icon(Icons.cloud_off_outlined, size: 18),
-              label: const Text('Prenesene'),
+              label: Text(context.l10n.aboutWipeDownloaded),
             ),
             OutlinedButton.icon(
               onPressed: () => _wipeData(_WipeScope.all),
@@ -1052,7 +1064,7 @@ class _AboutScreenState extends State<AboutScreen> {
                 foregroundColor: colorScheme.error,
               ),
               icon: const Icon(Icons.delete_forever, size: 18),
-              label: const Text('Vse'),
+              label: Text(context.l10n.aboutWipeAll),
             ),
           ],
         ),
@@ -1063,25 +1075,23 @@ class _AboutScreenState extends State<AboutScreen> {
   Future<void> _wipeData(_WipeScope scope) async {
     final messenger = ScaffoldMessenger.of(context);
     final label = switch (scope) {
-      _WipeScope.all => 'vse baze',
-      _WipeScope.imported => 'uvožene baze',
-      _WipeScope.downloaded => 'prenesene baze',
+      _WipeScope.all => context.l10n.aboutWipeScopeAll,
+      _WipeScope.imported => context.l10n.aboutWipeScopeImported,
+      _WipeScope.downloaded => context.l10n.aboutWipeScopeDownloaded,
     };
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Pobriši podatke'),
-        content: Text(
-          'Ali res želiš pobrisati $label? Tega ni mogoče razveljaviti.',
-        ),
+        title: Text(context.l10n.aboutWipeTitle),
+        content: Text(context.l10n.aboutWipeConfirm(label)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Pobriši'),
+            child: Text(context.l10n.aboutWipeButton),
           ),
         ],
       ),
@@ -1109,8 +1119,8 @@ class _AboutScreenState extends State<AboutScreen> {
       SnackBar(
         content: Text(
           removed == 0
-              ? 'Ni ustreznih baz za brisanje.'
-              : 'Pobrisanih baz: $removed.',
+              ? L10n.current.aboutWipeNone
+              : L10n.current.aboutWipeDone(removed),
         ),
       ),
     );
@@ -1127,10 +1137,49 @@ class _AboutScreenState extends State<AboutScreen> {
     return buffer.toString();
   }
 
+  /// Language selector: follow the device, or force Slovenian / Croatian.
+  Widget _buildLanguageRow(BuildContext context, ColorScheme colorScheme) {
+    return ListenableBuilder(
+      listenable: LocaleSettings.instance,
+      builder: (context, _) {
+        final code = LocaleSettings.instance.override?.languageCode;
+        return ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.language, color: colorScheme.primary),
+          title: Text(context.l10n.aboutLanguage),
+          trailing: DropdownButton<String>(
+            value: (code == 'sl' || code == 'hr') ? code : 'auto',
+            underline: const SizedBox.shrink(),
+            items: [
+              DropdownMenuItem(
+                value: 'auto',
+                child: Text(context.l10n.aboutLanguageAuto),
+              ),
+              const DropdownMenuItem(value: 'sl', child: Text('Slovenščina')),
+              const DropdownMenuItem(value: 'hr', child: Text('Hrvatski')),
+            ],
+            onChanged: (v) => LocaleSettings.instance.setOverride(
+              (v == null || v == 'auto') ? null : Locale(v),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildSettingsCard(BuildContext context, ColorScheme colorScheme) {
     return Card(
       child: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Column(
+              children: [
+                _buildLanguageRow(context, colorScheme),
+                const Divider(height: 16),
+              ],
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: _buildParcelsDbSection(context, colorScheme),
@@ -1184,8 +1233,7 @@ class _AboutScreenState extends State<AboutScreen> {
             _buildMapSourceItem(
               context,
               'Zavod za gozdove Slovenije (ZGS)',
-              'Gozdarski sloji, sestoji, odseki, revirji, gozdni rezervati, '
-                  'varovalni gozdovi, požarna ogroženost, vetrolomi, podlubniki',
+              context.l10n.aboutSrcZgsDesc,
               'https://prostor.zgs.gov.si',
               Icons.park,
             ),
@@ -1193,8 +1241,7 @@ class _AboutScreenState extends State<AboutScreen> {
             _buildMapSourceItem(
               context,
               'Geodetska uprava RS (GURS)',
-              'Ortofoto posnetki (2022-2024), kataster, katastrske občine, '
-                  'občine, upravne enote, DMR',
+              context.l10n.aboutSrcGursDesc,
               'https://www.e-prostor.gov.si',
               Icons.map,
             ),
@@ -1202,7 +1249,7 @@ class _AboutScreenState extends State<AboutScreen> {
             _buildMapSourceItem(
               context,
               'OpenStreetMap',
-              'Osnovni zemljevid in topografski podatki',
+              context.l10n.aboutSrcOsmDesc,
               'https://www.openstreetmap.org',
               Icons.public,
             ),
@@ -1210,7 +1257,7 @@ class _AboutScreenState extends State<AboutScreen> {
             _buildMapSourceItem(
               context,
               'Topo LIDAR + OSM',
-              'Topografski zemljevid (Seznam.cz)',
+              context.l10n.aboutSrcTopoDesc,
               'https://mapy.cz',
               Icons.terrain,
             ),
@@ -1218,7 +1265,7 @@ class _AboutScreenState extends State<AboutScreen> {
             _buildMapSourceItem(
               context,
               'ESRI',
-              'Satelitski posnetki in topografski zemljevid',
+              context.l10n.aboutSrcEsriDesc,
               'https://www.esri.com',
               Icons.satellite_alt,
             ),
@@ -1289,17 +1336,14 @@ class _AboutScreenState extends State<AboutScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Pogoji uporabe',
+              context.l10n.aboutTermsTitle,
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
-              'Aplikacija Gozdar je namenjena izključno informativnim namenom. '
-              'Podatki o parcelah, gozdnih sestojih in drugih kartografskih '
-              'slojih so povzeti iz javno dostopnih virov in morda niso '
-              'posodobljeni ali popolnoma točni.',
+              context.l10n.aboutTermsBody,
               style: TextStyle(
                 fontSize: 13,
                 color: colorScheme.onSurfaceVariant,
@@ -1308,17 +1352,14 @@ class _AboutScreenState extends State<AboutScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Omejitev odgovornosti',
+              context.l10n.aboutDisclaimerTitle,
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
-              'Razvijalec ne prevzema odgovornosti za morebitno škodo, ki bi '
-              'nastala zaradi uporabe aplikacije ali podatkov v njej. Za '
-              'uradne podatke o lastništvu in mejah parcel se obrnite na '
-              'pristojne organe (GURS, ZGS).',
+              context.l10n.aboutDisclaimerBody,
               style: TextStyle(
                 fontSize: 13,
                 color: colorScheme.onSurfaceVariant,
@@ -1327,16 +1368,14 @@ class _AboutScreenState extends State<AboutScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Avtorske pravice',
+              context.l10n.aboutCopyrightTitle,
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
-              'Kartografski podatki ZGS in GURS so last Republike Slovenije. '
-              'OpenStreetMap podatki so na voljo pod licenco ODbL. '
-              'ESRI podatki so last Esri Inc.',
+              context.l10n.aboutCopyrightBody,
               style: TextStyle(
                 fontSize: 13,
                 color: colorScheme.onSurfaceVariant,
@@ -1345,17 +1384,14 @@ class _AboutScreenState extends State<AboutScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Zasebnost',
+              context.l10n.aboutPrivacyTitle,
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
-              'Aplikacija zbira anonimne podatke o uporabi za izboljšanje '
-              'delovanja (Firebase Analytics). Lokacijski podatki se ne '
-              'pošiljajo na strežnik - vsi podatki o parcelah in hlodih '
-              'se hranijo lokalno na napravi.',
+              context.l10n.aboutPrivacyBody,
               style: TextStyle(
                 fontSize: 13,
                 color: colorScheme.onSurfaceVariant,
@@ -1372,8 +1408,8 @@ class _AboutScreenState extends State<AboutScreen> {
     return Card(
       child: ListTile(
         leading: Icon(Icons.code, color: colorScheme.primary),
-        title: const Text('Prikaži licence'),
-        subtitle: const Text('Flutter in odprtokodne knjižnice'),
+        title: Text(context.l10n.aboutShowLicenses),
+        subtitle: Text(context.l10n.aboutLicensesDesc),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
           showLicensePage(
@@ -1404,7 +1440,7 @@ class _AboutScreenState extends State<AboutScreen> {
         children: [
           ListTile(
             leading: Icon(Icons.bug_report, color: colorScheme.primary),
-            title: const Text('Prijavi napako'),
+            title: Text(context.l10n.aboutReportBug),
             subtitle: const Text('GitHub Issues'),
             trailing: const Icon(Icons.open_in_new, size: 18),
             onTap: () => _launchUrl('https://github.com/dz0ny/gozdar/issues'),
@@ -1412,16 +1448,16 @@ class _AboutScreenState extends State<AboutScreen> {
           const Divider(height: 1),
           ListTile(
             leading: Icon(Icons.email, color: colorScheme.primary),
-            title: const Text('Kontakt'),
-            subtitle: const Text('Pošljite povratne informacije'),
+            title: Text(context.l10n.aboutContact),
+            subtitle: Text(context.l10n.aboutContactDesc),
             trailing: const Icon(Icons.open_in_new, size: 18),
             onTap: () => _launchUrl('mailto:gozdar@dz0ny.dev'),
           ),
           const Divider(height: 1),
           ListTile(
             leading: Icon(Icons.star, color: colorScheme.primary),
-            title: const Text('Izvorna koda'),
-            subtitle: const Text('Odprtokodni projekt na GitHub'),
+            title: Text(context.l10n.aboutSourceCode),
+            subtitle: Text(context.l10n.aboutSourceCodeDesc),
             trailing: const Icon(Icons.open_in_new, size: 18),
             onTap: () => _launchUrl('https://github.com/dz0ny/gozdar'),
           ),

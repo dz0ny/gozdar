@@ -12,6 +12,7 @@ import 'package:pdf/widgets.dart' as pw;
 import '../models/map_layer.dart';
 import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../l10n/l10n.dart';
 
 /// Builds a printable PDF for a cadastral parcel: a snapshot of the map
 /// (base layer + active cadastral overlays, identical to what is shown on
@@ -254,22 +255,23 @@ class ParcelPdfService {
   }) async {
     final theme = await _loadTheme();
     final doc = pw.Document(theme: theme);
-    final dateStr = DateFormat('d. M. yyyy').format(DateTime.now());
+    final dateStr = DateFormat('d. M. yyyy', L10n.current.localeName).format(DateTime.now());
+    final l10n = L10n.current;
     final koValue = owner?.koName != null
         ? '${owner!.koName} (${parcel.cadastralMunicipality})'
         : parcel.cadastralMunicipality.toString();
 
     // All available attributes (rows with no value are skipped).
     final rows = <({String label, String value})>[
-      (label: 'Katastrska občina', value: koValue),
-      (label: 'Parcelna številka', value: parcel.parcelNumber),
-      (label: 'Površina', value: parcel.formattedArea),
+      (label: l10n.parcelPdfKo, value: koValue),
+      (label: l10n.parcelPdfNumber, value: parcel.parcelNumber),
+      (label: l10n.parcelPdfArea, value: parcel.formattedArea),
       if (owner != null && owner.displayOwners.isNotEmpty)
-        (label: 'Lastnik', value: owner.displayOwners),
+        (label: l10n.parcelOwnerTitle, value: owner.displayOwners),
       if (owner?.address != null)
-        (label: 'Naslov', value: owner!.address!),
+        (label: l10n.parcelPdfAddress, value: owner!.address!),
       if (owner?.municipality != null)
-        (label: 'Občina', value: owner!.municipality!),
+        (label: l10n.parcelPdfMunicipality, value: owner!.municipality!),
     ];
 
     doc.addPage(
@@ -281,7 +283,7 @@ class ParcelPdfService {
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
               pw.Text(
-                'Parcela ${parcel.parcelNumber}',
+                l10n.parcelFoundTitle(parcel.parcelNumber),
                 style: pw.TextStyle(
                   fontSize: 24,
                   fontWeight: pw.FontWeight.bold,
@@ -305,7 +307,7 @@ class ParcelPdfService {
                           height: 120,
                           alignment: pw.Alignment.center,
                           child: pw.Text(
-                            'Zemljevida ni bilo mogoče naložiti',
+                            l10n.parcelPdfMapFailed,
                             style: const pw.TextStyle(color: PdfColors.grey600),
                           ),
                         ),
@@ -319,14 +321,14 @@ class ParcelPdfService {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
-                    'Gozdar • Izpisano: $dateStr',
+                    l10n.parcelPdfFooter(dateStr),
                     style: const pw.TextStyle(
                       fontSize: 9,
                       color: PdfColors.grey600,
                     ),
                   ),
                   pw.Text(
-                    'Vir: © GURS, © ZGS',
+                    l10n.parcelPdfSource,
                     style: const pw.TextStyle(
                       fontSize: 9,
                       color: PdfColors.grey600,

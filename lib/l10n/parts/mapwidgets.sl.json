@@ -1,0 +1,292 @@
+{
+  "mapwAddLocationTitle": "Dodaj lokacijo",
+  "mapwAddLocationHint": "Koordinate iz dolgo-pritiska ali vnesite svoje",
+  "mapwLatLabel": "Zemljepisna širina (Lat)",
+  "mapwLngLabel": "Zemljepisna dolžina (Lng)",
+  "mapwLatExample": "npr. 46.0569",
+  "mapwLngExample": "npr. 14.5058",
+  "mapwEnterLat": "Vnesite širino",
+  "mapwEnterLng": "Vnesite dolžino",
+  "mapwInvalidNumber": "Neveljavna številka",
+  "mapwLatRange": "Širina mora biti med -90 in 90",
+  "mapwLngRange": "Dolžina mora biti med -180 in 180",
+  "mapwLatNotInSlovenia": "Lokacija ni v Sloveniji (45.4-46.9)",
+  "mapwLngNotInSlovenia": "Lokacija ni v Sloveniji (13.3-16.6)",
+  "mapwLocationNameLabel": "Ime lokacije",
+  "mapwLocationNameHint": "Vnesite ime za to lokacijo",
+  "mapwEnterName": "Vnesite ime",
+  "mapwMarkFellingTitle": "Označi sečnjo",
+  "mapwTreeDescLabel": "Opis drevesa",
+  "mapwTreeDescHint": "npr. Hrast, Bukev, Smreka...",
+  "mapwEnterDescription": "Prosim vnesite opis",
+  "mapwMarkAction": "Označi",
+  "mapwDeleteLocationTitle": "Izbriši lokacijo",
+  "mapwDeleteLocationSure": "Ali ste prepričani, da želite izbrisati \"{name}\"?",
+  "@mapwDeleteLocationSure": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwAddLocationByCoordsTitle": "Dodaj lokacijo s koordinatami",
+  "mapwEnterWgs84Hint": "Vnesite koordinate v WGS84 formatu (decimalne stopinje)",
+  "mapwRenameLocationTitle": "Preimenuj lokacijo",
+  "mapwNameLabel": "Ime",
+  "mapwParcelTitle": "Parcela {number}",
+  "@mapwParcelTitle": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwCadastralParcel": "Katastrska parcela",
+  "mapwCadastralMunicipality": "Katastrska občina",
+  "mapwArea": "Površina",
+  "mapwOwner": "Lastnik",
+  "mapwDeleteLocationQuestion": "Ali res želite izbrisati lokacijo \"{name}\"?",
+  "@mapwDeleteLocationQuestion": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwResetOnboardingTitle": "Ponastavi uvodni vodič",
+  "mapwResetOnboardingBody": "Ali res želite ponastaviti uvodni vodič? Ponovno zaženite aplikacijo.",
+  "mapwReset": "Ponastavi",
+  "mapwMenuMeasure": "Merjenje",
+  "mapwMenuNavigate": "Navigiraj",
+  "mapwMenuParcel": "Parcela",
+  "mapwMenuImport": "Uvozi",
+  "mapwPublicParcel": "Javna parcela • {category}",
+  "@mapwPublicParcel": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwMenuPoint": "Točka",
+  "mapwMenuLogs": "Hlodovina",
+  "mapwMenuFelling": "Sečnja",
+  "mapwMenuDistance": "Razdalja",
+  "mapwMenuBoundaries": "Mejniki",
+  "mapwSelectLayer": "Izberi sloj",
+  "mapwSearchParcelByKo": "Išči parcelo po KO",
+  "mapwZoomIn": "Povečaj karto",
+  "mapwZoomOut": "Pomanjšaj karto",
+  "mapwCenterOnGps": "Centriraj na GPS lokacijo",
+  "mapwSavedLocations": "Shranjene lokacije",
+  "mapwLayersTitle": "Sloji karte",
+  "mapwTabBase": "Podlaga",
+  "mapwTabOverlays": "Prekrivni sloji",
+  "mapwInternationalMaps": "Mednarodne karte",
+  "mapwSlovenianMaps": "Slovenske karte",
+  "mapwDownloadOffline": "Prenesi za delo brez povezave",
+  "mapwImportGeodata": "Uvozi geodatke (KML, KMZ)",
+  "mapwNoResults": "Ni rezultatov",
+  "mapwActiveCount": "{count} aktivnih",
+  "@mapwActiveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwPublicParcels": "Javne parcele",
+  "mapwVlakeHint": "Vlake (pri večji povečavi)",
+  "mapwAddByCoordinates": "Dodaj s koordinatami",
+  "mapwSectionPoints": "Točke",
+  "mapwNoSavedLocations": "Ni shranjenih lokacij",
+  "mapwRename": "Preimenuj",
+  "mapwNavAppOpenFailed": "Aplikacije za navigacijo ni bilo mogoče odpreti.",
+  "mapwGoogleMaps": "Google Zemljevidi",
+  "mapwAppleMaps": "Apple Zemljevidi",
+  "mapwRoadNavigation": "Navigacija po cesti",
+  "mapwInAppCompass": "Kompas v aplikaciji",
+  "mapwInAppCompassHint": "Smer in razdalja do cilja, tudi brez spleta",
+  "mapwCopyCoordinates": "Kopiraj koordinate",
+  "mapwCoordinatesCopied": "Koordinate kopirane",
+  "mapwCompassN": "S",
+  "mapwCompassE": "V",
+  "mapwCompassS": "J",
+  "mapwCompassW": "Z",
+  "mapwCompassNE": "SV",
+  "mapwCompassSE": "JV",
+  "mapwCompassSW": "JZ",
+  "mapwCompassNW": "SZ",
+  "mapwCompassLowAccuracy": "Nizka natančnost kompasa (±{degrees}°). Kalibrirajte napravo.",
+  "@mapwCompassLowAccuracy": {
+    "placeholders": {
+      "degrees": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwCompassMediumAccuracy": "Zmerna natančnost kompasa (±{degrees}°)",
+  "@mapwCompassMediumAccuracy": {
+    "placeholders": {
+      "degrees": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwLocationPermissionDenied": "Dovoljenje za lokacijo zavrnjeno — razdalja ni na voljo",
+  "mapwCompass": "Kompas",
+  "mapwDistance": "Razdalja",
+  "mapwAzimuth": "Azimut",
+  "mapwDirection": "Smer",
+  "mapwTileTemplateUnavailable": "URL predloge ni na voljo",
+  "mapwDownloadComplete": "Prenos končan",
+  "mapwClearCacheTitle": "Počisti predpomnilnik?",
+  "mapwClearCacheBody": "Vse prenesene ploščice bodo izbrisane. Te operacije ni mogoče razveljaviti.",
+  "mapwCacheCleared": "Predpomnilnik izpraznjen",
+  "mapwSyncing": "Sinhroniziram {name}",
+  "@mapwSyncing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwSyncDownloaded": "Preneseno {done}/{total}",
+  "@mapwSyncDownloaded": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwSyncFromCache": "Iz predpomnilnika {done}/{total}",
+  "@mapwSyncFromCache": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwSyncDone": "Končano! {downloaded} prenesenih, {skipped} iz predpomnilnika, {failed} neuspešnih",
+  "@mapwSyncDone": {
+    "placeholders": {
+      "downloaded": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwSyncCancelled": "Sinhronizacija preklicana",
+  "mapwTileSharing": "Deljenje ploščic",
+  "mapwShareMyTiles": "Deli moje ploščice",
+  "mapwSharingOnHint": "Druge naprave lahko prenesejo ploščice s te naprave",
+  "mapwSharingOffHint": "Začni deliti predpomnjene ploščice z bližnjimi napravami",
+  "mapwMyCachedMaps": "Moje predpomnjene karte",
+  "mapwTilesAndSize": "{tiles} ploščic, {size}",
+  "@mapwTilesAndSize": {
+    "placeholders": {
+      "tiles": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwNearbyDevices": "Bližnje naprave",
+  "mapwRefresh": "Osveži",
+  "mapwAddDeviceManually": "Ročno dodaj napravo",
+  "mapwNoDevicesFound": "V lokalnem omrežju ni najdenih naprav.\nPreverite, da imajo druge naprave vključeno deljenje ploščic.",
+  "mapwFetchingCatalog": "Pridobivam katalog",
+  "mapwNoCachedTilesOnDevice": "Na tej napravi ni predpomnjenih ploščic",
+  "mapwYouHave": " (imate {count})",
+  "@mapwYouHave": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwDownloadAll": "Prenesi vse",
+  "mapwAddDeviceTitle": "Dodaj napravo",
+  "mapwIpAddress": "IP naslov",
+  "mapwDeleteStyleTitle": "Izbriši {name}?",
+  "@mapwDeleteStyleTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwDeleteStyleBody": "{tiles} ploščic, {size} bo izbrisanih.",
+  "@mapwDeleteStyleBody": {
+    "placeholders": {
+      "tiles": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwTileDownloadTitle": "Prenos kart",
+  "mapwForOfflineWork": "Za delo brez povezave",
+  "mapwSharingEnabled": "Deljenje ploščic vključeno",
+  "mapwSharingDisabled": "Deljenje ploščic izklopljeno",
+  "mapwLayersShort": "Sloji",
+  "mapwZoomLevel": "Povečava",
+  "mapwEstimate": "Ocena",
+  "mapwEstimatedTiles": "~{count} ploščic",
+  "@mapwEstimatedTiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwDownloadingPercent": "Prenašam... {percent}%",
+  "@mapwDownloadingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwLayerNotDownloadable": "Sloj ni na voljo za prenos",
+  "mapwNoXyzTemplate": "Za ta sloj ni bilo mogoče določiti XYZ predloge.",
+  "mapwCache": "Predpomnilnik",
+  "mapwCacheStats": "{tiles} ploščic ({size} MB)",
+  "@mapwCacheStats": {
+    "placeholders": {
+      "tiles": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwClearCache": "Počisti predpomnilnik",
+  "mapwParcelAlreadyInDb": "Parcela {municipality} - {number} je že v bazi podatkov",
+  "@mapwParcelAlreadyInDb": {
+    "placeholders": {
+      "municipality": {
+        "type": "String"
+      },
+      "number": {
+        "type": "String"
+      }
+    }
+  }
+}

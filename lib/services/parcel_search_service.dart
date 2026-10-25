@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 import 'ko_locator.dart';
 import 'owner_lookup_service.dart';
 import 'parcel_lookup_service.dart';
+import '../l10n/l10n.dart';
 
 enum ParcelSuggestionKind { parcel, owner, ko }
 
@@ -151,9 +152,9 @@ class ParcelSearchService {
       final owners = hit.owners.take(2).join(', ');
       out.add(ParcelSuggestion(
         kind: ParcelSuggestionKind.owner,
-        title: 'Parcela ${hit.parcela}',
+        title: L10n.current.parcelFoundTitle(hit.parcela),
         subtitle: [
-          if (koName != null) 'KO $koName' else 'KO ${hit.sifko}',
+          L10n.current.parcelFoundKo(koName ?? '${hit.sifko}'),
           if (owners.isNotEmpty) owners,
           if (hit.address != null) hit.address!,
         ].join(' • '),
@@ -183,8 +184,8 @@ class ParcelSearchService {
   static ParcelSuggestion _parcelFor(KoInfo k, String number) =>
       ParcelSuggestion(
         kind: ParcelSuggestionKind.parcel,
-        title: 'Parcela $number',
-        subtitle: 'KO ${k.label}',
+        title: L10n.current.parcelFoundTitle(number),
+        subtitle: L10n.current.parcelFoundKo(k.label),
         sifko: k.sifko,
         parcela: number,
         ko: k,
@@ -193,7 +194,7 @@ class ParcelSearchService {
   static ParcelSuggestion _koSuggestion(KoInfo k) => ParcelSuggestion(
         kind: ParcelSuggestionKind.ko,
         title: k.name,
-        subtitle: 'Katastrska občina ${k.sifko}',
+        subtitle: L10n.current.parcelSearchKoSubtitle(k.sifko),
         ko: k,
       );
 }

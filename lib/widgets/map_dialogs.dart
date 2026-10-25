@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import '../l10n/l10n.dart';
 import '../models/map_location.dart';
 import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
@@ -27,7 +28,7 @@ class MapDialogs {
           children: [
             Icon(Icons.add_location_alt, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            const Expanded(child: Text('Dodaj lokacijo')),
+            Expanded(child: Text(context.l10n.mapwAddLocationTitle)),
           ],
         ),
         content: Form(
@@ -38,33 +39,33 @@ class MapDialogs {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Koordinate iz dolgo-pritiska ali vnesite svoje',
+                  context.l10n.mapwAddLocationHint,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: latController,
-                  decoration: const InputDecoration(
-                    labelText: 'Zemljepisna širina (Lat)',
-                    hintText: 'npr. 46.0569',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.mapwLatLabel,
+                    hintText: context.l10n.mapwLatExample,
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.north),
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Vnesite širino';
+                      return context.l10n.mapwEnterLat;
                     }
                     final lat = double.tryParse(value.trim().replaceAll(',', '.'));
                     if (lat == null) {
-                      return 'Neveljavna številka';
+                      return context.l10n.mapwInvalidNumber;
                     }
                     if (lat < -90 || lat > 90) {
-                      return 'Širina mora biti med -90 in 90';
+                      return context.l10n.mapwLatRange;
                     }
                     // Slovenia bounds check (rough)
                     if (lat < 45.4 || lat > 46.9) {
-                      return 'Lokacija ni v Sloveniji (45.4-46.9)';
+                      return context.l10n.mapwLatNotInSlovenia;
                     }
                     return null;
                   },
@@ -72,27 +73,27 @@ class MapDialogs {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: lngController,
-                  decoration: const InputDecoration(
-                    labelText: 'Zemljepisna dolžina (Lng)',
-                    hintText: 'npr. 14.5058',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.mapwLngLabel,
+                    hintText: context.l10n.mapwLngExample,
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.east),
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Vnesite dolžino';
+                      return context.l10n.mapwEnterLng;
                     }
                     final lng = double.tryParse(value.trim().replaceAll(',', '.'));
                     if (lng == null) {
-                      return 'Neveljavna številka';
+                      return context.l10n.mapwInvalidNumber;
                     }
                     if (lng < -180 || lng > 180) {
-                      return 'Dolžina mora biti med -180 in 180';
+                      return context.l10n.mapwLngRange;
                     }
                     // Slovenia bounds check (rough)
                     if (lng < 13.3 || lng > 16.6) {
-                      return 'Lokacija ni v Sloveniji (13.3-16.6)';
+                      return context.l10n.mapwLngNotInSlovenia;
                     }
                     return null;
                   },
@@ -100,9 +101,9 @@ class MapDialogs {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ime lokacije',
-                    hintText: 'Vnesite ime za to lokacijo',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.mapwLocationNameLabel,
+                    hintText: context.l10n.mapwLocationNameHint,
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.label),
                   ),
@@ -110,7 +111,7 @@ class MapDialogs {
                   textCapitalization: TextCapitalization.words,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Vnesite ime';
+                      return context.l10n.mapwEnterName;
                     }
                     return null;
                   },
@@ -122,7 +123,7 @@ class MapDialogs {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton.icon(
             onPressed: () {
@@ -131,7 +132,7 @@ class MapDialogs {
               }
             },
             icon: const Icon(Icons.add_location),
-            label: const Text('Dodaj'),
+            label: Text(context.l10n.commonAdd),
           ),
         ],
       ),
@@ -160,7 +161,7 @@ class MapDialogs {
           children: [
             Icon(Icons.carpenter, color: Colors.deepOrange),
             const SizedBox(width: 8),
-            const Text('Označi sečnjo'),
+            Text(context.l10n.mapwMarkFellingTitle),
           ],
         ),
         content: Column(
@@ -175,9 +176,9 @@ class MapDialogs {
             const SizedBox(height: 16),
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Opis drevesa',
-                hintText: 'npr. Hrast, Bukev, Smreka...',
+              decoration: InputDecoration(
+                labelText: context.l10n.mapwTreeDescLabel,
+                hintText: context.l10n.mapwTreeDescHint,
                 border: OutlineInputBorder(),
               ),
               autofocus: true,
@@ -188,20 +189,20 @@ class MapDialogs {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton.icon(
             onPressed: () {
               if (nameController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Prosim vnesite opis')),
+                  SnackBar(content: Text(context.l10n.mapwEnterDescription)),
                 );
                 return;
               }
               Navigator.of(context).pop(true);
             },
             icon: const Icon(Icons.carpenter),
-            label: const Text('Označi'),
+            label: Text(context.l10n.mapwMarkAction),
             style: FilledButton.styleFrom(backgroundColor: Colors.deepOrange),
           ),
         ],
@@ -223,19 +224,17 @@ class MapDialogs {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Izbriši lokacijo'),
-        content: Text(
-          'Ali ste prepričani, da želite izbrisati "${location.name}"?',
-        ),
+        title: Text(context.l10n.mapwDeleteLocationTitle),
+        content: Text(context.l10n.mapwDeleteLocationSure(location.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Izbriši'),
+            child: Text(context.l10n.commonDelete),
           ),
         ],
       ),
@@ -261,7 +260,7 @@ class MapDialogs {
           children: [
             Icon(Icons.edit_location_alt, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            const Expanded(child: Text('Dodaj lokacijo s koordinatami')),
+            Expanded(child: Text(context.l10n.mapwAddLocationByCoordsTitle)),
           ],
         ),
         content: Form(
@@ -272,33 +271,33 @@ class MapDialogs {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Vnesite koordinate v WGS84 formatu (decimalne stopinje)',
+                  context.l10n.mapwEnterWgs84Hint,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: latController,
-                  decoration: const InputDecoration(
-                    labelText: 'Zemljepisna širina (Lat)',
-                    hintText: 'npr. 46.0569',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.mapwLatLabel,
+                    hintText: context.l10n.mapwLatExample,
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.north),
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Vnesite širino';
+                      return context.l10n.mapwEnterLat;
                     }
                     final lat = double.tryParse(value.trim().replaceAll(',', '.'));
                     if (lat == null) {
-                      return 'Neveljavna številka';
+                      return context.l10n.mapwInvalidNumber;
                     }
                     if (lat < -90 || lat > 90) {
-                      return 'Širina mora biti med -90 in 90';
+                      return context.l10n.mapwLatRange;
                     }
                     // Slovenia bounds check (rough)
                     if (lat < 45.4 || lat > 46.9) {
-                      return 'Lokacija ni v Sloveniji (45.4-46.9)';
+                      return context.l10n.mapwLatNotInSlovenia;
                     }
                     return null;
                   },
@@ -306,27 +305,27 @@ class MapDialogs {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: lngController,
-                  decoration: const InputDecoration(
-                    labelText: 'Zemljepisna dolžina (Lng)',
-                    hintText: 'npr. 14.5058',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.mapwLngLabel,
+                    hintText: context.l10n.mapwLngExample,
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.east),
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Vnesite dolžino';
+                      return context.l10n.mapwEnterLng;
                     }
                     final lng = double.tryParse(value.trim().replaceAll(',', '.'));
                     if (lng == null) {
-                      return 'Neveljavna številka';
+                      return context.l10n.mapwInvalidNumber;
                     }
                     if (lng < -180 || lng > 180) {
-                      return 'Dolžina mora biti med -180 in 180';
+                      return context.l10n.mapwLngRange;
                     }
                     // Slovenia bounds check (rough)
                     if (lng < 13.3 || lng > 16.6) {
-                      return 'Lokacija ni v Sloveniji (13.3-16.6)';
+                      return context.l10n.mapwLngNotInSlovenia;
                     }
                     return null;
                   },
@@ -334,16 +333,16 @@ class MapDialogs {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ime lokacije',
-                    hintText: 'Vnesite ime za to lokacijo',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.mapwLocationNameLabel,
+                    hintText: context.l10n.mapwLocationNameHint,
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.label),
                   ),
                   textCapitalization: TextCapitalization.words,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Vnesite ime';
+                      return context.l10n.mapwEnterName;
                     }
                     return null;
                   },
@@ -355,7 +354,7 @@ class MapDialogs {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton.icon(
             onPressed: () {
@@ -364,7 +363,7 @@ class MapDialogs {
               }
             },
             icon: const Icon(Icons.add_location),
-            label: const Text('Dodaj'),
+            label: Text(context.l10n.commonAdd),
           ),
         ],
       ),
@@ -388,11 +387,11 @@ class MapDialogs {
     final newName = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Preimenuj lokacijo'),
+        title: Text(context.l10n.mapwRenameLocationTitle),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Ime',
+          decoration: InputDecoration(
+            labelText: context.l10n.mapwNameLabel,
             border: OutlineInputBorder(),
           ),
           autofocus: true,
@@ -401,11 +400,11 @@ class MapDialogs {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Shrani'),
+            child: Text(context.l10n.commonSave),
           ),
         ],
       ),
@@ -461,12 +460,12 @@ class MapDialogs {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Parcela ${cadastralParcel.parcelNumber}',
+                      context.l10n.mapwParcelTitle(cadastralParcel.parcelNumber.toString()),
                       style: Theme.of(context).textTheme.titleLarge
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      'Katastrska parcela',
+                      context.l10n.mapwCadastralParcel,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -483,7 +482,7 @@ class MapDialogs {
           _detailRow(
             context,
             Icons.location_city,
-            'Katastrska občina',
+            context.l10n.mapwCadastralMunicipality,
             owner?.koName != null
                 ? '${owner!.koName} (${cadastralParcel.cadastralMunicipality})'
                 : cadastralParcel.cadastralMunicipality.toString(),
@@ -491,14 +490,14 @@ class MapDialogs {
           _detailRow(
             context,
             Icons.straighten,
-            'Površina',
+            context.l10n.mapwArea,
             cadastralParcel.formattedArea,
           ),
           if (owner != null)
             _detailRow(
               context,
               Icons.person,
-              'Lastnik',
+              context.l10n.mapwOwner,
               owner.displayOwners,
               secondary: owner.address,
             ),

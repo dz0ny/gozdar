@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:pointycastle/export.dart';
+import '../l10n/l10n.dart';
 
 /// Thrown when decryption fails (wrong password or corrupt/invalid file).
 class AesDecryptException implements Exception {
@@ -80,8 +81,7 @@ class AesFileDecryptor {
         if (pending.length < _headerLen) continue;
         for (var i = 0; i < 8; i++) {
           if (pending[i] != _magic[i]) {
-            throw const AesDecryptException(
-                'Datoteka ni v pričakovani obliki (napačna glava).');
+            throw AesDecryptException(L10n.current.svcAesBadFormat);
           }
         }
         final salt = Uint8List.sublistView(pending, 8, 24);
@@ -94,18 +94,18 @@ class AesFileDecryptor {
     }
 
     if (cipher == null || pending.length != 16) {
-      throw const AesDecryptException('Datoteka je okvarjena ali nepopolna.');
+      throw AesDecryptException(L10n.current.svcAesCorrupt);
     }
     // Decrypt + validate + strip PKCS7 padding on the final block.
     final finalBlock = Uint8List(16);
     cipher.processBlock(pending, 0, finalBlock, 0);
     final pad = finalBlock[15];
     if (pad < 1 || pad > 16) {
-      throw const AesDecryptException('Napačno geslo.');
+      throw AesDecryptException(L10n.current.svcAesWrongPassword);
     }
     for (var i = 16 - pad; i < 16; i++) {
       if (finalBlock[i] != pad) {
-        throw const AesDecryptException('Napačno geslo.');
+        throw AesDecryptException(L10n.current.svcAesWrongPassword);
       }
     }
     for (var i = 0; i < 16 - pad; i++) {

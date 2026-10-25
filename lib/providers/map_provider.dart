@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+import '../l10n/l10n.dart';
 import '../models/map_location.dart';
 import '../models/map_layer.dart';
 import '../models/parcel.dart';
@@ -311,7 +312,10 @@ class MapProvider extends ChangeNotifier {
       );
 
       if (exists) {
-        _error = 'Parcela ${cadastralParcel.cadastralMunicipality} - ${cadastralParcel.parcelNumber} je že v bazi podatkov';
+        _error = L10n.current.mapwParcelAlreadyInDb(
+          cadastralParcel.cadastralMunicipality.toString(),
+          cadastralParcel.parcelNumber.toString(),
+        );
         notifyListeners();
         return false;
       }

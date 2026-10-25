@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/parcel.dart';
+import '../l10n/l10n.dart';
 
 /// Wood tracking card showing allowance, cut amount, progress, and action buttons
 class ParcelWoodTrackingCard extends StatelessWidget {
@@ -33,7 +34,7 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                 const Icon(Icons.forest, color: Colors.brown),
                 const SizedBox(width: 8),
                 Text(
-                  'Posek lesa',
+                  context.l10n.parcelWoodTitle,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -55,14 +56,14 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Dovoljen posek',
+                            context.l10n.parcelAllowanceTitle,
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: Colors.grey[600]),
                           ),
                           Text(
                             parcel.woodAllowance > 0
                                 ? '${parcel.woodAllowance.toStringAsFixed(2)} m³'
-                                : 'Ni določen',
+                                : context.l10n.parcelNotSet,
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ],
@@ -84,7 +85,7 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Posekano',
+                        context.l10n.parcelCutLabel,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey[600],
                         ),
@@ -101,7 +102,7 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                 if (parcel.woodCut > 0)
                   IconButton(
                     icon: const Icon(Icons.refresh),
-                    tooltip: 'Ponastavi',
+                    tooltip: context.l10n.parcelReset,
                     onPressed: onResetCut,
                   ),
               ],
@@ -130,11 +131,11 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '${parcel.woodUsedPercent.toStringAsFixed(0)}% izkoriščeno',
+                    context.l10n.parcelWoodUsed(parcel.woodUsedPercent.toStringAsFixed(0)),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   Text(
-                    'Še na voljo: ${parcel.woodRemaining.toStringAsFixed(2)} m³',
+                    context.l10n.parcelCutRemaining(parcel.woodRemaining.toStringAsFixed(2)),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.green[700],
                       fontWeight: FontWeight.bold,
@@ -154,7 +155,7 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Posekanih dreves',
+                        context.l10n.parcelTreesCutLabel,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey[600],
                         ),
@@ -171,7 +172,7 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                 if (parcel.treesCut > 0)
                   IconButton(
                     icon: const Icon(Icons.refresh),
-                    tooltip: 'Ponastavi',
+                    tooltip: context.l10n.parcelReset,
                     onPressed: onResetTrees,
                   ),
               ],
@@ -186,7 +187,7 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                   child: FilledButton.icon(
                     onPressed: onLogWoodCut,
                     icon: const Icon(Icons.add),
-                    label: const Text('Posek m³'),
+                    label: Text(context.l10n.parcelLogCutButton),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -194,7 +195,7 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onLogTreesCut,
                     icon: const Icon(Icons.nature),
-                    label: const Text('Drevo'),
+                    label: Text(context.l10n.parcelTreeButton),
                   ),
                 ),
               ],

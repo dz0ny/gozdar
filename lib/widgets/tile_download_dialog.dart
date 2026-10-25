@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import '../l10n/l10n.dart';
 
 import '../models/map_layer.dart';
 import '../services/offline_tile_cache_service.dart';
@@ -161,7 +162,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
   Future<void> _startDownload() async {
     if (_downloadableLayers.isEmpty) {
       setState(() {
-        _errorMessage = 'URL predloge ni na voljo';
+        _errorMessage = L10n.current.mapwTileTemplateUnavailable;
       });
       return;
     }
@@ -202,8 +203,8 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
           _isDownloading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Prenos končan'),
+          SnackBar(
+            content: Text(context.l10n.mapwDownloadComplete),
             backgroundColor: Colors.green,
           ),
         );
@@ -232,19 +233,17 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Počisti predpomnilnik?'),
-        content: const Text(
-          'Vse prenesene ploščice bodo izbrisane. Te operacije ni mogoče razveljaviti.',
-        ),
+        title: Text(context.l10n.mapwClearCacheTitle),
+        content: Text(context.l10n.mapwClearCacheBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Izbriši'),
+            child: Text(context.l10n.commonDelete),
           ),
         ],
       ),
@@ -256,7 +255,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       await _refreshLocalStyles();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Predpomnilnik izpraznjen')),
+          SnackBar(content: Text(context.l10n.mapwCacheCleared)),
         );
       }
     }
@@ -290,7 +289,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     _syncSubscription?.cancel();
     setState(() {
       _isSyncing = true;
-      _syncStatus = 'Sinhroniziram ${style.displayName}';
+      _syncStatus = L10n.current.mapwSyncing(style.displayName);
       _syncProgress = 0;
     });
 
@@ -300,18 +299,18 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       if (!mounted) return;
       if (event is PeerSyncStarted) {
         setState(() {
-          _syncStatus = 'Sinhroniziram ${style.displayName}';
+          _syncStatus = L10n.current.mapwSyncing(style.displayName);
           _syncProgress = event.totalTiles == 0 ? 1 : 0;
         });
       } else if (event is PeerSyncTileDownloaded) {
         setState(() {
           _syncProgress = event.total == 0 ? 1 : event.downloaded / event.total;
-          _syncStatus = 'Preneseno ${event.downloaded}/${event.total}';
+          _syncStatus = L10n.current.mapwSyncDownloaded(event.downloaded, event.total);
         });
       } else if (event is PeerSyncTileSkipped) {
         setState(() {
           _syncProgress = event.total == 0 ? 1 : event.skipped / event.total;
-          _syncStatus = 'Iz predpomnilnika ${event.skipped}/${event.total}';
+          _syncStatus = L10n.current.mapwSyncFromCache(event.skipped, event.total);
         });
       } else if (event is PeerSyncComplete) {
         await _loadCacheStats();
@@ -320,12 +319,12 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
           _isSyncing = false;
           _syncProgress = 1;
           _syncStatus =
-              'Končano! ${event.downloaded} prenesenih, ${event.skipped} iz predpomnilnika, ${event.failed} neuspešnih';
+              L10n.current.mapwSyncDone(event.downloaded, event.skipped, event.failed);
         });
       } else if (event is PeerSyncCancelled) {
         setState(() {
           _isSyncing = false;
-          _syncStatus = 'Sinhronizacija preklicana';
+          _syncStatus = L10n.current.mapwSyncCancelled;
         });
       }
     });
@@ -370,16 +369,16 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                       ),
                     ),
                     Text(
-                      'Deljenje ploščic',
+                      context.l10n.mapwTileSharing,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 12),
                     SwitchListTile(
-                      title: const Text('Deli moje ploščice'),
+                      title: Text(context.l10n.mapwShareMyTiles),
                       subtitle: Text(
                         _isServerRunning
-                            ? 'Druge naprave lahko prenesejo ploščice s te naprave'
-                            : 'Začni deliti predpomnjene ploščice z bližnjimi napravami',
+                            ? context.l10n.mapwSharingOnHint
+                            : context.l10n.mapwSharingOffHint,
                       ),
                       secondary: Icon(
                         _isServerRunning
@@ -397,7 +396,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
-                          'Moje predpomnjene karte',
+                          context.l10n.mapwMyCachedMaps,
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                       ),
@@ -407,11 +406,14 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                           leading: const Icon(Icons.map, size: 20),
                           title: Text(style.displayName),
                           subtitle: Text(
-                            '${_formatNumber(style.tileCount)} ploščic, ${_formatBytes(style.sizeBytes)}',
+                            context.l10n.mapwTilesAndSize(
+                              _formatNumber(style.tileCount),
+                              _formatBytes(style.sizeBytes),
+                            ),
                           ),
                           trailing: IconButton(
                             icon: const Icon(Icons.delete_outline, size: 20),
-                            tooltip: 'Izbriši',
+                            tooltip: context.l10n.commonDelete,
                             onPressed: () async {
                               await _confirmDeleteStyle(context, style);
                               refreshSheet();
@@ -427,7 +429,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Bližnje naprave',
+                              context.l10n.mapwNearbyDevices,
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                           ),
@@ -440,7 +442,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                           else
                             IconButton(
                               icon: const Icon(Icons.refresh, size: 20),
-                              tooltip: 'Osveži',
+                              tooltip: context.l10n.mapwRefresh,
                               onPressed: () async {
                                 await _refreshPeerCatalogs();
                                 refreshSheet();
@@ -448,7 +450,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                             ),
                           IconButton(
                             icon: const Icon(Icons.add, size: 20),
-                            tooltip: 'Ročno dodaj napravo',
+                            tooltip: context.l10n.mapwAddDeviceManually,
                             onPressed: () => _showAddPeerDialog(context, refreshSheet),
                           ),
                         ],
@@ -458,7 +460,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
-                          'V lokalnem omrežju ni najdenih naprav.\nPreverite, da imajo druge naprave vključeno deljenje ploščic.',
+                          context.l10n.mapwNoDevicesFound,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
@@ -474,7 +476,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                           (peer) => ListTile(
                             leading: const Icon(Icons.devices),
                             title: Text(peer.ipAddress),
-                            subtitle: const Text('Pridobivam katalog'),
+                            subtitle: Text(context.l10n.mapwFetchingCatalog),
                             trailing: IconButton(
                               icon: const Icon(Icons.remove_circle_outline, size: 20),
                               onPressed: () {
@@ -506,7 +508,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                                   _tileSharingService.cancelSync();
                                   refreshSheet();
                                 },
-                                child: const Text('Prekliči'),
+                                child: Text(context.l10n.commonCancel),
                               ),
                           ],
                         ),
@@ -558,7 +560,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  'Na tej napravi ni predpomnjenih ploščic',
+                  context.l10n.mapwNoCachedTilesOnDevice,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context)
                         .colorScheme
@@ -579,8 +581,13 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                 leading: const Icon(Icons.map_outlined, size: 20),
                 title: Text(style.displayName),
                 subtitle: Text(
-                  '${_formatNumber(style.tileCount)} ploščic, ${_formatBytes(style.sizeBytes)}'
-                  '${localCount > 0 ? ' (imate ${_formatNumber(localCount)})' : ''}',
+                  context.l10n.mapwTilesAndSize(
+                        _formatNumber(style.tileCount),
+                        _formatBytes(style.sizeBytes),
+                      ) +
+                      (localCount > 0
+                          ? context.l10n.mapwYouHave(_formatNumber(localCount))
+                          : ''),
                 ),
                 trailing: missingTiles > 0
                     ? TextButton.icon(
@@ -593,7 +600,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                         icon: const Icon(Icons.download, size: 16),
                         label: Text(
                           missingTiles == style.tileCount
-                              ? 'Prenesi vse'
+                              ? context.l10n.mapwDownloadAll
                               : '+${_formatNumber(missingTiles)}',
                         ),
                       )
@@ -611,11 +618,11 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Dodaj napravo'),
+        title: Text(context.l10n.mapwAddDeviceTitle),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'IP naslov',
+          decoration: InputDecoration(
+            labelText: context.l10n.mapwIpAddress,
             hintText: '192.168.1.100',
           ),
           keyboardType: TextInputType.number,
@@ -624,7 +631,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () {
@@ -634,7 +641,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                 Navigator.pop(context);
               }
             },
-            child: const Text('Dodaj'),
+            child: Text(context.l10n.commonAdd),
           ),
         ],
       ),
@@ -646,18 +653,21 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Izbriši ${style.displayName}?'),
+        title: Text(context.l10n.mapwDeleteStyleTitle(style.displayName)),
         content: Text(
-          '${_formatNumber(style.tileCount)} ploščic, ${_formatBytes(style.sizeBytes)} bo izbrisanih.',
+          context.l10n.mapwDeleteStyleBody(
+            _formatNumber(style.tileCount),
+            _formatBytes(style.sizeBytes),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Izbriši', style: TextStyle(color: Colors.red)),
+            child: Text(context.l10n.commonDelete, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -739,16 +749,16 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
             icon: const Icon(Icons.close),
             onPressed: () => Navigator.pop(context),
           ),
-          const Expanded(
+          Expanded(
             child: Column(
               children: [
                 Text(
-                  'Prenos kart',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  context.l10n.mapwTileDownloadTitle,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  'Za delo brez povezave',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                  context.l10n.mapwForOfflineWork,
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
                 ),
               ],
             ),
@@ -761,7 +771,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                 _isServerRunning ? Icons.wifi_tethering : Icons.wifi_tethering_off,
               ),
             ),
-            tooltip: _isServerRunning ? 'Deljenje ploščic vključeno' : 'Deljenje ploščic izklopljeno',
+            tooltip: _isServerRunning ? context.l10n.mapwSharingEnabled : context.l10n.mapwSharingDisabled,
             onPressed: _showSharingSheet,
           ),
         ],
@@ -780,7 +790,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
           color: colorScheme.primary,
         ),
         title: Text(
-          widget.layers.length > 1 ? 'Sloji' : 'Podlaga',
+          widget.layers.length > 1 ? context.l10n.mapwLayersShort : context.l10n.mapwTabBase,
           style: TextStyle(color: colorScheme.onSurface),
         ),
         subtitle: Text(
@@ -797,7 +807,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       color: colorScheme.surfaceContainerHighest,
       child: ListTile(
         leading: Icon(Icons.zoom_in, color: colorScheme.primary),
-        title: Text('Povečava', style: TextStyle(color: colorScheme.onSurface)),
+        title: Text(context.l10n.mapwZoomLevel, style: TextStyle(color: colorScheme.onSurface)),
         subtitle: Text(
           '$_minZoom → $_maxZoom',
           style: TextStyle(color: colorScheme.onSurfaceVariant),
@@ -812,9 +822,9 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       color: colorScheme.surfaceContainerHighest,
       child: ListTile(
         leading: Icon(Icons.grid_view, color: colorScheme.primary),
-        title: Text('Ocena', style: TextStyle(color: colorScheme.onSurface)),
+        title: Text(context.l10n.mapwEstimate, style: TextStyle(color: colorScheme.onSurface)),
         subtitle: Text(
-          '~$_estimatedTileCount ploščic',
+          context.l10n.mapwEstimatedTiles(_estimatedTileCount),
           style: TextStyle(color: colorScheme.onSurfaceVariant),
         ),
       ),
@@ -848,7 +858,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Prenašam... ${_downloadProgress.toStringAsFixed(1)}%',
+          context.l10n.mapwDownloadingPercent(_downloadProgress.toStringAsFixed(1)),
           style: const TextStyle(fontWeight: FontWeight.w500),
           textAlign: TextAlign.center,
         ),
@@ -873,7 +883,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     return FilledButton.icon(
       onPressed: _startDownload,
       icon: const Icon(Icons.download),
-      label: const Text('Prenesi'),
+      label: Text(context.l10n.commonDownload),
     );
   }
 
@@ -881,7 +891,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     return OutlinedButton.icon(
       onPressed: _cancelDownload,
       icon: const Icon(Icons.cancel),
-      label: const Text('Prekliči'),
+      label: Text(context.l10n.commonCancel),
       style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
     );
   }
@@ -899,12 +909,12 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
           Icon(Icons.info_outline, color: Colors.orange.shade700, size: 32),
           const SizedBox(height: 12),
           Text(
-            'Sloj ni na voljo za prenos',
+            context.l10n.mapwLayerNotDownloadable,
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade900),
           ),
           const SizedBox(height: 8),
           Text(
-            'Za ta sloj ni bilo mogoče določiti XYZ predloge.',
+            context.l10n.mapwNoXyzTemplate,
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.orange.shade800),
           ),
@@ -926,9 +936,9 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       color: colorScheme.surfaceContainerLow,
       child: ListTile(
         leading: Icon(Icons.storage, color: colorScheme.onSurfaceVariant),
-        title: Text('Predpomnilnik', style: TextStyle(color: colorScheme.onSurface)),
+        title: Text(context.l10n.mapwCache, style: TextStyle(color: colorScheme.onSurface)),
         subtitle: Text(
-          '$totalTiles ploščic ($totalSizeMB MB)',
+          context.l10n.mapwCacheStats('$totalTiles', '$totalSizeMB'),
           style: TextStyle(color: colorScheme.onSurfaceVariant),
         ),
       ),
@@ -939,7 +949,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     return TextButton.icon(
       onPressed: _clearCache,
       icon: const Icon(Icons.delete_outline),
-      label: const Text('Počisti predpomnilnik'),
+      label: Text(context.l10n.mapwClearCache),
       style: TextButton.styleFrom(foregroundColor: Colors.red),
     );
   }

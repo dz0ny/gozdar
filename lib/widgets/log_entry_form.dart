@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/log_entry.dart';
@@ -97,7 +98,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
       if (!serviceEnabled) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Lokacijske storitve so onemogočene')),
+            SnackBar(content: Text(context.l10n.logsFormLocationServicesDisabled)),
           );
         }
         return;
@@ -109,7 +110,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
         if (permission == LocationPermission.denied) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Dovoljenja za lokacijo zavrnjena')),
+              SnackBar(content: Text(context.l10n.logsFormPermissionsDenied)),
             );
           }
           return;
@@ -119,8 +120,8 @@ class _LogEntryFormState extends State<LogEntryForm> {
       if (permission == LocationPermission.deniedForever) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Dovoljenja za lokacijo trajno zavrnjena'),
+            SnackBar(
+              content: Text(context.l10n.logsFormPermissionsDeniedForever),
             ),
           );
         }
@@ -138,12 +139,12 @@ class _LogEntryFormState extends State<LogEntryForm> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Lokacija dodana')));
+        ).showSnackBar(SnackBar(content: Text(context.l10n.logsFormLocationAdded)));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri pridobivanju lokacije: $e')),
+          SnackBar(content: Text(context.l10n.logsFormLocationError('$e'))),
         );
       }
     } finally {
@@ -168,12 +169,12 @@ class _LogEntryFormState extends State<LogEntryForm> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Dodaj novo vrsto'),
+          title: Text(context.l10n.logsSpeciesAddTitle),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(
-              labelText: 'Ime vrste',
-              hintText: 'Npr. Hrast',
+            decoration: InputDecoration(
+              labelText: context.l10n.logsSpeciesNameLabel,
+              hintText: context.l10n.logsSpeciesNameHint,
             ),
             autofocus: true,
             textCapitalization: TextCapitalization.words,
@@ -181,7 +182,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Prekliči'),
+              child: Text(context.l10n.commonCancel),
             ),
             FilledButton(
               onPressed: () {
@@ -189,7 +190,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
                   Navigator.pop(context, controller.text.trim());
                 }
               },
-              child: const Text('Dodaj'),
+              child: Text(context.l10n.commonAdd),
             ),
           ],
         );
@@ -205,7 +206,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Vrsta "$newSpecies" dodana')));
+        ).showSnackBar(SnackBar(content: Text(context.l10n.logsSpeciesAdded(newSpecies))));
       }
     }
   }
@@ -222,7 +223,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
     if (_isCalculateMode) {
       if (_calculatedVolume == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Prosim vnesite veljavne dimenzije')),
+          SnackBar(content: Text(context.l10n.logsFormInvalidDimensions)),
         );
         return;
       }
@@ -266,7 +267,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isNew ? 'Nov' : 'Uredi'),
+        title: Text(_isNew ? context.l10n.logsFormTitleNew : context.l10n.commonEdit),
         actions: [
           IconButton(icon: const Icon(Icons.check), onPressed: _saveEntry),
         ],
@@ -286,7 +287,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Način vnosa volumna',
+                          context.l10n.logsFormVolumeModeTitle,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         Switch(
@@ -303,8 +304,8 @@ class _LogEntryFormState extends State<LogEntryForm> {
                     const SizedBox(height: 8),
                     Text(
                       _isCalculateMode
-                          ? 'Izračunaj iz dimenzij'
-                          : 'Vnesi volumen neposredno',
+                          ? context.l10n.logsFormModeCalculate
+                          : context.l10n.logsFormModeDirect,
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
@@ -317,11 +318,11 @@ class _LogEntryFormState extends State<LogEntryForm> {
             if (_isCalculateMode) ...[
               TextFormField(
                 controller: _diameterController,
-                decoration: const InputDecoration(
-                  labelText: 'Premer (cm)',
+                decoration: InputDecoration(
+                  labelText: context.l10n.logsDiameterLabel,
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.straighten),
-                  helperText: 'Vnesite premer hloda v centimetrih',
+                  helperText: context.l10n.logsFormDiameterHelper,
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -329,11 +330,11 @@ class _LogEntryFormState extends State<LogEntryForm> {
                 inputFormatters: [DecimalTextInputFormatter()],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Prosim vnesite premer';
+                    return context.l10n.logsFormDiameterRequired;
                   }
                   final diameter = parseDecimal(value);
                   if (diameter == null || diameter <= 0) {
-                    return 'Prosim vnesite veljaven premer';
+                    return context.l10n.logsFormDiameterInvalid;
                   }
                   return null;
                 },
@@ -341,11 +342,11 @@ class _LogEntryFormState extends State<LogEntryForm> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _lengthController,
-                decoration: const InputDecoration(
-                  labelText: 'Dolžina (m)',
+                decoration: InputDecoration(
+                  labelText: context.l10n.logsLengthLabel,
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.height),
-                  helperText: 'Vnesite dolžino hloda v metrih',
+                  helperText: context.l10n.logsFormLengthHelper,
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -353,11 +354,11 @@ class _LogEntryFormState extends State<LogEntryForm> {
                 inputFormatters: [DecimalTextInputFormatter()],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Prosim vnesite dolžino';
+                    return context.l10n.logsFormLengthRequired;
                   }
                   final length = parseDecimal(value);
                   if (length == null || length <= 0) {
-                    return 'Prosim vnesite veljavno dolžino';
+                    return context.l10n.logsFormLengthInvalid;
                   }
                   return null;
                 },
@@ -379,7 +380,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Izračunan volumen',
+                              context.l10n.logsFormCalculatedVolume,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: Theme.of(
@@ -406,11 +407,11 @@ class _LogEntryFormState extends State<LogEntryForm> {
             ] else ...[
               TextFormField(
                 controller: _volumeController,
-                decoration: const InputDecoration(
-                  labelText: 'Volumen (m³)',
+                decoration: InputDecoration(
+                  labelText: context.l10n.logsFormVolumeLabel,
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.inventory),
-                  helperText: 'Vnesite volumen v kubičnih metrih',
+                  helperText: context.l10n.logsFormVolumeHelper,
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -418,11 +419,11 @@ class _LogEntryFormState extends State<LogEntryForm> {
                 inputFormatters: [DecimalTextInputFormatter()],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Prosim vnesite volumen';
+                    return context.l10n.logsFormVolumeRequired;
                   }
                   final volume = parseDecimal(value);
                   if (volume == null || volume <= 0) {
-                    return 'Prosim vnesite veljaven volumen';
+                    return context.l10n.logsFormVolumeInvalid;
                   }
                   return null;
                 },
@@ -439,15 +440,15 @@ class _LogEntryFormState extends State<LogEntryForm> {
                             _availableSpecies.contains(_selectedSpecies)
                         ? _selectedSpecies
                         : null,
-                    decoration: const InputDecoration(
-                      labelText: 'Drevesna vrsta (neobvezno)',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.logsFormSpeciesOptional,
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.forest),
                     ),
                     items: [
-                      const DropdownMenuItem<String>(
+                      DropdownMenuItem<String>(
                         value: null,
-                        child: Text('Ni izbrano'),
+                        child: Text(context.l10n.logsNotSelected),
                       ),
                       ..._availableSpecies.map((species) {
                         return DropdownMenuItem<String>(
@@ -466,13 +467,13 @@ class _LogEntryFormState extends State<LogEntryForm> {
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
-                  tooltip: 'Dodaj novo vrsto',
+                  tooltip: context.l10n.logsSpeciesAddTitle,
                   onPressed: _showAddSpeciesDialog,
                 ),
               ],
             ),
             const SizedBox(height: 24),
-            Text('Lokacija', style: Theme.of(context).textTheme.titleMedium),
+            Text(context.l10n.logsLocationLabel, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (_latitude != null && _longitude != null)
               Card(
@@ -504,18 +505,18 @@ class _LogEntryFormState extends State<LogEntryForm> {
                     : const Icon(Icons.my_location),
                 label: Text(
                   _isLoadingLocation
-                      ? 'Pridobivanje lokacije...'
-                      : 'Dodaj trenutno lokacijo',
+                      ? context.l10n.logsFormLocating
+                      : context.l10n.logsFormAddCurrentLocation,
                 ),
               ),
             const SizedBox(height: 24),
             TextFormField(
               controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Opombe (neobvezno)',
+              decoration: InputDecoration(
+                labelText: context.l10n.logsFormNotesOptional,
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.note),
-                helperText: 'Dodajte morebitne opombe',
+                helperText: context.l10n.logsFormNotesHelper,
               ),
               maxLines: 3,
             ),
@@ -523,7 +524,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
             FilledButton.icon(
               onPressed: _saveEntry,
               icon: const Icon(Icons.save),
-              label: const Text('Shrani'),
+              label: Text(context.l10n.commonSave),
               style: FilledButton.styleFrom(padding: const EdgeInsets.all(16)),
             ),
           ],

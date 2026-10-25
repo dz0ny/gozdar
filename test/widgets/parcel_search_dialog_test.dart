@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gozdar/l10n/l10n.dart';
 import 'package:gozdar/services/ko_locator.dart';
 import 'package:gozdar/services/owner_lookup_service.dart';
 import 'package:gozdar/theme/app_theme.dart';
@@ -25,22 +26,27 @@ void main() {
     tester.view.physicalSize = const Size(1080, 2200);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.greenTheme,
-      home: Builder(
-        builder: (context) => Scaffold(
-          body: TextButton(
-            onPressed: () => ParcelSearchDialog.show(
-              context: context,
-              mapController: MapController(),
-              center: center,
-              onParcelFound: (_) {},
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('sl'),
+        theme: AppTheme.greenTheme,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => ParcelSearchDialog.show(
+                context: context,
+                mapController: MapController(),
+                center: center,
+                onParcelFound: (_) {},
+              ),
+              child: const Text('open'),
             ),
-            child: const Text('open'),
           ),
         ),
       ),
-    ));
+    );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
   }
@@ -50,13 +56,16 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('opens with the KO under the map centre preselected',
-      (tester) async {
+  testWidgets('opens with the KO under the map centre preselected', (
+    tester,
+  ) async {
     await open(tester);
 
     expect(find.text('Iskanje parcele'), findsOneWidget);
-    expect(find.widgetWithText(InputChip, 'KO BABNO POLJE (1651)'),
-        findsOneWidget);
+    expect(
+      find.widgetWithText(InputChip, 'KO BABNO POLJE (1651)'),
+      findsOneWidget,
+    );
     // Empty state before anything is typed.
     expect(find.textContaining('Vnesite številko parcele'), findsOneWidget);
     // The field takes focus straight away.
@@ -70,8 +79,9 @@ void main() {
     expect(find.text('Vse katastrske občine'), findsOneWidget);
   });
 
-  testWidgets('a parcel number is suggested in the preselected KO',
-      (tester) async {
+  testWidgets('a parcel number is suggested in the preselected KO', (
+    tester,
+  ) async {
     await open(tester);
     await type(tester, '123/4');
 
@@ -92,12 +102,15 @@ void main() {
 
     expect(find.widgetWithText(InputChip, 'KO ŠENTJUR (2001)'), findsOneWidget);
     expect(find.text('KO BABNO POLJE (1651)'), findsNothing);
-    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
-        isEmpty);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      isEmpty,
+    );
   });
 
-  testWidgets('removing the chip searches every KO; "<KO> <number>" works',
-      (tester) async {
+  testWidgets('removing the chip searches every KO; "<KO> <number>" works', (
+    tester,
+  ) async {
     await open(tester);
     await tester.tap(find.byTooltip('Odstrani katastrsko občino'));
     await tester.pumpAndSettle();
@@ -114,8 +127,9 @@ void main() {
     expect(find.textContaining('izberite katastrsko občino'), findsWidgets);
   });
 
-  testWidgets('reopening restores the last query and its suggestions',
-      (tester) async {
+  testWidgets('reopening restores the last query and its suggestions', (
+    tester,
+  ) async {
     await open(tester);
     await type(tester, '123/4');
     expect(find.text('Parcela 123/4'), findsOneWidget);
@@ -126,11 +140,15 @@ void main() {
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
-        '123/4');
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '123/4',
+    );
     expect(find.text('Parcela 123/4'), findsOneWidget);
-    expect(find.widgetWithText(InputChip, 'KO BABNO POLJE (1651)'),
-        findsOneWidget);
+    expect(
+      find.widgetWithText(InputChip, 'KO BABNO POLJE (1651)'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('no matches shows the empty state', (tester) async {
@@ -139,17 +157,22 @@ void main() {
     expect(find.text('Ni zadetkov.'), findsOneWidget);
   });
 
-  testWidgets('owner names are suggested with their KO on a second line',
-      (tester) async {
+  testWidgets('owner names are suggested with their KO on a second line', (
+    tester,
+  ) async {
     final dir = Directory.systemTemp.createTempSync('owners-');
     addTearDown(() => dir.deleteSync(recursive: true));
     final path = '${dir.path}/owners.sqlite';
     sqlite3.open(path)
-      ..execute('CREATE TABLE owners(sifko INT, parcela TEXT, lastnik TEXT, '
-          'naslov TEXT, imeko TEXT, obcina TEXT)')
-      ..execute("INSERT INTO owners VALUES "
-          "(1651,'1234/2','NOVAK JANEZ','BABNO POLJE 12','BABNO POLJE',NULL),"
-          "(1700,'5','NOVAK ANA',NULL,'KOZARIŠČE',NULL)")
+      ..execute(
+        'CREATE TABLE owners(sifko INT, parcela TEXT, lastnik TEXT, '
+        'naslov TEXT, imeko TEXT, obcina TEXT)',
+      )
+      ..execute(
+        "INSERT INTO owners VALUES "
+        "(1651,'1234/2','NOVAK JANEZ','BABNO POLJE 12','BABNO POLJE',NULL),"
+        "(1700,'5','NOVAK ANA',NULL,'KOZARIŠČE',NULL)",
+      )
       ..close();
     OwnerLookupService.instance.openForTesting(path);
 
@@ -162,7 +185,10 @@ void main() {
 
     // Only the owner in the preselected KO.
     expect(find.text('Parcela 1234/2'), findsOneWidget);
-    expect(find.text('KO BABNO POLJE • NOVAK JANEZ • BABNO POLJE 12'), findsOneWidget);
+    expect(
+      find.text('KO BABNO POLJE • NOVAK JANEZ • BABNO POLJE 12'),
+      findsOneWidget,
+    );
     expect(find.text('Parcela 5'), findsNothing);
 
     // Dropping the KO filter shows both.

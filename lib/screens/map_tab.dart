@@ -48,6 +48,7 @@ import 'parcel_detail_screen.dart';
 import '../providers/map_provider.dart';
 import '../services/location_settings.dart';
 import '../services/map_preferences_service.dart';
+import '../l10n/l10n.dart';
 
 enum _MeasurementTool { distance, area }
 
@@ -278,7 +279,7 @@ class MapTabState extends State<MapTab> {
           setNavigationTarget(
             NavigationTarget(
               location: point,
-              name: 'Mejnik $number ($parcela)',
+              name: L10n.current.mapTabMejnikName(number, parcela),
             ),
             zoomIn: false,
           );
@@ -530,7 +531,7 @@ class MapTabState extends State<MapTab> {
       if (!serviceEnabled) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Lokacijske storitve so onemogočene')),
+            SnackBar(content: Text(L10n.current.mapTabLocationServicesDisabled)),
           );
         }
         return;
@@ -543,7 +544,7 @@ class MapTabState extends State<MapTab> {
         if (permission == LocationPermission.denied) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Dovoljenje za lokacijo zavrnjeno')),
+              SnackBar(content: Text(L10n.current.mapTabLocationPermissionDenied)),
             );
           }
           return;
@@ -553,8 +554,8 @@ class MapTabState extends State<MapTab> {
       if (permission == LocationPermission.deniedForever) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Dovoljenje za lokacijo trajno zavrnjeno'),
+            SnackBar(
+              content: Text(L10n.current.mapTabLocationPermissionDeniedForever),
             ),
           );
         }
@@ -572,7 +573,7 @@ class MapTabState extends State<MapTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri pridobivanju lokacije: $e')),
+          SnackBar(content: Text(L10n.current.mapTabLocationError(e))),
         );
       }
     }
@@ -601,17 +602,17 @@ class MapTabState extends State<MapTab> {
         if (success) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('Dodano "$name"')));
+          ).showSnackBar(SnackBar(content: Text(L10n.current.mapTabLocationAdded(name))));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka: ${mapProvider.error}')),
+            SnackBar(content: Text(L10n.current.mapTabErrorWithMessage(mapProvider.error ?? ''))),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri dodajanju lokacije: $e')),
+          SnackBar(content: Text(L10n.current.mapTabLocationAddError(e))),
         );
       }
     }
@@ -646,17 +647,17 @@ class MapTabState extends State<MapTab> {
         if (success) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('Sečnja "$name" označena')));
+          ).showSnackBar(SnackBar(content: Text(L10n.current.mapTabSecnjaMarked(name))));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka: ${mapProvider.error}')),
+            SnackBar(content: Text(L10n.current.mapTabErrorWithMessage(mapProvider.error ?? ''))),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri označevanju sečnje: $e')),
+          SnackBar(content: Text(L10n.current.mapTabSecnjaMarkError(e))),
         );
       }
     }
@@ -688,7 +689,9 @@ class MapTabState extends State<MapTab> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Hlod dodan (${entry.volume.toStringAsFixed(3)} m³)',
+                      L10n.current.mapTabLogAdded(
+                        entry.volume.toStringAsFixed(3),
+                      ),
                     ),
                   ),
                 );
@@ -696,7 +699,7 @@ class MapTabState extends State<MapTab> {
             } catch (e) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Napaka pri dodajanju hloda: $e')),
+                  SnackBar(content: Text(L10n.current.mapTabLogAddError(e))),
                 );
               }
             }
@@ -738,11 +741,11 @@ class MapTabState extends State<MapTab> {
         if (mounted) {
           if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Izbrisano "${location.name}"')),
+              SnackBar(content: Text(L10n.current.mapTabLocationDeleted(location.name))),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Napaka: ${mapProvider.error}')),
+              SnackBar(content: Text(L10n.current.mapTabErrorWithMessage(mapProvider.error ?? ''))),
             );
           }
         }
@@ -750,7 +753,7 @@ class MapTabState extends State<MapTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri brisanju lokacije: $e')),
+          SnackBar(content: Text(L10n.current.mapTabLocationDeleteError(e))),
         );
       }
     }
@@ -945,9 +948,9 @@ class MapTabState extends State<MapTab> {
     messenger.showSnackBar(
       SnackBar(
         duration: const Duration(seconds: 6),
-        content: Text('Za regijo ${region.name} ni podatkov katastra.'),
+        content: Text(L10n.current.mapTabNoCadastreData(region.name)),
         action: SnackBarAction(
-          label: 'Prenesi',
+          label: L10n.current.commonDownload,
           onPressed: () => _downloadRegionByName(region.name),
         ),
       ),
@@ -966,7 +969,11 @@ class MapTabState extends State<MapTab> {
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text(e is FormatException ? e.message : 'Napaka: $e'),
+          content: Text(
+            e is FormatException
+                ? e.message
+                : L10n.current.mapTabErrorWithMessage(e),
+          ),
         ),
       );
       return;
@@ -980,7 +987,7 @@ class MapTabState extends State<MapTab> {
     }
     if (match == null) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Regije $name ni v seznamu.')),
+        SnackBar(content: Text(L10n.current.mapTabRegionNotInList(name))),
       );
       return;
     }
@@ -1014,18 +1021,20 @@ class MapTabState extends State<MapTab> {
         _invalidateOfflineQueryCache();
         _refreshOfflineParcels();
         messenger.showSnackBar(
-          SnackBar(content: Text('$name: prenesenih ${result.rows} parcel.')),
+          SnackBar(content: Text(L10n.current.mapTabRegionDownloaded(name, result.rows))),
         );
       }
     } on ParcelDownloadCancelled {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Prenos preklican.')),
+        SnackBar(content: Text(L10n.current.mapTabDownloadCancelled)),
       );
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            e is FormatException ? e.message : 'Prenos ni uspel: $e',
+            e is FormatException
+                ? e.message
+                : L10n.current.mapTabDownloadFailed(e),
           ),
         ),
       );
@@ -1054,7 +1063,7 @@ class MapTabState extends State<MapTab> {
         // giving up (e.g. no connectivity, or the WMS returned no feature).
         if (_showOfflineOwnerFallback(location)) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Na tej lokaciji ni najdene parcele')),
+          SnackBar(content: Text(L10n.current.mapTabNoParcelAtLocation)),
         );
         return;
       }
@@ -1075,7 +1084,7 @@ class MapTabState extends State<MapTab> {
       if (_showOfflineOwnerFallback(location)) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Napaka pri iskanju parcele: $e')));
+      ).showSnackBar(SnackBar(content: Text(L10n.current.mapTabParcelSearchError(e))));
     }
   }
 
@@ -1094,9 +1103,9 @@ class MapTabState extends State<MapTab> {
 
     // Show the first (smallest bounding box) candidate.
     final hit = hits.first;
-    final owner = hit.owner.isNotEmpty ? hit.owner : 'Neznan lastnik';
+    final owner = hit.owner.isNotEmpty ? hit.owner : L10n.current.mapTabUnknownOwner;
     final details = [
-      'Parcela ${hit.parcela} (KO ${hit.koLabel})',
+      L10n.current.mapTabParcelKo(hit.parcela, hit.koLabel),
       if (hit.address != null) hit.address!,
     ].join('\n');
 
@@ -1135,7 +1144,7 @@ class MapTabState extends State<MapTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Lastnik (offline)',
+                          L10n.current.mapTabOwnerOffline,
                           style: Theme.of(sheetContext).textTheme.titleMedium
                               ?.copyWith(
                                 color: colorScheme.tertiary,
@@ -1143,7 +1152,7 @@ class MapTabState extends State<MapTab> {
                               ),
                         ),
                         Text(
-                          '≈ približno (brez povezave)',
+                          L10n.current.mapTabApproximateOffline,
                           style: Theme.of(sheetContext).textTheme.bodySmall
                               ?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
@@ -1192,7 +1201,7 @@ class MapTabState extends State<MapTab> {
                   ),
                 ),
                 icon: const Icon(Icons.close),
-                label: const Text('Zapri'),
+                label: Text(L10n.current.commonClose),
               ),
             ],
           ),
@@ -1220,19 +1229,22 @@ class MapTabState extends State<MapTab> {
       final viewParcel = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Parcela že obstaja'),
+          title: Text(L10n.current.mapTabParcelExistsTitle),
           content: Text(
-            'Parcela ${cadastralParcel.cadastralMunicipality} - ${cadastralParcel.parcelNumber} je že v vaših parcelah.',
+            L10n.current.mapTabParcelExistsBody(
+              cadastralParcel.cadastralMunicipality,
+              cadastralParcel.parcelNumber,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Zapri'),
+              child: Text(L10n.current.commonClose),
             ),
             FilledButton.icon(
               onPressed: () => Navigator.of(context).pop(true),
               icon: const Icon(Icons.visibility),
-              label: const Text('Prikaži v mojih parcelah'),
+              label: Text(L10n.current.mapTabShowInMyParcels),
             ),
           ],
         ),
@@ -1333,7 +1345,7 @@ class MapTabState extends State<MapTab> {
                         ),
                       ),
                       Text(
-                        'Uvozi parcelo',
+                        L10n.current.mapTabImportParcelTitle,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -1342,7 +1354,7 @@ class MapTabState extends State<MapTab> {
                       MapDialogs.importParcelInfoCard(context, parcel),
                       const SizedBox(height: 16),
                       Text(
-                        'Ali želite uvoziti to parcelo v "Moj gozd"?',
+                        L10n.current.mapTabImportParcelQuestion,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 16),
@@ -1362,7 +1374,7 @@ class MapTabState extends State<MapTab> {
                                     ),
                                   )
                                 : const Icon(Icons.print),
-                            label: const Text('Natisni'),
+                            label: Text(L10n.current.mapTabPrint),
                           ),
                           const SizedBox(width: 8),
                           FilledButton.icon(
@@ -1370,7 +1382,7 @@ class MapTabState extends State<MapTab> {
                                 ? null
                                 : _confirmImportPanel,
                             icon: const Icon(Icons.download),
-                            label: const Text('Uvozi'),
+                            label: Text(L10n.current.mapTabImport),
                           ),
                         ],
                       ),
@@ -1409,12 +1421,12 @@ class MapTabState extends State<MapTab> {
       final result = await OpenFilex.open(file.path);
       if (result.type != ResultType.done) {
         messenger.showSnackBar(
-          SnackBar(content: Text('PDF ni mogoče odpreti: ${result.message}')),
+          SnackBar(content: Text(L10n.current.mapTabPdfOpenFailed(result.message))),
         );
       }
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Napaka pri pripravi PDF: $e')),
+        SnackBar(content: Text(L10n.current.mapTabPdfError(e))),
       );
     }
   }
@@ -1432,13 +1444,16 @@ class MapTabState extends State<MapTab> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Parcela ${cadastralParcel.cadastralMunicipality} - ${cadastralParcel.parcelNumber} uspešno uvožena',
+                L10n.current.mapTabParcelImported(
+                  cadastralParcel.cadastralMunicipality,
+                  cadastralParcel.parcelNumber,
+                ),
               ),
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka: ${mapProvider.error}')),
+            SnackBar(content: Text(L10n.current.mapTabErrorWithMessage(mapProvider.error ?? ''))),
           );
         }
       }
@@ -1446,7 +1461,7 @@ class MapTabState extends State<MapTab> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu parcele: $e')));
+        ).showSnackBar(SnackBar(content: Text(L10n.current.mapTabParcelImportError(e))));
       }
     }
   }
@@ -1464,8 +1479,8 @@ class MapTabState extends State<MapTab> {
       // TODO: Handle KML/KMZ import
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('KML/KMZ uvoz še ni podprt preko karte'),
+          SnackBar(
+            content: Text(L10n.current.mapTabKmlUnsupported),
           ),
         );
       }
@@ -1473,7 +1488,7 @@ class MapTabState extends State<MapTab> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu: $e')));
+        ).showSnackBar(SnackBar(content: Text(L10n.current.mapTabImportError(e))));
       }
     }
   }
@@ -1630,8 +1645,16 @@ class MapTabState extends State<MapTab> {
         p.parcelNumber,
       );
       parcelTitle =
-          'Parc. ${p.parcelNumber} • KO ${p.cadastralMunicipality}'
-          '${koName != null && koName.isNotEmpty ? ' $koName' : ''}';
+          (koName != null && koName.isNotEmpty)
+          ? L10n.current.mapTabParcelTitleWithKo(
+              p.parcelNumber,
+              p.cadastralMunicipality,
+              koName,
+            )
+          : L10n.current.mapTabParcelTitle(
+              p.parcelNumber,
+              p.cadastralMunicipality,
+            );
       parcelSubtitle = p.area > 0 ? _formatArea(p.area) : null;
     }
 
@@ -1658,8 +1681,10 @@ class MapTabState extends State<MapTab> {
         // under the press when there is one.
         final name = parcelAtPosition?.name ??
             (offlineParcelAtPosition != null
-                ? 'Parc. ${offlineParcelAtPosition.parcelNumber}'
-                : 'Izbrana točka');
+                ? L10n.current.mapTabParcelShort(
+                    offlineParcelAtPosition.parcelNumber,
+                  )
+                : L10n.current.mapTabSelectedPoint);
         NavigateToSheet.show(
           context,
           destination: position,
@@ -1682,10 +1707,8 @@ class MapTabState extends State<MapTab> {
           ScaffoldMessenger.of(context)
             ..clearSnackBars()
             ..showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Dolgo pritisnite na parcelo za prikaz mejnikov.',
-                ),
+              SnackBar(
+                content: Text(L10n.current.mapTabMejnikiHint),
               ),
             );
           return;
@@ -1803,7 +1826,7 @@ class MapTabState extends State<MapTab> {
 
   String _measurementValueLabel() {
     if (!_measurement.isActive) {
-      return 'Ni aktivnega merjenja';
+      return L10n.current.mapTabNoActiveMeasurement;
     }
 
     if (_measurement.tool == _MeasurementTool.distance) {
@@ -1855,21 +1878,21 @@ class MapTabState extends State<MapTab> {
 
   String _measurementHintLabel() {
     if (!_measurement.isActive) {
-      return 'Dolgo pritisnite na karto za začetek merjenja.';
+      return L10n.current.mapTabHintStart;
     }
     if (_measurement.isFinished) {
-      return 'Merjenje je zaključeno.';
+      return L10n.current.mapTabHintFinished;
     }
     if (_measurement.tool == _MeasurementTool.distance) {
       if (_measurement.points.length < 2) {
-        return 'Premaknite karto, da nitni križ kaže na točko, in tapnite »Dodaj točko«.';
+        return L10n.current.mapTabHintMoveMap;
       }
-      return 'Naslednjo točko dodajte z nitnim križem ali zaključite merjenje.';
+      return L10n.current.mapTabHintNextPointDistance;
     }
     if (_measurement.points.length < 3) {
-      return 'Z nitnim križem dodajte vsaj 3 točke za površino.';
+      return L10n.current.mapTabHintMinPointsArea;
     }
-    return 'Naslednjo točko dodajte z nitnim križem ali zaključite poligon.';
+    return L10n.current.mapTabHintNextPointPolygon;
   }
 
   List<Marker> _measurementMarkers() {
@@ -1969,8 +1992,8 @@ class MapTabState extends State<MapTab> {
                   Expanded(
                     child: Text(
                       _measurement.tool == _MeasurementTool.area
-                          ? 'Merjenje površine'
-                          : 'Merjenje razdalje',
+                          ? L10n.current.mapTabMeasureArea
+                          : L10n.current.mapTabMeasureDistance,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -1978,7 +2001,7 @@ class MapTabState extends State<MapTab> {
                   ),
                   TextButton(
                     onPressed: _closeMeasurement,
-                    child: const Text('Zapri'),
+                    child: Text(L10n.current.commonClose),
                   ),
                 ],
               ),
@@ -2015,7 +2038,7 @@ class MapTabState extends State<MapTab> {
                       ? null
                       : _addMeasurementPointAtCrosshair,
                   icon: const Icon(Icons.add_location_alt, size: 20),
-                  label: const Text('Dodaj točko'),
+                  label: Text(L10n.current.mapTabAddPoint),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -2030,7 +2053,7 @@ class MapTabState extends State<MapTab> {
                           ? null
                           : _undoMeasurementPoint,
                       icon: const Icon(Icons.undo, size: 18),
-                      label: const Text('Razveljavi'),
+                      label: Text(L10n.current.mapTabUndo),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -2042,7 +2065,7 @@ class MapTabState extends State<MapTab> {
                           ? _finishMeasurement
                           : null,
                       icon: const Icon(Icons.check, size: 18),
-                      label: const Text('Zaključi'),
+                      label: Text(L10n.current.mapTabFinish),
                     ),
                   ),
                 ],
@@ -2130,7 +2153,7 @@ class MapTabState extends State<MapTab> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Nalagam karto...',
+                L10n.current.mapTabLoadingMap,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -2315,7 +2338,7 @@ class MapTabState extends State<MapTab> {
                         color: Colors.blue.withValues(alpha: 0.3),
                         borderColor: Colors.blue,
                         borderStrokeWidth: 3.0,
-                        label: 'Parcela ${_searchedParcel!.label}',
+                        label: L10n.current.mapTabParcelLabel(_searchedParcel!.label),
                         labelStyle: const TextStyle(
                           color: Colors.blue,
                           fontWeight: FontWeight.bold,
@@ -2564,7 +2587,9 @@ class MapTabState extends State<MapTab> {
             children: [
               Expanded(
                 child: Text(
-                  'Prenos kart ${(downloadState.percent * 100).toStringAsFixed(1)}%',
+                  L10n.current.mapTabTilesDownloadPercent(
+                    (downloadState.percent * 100).toStringAsFixed(1),
+                  ),
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -2572,7 +2597,7 @@ class MapTabState extends State<MapTab> {
               ),
               TextButton(
                 onPressed: _tileCacheService.cancelDownload,
-                child: const Text('Prekliči'),
+                child: Text(L10n.current.commonCancel),
               ),
             ],
           ),
@@ -2583,7 +2608,12 @@ class MapTabState extends State<MapTab> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Preneseno ${downloadState.downloaded}, v predpomnilniku ${downloadState.skipped}, napake ${downloadState.failed} / ${downloadState.total}',
+            L10n.current.mapTabTilesDownloadStats(
+              downloadState.downloaded,
+              downloadState.skipped,
+              downloadState.failed,
+              downloadState.total,
+            ),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -2614,7 +2644,7 @@ class MapTabState extends State<MapTab> {
             ),
             const SizedBox(width: 12),
             Text(
-              'Iskanje parcele...',
+              L10n.current.mapTabSearchingParcel,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
@@ -2667,7 +2697,11 @@ class MapTabState extends State<MapTab> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Prenašam $_downloadingRegionName… $mb/$totMb MB'
+                        '${L10n.current.mapTabRegionDownloading(
+                          _downloadingRegionName ?? '',
+                          mb,
+                          totMb,
+                        )}'
                         '${pct != null ? ' • ${(pct * 100).toStringAsFixed(0)}%' : ''}',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
@@ -2676,7 +2710,7 @@ class MapTabState extends State<MapTab> {
                       onPressed: () => setState(
                         () => _cancelRegionDownload = true,
                       ),
-                      child: const Text('Prekliči'),
+                      child: Text(L10n.current.commonCancel),
                     ),
                   ],
                 ),
@@ -2812,19 +2846,19 @@ class MapTabState extends State<MapTab> {
           final viewParcel = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Parcela že obstaja'),
+              title: Text(L10n.current.mapTabParcelExistsTitle),
               content: Text(
-                'Parcela ${wfsParcel.label} je že v vaših parcelah.',
+                L10n.current.mapTabParcelExistsLabelBody(wfsParcel.label),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Zapri'),
+                  child: Text(L10n.current.commonClose),
                 ),
                 FilledButton.icon(
                   onPressed: () => Navigator.of(context).pop(true),
                   icon: const Icon(Icons.visibility),
-                  label: const Text('Prikaži v mojih parcelah'),
+                  label: Text(L10n.current.mapTabShowInMyParcels),
                 ),
               ],
             ),
@@ -2863,14 +2897,14 @@ class MapTabState extends State<MapTab> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Parcela je bila uvožena')),
+          SnackBar(content: Text(L10n.current.mapTabParcelImportedSimple)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Napaka pri uvozu: $e')));
+        ).showSnackBar(SnackBar(content: Text(L10n.current.mapTabImportError(e))));
       }
     }
   }
@@ -2904,7 +2938,7 @@ class MapTabState extends State<MapTab> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  'Pravice uporabe podatkov',
+                  L10n.current.mapTabUsageRightsTitle,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
@@ -2916,38 +2950,30 @@ class MapTabState extends State<MapTab> {
                   children: [
                     _buildUsageRightsSection(
                       context,
-                      'Geodetska uprava RS',
+                      L10n.current.mapTabUsageGuName,
                       'prostor.zgs.gov.si',
-                      'Podatki Geodetske uprave Republike Slovenije (ortofoto, kataster, '
-                          'topografske karte) so na voljo pod pogoji odprtih podatkov. '
-                          'Uporaba je dovoljena za nekomercialne in komercialne namene '
-                          'ob navedbi vira.',
+                      L10n.current.mapTabUsageGuDesc,
                       'https://www.gov.si/drzavni-organi/organi-v-sestavi/geodetska-uprava/',
                     ),
                     _buildUsageRightsSection(
                       context,
-                      'Zavod za gozdove Slovenije',
+                      L10n.current.mapTabUsageZgsName,
                       'ZGS',
-                      'Gozdarski podatki (gozdne združbe, sestojna karta, rastiščni koeficienti) '
-                          'so javno dostopni. Uporaba je dovoljena za informativne namene. '
-                          'Za komercialno uporabo je potrebno pridobiti dovoljenje ZGS.',
+                      L10n.current.mapTabUsageZgsDesc,
                       'https://www.zgs.si/',
                     ),
                     _buildUsageRightsSection(
                       context,
                       'OpenStreetMap',
                       'OSM',
-                      'Kartografski podatki OpenStreetMap so na voljo pod licenco '
-                          'Open Database License (ODbL). Uporaba je dovoljena ob navedbi '
-                          '"© OpenStreetMap contributors".',
+                      L10n.current.mapTabUsageOsmDesc,
                       'https://www.openstreetmap.org/copyright',
                     ),
                     _buildUsageRightsSection(
                       context,
                       'ESRI',
                       'Esri',
-                      'Esri satelitski posnetki so na voljo za osebno in nekomercialno '
-                          'uporabo. Za komercialno uporabo je potrebna licenca.',
+                      L10n.current.mapTabUsageEsriDesc,
                       'https://www.esri.com/en-us/legal/terms/full-master-agreement',
                     ),
                     const SizedBox(height: 16),
@@ -2968,8 +2994,7 @@ class MapTabState extends State<MapTab> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              'Ta aplikacija je namenjena informativni uporabi. '
-                              'Za uradne podatke se obrnite na pristojne institucije.',
+                              L10n.current.mapTabUsageDisclaimer,
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Theme.of(
@@ -3092,7 +3117,7 @@ class MapTabState extends State<MapTab> {
       await mapProvider.loadLocations();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lokacija preimenovana v "$newName"')),
+          SnackBar(content: Text(L10n.current.mapTabLocationRenamed(newName))),
         );
       }
     }
