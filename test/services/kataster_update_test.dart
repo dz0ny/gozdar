@@ -51,6 +51,32 @@ void main() {
   group('KatasterUpdate.compute', () {
     final manifest = KatasterManifest.fromJson(_manifestJson);
 
+    test('a region with its own date is compared against that date', () {
+      final m = KatasterManifest.fromJson({
+        'date': '2026-10-11',
+        'regions': [
+          ..._manifestJson['regions'] as List,
+          {
+            'code': 'gk',
+            'name': 'Gorski kotar',
+            'file': 'parcels-gorski-kotar.sqlite',
+            'date': '2026-10-18',
+            'source': 'DGU DKP (HR)',
+          },
+        ],
+      });
+      expect(m.regions.last.source, 'DGU DKP (HR)');
+      final u = KatasterUpdate.compute(
+        m,
+        loadedRegionDates: {
+          'parcels-gorenjska.sqlite': '2026-10-11',
+          'parcels-gorski-kotar.sqlite': '2026-10-11',
+        },
+        publicOwnersBuilt: null,
+      );
+      expect(u.outdatedRegions.map((r) => r.code), ['gk']);
+    });
+
     test('flags loaded regions older than the manifest date', () {
       final u = KatasterUpdate.compute(
         manifest,
@@ -60,7 +86,9 @@ void main() {
         },
         publicOwnersBuilt: '2026-10-13T09:41:18Z',
       );
-      expect(u.outdatedRegions.map((r) => r.file), ['parcels-gorenjska.sqlite']);
+      expect(u.outdatedRegions.map((r) => r.file), [
+        'parcels-gorenjska.sqlite',
+      ]);
       expect(u.publicOwnersOutdated, isFalse);
       expect(u.isEmpty, isFalse);
     });
@@ -88,10 +116,10 @@ void main() {
 
     test('flags public owners only when a local build is older', () {
       KatasterUpdate run(String? built) => KatasterUpdate.compute(
-            manifest,
-            loadedRegionDates: const {},
-            publicOwnersBuilt: built,
-          );
+        manifest,
+        loadedRegionDates: const {},
+        publicOwnersBuilt: built,
+      );
       // Not downloaded yet: initPublic fetches it on its own, nothing to update.
       expect(run(null).publicOwnersOutdated, isFalse);
       expect(run('2026-06-02T14:33:42Z').publicOwnersOutdated, isTrue);
@@ -128,8 +156,9 @@ void main() {
 
       final first = await service.check();
       expect(fetches, 1);
-      expect(first?.outdatedRegions.map((r) => r.file),
-          ['parcels-zasavska.sqlite']);
+      expect(first?.outdatedRegions.map((r) => r.file), [
+        'parcels-zasavska.sqlite',
+      ]);
       expect(service.pending, isNotNull);
 
       // Same week: no network, cached result is reused.
@@ -167,30 +196,32 @@ void main() {
       expect(fetches, 2);
     });
 
-    test('force bypasses the guard and a failed fetch does not arm it',
-        () async {
-      var fetches = 0;
-      var fail = true;
-      final service = KatasterUpdateService.forTesting(
-        fetchManifest: () async {
-          fetches++;
-          if (fail) throw Exception('offline');
-          return KatasterManifest.fromJson(_manifestJson);
-        },
-        loadedRegionDates: () => {'parcels-zasavska.sqlite': '2026-05-31'},
-        publicOwnersBuilt: () => null,
-        clock: DateTime.now,
-      );
-      await service.init();
-      expect(await service.check(), isNull);
-      expect(fetches, 1);
-      // Failure must not count as a check: the next attempt fetches again.
-      fail = false;
-      expect(await service.check(), isNotNull);
-      expect(fetches, 2);
-      expect(await service.check(force: true), isNotNull);
-      expect(fetches, 3);
-    });
+    test(
+      'force bypasses the guard and a failed fetch does not arm it',
+      () async {
+        var fetches = 0;
+        var fail = true;
+        final service = KatasterUpdateService.forTesting(
+          fetchManifest: () async {
+            fetches++;
+            if (fail) throw Exception('offline');
+            return KatasterManifest.fromJson(_manifestJson);
+          },
+          loadedRegionDates: () => {'parcels-zasavska.sqlite': '2026-05-31'},
+          publicOwnersBuilt: () => null,
+          clock: DateTime.now,
+        );
+        await service.init();
+        expect(await service.check(), isNull);
+        expect(fetches, 1);
+        // Failure must not count as a check: the next attempt fetches again.
+        fail = false;
+        expect(await service.check(), isNotNull);
+        expect(fetches, 2);
+        expect(await service.check(force: true), isNotNull);
+        expect(fetches, 3);
+      },
+    );
 
     test('dismiss hides the update for that manifest date only', () async {
       final service = KatasterUpdateService.forTesting(

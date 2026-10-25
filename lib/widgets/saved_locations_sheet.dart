@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import '../l10n/l10n.dart';
 import '../models/map_location.dart';
 import '../models/log_entry.dart';
 import '../models/parcel.dart';
@@ -137,7 +138,7 @@ class _ContentWidget extends StatelessWidget {
                 Icon(Icons.place, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Shranjene lokacije',
+                  context.l10n.mapwSavedLocations,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const Spacer(),
@@ -151,7 +152,7 @@ class _ContentWidget extends StatelessWidget {
                   const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(Icons.add_location_alt),
-                    tooltip: 'Dodaj s koordinatami',
+                    tooltip: context.l10n.mapwAddByCoordinates,
                     onPressed: () {
                       Navigator.pop(context);
                       onAddByCoordinates!();
@@ -173,7 +174,7 @@ class _ContentWidget extends StatelessWidget {
                   _SectionHeader(
                     icon: Icons.location_on,
                     color: Colors.orange,
-                    title: 'Točke',
+                    title: context.l10n.mapwSectionPoints,
                     count: locations.where((l) => !l.isSecnja).length,
                   ),
                   ...locations.where((l) => !l.isSecnja).map((location) {
@@ -195,7 +196,7 @@ class _ContentWidget extends StatelessWidget {
                   _SectionHeader(
                     icon: Icons.carpenter,
                     color: Colors.deepOrange,
-                    title: 'Sečnja',
+                    title: context.l10n.mapwMenuFelling,
                     count: locations.where((l) => l.isSecnja).length,
                   ),
                   ...locations.where((l) => l.isSecnja).map((location) {
@@ -217,7 +218,7 @@ class _ContentWidget extends StatelessWidget {
                   _SectionHeader(
                     icon: Icons.forest,
                     color: Colors.brown,
-                    title: 'Hlodovina',
+                    title: context.l10n.mapwMenuLogs,
                     count: geolocatedLogs.length,
                   ),
                   ...geolocatedLogs.map((log) {
@@ -252,7 +253,7 @@ class _ContentWidget extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Ni shranjenih lokacij',
+            context.l10n.mapwNoSavedLocations,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -362,19 +363,19 @@ class _LocationListTile extends StatelessWidget {
           }
         },
         itemBuilder: (context) => [
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'navigate',
             child: ListTile(
-              leading: Icon(Icons.navigation),
-              title: Text('Navigiraj'),
+              leading: const Icon(Icons.navigation),
+              title: Text(context.l10n.mapwMenuNavigate),
               contentPadding: EdgeInsets.zero,
             ),
           ),
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'edit',
             child: ListTile(
-              leading: Icon(Icons.edit),
-              title: Text('Preimenuj'),
+              leading: const Icon(Icons.edit),
+              title: Text(context.l10n.mapwRename),
               contentPadding: EdgeInsets.zero,
             ),
           ),
@@ -386,7 +387,7 @@ class _LocationListTile extends StatelessWidget {
                 color: Theme.of(context).colorScheme.error,
               ),
               title: Text(
-                'Izbriši',
+                context.l10n.commonDelete,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
               contentPadding: EdgeInsets.zero,

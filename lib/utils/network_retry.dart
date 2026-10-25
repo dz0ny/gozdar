@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import '../l10n/l10n.dart';
 
 /// Network error types for categorization
 enum NetworkErrorType {
@@ -191,17 +192,17 @@ class NetworkException implements Exception {
   @override
   String toString() => 'NetworkException($type): $message';
 
-  /// User-friendly error message in Slovenian
+  /// User-friendly, localized error message
   String get userMessage {
     switch (type) {
       case NetworkErrorType.timeout:
-        return 'Povezava je potekla. Prosimo, poskusite znova.';
+        return L10n.current.svcNetTimeout;
       case NetworkErrorType.noConnection:
-        return 'Ni internetne povezave. Preverite omrežje.';
+        return L10n.current.svcNetNoConnection;
       case NetworkErrorType.serverError:
-        return 'Strežnik ni dosegljiv. Poskusite pozneje.';
+        return L10n.current.svcNetServerError;
       case NetworkErrorType.unknown:
-        return 'Prišlo je do napake. Poskusite znova.';
+        return L10n.current.svcNetUnknown;
     }
   }
 }

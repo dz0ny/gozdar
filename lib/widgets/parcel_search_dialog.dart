@@ -8,6 +8,7 @@ import '../services/cadastral_service.dart';
 import '../services/ko_locator.dart';
 import '../services/parcel_search_service.dart';
 import 'parcel_search_controller.dart';
+import '../l10n/l10n.dart';
 
 /// Bottom sheet for finding a cadastral parcel with a single search field.
 ///
@@ -165,13 +166,13 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
       }
       setState(() {
         _locatingKey = null;
-        _error = 'Parcela ${s.parcela} ni najdena.';
+        _error = L10n.current.parcelSearchNotFound(s.parcela!);
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _locatingKey = null;
-        _error = 'Napaka pri iskanju: $e';
+        _error = L10n.current.parcelSearchError('$e');
       });
     }
   }
@@ -243,14 +244,14 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Iskanje parcele',
+              context.l10n.parcelSearchTitle,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           IconButton(
-            tooltip: 'Prekliči',
+            tooltip: context.l10n.commonCancel,
             icon: const Icon(Icons.close),
             onPressed: () => Navigator.of(context).pop(),
           ),
@@ -268,7 +269,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         child: ko == null
             ? Chip(
                 avatar: const Icon(Icons.place_outlined, size: 18),
-                label: const Text('Vse katastrske občine'),
+                label: Text(context.l10n.parcelSearchAllKo),
               )
             : InputChip(
                 avatar: Icon(
@@ -276,11 +277,11 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
                   size: 18,
                 ),
                 label: Text(
-                  'KO ${ko.label}',
+                  context.l10n.parcelFoundKo(ko.label),
                   overflow: TextOverflow.ellipsis,
                 ),
-                tooltip: _koFromMap ? 'Po legi na zemljevidu' : null,
-                deleteButtonTooltipMessage: 'Odstrani katastrsko občino',
+                tooltip: _koFromMap ? context.l10n.parcelSearchByMapPosition : null,
+                deleteButtonTooltipMessage: context.l10n.parcelSearchRemoveKo,
                 onDeleted: () => _setKo(null),
               ),
       ),
@@ -303,12 +304,12 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         },
         onSubmitted: (_) => _submit(),
         decoration: InputDecoration(
-          hintText: 'Parcela, lastnik, naslov ali k.o.',
-          helperText: 'npr. 123/4, Novak Babno ali Škofja Loka',
+          hintText: context.l10n.parcelSearchHint,
+          helperText: context.l10n.parcelSearchHelper,
           prefixIcon: const Icon(Icons.search),
           suffixIcon: _controller.hasQuery
               ? IconButton(
-                  tooltip: 'Počisti',
+                  tooltip: context.l10n.parcelEditorClear,
                   icon: Icon(Icons.clear, color: cs.onSurfaceVariant),
                   onPressed: () {
                     _controller.text.clear();
@@ -333,8 +334,8 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         context,
         Icons.travel_explore,
         _controller.ko == null
-            ? 'Vnesite številko parcele, ime lastnika, naslov ali katastrsko občino.'
-            : 'Vnesite številko parcele (npr. 123/4), ime lastnika ali naslov.',
+            ? context.l10n.parcelSearchPromptNoKo
+            : context.l10n.parcelSearchPromptWithKo,
       );
     }
     if (rows.isEmpty) {
@@ -343,9 +344,8 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         context,
         needsKo ? Icons.place_outlined : Icons.search_off,
         needsKo
-            ? 'Za parcelo ${parsed.parcelNumber} izberite katastrsko občino: '
-                'vnesite njeno ime.'
-            : 'Ni zadetkov.',
+            ? context.l10n.parcelSearchNeedsKoHint(parsed.parcelNumber!)
+            : context.l10n.parcelSearchNoResults,
       );
     }
     return ListView.separated(
@@ -357,7 +357,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
           return ListTile(
             leading: const Icon(Icons.info_outline),
             title: Text(
-              'Za parcelo ${parsed.parcelNumber} izberite katastrsko občino.',
+              context.l10n.parcelSearchNeedsKo(parsed.parcelNumber!),
             ),
           );
         }

@@ -8,6 +8,7 @@ import '../models/map_layer.dart';
 import '../services/location_settings.dart';
 import '../services/tile_cache_service.dart';
 import '../services/map_preferences_service.dart';
+import '../l10n/l10n.dart';
 
 class ParcelEditor extends StatefulWidget {
   final Parcel? parcel;
@@ -148,7 +149,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
     if (_polygon.length < 3) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Narišite vsaj 3 točke')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.parcelEditorNeedThreePoints)));
       return;
     }
     setState(() {
@@ -160,14 +161,14 @@ class _ParcelEditorState extends State<ParcelEditor> {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Prosim vnesite ime')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.parcelEditorNameRequired)));
       return;
     }
 
     if (_polygon.length < 3) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Narišite vsaj 3 točke')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.parcelEditorNeedThreePoints)));
       return;
     }
 
@@ -222,7 +223,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
-                    'Osnovni sloj',
+                    context.l10n.parcelEditorBaseLayer,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
@@ -254,7 +255,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
-                    'Prekrivni sloji',
+                    context.l10n.parcelEditorOverlayLayers,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
@@ -315,7 +316,9 @@ class _ParcelEditorState extends State<ParcelEditor> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.parcel == null ? 'Dodaj parcelo' : 'Uredi parcelo'),
+        title: Text(widget.parcel == null
+              ? context.l10n.parcelEditorAddTitle
+              : context.l10n.parcelEditorEditTitle),
         actions: [
           IconButton(icon: const Icon(Icons.check), onPressed: _saveParcel),
         ],
@@ -330,24 +333,24 @@ class _ParcelEditorState extends State<ParcelEditor> {
               children: [
                 TextField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ime parcele',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.label),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.parcelEditorNameLabel,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.label),
                   ),
                   textCapitalization: TextCapitalization.words,
                 ),
                 const SizedBox(height: 12),
                 SegmentedButton<ForestType>(
                   segments: [
-                    const ButtonSegment(
+                    ButtonSegment(
                       value: ForestType.deciduous,
-                      label: Text('Listavci'),
-                      icon: Icon(Icons.nature),
+                      label: Text(context.l10n.parcelForestTypeDeciduous),
+                      icon: const Icon(Icons.nature),
                     ),
                     ButtonSegment(
                       value: ForestType.mixed,
-                      label: const Text('Mešani'),
+                      label: Text(context.l10n.parcelForestTypeMixedShort),
                       icon: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -364,10 +367,10 @@ class _ParcelEditorState extends State<ParcelEditor> {
                         ],
                       ),
                     ),
-                    const ButtonSegment(
+                    ButtonSegment(
                       value: ForestType.coniferous,
-                      label: Text('Iglavci'),
-                      icon: Icon(Icons.park),
+                      label: Text(context.l10n.parcelForestTypeConiferous),
+                      icon: const Icon(Icons.park),
                     ),
                   ],
                   selected: {_forestType},
@@ -396,13 +399,13 @@ class _ParcelEditorState extends State<ParcelEditor> {
                 Expanded(
                   child: Text(
                     _isDrawing
-                        ? 'Tapnite na zemljevid za dodajanje točk (${_polygon.length} točk)'
-                        : 'Risanje zaključeno',
+                        ? context.l10n.parcelEditorTapToAdd(_polygon.length)
+                        : context.l10n.parcelEditorDrawingDone,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
                 Text(
-                  'Površina: $areaPreview',
+                  context.l10n.parcelEditorArea(areaPreview),
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -632,8 +635,8 @@ class _ParcelEditorState extends State<ParcelEditor> {
                                   ? null
                                   : _removeLastPoint,
                               icon: const Icon(Icons.undo, size: 18),
-                              label: const Text(
-                                'Nazaj',
+                              label: Text(
+                                context.l10n.commonBack,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -646,7 +649,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
                                   ? null
                                   : _clearPolygon,
                               icon: const Icon(Icons.clear),
-                              label: const Text('Počisti'),
+                              label: Text(context.l10n.parcelEditorClear),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -657,13 +660,13 @@ class _ParcelEditorState extends State<ParcelEditor> {
                                         ? _finishDrawing
                                         : null,
                                     icon: const Icon(Icons.check),
-                                    label: const Text('Končano'),
+                                    label: Text(context.l10n.commonDone),
                                   )
                                 : FilledButton.icon(
                                     onPressed: () =>
                                         setState(() => _isDrawing = true),
                                     icon: const Icon(Icons.edit),
-                                    label: const Text('Uredi'),
+                                    label: Text(context.l10n.commonEdit),
                                   ),
                           ),
                         ],

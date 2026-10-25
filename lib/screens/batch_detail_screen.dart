@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
@@ -65,7 +66,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka: $e')),
+          SnackBar(content: Text(context.l10n.logsErrorWithDetail('$e'))),
         );
       }
     }
@@ -105,9 +106,9 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Hlod izbrisan'),
+            content: Text(context.l10n.batchLogDeleted),
             action: SnackBarAction(
-              label: 'Razveljavi',
+              label: context.l10n.logsUndo,
               onPressed: () async {
                 final newEntry = LogEntry(
                   diameter: entry.diameter,
@@ -131,7 +132,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka: $e')),
+          SnackBar(content: Text(context.l10n.logsErrorWithDetail('$e'))),
         );
       }
     }
@@ -141,20 +142,22 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Izbriši shranjene hlode'),
+        title: Text(context.l10n.logsSavedDeleteTitle),
         content: Text(
-          'Ali ste prepričani, da želite izbrisati "${_batch.name ?? 'shranjene hlode'}"?\n\n'
-          'Hlodi (${_logs.length}) se vrnejo na seznam Hlodi.',
+          context.l10n.batchDeleteConfirm(
+            _batch.name ?? context.l10n.batchDeleteFallbackName,
+            _logs.length,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Izbriši'),
+            child: Text(context.l10n.commonDelete),
           ),
         ],
       ),
@@ -198,7 +201,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
   Future<void> _showExportMenu() async {
     if (_logs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ni hlodov za izvoz')),
+        SnackBar(content: Text(context.l10n.batchNoLogsToExport)),
       );
       return;
     }
@@ -206,18 +209,18 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Izvozi hlode'),
+        title: Text(context.l10n.logsExportTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.table_chart),
-              title: const Text('Izvozi kot Excel'),
+              title: Text(context.l10n.logsExportExcel),
               onTap: () => Navigator.of(context).pop('excel'),
             ),
             ListTile(
               leading: const Icon(Icons.code),
-              title: const Text('Izvozi kot JSON'),
+              title: Text(context.l10n.logsExportJson),
               onTap: () => Navigator.of(context).pop('json'),
             ),
           ],
@@ -235,13 +238,13 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Izvoz uspešen')),
+            SnackBar(content: Text(context.l10n.logsExportSuccess)),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Napaka: $e')),
+            SnackBar(content: Text(context.l10n.logsErrorWithDetail('$e'))),
           );
         }
       }
@@ -254,21 +257,21 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_batch.name ?? 'Shranjeni hlodi'),
+        title: Text(_batch.name ?? context.l10n.batchDefaultTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.file_download),
-            tooltip: 'Izvozi',
+            tooltip: context.l10n.logsMenuExport,
             onPressed: _showExportMenu,
           ),
           IconButton(
             icon: const Icon(Icons.edit),
-            tooltip: 'Uredi info',
+            tooltip: context.l10n.batchEditInfoTooltip,
             onPressed: _editBatchInfo,
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            tooltip: 'Izbriši',
+            tooltip: context.l10n.commonDelete,
             onPressed: _deleteBatch,
           ),
         ],
@@ -314,7 +317,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
                                   ),
                                   const Spacer(),
                                   Text(
-                                    '${_logs.length} hlodov',
+                                    context.l10n.logsCountLogs(_logs.length),
                                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                           color: Colors.grey[500],
                                         ),
@@ -373,14 +376,14 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
                                   Icon(Icons.forest_outlined, size: 64, color: Colors.grey[600]),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'Ni še hlodov',
+                                    context.l10n.logsEmptyTitle,
                                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                           color: Colors.grey[500],
                                         ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Tapnite + za dodajanje hloda',
+                                    context.l10n.batchEmptyHint,
                                     style: TextStyle(color: Colors.grey[600]),
                                   ),
                                 ],
@@ -488,7 +491,7 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
           permission == LocationPermission.deniedForever) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Dovoljenje za lokacijo zavrnjeno')),
+            SnackBar(content: Text(context.l10n.logsLocationPermissionDenied)),
           );
         }
         return;
@@ -505,7 +508,7 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka: $e')),
+          SnackBar(content: Text(context.l10n.logsErrorWithDetail('$e'))),
         );
       }
     } finally {
@@ -575,7 +578,9 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
               Row(
                 children: [
                   Text(
-                    _addedCount > 0 ? 'Dodaj (+$_addedCount)' : 'Dodaj',
+                    _addedCount > 0
+                        ? context.l10n.batchAddTitleCount(_addedCount)
+                        : context.l10n.commonAdd,
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
@@ -593,8 +598,8 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
                       controller: _diameterController,
                       focusNode: _diameterFocus,
                       autofocus: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Premer (cm)',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.logsDiameterLabel,
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),
@@ -602,15 +607,15 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
                       inputFormatters: [
                         DecimalTextInputFormatter(),
                       ],
-                      validator: (v) => v == null || v.isEmpty ? 'Vnesi' : null,
+                      validator: (v) => v == null || v.isEmpty ? context.l10n.batchValidatorEnter : null,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
                       controller: _lengthController,
-                      decoration: const InputDecoration(
-                        labelText: 'Dolžina (m)',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.logsLengthLabel,
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),
@@ -618,7 +623,7 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
                       inputFormatters: [
                         DecimalTextInputFormatter(),
                       ],
-                      validator: (v) => v == null || v.isEmpty ? 'Vnesi' : null,
+                      validator: (v) => v == null || v.isEmpty ? context.l10n.batchValidatorEnter : null,
                     ),
                   ),
                 ],
@@ -628,7 +633,7 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
                 // ignore: deprecated_member_use
                 value: _selectedSpecies,
                 decoration: InputDecoration(
-                  labelText: 'Drevesna vrsta',
+                  labelText: context.l10n.logsSpeciesLabel,
                   border: const OutlineInputBorder(),
                   isDense: true,
                   prefixIcon: const Icon(Icons.forest, size: 18),
@@ -645,9 +650,9 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
                       : null,
                 ),
                 items: [
-                  const DropdownMenuItem<String>(
+                  DropdownMenuItem<String>(
                     value: null,
-                    child: Text('Ni izbrano'),
+                    child: Text(context.l10n.logsNotSelected),
                   ),
                   ..._availableSpecies.map((species) {
                     return DropdownMenuItem<String>(
@@ -675,7 +680,7 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
                       Icon(Icons.calculate, color: Colors.green[700]),
                       const SizedBox(width: 8),
                       Text(
-                        'Volumen: ${_calculatedVolume!.toStringAsFixed(4)} m³',
+                        context.l10n.batchVolumeLine(_calculatedVolume!.toStringAsFixed(4)),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.green[800],
@@ -721,12 +726,12 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.my_location, size: 16),
-                      label: const Text('Lokacija'),
+                      label: Text(context.l10n.logsLocationLabel),
                     ),
                   const Spacer(),
                   FilledButton(
                     onPressed: _calculatedVolume != null && !_isSaving ? _saveAndContinue : null,
-                    child: const Text('Dodaj'),
+                    child: Text(context.l10n.commonAdd),
                   ),
                 ],
               ),
@@ -789,7 +794,7 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka: $e')),
+          SnackBar(content: Text(context.l10n.logsErrorWithDetail('$e'))),
         );
       }
     } finally {
@@ -827,8 +832,8 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
           children: [
             Row(
               children: [
-                const Text(
-                  'Uredi',
+                Text(
+                  context.l10n.commonEdit,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
@@ -842,9 +847,9 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
 
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Ime',
-                hintText: 'npr. Smreka za Novaka',
+              decoration: InputDecoration(
+                labelText: context.l10n.logsNameLabel,
+                hintText: context.l10n.logsNameHint,
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.label_outline),
                 isDense: true,
@@ -855,9 +860,9 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
 
             TextField(
               controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Opombe',
-                hintText: 'Dodatne opombe',
+              decoration: InputDecoration(
+                labelText: context.l10n.logsNotesLabel,
+                hintText: context.l10n.batchNotesHint,
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.note),
                 isDense: true,
@@ -902,12 +907,12 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.my_location, size: 16),
-                    label: const Text('Dodaj lokacijo'),
+                    label: Text(context.l10n.logsAddLocation),
                   ),
                 const Spacer(),
                 FilledButton(
                   onPressed: _save,
-                  child: const Text('Shrani'),
+                  child: Text(context.l10n.commonSave),
                 ),
               ],
             ),

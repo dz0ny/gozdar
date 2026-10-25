@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import '../services/species_service.dart';
-import '../utils/sl_plural.dart';
 
 /// Bottom sheet for managing tree species
 class SpeciesManagementSheet extends StatefulWidget {
@@ -36,12 +36,12 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Dodaj novo vrsto'),
+          title: Text(context.l10n.logsSpeciesAddTitle),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(
-              labelText: 'Ime vrste',
-              hintText: 'Npr. Hrast',
+            decoration: InputDecoration(
+              labelText: context.l10n.logsSpeciesNameLabel,
+              hintText: context.l10n.logsSpeciesNameHint,
               border: OutlineInputBorder(),
             ),
             autofocus: true,
@@ -50,7 +50,7 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Prekliči'),
+              child: Text(context.l10n.commonCancel),
             ),
             FilledButton(
               onPressed: () {
@@ -58,7 +58,7 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
                   Navigator.pop(context, controller.text.trim());
                 }
               },
-              child: const Text('Dodaj'),
+              child: Text(context.l10n.commonAdd),
             ),
           ],
         );
@@ -70,7 +70,7 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
       await _loadSpecies();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Vrsta "$newSpecies" dodana')),
+          SnackBar(content: Text(context.l10n.logsSpeciesAdded(newSpecies))),
         );
       }
     }
@@ -80,17 +80,17 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Odstrani vrsto'),
-        content: Text('Ali ste prepričani, da želite odstraniti "$species"?'),
+        title: Text(context.l10n.logsSpeciesRemoveTitle),
+        content: Text(context.l10n.logsSpeciesRemoveConfirm(species)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Odstrani'),
+            child: Text(context.l10n.logsSpeciesRemoveButton),
           ),
         ],
       ),
@@ -101,7 +101,7 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
       await _loadSpecies();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Vrsta "$species" odstranjena')),
+          SnackBar(content: Text(context.l10n.logsSpeciesRemoved(species))),
         );
       }
     }
@@ -111,20 +111,17 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Ponastavi na privzeto'),
-        content: const Text(
-          'Ali ste prepričani, da želite ponastaviti vrste na privzete vrednosti?\n\n'
-          'Vse dodane vrste bodo odstranjene.',
-        ),
+        title: Text(context.l10n.logsSpeciesResetTitle),
+        content: Text(context.l10n.logsSpeciesResetConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('Ponastavi'),
+            child: Text(context.l10n.logsSpeciesResetButton),
           ),
         ],
       ),
@@ -135,7 +132,7 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
       await _loadSpecies();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Vrste ponastavljene na privzete')),
+          SnackBar(content: Text(context.l10n.logsSpeciesResetDone)),
         );
       }
     }
@@ -151,8 +148,8 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
           children: [
             Row(
               children: [
-                const Text(
-                  'Upravljanje vrst',
+                Text(
+                  context.l10n.logsMenuManageSpecies,
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
@@ -174,20 +171,20 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
                   child: FilledButton.icon(
                     onPressed: _addSpecies,
                     icon: const Icon(Icons.add),
-                    label: const Text('Dodaj novo vrsto'),
+                    label: Text(context.l10n.logsSpeciesAddTitle),
                   ),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
                   onPressed: _resetToDefaults,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Ponastavi'),
+                  label: Text(context.l10n.logsSpeciesResetButton),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             Text(
-              slCount(_species.length, 'vrsta', 'vrsti', 'vrste', 'vrst'),
+              context.l10n.logsSpeciesCount(_species.length),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -206,7 +203,7 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Ni dodanih vrst',
+                            context.l10n.logsSpeciesNone,
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),

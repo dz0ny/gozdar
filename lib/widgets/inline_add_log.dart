@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import '../models/log_entry.dart';
 import '../services/log_input_prefs_service.dart';
 import '../utils/decimal_input.dart';
@@ -109,7 +110,7 @@ class _InlineAddLogState extends State<InlineAddLog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka pri shranjevanju: $e')),
+          SnackBar(content: Text(context.l10n.logsSaveErrorWithDetail('$e'))),
         );
       }
     } finally {
@@ -229,8 +230,8 @@ class _InlineAddLogState extends State<InlineAddLog> {
                           backgroundColor: Colors.green[700],
                           foregroundColor: Colors.white,
                         ),
-                        child: const Tooltip(
-                          message: 'Dodaj',
+                        child: Tooltip(
+                          message: context.l10n.commonAdd,
                           child: Icon(Icons.add, size: 44),
                         ),
                       ),
@@ -243,14 +244,14 @@ class _InlineAddLogState extends State<InlineAddLog> {
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
-                    Text('Volumen', style: unitStyle),
+                    Text(context.l10n.logsVolumeLabel, style: unitStyle),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: Text('=', style: unitStyle),
                     ),
                     if (_addedCount > 0)
                       Text(
-                        'Dodano: $_addedCount',
+                        context.l10n.logsInlineAdded(_addedCount),
                         style: textTheme.titleMedium?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),

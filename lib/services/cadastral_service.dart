@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:proj4dart/proj4dart.dart' as proj4;
+
+import '../l10n/l10n.dart';
 import 'http_cache_service.dart';
 
 /// A fetched parcel plus its bounding box, kept in the spatial cache.
@@ -28,7 +31,8 @@ class CadastralService {
   // Global geoserver WMS endpoint (workspace-qualified layer names work here).
   // Matches the official ZGS pregledovalnik viewer configuration.
   static const String _wmsBaseUrl = 'https://prostor.zgs.gov.si/geoserver/wms';
-  static const String _wfsApiUrl = 'https://gozdar-proxy.dz0ny.workers.dev/api/wfs';
+  static const String _wfsApiUrl =
+      'https://gozdar-proxy.dz0ny.workers.dev/api/wfs';
 
   final HttpCacheService _httpCache = HttpCacheService();
 
@@ -55,8 +59,9 @@ class CadastralService {
       if (await _cacheFile!.exists()) {
         final data = jsonDecode(await _cacheFile!.readAsString()) as List;
         for (final entry in data) {
-          final parcel =
-              CadastralParcel.fromJson(entry as Map<String, dynamic>);
+          final parcel = CadastralParcel.fromJson(
+            entry as Map<String, dynamic>,
+          );
           _addToCache(parcel, persist: false);
         }
         debugPrint('Loaded ${_parcelCache.length} cached parcels');
@@ -127,15 +132,20 @@ class CadastralService {
           '+towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs';
 
       try {
-        _epsg3794 = proj4.Projection.get('EPSG:3794') ??
+        _epsg3794 =
+            proj4.Projection.get('EPSG:3794') ??
             proj4.Projection.add('EPSG:3794', epsg3794Def);
       } catch (e) {
         _epsg3794 = proj4.Projection.get('EPSG:3794');
       }
 
       // Some proj4dart setups may not have EPSG:4326 pre-registered.
-      _wgs84 = proj4.Projection.get('EPSG:4326') ??
-          proj4.Projection.add('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs');
+      _wgs84 =
+          proj4.Projection.get('EPSG:4326') ??
+          proj4.Projection.add(
+            'EPSG:4326',
+            '+proj=longlat +datum=WGS84 +no_defs',
+          );
     }
   }
 
@@ -180,27 +190,32 @@ class CadastralService {
       final maxY = point.y + boxSize;
 
       // Build WMS 1.3.0 GetFeatureInfo request
-      final uri = Uri.parse(_wmsBaseUrl).replace(queryParameters: {
-        'SERVICE': 'WMS',
-        'VERSION': '1.3.0',
-        'REQUEST': 'GetFeatureInfo',
-        'FORMAT': 'image/png',
-        'TRANSPARENT': 'true',
-        'QUERY_LAYERS': layerName,
-        'STYLES': '',
-        'LAYERS': layerName,
-        'EXCEPTIONS': 'INIMAGE',
-        'INFO_FORMAT': 'application/json',
-        'FEATURE_COUNT': featureCount.toString(),
-        'I': '50',
-        'J': '50',
-        'CRS': 'EPSG:3794',
-        'WIDTH': '101',
-        'HEIGHT': '101',
-        'BBOX': '$minX,$minY,$maxX,$maxY',
-      });
+      final uri = Uri.parse(_wmsBaseUrl).replace(
+        queryParameters: {
+          'SERVICE': 'WMS',
+          'VERSION': '1.3.0',
+          'REQUEST': 'GetFeatureInfo',
+          'FORMAT': 'image/png',
+          'TRANSPARENT': 'true',
+          'QUERY_LAYERS': layerName,
+          'STYLES': '',
+          'LAYERS': layerName,
+          'EXCEPTIONS': 'INIMAGE',
+          'INFO_FORMAT': 'application/json',
+          'FEATURE_COUNT': featureCount.toString(),
+          'I': '50',
+          'J': '50',
+          'CRS': 'EPSG:3794',
+          'WIDTH': '101',
+          'HEIGHT': '101',
+          'BBOX': '$minX,$minY,$maxX,$maxY',
+        },
+      );
 
-      final response = await _httpCache.get(uri, timeout: const Duration(seconds: 30));
+      final response = await _httpCache.get(
+        uri,
+        timeout: const Duration(seconds: 30),
+      );
 
       if (response.statusCode != 200) {
         return null;
@@ -268,8 +283,10 @@ class CadastralService {
       final lon = location.longitude.toStringAsFixed(5);
       final uri = Uri.parse('$_wfsApiUrl/parcel/point?lat=$lat&lon=$lon');
 
-      final response =
-          await _httpCache.get(uri, timeout: const Duration(seconds: 30));
+      final response = await _httpCache.get(
+        uri,
+        timeout: const Duration(seconds: 30),
+      );
       if (response.statusCode != 200) return null;
 
       final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -296,7 +313,10 @@ class CadastralService {
       final encodedParcel = Uri.encodeComponent(parcelNumber);
       final uri = Uri.parse('$_wfsApiUrl/parcel/ko/$koNumber/$encodedParcel');
 
-      final response = await _httpCache.get(uri, timeout: const Duration(seconds: 30));
+      final response = await _httpCache.get(
+        uri,
+        timeout: const Duration(seconds: 30),
+      );
 
       if (response.statusCode != 200) {
         return null;
@@ -311,7 +331,9 @@ class CadastralService {
 
       return WfsParcel.fromGeoJson(features.first as Map<String, dynamic>);
     } catch (e) {
-      debugPrint('Error querying parcel by KO $koNumber and number $parcelNumber: $e');
+      debugPrint(
+        'Error querying parcel by KO $koNumber and number $parcelNumber: $e',
+      );
       return null;
     }
   }
@@ -355,7 +377,10 @@ class CadastralService {
       return null;
     }
 
-    return WmsFeature.fromGeoJson(features.first, 'Zavarovano območje');
+    return WmsFeature.fromGeoJson(
+      features.first,
+      L10n.current.svcLayerProtectedArea,
+    );
   }
 
   /// Query multiple layers at once and return all results
@@ -382,21 +407,24 @@ class CadastralService {
   /// Get display name for a layer
   String _getLayerDisplayName(String layerName) {
     final names = {
-      'pregledovalnik:kn_parcele': 'Parcela',
-      'pregledovalnik:sestoji': 'Sestoj',
-      'pregledovalnik:odseki_gozdni': 'Odsek',
-      'pregledovalnik:revirji': 'Revir',
-      'pregledovalnik:gge': 'GGE',
-      'pregledovalnik:ggo': 'GGO',
-      'pregledovalnik:gozdni_rezervati': 'Gozdni rezervat',
-      'pregledovalnik:varovalni_gozdovi': 'Varovalni gozd',
-      'pregledovalnik:zavarovana_obmocja_poligoni': 'Zavarovano območje',
-      'pregledovalnik:naravne_vrednote_poligoni': 'Naravna vrednota',
-      'pregledovalnik:epo_poligoni': 'EPO',
-      'pregledovalnik:lovisca': 'Lovišče',
-      'pregledovalnik:pozarna_ogrozenost': 'Požarna ogroženost',
-      'pregledovalnik:NEP_RPE_OBCINE': 'Občina',
-      'pregledovalnik:KN_KATASTRSKE_OBCINE': 'Katastrska občina',
+      'pregledovalnik:kn_parcele': L10n.current.svcLayerParcel,
+      'pregledovalnik:sestoji': L10n.current.svcLayerStand,
+      'pregledovalnik:odseki_gozdni': L10n.current.svcLayerSection,
+      'pregledovalnik:revirji': L10n.current.svcLayerDistrict,
+      'pregledovalnik:gge': L10n.current.svcLayerGge,
+      'pregledovalnik:ggo': L10n.current.svcLayerGgo,
+      'pregledovalnik:gozdni_rezervati': L10n.current.svcLayerForestReserve,
+      'pregledovalnik:varovalni_gozdovi': L10n.current.svcLayerProtectiveForest,
+      'pregledovalnik:zavarovana_obmocja_poligoni':
+          L10n.current.svcLayerProtectedArea,
+      'pregledovalnik:naravne_vrednote_poligoni':
+          L10n.current.svcLayerNaturalValue,
+      'pregledovalnik:epo_poligoni': L10n.current.svcLayerEpo,
+      'pregledovalnik:lovisca': L10n.current.svcLayerHuntingGround,
+      'pregledovalnik:pozarna_ogrozenost': L10n.current.svcLayerFireRisk,
+      'pregledovalnik:NEP_RPE_OBCINE': L10n.current.svcLayerMunicipality,
+      'pregledovalnik:KN_KATASTRSKE_OBCINE':
+          L10n.current.svcLayerCadastralMunicipality,
     };
     return names[layerName] ?? layerName.split(':').last;
   }
@@ -416,7 +444,10 @@ class WmsFeature {
     this.polygon,
   });
 
-  factory WmsFeature.fromGeoJson(Map<String, dynamic> feature, String layerType) {
+  factory WmsFeature.fromGeoJson(
+    Map<String, dynamic> feature,
+    String layerType,
+  ) {
     final properties = feature['properties'] as Map<String, dynamic>? ?? {};
     final geometry = feature['geometry'] as Map<String, dynamic>?;
 
@@ -510,7 +541,9 @@ class CadastralParcel {
     }).toList();
 
     // Convert to WGS84
-    final latLngPolygon = CadastralService.convertPolygonToLatLng(polygonCoords);
+    final latLngPolygon = CadastralService.convertPolygonToLatLng(
+      polygonCoords,
+    );
 
     return CadastralParcel(
       id: feature['id'] as String? ?? '',
@@ -524,7 +557,9 @@ class CadastralParcel {
   /// Create from a [WfsParcel] (proxy API, WGS84). The national cadastral
   /// reference is `"<ko> <parcel>"`, e.g. "1651 603".
   factory CadastralParcel.fromWfsParcel(WfsParcel parcel) {
-    final parts = parcel.nationalCadastralReference.trim().split(RegExp(r'\s+'));
+    final parts = parcel.nationalCadastralReference.trim().split(
+      RegExp(r'\s+'),
+    );
     final ko = parts.isNotEmpty ? int.tryParse(parts.first) ?? 0 : 0;
     var parcelNumber = parcel.label;
     if (parcelNumber.isEmpty && parts.length > 1) {
@@ -549,25 +584,23 @@ class CadastralParcel {
   }
 
   /// Get display name for the parcel
-  String get displayName => 'Parcela $parcelNumber (KO $cadastralMunicipality)';
+  String get displayName =>
+      L10n.current.svcParcelDisplayName(parcelNumber, cadastralMunicipality);
 
   /// Serialize for the persistent spatial cache.
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'ko': cadastralMunicipality,
-        'parcela': parcelNumber,
-        'area': area,
-        'polygon': polygon
-            .map((p) => [p.latitude, p.longitude])
-            .toList(growable: false),
-      };
+    'id': id,
+    'ko': cadastralMunicipality,
+    'parcela': parcelNumber,
+    'area': area,
+    'polygon': polygon
+        .map((p) => [p.latitude, p.longitude])
+        .toList(growable: false),
+  };
 
   factory CadastralParcel.fromJson(Map<String, dynamic> json) {
     final poly = (json['polygon'] as List<dynamic>? ?? [])
-        .map((c) => LatLng(
-              (c[0] as num).toDouble(),
-              (c[1] as num).toDouble(),
-            ))
+        .map((c) => LatLng((c[0] as num).toDouble(), (c[1] as num).toDouble()))
         .toList();
     return CadastralParcel(
       id: json['id'] as String? ?? '',
@@ -588,7 +621,8 @@ class CadastralParcel {
       final xi = poly[i].longitude, yi = poly[i].latitude;
       final xj = poly[j].longitude, yj = poly[j].latitude;
       if (((yi > point.latitude) != (yj > point.latitude)) &&
-          (point.longitude < (xj - xi) * (point.latitude - yi) / (yj - yi) + xi)) {
+          (point.longitude <
+              (xj - xi) * (point.latitude - yi) / (yj - yi) + xi)) {
         inside = !inside;
       }
       j = i;
@@ -679,7 +713,8 @@ class WfsParcel {
     return WfsParcel(
       localId: inspireId?['localId'] as String? ?? '',
       label: properties['label'] as String? ?? '',
-      nationalCadastralReference: properties['nationalCadastralReference'] as String? ?? '',
+      nationalCadastralReference:
+          properties['nationalCadastralReference'] as String? ?? '',
       area: area,
       polygon: polygon,
       referencePoint: referencePoint,
@@ -708,5 +743,6 @@ class WfsParcel {
   }
 
   /// Get display name for the parcel
-  String get displayName => 'Parcela $label ($nationalCadastralReference)';
+  String get displayName =>
+      L10n.current.svcParcelDisplayNameRef(label, nationalCadastralReference);
 }

@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/parcel.dart';
 import '../models/log_entry.dart';
 import '../models/map_location.dart';
+import '../l10n/l10n.dart';
 
 class KmlService {
   /// Export parcels to KML format
@@ -21,8 +22,8 @@ class KmlService {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(filePath)],
-          subject: 'Gozdar Parcels Export',
-          text: 'Exported ${parcels.length} parcels',
+          subject: L10n.current.svcKmlExportSubject,
+          text: L10n.current.svcKmlExportText(parcels.length),
         ),
       );
     } catch (e) {
@@ -207,9 +208,14 @@ class KmlService {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(filePath)],
-          subject: 'Parcela ${parcel.name}',
+          subject: L10n.current.svcKmlParcelShareSubject(parcel.name),
           text:
-              'Izvoz parcele ${parcel.name} z ${logs.length} hlodi, ${secnja.length} sečnjami in ${locations.length} točkami',
+              L10n.current.svcKmlParcelShareText(
+            parcel.name,
+            logs.length,
+            secnja.length,
+            locations.length,
+          ),
         ),
       );
     } catch (e) {

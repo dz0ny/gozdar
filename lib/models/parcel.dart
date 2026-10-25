@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:latlong2/latlong.dart';
+import '../l10n/l10n.dart';
 import 'log_entry.dart';
 
 enum ForestType { mixed, deciduous, coniferous }
@@ -77,9 +78,9 @@ class Parcel {
 
   String getPointName(int index) {
     final names = pointNames;
-    if (index < 0 || index >= polygon.length) return 'Točka ?';
+    if (index < 0 || index >= polygon.length) return L10n.current.parcelPointUnknown;
     final customName = index < names.length ? names[index] : null;
-    return customName ?? 'Točka ${index + 1}';
+    return customName ?? L10n.current.parcelPointNumbered(index + 1);
   }
 
   Parcel withPointName(int index, String? name) {

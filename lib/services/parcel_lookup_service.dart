@@ -24,12 +24,21 @@ class ParcelRegion {
   final int? bytes;
   final int? rows;
 
+  /// Data date of this region when it differs from the manifest's (e.g. the
+  /// Croatian DGU data); null means the manifest-level date applies.
+  final String? date;
+
+  /// Data source of this region when it differs from the manifest's.
+  final String? source;
+
   const ParcelRegion({
     required this.code,
     required this.name,
     required this.file,
     this.bytes,
     this.rows,
+    this.date,
+    this.source,
   });
 
   factory ParcelRegion.fromJson(Map<String, dynamic> j) => ParcelRegion(
@@ -38,6 +47,8 @@ class ParcelRegion {
         file: (j['file'] ?? '').toString(),
         bytes: (j['bytes'] as num?)?.toInt(),
         rows: (j['rows'] as num?)?.toInt(),
+        date: j['date']?.toString(),
+        source: j['source']?.toString(),
       );
 
   /// Approximate size in MB, or null when unknown.
@@ -57,6 +68,7 @@ class _RegionDb {
   final String fileName;
   final String? region;
   final String? dataDate;
+  final String? dataSource; // `meta.source`, e.g. 'DGU DKP (HR)'
   final String? source; // 'imported' | 'downloaded'
   final int rowCount;
   final bool hasRtree;
@@ -67,6 +79,7 @@ class _RegionDb {
     required this.fileName,
     required this.region,
     required this.dataDate,
+    required this.dataSource,
     required this.source,
     required this.rowCount,
     required this.hasRtree,
@@ -121,6 +134,9 @@ class ParcelLookupService {
       ..sort();
     return names;
   }
+
+  /// Whether a Croatian (DGU) region is loaded, from the databases' `meta.source`.
+  bool get hasCroatianRegion => _dbs.any((d) => d.dataSource == 'DGU DKP (HR)');
 
   /// File names of the loaded databases (e.g. `parcels-gorenjska.sqlite`).
   Set<String> get loadedFiles => _dbs.map((d) => d.fileName).toSet();
@@ -189,6 +205,7 @@ class ParcelLookupService {
       fileName: _baseName(path),
       region: _readMeta(db, 'region'),
       dataDate: _readMeta(db, 'date'),
+      dataSource: _readMeta(db, 'source'),
       source: _readSource(path),
       rowCount: _readRowCount(db),
       hasRtree: _detectRtree(db),

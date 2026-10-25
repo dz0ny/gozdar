@@ -9,8 +9,9 @@
 
 Each entry carries the region ``code`` (from ``regije.geojson``), its display
 ``name`` (from the DB's ``meta.region``), the ``file`` name, size in ``bytes``
-and the parcel ``rows`` count. Top-level ``date``/``source`` are copied from the
-databases' ``meta`` table (all regions must agree).
+and the parcel ``rows`` count. Top-level ``date``/``source`` come from the
+databases' ``meta`` table and use the most common value. A region that differs
+(for example a Croatian one) gets its own ``date``/``source`` entry.
 
 With ``--public-owners``, the public-owners DB's size and ``meta.built``
 timestamp are added under ``public_owners`` so installed apps can tell when a
@@ -24,6 +25,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import sqlite3
 import sys
@@ -45,7 +47,7 @@ def main() -> None:
     geo = json.loads(Path(args.regions).read_text(encoding="utf-8"))
     code_by_name = {f["properties"]["name"]: f["properties"]["code"] for f in geo["features"]}
 
-    entries, dates, sources = [], set(), set()
+    entries, metas = [], []
     for f in sorted(d.glob("parcels-*.sqlite")):
         con = sqlite3.connect(f"file:{f}?mode=ro", uri=True)
         meta = dict(con.execute("SELECT k, v FROM meta"))
@@ -59,17 +61,21 @@ def main() -> None:
             sys.exit(f"{f.name}: region '{name}' not found in {args.regions}")
         if meta.get("rows") and int(meta["rows"]) != rows:
             sys.exit(f"{f.name}: meta.rows={meta['rows']} but COUNT(*)={rows}")
-        dates.add(meta.get("date"))
-        sources.add(meta.get("source"))
+        metas.append((meta.get("date"), meta.get("source")))
         entries.append({"code": code, "name": name, "file": f.name,
                         "bytes": f.stat().st_size, "rows": rows})
 
     if not entries:
         sys.exit(f"No parcels-*.sqlite in {d}")
-    if len(dates) != 1 or len(sources) != 1:
-        sys.exit(f"Inconsistent meta across regions: dates={dates} sources={sources}")
+    top_date = collections.Counter(d for d, _ in metas).most_common(1)[0][0]
+    top_source = collections.Counter(s for _, s in metas).most_common(1)[0][0]
+    for entry, (date, source) in zip(entries, metas):
+        if date != top_date:
+            entry["date"] = date
+        if source != top_source:
+            entry["source"] = source
     entries.sort(key=lambda e: e["name"])
-    manifest = {"date": dates.pop(), "source": sources.pop(), "regions": entries}
+    manifest = {"date": top_date, "source": top_source, "regions": entries}
     if args.public_owners:
         po = Path(args.public_owners)
         con = sqlite3.connect(f"file:{po}?mode=ro", uri=True)

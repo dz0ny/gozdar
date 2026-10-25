@@ -95,15 +95,15 @@ class KatasterUpdate {
     required Map<String, String?> loadedRegionDates,
     required String? publicOwnersBuilt,
   }) {
-    final remoteDate = manifest.date;
     final outdated = <ParcelRegion>[];
-    if (remoteDate != null) {
-      for (final region in manifest.regions) {
-        if (!loadedRegionDates.containsKey(region.file)) continue;
-        final local = loadedRegionDates[region.file];
-        if (local == null || local.compareTo(remoteDate) < 0) {
-          outdated.add(region);
-        }
+    for (final region in manifest.regions) {
+      // A region may carry its own date (data from another authority).
+      final remoteDate = region.date ?? manifest.date;
+      if (remoteDate == null) continue;
+      if (!loadedRegionDates.containsKey(region.file)) continue;
+      final local = loadedRegionDates[region.file];
+      if (local == null || local.compareTo(remoteDate) < 0) {
+        outdated.add(region);
       }
     }
     final remoteBuilt = manifest.publicOwnersBuilt;

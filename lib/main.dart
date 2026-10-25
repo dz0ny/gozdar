@@ -1,5 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'config/distribution.dart';
@@ -17,6 +19,8 @@ import 'services/drone_settings.dart';
 import 'services/owner_offline_settings_service.dart';
 import 'services/update_service.dart';
 import 'services/vlake_settings.dart';
+import 'services/locale_settings.dart';
+import 'l10n/l10n.dart';
 import 'providers/logs_provider.dart';
 import 'providers/map_provider.dart';
 import 'theme/app_theme.dart';
@@ -30,12 +34,15 @@ void main() async {
   await OwnerLookupService.instance.init();
   await OwnerLookupService.instance.initPublic();
   await ParcelLookupService.instance.init();
+  OwnerLookupService.instance.initPublicHr().ignore();
   await KatasterUpdateService.instance.init();
   await OwnerOfflineSettingsService.instance.init();
   await DroneSettings.instance.init();
   await CacheSettings.instance.load();
   await PublicParcelSettings.instance.load();
   await VlakeSettings.instance.load();
+  await initializeDateFormatting();
+  await LocaleSettings.instance.load();
 
   // Initialize update service (Android only)
   if (Platform.isAndroid && !isPlayDistribution) {
@@ -99,14 +106,27 @@ class _GozdarAppState extends State<GozdarApp> {
         ),
         ChangeNotifierProvider.value(value: _navigationNotifier),
         ChangeNotifierProvider.value(value: VlakeSettings.instance),
+        ChangeNotifierProvider.value(value: LocaleSettings.instance),
         if (Platform.isAndroid && !isPlayDistribution)
           ChangeNotifierProvider.value(value: UpdateService()),
       ],
-      child: MaterialApp.router(
-        title: 'Gozdar',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.greenTheme,
-        routerConfig: _router,
+      child: Consumer<LocaleSettings>(
+        builder: (context, localeSettings, _) => MaterialApp.router(
+          title: 'Gozdar',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.greenTheme,
+          routerConfig: _router,
+          locale: localeSettings.override,
+          supportedLocales: const [Locale('sl'), Locale('hr')],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          localeResolutionCallback: (locale, supported) =>
+              L10n.resolve(locale),
+        ),
       ),
     );
   }

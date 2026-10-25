@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import '../models/log_batch.dart';
 import '../services/location_settings.dart';
-import '../utils/sl_plural.dart';
 
 /// "Shrani hlode": name the current working list and file it away, with an
 /// optional GPS fix for where the pile sits. Notes can be added later from
@@ -22,7 +22,9 @@ class SaveBatchSheet extends StatefulWidget {
 
   /// Default name offered in the field: "Hlodi 18. 10. 2026".
   static String defaultName(DateTime now) =>
-      'Hlodi ${DateFormat('d. M. yyyy').format(now)}';
+      L10n.current.logsSaveSheetDefaultName(
+        DateFormat('d. M. yyyy').format(now),
+      );
 
   @override
   State<SaveBatchSheet> createState() => _SaveBatchSheetState();
@@ -60,7 +62,7 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
           permission == LocationPermission.deniedForever) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Dovoljenje za lokacijo zavrnjeno')),
+            SnackBar(content: Text(context.l10n.logsLocationPermissionDenied)),
           );
         }
         return;
@@ -76,7 +78,7 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Napaka: $e')),
+          SnackBar(content: Text(context.l10n.logsErrorWithDetail('$e'))),
         );
       }
     } finally {
@@ -99,7 +101,7 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Napaka pri shranjevanju')),
+          SnackBar(content: Text(context.l10n.logsSaveError)),
         );
       }
     } finally {
@@ -122,13 +124,15 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Shrani hlode',
+            context.l10n.logsSaveSheetTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 4),
           Text(
-            '${widget.totalVolume.toStringAsFixed(2)} m³ • '
-            '${slCount(widget.logCount, 'hlod', 'hloda', 'hlodi', 'hlodov')}',
+            context.l10n.logsSaveSheetSummary(
+              widget.logCount,
+              widget.totalVolume.toStringAsFixed(2),
+            ),
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium
@@ -138,9 +142,9 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
           TextField(
             controller: _nameController,
             autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Ime',
-              hintText: 'npr. Smreka za Novaka',
+            decoration: InputDecoration(
+              labelText: context.l10n.logsNameLabel,
+              hintText: context.l10n.logsNameHint,
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.label_outline),
             ),
@@ -170,7 +174,7 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.my_location),
-              label: const Text('Dodaj lokacijo'),
+              label: Text(context.l10n.logsAddLocation),
             ),
           const SizedBox(height: 12),
           FilledButton.icon(
@@ -182,7 +186,7 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.save_outlined),
-            label: const Text('Shrani'),
+            label: Text(context.l10n.commonSave),
           ),
         ],
       ),

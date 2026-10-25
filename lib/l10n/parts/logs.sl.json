@@ -1,0 +1,352 @@
+{
+  "logsHeaderTitle": "Hlodi",
+  "logsMoreOptionsTooltip": "Več možnosti hlodov",
+  "logsMenuManageSpecies": "Upravljanje vrst",
+  "logsMenuExport": "Izvozi",
+  "logsMenuDeleteAll": "Odstrani vse",
+  "logsSavedTooltip": "Shranjeno",
+  "logsSaved": "Shranjeno",
+  "logsSaveError": "Napaka pri shranjevanju",
+  "logsEntryUpdated": "Vnos posodobljen",
+  "logsErrorWithDetail": "Napaka: {error}",
+  "@logsErrorWithDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logsEntryDeleted": "Vnos izbrisan",
+  "logsUndo": "Razveljavi",
+  "logsExportTitle": "Izvozi hlode",
+  "logsExportExcel": "Izvozi kot Excel",
+  "logsExportJson": "Izvozi kot JSON",
+  "logsExportSuccess": "Izvoz uspešen",
+  "logsNoEntriesToDelete": "Ni vnosov za brisanje",
+  "logsDeleteAllTitle": "Odstrani vse hlode",
+  "logsDeleteAllConfirm": "Ali ste prepričani, da želite odstraniti vseh {count} vnosov?\n\nSkupni volumen: {volume} m³\n\nShranjeni hlodi ostanejo nespremenjeni. To dejanje ni mogoče razveljaviti.",
+  "@logsDeleteAllConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "logsAllEntriesRemoved": "Vsi vnosi odstranjeni",
+  "logsNoEntriesToSave": "Ni vnosov za shranjevanje",
+  "logsCountLogs": "{count, plural, one{{count} hlod} two{{count} hloda} few{{count} hlodi} other{{count} hlodov}}",
+  "@logsCountLogs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsGroupSummary": "{count, plural, one{{count} hlod} two{{count} hloda} few{{count} hlodi} other{{count} hlodov}} • {volume} m³",
+  "@logsGroupSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSaveSheetSummary": "{volume} m³ • {count, plural, one{{count} hlod} two{{count} hloda} few{{count} hlodi} other{{count} hlodov}}",
+  "@logsSaveSheetSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSpeciesNotSelected": "Vrsta ni izbrana",
+  "logsUnknownSpecies": "Neznana vrsta",
+  "logsEmptyTitle": "Ni še hlodov",
+  "logsEmptyHint": "Vnesite premer in dolžino spodaj",
+  "logsDiameterLabel": "Premer (cm)",
+  "logsLengthLabel": "Dolžina (m)",
+  "logsVolumeLabel": "Volumen",
+  "logsSpeciesLabel": "Drevesna vrsta",
+  "logsNotSelected": "Ni izbrano",
+  "logsLocationLabel": "Lokacija",
+  "logsAddLocation": "Dodaj lokacijo",
+  "logsNameLabel": "Ime",
+  "logsNameHint": "npr. Smreka za Novaka",
+  "logsNotesLabel": "Opombe",
+  "logsNotesEditorHint": "Vnesite opombe",
+  "logsLocationPermissionDenied": "Dovoljenje za lokacijo zavrnjeno",
+  "logsSaveErrorWithDetail": "Napaka pri shranjevanju: {error}",
+  "@logsSaveErrorWithDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logsInlineAdded": "Dodano: {count}",
+  "@logsInlineAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsSpeciesAddTitle": "Dodaj novo vrsto",
+  "logsSpeciesNameLabel": "Ime vrste",
+  "logsSpeciesNameHint": "Npr. Hrast",
+  "logsSpeciesAdded": "Vrsta \"{name}\" dodana",
+  "@logsSpeciesAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSpeciesRemoveTitle": "Odstrani vrsto",
+  "logsSpeciesRemoveConfirm": "Ali ste prepričani, da želite odstraniti \"{name}\"?",
+  "@logsSpeciesRemoveConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSpeciesRemoveButton": "Odstrani",
+  "logsSpeciesRemoved": "Vrsta \"{name}\" odstranjena",
+  "@logsSpeciesRemoved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSpeciesResetTitle": "Ponastavi na privzeto",
+  "logsSpeciesResetConfirm": "Ali ste prepričani, da želite ponastaviti vrste na privzete vrednosti?\n\nVse dodane vrste bodo odstranjene.",
+  "logsSpeciesResetButton": "Ponastavi",
+  "logsSpeciesResetDone": "Vrste ponastavljene na privzete",
+  "logsSpeciesCount": "{count, plural, one{{count} vrsta} two{{count} vrsti} few{{count} vrste} other{{count} vrst}}",
+  "@logsSpeciesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsSpeciesNone": "Ni dodanih vrst",
+  "logsConvTitle": "Pretvorba volumna",
+  "logsConvSpeciesHint": "Vrsta, ki jo dobijo novo dodani hlodi.",
+  "logsConvPrmTitle": "PRM - Prostorninski meter drv",
+  "logsConvPrmDesc": "Zložena drva (polena). 1 PRM × faktor = m³ trdne mase.",
+  "logsConvNmTitle": "NM - Nasuti meter",
+  "logsConvNmDesc": "Nasut les (sekanci, odpadki). 1 NM × faktor = m³ trdne mase.",
+  "logsConvDefault": "Privzeto",
+  "logsConvBeechOak": "Bukev/Hrast",
+  "logsConvSpruceFir": "Smreka/Jelka",
+  "logsConvSoftHardwood": "Mehki listavci",
+  "logsConvHardWood": "Trdi les",
+  "logsConvSoftWood": "Mehki les",
+  "logsConvConfirm": "Potrdi",
+  "logsConvCustomFactor": "Faktor po meri",
+  "logsFormLocationServicesDisabled": "Lokacijske storitve so onemogočene",
+  "logsFormPermissionsDenied": "Dovoljenja za lokacijo zavrnjena",
+  "logsFormPermissionsDeniedForever": "Dovoljenja za lokacijo trajno zavrnjena",
+  "logsFormLocationAdded": "Lokacija dodana",
+  "logsFormLocationError": "Napaka pri pridobivanju lokacije: {error}",
+  "@logsFormLocationError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logsFormInvalidDimensions": "Prosim vnesite veljavne dimenzije",
+  "logsFormTitleNew": "Nov",
+  "logsFormVolumeModeTitle": "Način vnosa volumna",
+  "logsFormModeCalculate": "Izračunaj iz dimenzij",
+  "logsFormModeDirect": "Vnesi volumen neposredno",
+  "logsFormDiameterHelper": "Vnesite premer hloda v centimetrih",
+  "logsFormDiameterRequired": "Prosim vnesite premer",
+  "logsFormDiameterInvalid": "Prosim vnesite veljaven premer",
+  "logsFormLengthHelper": "Vnesite dolžino hloda v metrih",
+  "logsFormLengthRequired": "Prosim vnesite dolžino",
+  "logsFormLengthInvalid": "Prosim vnesite veljavno dolžino",
+  "logsFormCalculatedVolume": "Izračunan volumen",
+  "logsFormVolumeLabel": "Volumen (m³)",
+  "logsFormVolumeHelper": "Vnesite volumen v kubičnih metrih",
+  "logsFormVolumeRequired": "Prosim vnesite volumen",
+  "logsFormVolumeInvalid": "Prosim vnesite veljaven volumen",
+  "logsFormSpeciesOptional": "Drevesna vrsta (neobvezno)",
+  "logsFormLocating": "Pridobivanje lokacije...",
+  "logsFormAddCurrentLocation": "Dodaj trenutno lokacijo",
+  "logsFormNotesOptional": "Opombe (neobvezno)",
+  "logsFormNotesHelper": "Dodajte morebitne opombe",
+  "logsSaveSheetTitle": "Shrani hlode",
+  "logsSaveSheetDefaultName": "Hlodi {date}",
+  "@logsSaveSheetDefaultName": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSavedSheetTitle": "Shranjene meritve",
+  "logsSavedSheetEmpty": "Ni shranjenih meritev",
+  "logsSavedSheetNoName": "Brez imena",
+  "logsSavedDeleteTitle": "Izbriši shranjene hlode",
+  "logsSavedDeleteConfirm": "Ali ste prepričani, da želite izbrisati ta zapis?\n\nHlodi se vrnejo na seznam Hlodi.",
+  "logsExportSheetName": "Hlodi",
+  "logsExportHeaderDiameter": "Premer (cm)",
+  "logsExportHeaderLength": "Dolžina (m)",
+  "logsExportHeaderVolume": "Volumen (m³)",
+  "logsExportHeaderNotes": "Opombe",
+  "logsExportHeaderDate": "Datum",
+  "logsExportShareSubject": "Gozdar Hlodi Export",
+  "logsExportShareText": "Izvoženih {count} vnosov",
+  "@logsExportShareText": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchDefaultTitle": "Shranjeni hlodi",
+  "batchDeleteConfirm": "Ali ste prepričani, da želite izbrisati \"{name}\"?\n\nHlodi ({count}) se vrnejo na seznam Hlodi.",
+  "@batchDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchDeleteFallbackName": "shranjene hlode",
+  "batchLogDeleted": "Hlod izbrisan",
+  "batchNoLogsToExport": "Ni hlodov za izvoz",
+  "batchEditInfoTooltip": "Uredi info",
+  "batchEmptyHint": "Tapnite + za dodajanje hloda",
+  "batchAddTitleCount": "Dodaj (+{count})",
+  "@batchAddTitleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchValidatorEnter": "Vnesi",
+  "batchVolumeLine": "Volumen: {volume} m³",
+  "@batchVolumeLine": {
+    "placeholders": {
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "batchNotesHint": "Dodatne opombe",
+  "forestTitle": "Moj Gozd",
+  "forestFilterByOwner": "Filtriraj po lastniku",
+  "forestMoreOptionsTooltip": "Več možnosti gozda",
+  "forestExportKml": "Izvozi KML",
+  "forestSummaryArea": "Površina",
+  "forestSummaryParcels": "Parcel",
+  "forestSummaryTrees": "Dreves",
+  "forestSummaryCut": "Posekano",
+  "forestLoadError": "Napaka pri nalaganju: {error}",
+  "@forestLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "forestDeleteError": "Napaka pri brisanju: {error}",
+  "@forestDeleteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "forestExportError": "Napaka pri izvozu: {error}",
+  "@forestExportError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "forestDeleteTitle": "Izbriši parcelo",
+  "forestDeleteConfirm": "Ali ste prepričani, da želite izbrisati \"{name}\"?\n\nIzbrisane bodo tudi vse točke, sečnje in hlodovina znotraj parcele.",
+  "@forestDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "forestDeleted": "Parcela izbrisana{extra}",
+  "@forestDeleted": {
+    "placeholders": {
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "forestCountPoints": "{count, plural, one{{count} točka} two{{count} točki} few{{count} točke} other{{count} točk}}",
+  "@forestCountPoints": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forestCountParcels": "{count, plural, one{{count} parcela} two{{count} parceli} few{{count} parcele} other{{count} parcel}}",
+  "@forestCountParcels": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forestCountTrees": "{count, plural, one{{count} drevo} two{{count} drevesi} few{{count} drevesa} other{{count} dreves}}",
+  "@forestCountTrees": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forestNoParcelsToExport": "Ni parcel za izvoz",
+  "forestKmlExported": "KML uspešno izvožen",
+  "forestNoOwners": "Ni parcel z določenimi lastniki",
+  "forestShowAll": "Prikaži vse",
+  "forestNoParcelsForOwner": "Ni parcel za \"{owner}\"",
+  "@forestNoParcelsForOwner": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "forestEmptyTitle": "Ni še parcel",
+  "forestEmptyHint": "Poiščite parcelo v katastru\nali jo uvozite iz KML",
+  "forestSearchParcel": "Išči parcelo",
+  "forestNoKo": "Brez KO",
+  "forestKoLabel": "KO {code}",
+  "@forestKoLabel": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  }
+}

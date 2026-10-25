@@ -1,0 +1,337 @@
+{
+  "mapTabMejnikName": "Mejnik {number} ({parcela})",
+  "@mapTabMejnikName": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "parcela": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabLocationServicesDisabled": "Lokacijske storitve so onemogočene",
+  "mapTabLocationPermissionDenied": "Dovoljenje za lokacijo zavrnjeno",
+  "mapTabLocationPermissionDeniedForever": "Dovoljenje za lokacijo trajno zavrnjeno",
+  "mapTabLocationError": "Napaka pri pridobivanju lokacije: {error}",
+  "@mapTabLocationError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabLocationAdded": "Dodano \"{name}\"",
+  "@mapTabLocationAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabErrorWithMessage": "Napaka: {error}",
+  "@mapTabErrorWithMessage": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabLocationAddError": "Napaka pri dodajanju lokacije: {error}",
+  "@mapTabLocationAddError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabSecnjaMarked": "Sečnja \"{name}\" označena",
+  "@mapTabSecnjaMarked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabSecnjaMarkError": "Napaka pri označevanju sečnje: {error}",
+  "@mapTabSecnjaMarkError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabLogAdded": "Hlod dodan ({volume} m³)",
+  "@mapTabLogAdded": {
+    "placeholders": {
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabLogAddError": "Napaka pri dodajanju hloda: {error}",
+  "@mapTabLogAddError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabLocationDeleted": "Izbrisano \"{name}\"",
+  "@mapTabLocationDeleted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabLocationDeleteError": "Napaka pri brisanju lokacije: {error}",
+  "@mapTabLocationDeleteError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabNoCadastreData": "Za regijo {region} ni podatkov katastra.",
+  "@mapTabNoCadastreData": {
+    "placeholders": {
+      "region": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabRegionNotInList": "Regije {name} ni v seznamu.",
+  "@mapTabRegionNotInList": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabRegionDownloaded": "{name}: prenesenih {count} parcel.",
+  "@mapTabRegionDownloaded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapTabDownloadCancelled": "Prenos preklican.",
+  "mapTabDownloadFailed": "Prenos ni uspel: {error}",
+  "@mapTabDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabNoParcelAtLocation": "Na tej lokaciji ni najdene parcele",
+  "mapTabParcelSearchError": "Napaka pri iskanju parcele: {error}",
+  "@mapTabParcelSearchError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabUnknownOwner": "Neznan lastnik",
+  "mapTabParcelKo": "Parcela {parcela} (KO {ko})",
+  "@mapTabParcelKo": {
+    "placeholders": {
+      "parcela": {
+        "type": "String"
+      },
+      "ko": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabOwnerOffline": "Lastnik (offline)",
+  "mapTabApproximateOffline": "≈ približno (brez povezave)",
+  "mapTabParcelExistsTitle": "Parcela že obstaja",
+  "mapTabParcelExistsBody": "Parcela {ko} - {number} je že v vaših parcelah.",
+  "@mapTabParcelExistsBody": {
+    "placeholders": {
+      "ko": {
+        "type": "Object"
+      },
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabParcelExistsLabelBody": "Parcela {label} je že v vaših parcelah.",
+  "@mapTabParcelExistsLabelBody": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabShowInMyParcels": "Prikaži v mojih parcelah",
+  "mapTabImportParcelTitle": "Uvozi parcelo",
+  "mapTabImportParcelQuestion": "Ali želite uvoziti to parcelo v \"Moj gozd\"?",
+  "mapTabPrint": "Natisni",
+  "mapTabImport": "Uvozi",
+  "mapTabPdfOpenFailed": "PDF ni mogoče odpreti: {message}",
+  "@mapTabPdfOpenFailed": {
+    "placeholders": {
+      "message": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabPdfError": "Napaka pri pripravi PDF: {error}",
+  "@mapTabPdfError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabParcelImported": "Parcela {ko} - {number} uspešno uvožena",
+  "@mapTabParcelImported": {
+    "placeholders": {
+      "ko": {
+        "type": "Object"
+      },
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabParcelImportError": "Napaka pri uvozu parcele: {error}",
+  "@mapTabParcelImportError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabKmlUnsupported": "KML/KMZ uvoz še ni podprt preko karte",
+  "mapTabImportError": "Napaka pri uvozu: {error}",
+  "@mapTabImportError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabParcelTitle": "Parc. {number} • KO {ko}",
+  "@mapTabParcelTitle": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      },
+      "ko": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabParcelTitleWithKo": "Parc. {number} • KO {ko} {koName}",
+  "@mapTabParcelTitleWithKo": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      },
+      "ko": {
+        "type": "Object"
+      },
+      "koName": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabParcelShort": "Parc. {number}",
+  "@mapTabParcelShort": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabSelectedPoint": "Izbrana točka",
+  "mapTabMejnikiHint": "Dolgo pritisnite na parcelo za prikaz mejnikov.",
+  "mapTabNoActiveMeasurement": "Ni aktivnega merjenja",
+  "mapTabHintStart": "Dolgo pritisnite na karto za začetek merjenja.",
+  "mapTabHintFinished": "Merjenje je zaključeno.",
+  "mapTabHintMoveMap": "Premaknite karto, da nitni križ kaže na točko, in tapnite »Dodaj točko«.",
+  "mapTabHintNextPointDistance": "Naslednjo točko dodajte z nitnim križem ali zaključite merjenje.",
+  "mapTabHintMinPointsArea": "Z nitnim križem dodajte vsaj 3 točke za površino.",
+  "mapTabHintNextPointPolygon": "Naslednjo točko dodajte z nitnim križem ali zaključite poligon.",
+  "mapTabMeasureArea": "Merjenje površine",
+  "mapTabMeasureDistance": "Merjenje razdalje",
+  "mapTabAddPoint": "Dodaj točko",
+  "mapTabUndo": "Razveljavi",
+  "mapTabFinish": "Zaključi",
+  "mapTabLoadingMap": "Nalagam karto...",
+  "mapTabParcelLabel": "Parcela {label}",
+  "@mapTabParcelLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabTilesDownloadPercent": "Prenos kart {percent}%",
+  "@mapTabTilesDownloadPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabTilesDownloadStats": "Preneseno {downloaded}, v predpomnilniku {cached}, napake {failed} / {total}",
+  "@mapTabTilesDownloadStats": {
+    "placeholders": {
+      "downloaded": {
+        "type": "int"
+      },
+      "cached": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mapTabSearchingParcel": "Iskanje parcele...",
+  "mapTabRegionDownloading": "Prenašam {name}… {mb}/{totMb} MB",
+  "@mapTabRegionDownloading": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "mb": {
+        "type": "String"
+      },
+      "totMb": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabParcelImportedSimple": "Parcela je bila uvožena",
+  "mapTabUsageRightsTitle": "Pravice uporabe podatkov",
+  "mapTabUsageGuName": "Geodetska uprava RS",
+  "mapTabUsageGuDesc": "Podatki Geodetske uprave Republike Slovenije (ortofoto, kataster, topografske karte) so na voljo pod pogoji odprtih podatkov. Uporaba je dovoljena za nekomercialne in komercialne namene ob navedbi vira.",
+  "mapTabUsageZgsName": "Zavod za gozdove Slovenije",
+  "mapTabUsageZgsDesc": "Gozdarski podatki (gozdne združbe, sestojna karta, rastiščni koeficienti) so javno dostopni. Uporaba je dovoljena za informativne namene. Za komercialno uporabo je potrebno pridobiti dovoljenje ZGS.",
+  "mapTabUsageOsmDesc": "Kartografski podatki OpenStreetMap so na voljo pod licenco Open Database License (ODbL). Uporaba je dovoljena ob navedbi \"© OpenStreetMap contributors\".",
+  "mapTabUsageEsriDesc": "Esri satelitski posnetki so na voljo za osebno in nekomercialno uporabo. Za komercialno uporabo je potrebna licenca.",
+  "mapTabUsageDisclaimer": "Ta aplikacija je namenjena informativni uporabi. Za uradne podatke se obrnite na pristojne institucije.",
+  "mapTabLocationRenamed": "Lokacija preimenovana v \"{newName}\"",
+  "@mapTabLocationRenamed": {
+    "placeholders": {
+      "newName": {
+        "type": "String"
+      }
+    }
+  }
+}

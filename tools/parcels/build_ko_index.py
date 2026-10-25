@@ -9,7 +9,7 @@ Format: [{"s": SIFKO, "n": NAZIV, "r": [[[lon*1e5, lat*1e5], ...], ...]}]
 
 Usage: ./build_ko_index.py [../../assets/ko_index.json]
 """
-import json, math, sys, urllib.request
+import json, math, os, sys, urllib.request
 
 URL = ("https://prostor.zgs.gov.si/geoserver/wfs?service=WFS&version=1.1.0"
        "&request=GetFeature&typeName=pregledovalnik:KN_KATASTRSKE_OBCINE"
@@ -58,6 +58,10 @@ def main():
             if len(ring) >= 4:
                 rings.append([[round(x * 1e5), round(y * 1e5)] for x, y in ring])
         out.append({"s": p["SIFKO"], "n": p["NAZIV"], "r": rings})
+    hr_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ko_index_hr.json")
+    if os.path.exists(hr_path):
+        with open(hr_path, encoding="utf-8") as fh:
+            out += json.load(fh)
     out.sort(key=lambda k: k["s"])
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(out, fh, ensure_ascii=False, separators=(",", ":"))

@@ -1,0 +1,1785 @@
+{
+  "@@locale": "sl",
+  "appTitle": "Gozdar",
+  "commonCancel": "Prekliči",
+  "commonSave": "Shrani",
+  "commonDelete": "Izbriši",
+  "commonClose": "Zapri",
+  "commonOk": "V redu",
+  "commonEdit": "Uredi",
+  "commonAdd": "Dodaj",
+  "commonYes": "Da",
+  "commonNo": "Ne",
+  "commonBack": "Nazaj",
+  "commonRetry": "Poskusi znova",
+  "commonSearch": "Iskanje",
+  "commonShare": "Deli",
+  "commonDownload": "Prenesi",
+  "commonContinue": "Naprej",
+  "commonDone": "Končano",
+  "commonSettings": "Nastavitve",
+  "commonError": "Napaka",
+  "commonLoading": "Nalaganje …",
+  "logsHeaderTitle": "Hlodi",
+  "logsMoreOptionsTooltip": "Več možnosti hlodov",
+  "logsMenuManageSpecies": "Upravljanje vrst",
+  "logsMenuExport": "Izvozi",
+  "logsMenuDeleteAll": "Odstrani vse",
+  "logsSavedTooltip": "Shranjeno",
+  "logsSaved": "Shranjeno",
+  "logsSaveError": "Napaka pri shranjevanju",
+  "logsEntryUpdated": "Vnos posodobljen",
+  "logsErrorWithDetail": "Napaka: {error}",
+  "@logsErrorWithDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logsEntryDeleted": "Vnos izbrisan",
+  "logsUndo": "Razveljavi",
+  "logsExportTitle": "Izvozi hlode",
+  "logsExportExcel": "Izvozi kot Excel",
+  "logsExportJson": "Izvozi kot JSON",
+  "logsExportSuccess": "Izvoz uspešen",
+  "logsNoEntriesToDelete": "Ni vnosov za brisanje",
+  "logsDeleteAllTitle": "Odstrani vse hlode",
+  "logsDeleteAllConfirm": "Ali ste prepričani, da želite odstraniti vseh {count} vnosov?\n\nSkupni volumen: {volume} m³\n\nShranjeni hlodi ostanejo nespremenjeni. To dejanje ni mogoče razveljaviti.",
+  "@logsDeleteAllConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "logsAllEntriesRemoved": "Vsi vnosi odstranjeni",
+  "logsNoEntriesToSave": "Ni vnosov za shranjevanje",
+  "logsCountLogs": "{count, plural, one{{count} hlod} two{{count} hloda} few{{count} hlodi} other{{count} hlodov}}",
+  "@logsCountLogs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsGroupSummary": "{count, plural, one{{count} hlod} two{{count} hloda} few{{count} hlodi} other{{count} hlodov}} • {volume} m³",
+  "@logsGroupSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSaveSheetSummary": "{volume} m³ • {count, plural, one{{count} hlod} two{{count} hloda} few{{count} hlodi} other{{count} hlodov}}",
+  "@logsSaveSheetSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSpeciesNotSelected": "Vrsta ni izbrana",
+  "logsUnknownSpecies": "Neznana vrsta",
+  "logsEmptyTitle": "Ni še hlodov",
+  "logsEmptyHint": "Vnesite premer in dolžino spodaj",
+  "logsDiameterLabel": "Premer (cm)",
+  "logsLengthLabel": "Dolžina (m)",
+  "logsVolumeLabel": "Volumen",
+  "logsSpeciesLabel": "Drevesna vrsta",
+  "logsNotSelected": "Ni izbrano",
+  "logsLocationLabel": "Lokacija",
+  "logsAddLocation": "Dodaj lokacijo",
+  "logsNameLabel": "Ime",
+  "logsNameHint": "npr. Smreka za Novaka",
+  "logsNotesLabel": "Opombe",
+  "logsNotesEditorHint": "Vnesite opombe",
+  "logsLocationPermissionDenied": "Dovoljenje za lokacijo zavrnjeno",
+  "logsSaveErrorWithDetail": "Napaka pri shranjevanju: {error}",
+  "@logsSaveErrorWithDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logsInlineAdded": "Dodano: {count}",
+  "@logsInlineAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsSpeciesAddTitle": "Dodaj novo vrsto",
+  "logsSpeciesNameLabel": "Ime vrste",
+  "logsSpeciesNameHint": "Npr. Hrast",
+  "logsSpeciesAdded": "Vrsta \"{name}\" dodana",
+  "@logsSpeciesAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSpeciesRemoveTitle": "Odstrani vrsto",
+  "logsSpeciesRemoveConfirm": "Ali ste prepričani, da želite odstraniti \"{name}\"?",
+  "@logsSpeciesRemoveConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSpeciesRemoveButton": "Odstrani",
+  "logsSpeciesRemoved": "Vrsta \"{name}\" odstranjena",
+  "@logsSpeciesRemoved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSpeciesResetTitle": "Ponastavi na privzeto",
+  "logsSpeciesResetConfirm": "Ali ste prepričani, da želite ponastaviti vrste na privzete vrednosti?\n\nVse dodane vrste bodo odstranjene.",
+  "logsSpeciesResetButton": "Ponastavi",
+  "logsSpeciesResetDone": "Vrste ponastavljene na privzete",
+  "logsSpeciesCount": "{count, plural, one{{count} vrsta} two{{count} vrsti} few{{count} vrste} other{{count} vrst}}",
+  "@logsSpeciesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logsSpeciesNone": "Ni dodanih vrst",
+  "logsConvTitle": "Pretvorba volumna",
+  "logsConvSpeciesHint": "Vrsta, ki jo dobijo novo dodani hlodi.",
+  "logsConvPrmTitle": "PRM - Prostorninski meter drv",
+  "logsConvPrmDesc": "Zložena drva (polena). 1 PRM × faktor = m³ trdne mase.",
+  "logsConvNmTitle": "NM - Nasuti meter",
+  "logsConvNmDesc": "Nasut les (sekanci, odpadki). 1 NM × faktor = m³ trdne mase.",
+  "logsConvDefault": "Privzeto",
+  "logsConvBeechOak": "Bukev/Hrast",
+  "logsConvSpruceFir": "Smreka/Jelka",
+  "logsConvSoftHardwood": "Mehki listavci",
+  "logsConvHardWood": "Trdi les",
+  "logsConvSoftWood": "Mehki les",
+  "logsConvConfirm": "Potrdi",
+  "logsConvCustomFactor": "Faktor po meri",
+  "logsFormLocationServicesDisabled": "Lokacijske storitve so onemogočene",
+  "logsFormPermissionsDenied": "Dovoljenja za lokacijo zavrnjena",
+  "logsFormPermissionsDeniedForever": "Dovoljenja za lokacijo trajno zavrnjena",
+  "logsFormLocationAdded": "Lokacija dodana",
+  "logsFormLocationError": "Napaka pri pridobivanju lokacije: {error}",
+  "@logsFormLocationError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logsFormInvalidDimensions": "Prosim vnesite veljavne dimenzije",
+  "logsFormTitleNew": "Nov",
+  "logsFormVolumeModeTitle": "Način vnosa volumna",
+  "logsFormModeCalculate": "Izračunaj iz dimenzij",
+  "logsFormModeDirect": "Vnesi volumen neposredno",
+  "logsFormDiameterHelper": "Vnesite premer hloda v centimetrih",
+  "logsFormDiameterRequired": "Prosim vnesite premer",
+  "logsFormDiameterInvalid": "Prosim vnesite veljaven premer",
+  "logsFormLengthHelper": "Vnesite dolžino hloda v metrih",
+  "logsFormLengthRequired": "Prosim vnesite dolžino",
+  "logsFormLengthInvalid": "Prosim vnesite veljavno dolžino",
+  "logsFormCalculatedVolume": "Izračunan volumen",
+  "logsFormVolumeLabel": "Volumen (m³)",
+  "logsFormVolumeHelper": "Vnesite volumen v kubičnih metrih",
+  "logsFormVolumeRequired": "Prosim vnesite volumen",
+  "logsFormVolumeInvalid": "Prosim vnesite veljaven volumen",
+  "logsFormSpeciesOptional": "Drevesna vrsta (neobvezno)",
+  "logsFormLocating": "Pridobivanje lokacije...",
+  "logsFormAddCurrentLocation": "Dodaj trenutno lokacijo",
+  "logsFormNotesOptional": "Opombe (neobvezno)",
+  "logsFormNotesHelper": "Dodajte morebitne opombe",
+  "logsSaveSheetTitle": "Shrani hlode",
+  "logsSaveSheetDefaultName": "Hlodi {date}",
+  "@logsSaveSheetDefaultName": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSavedSheetTitle": "Shranjene meritve",
+  "logsSavedSheetEmpty": "Ni shranjenih meritev",
+  "logsSavedSheetNoName": "Brez imena",
+  "logsSavedDeleteTitle": "Izbriši shranjene hlode",
+  "logsSavedDeleteConfirm": "Ali ste prepričani, da želite izbrisati ta zapis?\n\nHlodi se vrnejo na seznam Hlodi.",
+  "logsExportSheetName": "Hlodi",
+  "logsExportHeaderDiameter": "Premer (cm)",
+  "logsExportHeaderLength": "Dolžina (m)",
+  "logsExportHeaderVolume": "Volumen (m³)",
+  "logsExportHeaderNotes": "Opombe",
+  "logsExportHeaderDate": "Datum",
+  "logsExportShareSubject": "Gozdar Hlodi Export",
+  "logsExportShareText": "Izvoženih {count} vnosov",
+  "@logsExportShareText": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchDefaultTitle": "Shranjeni hlodi",
+  "batchDeleteConfirm": "Ali ste prepričani, da želite izbrisati \"{name}\"?\n\nHlodi ({count}) se vrnejo na seznam Hlodi.",
+  "@batchDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchDeleteFallbackName": "shranjene hlode",
+  "batchLogDeleted": "Hlod izbrisan",
+  "batchNoLogsToExport": "Ni hlodov za izvoz",
+  "batchEditInfoTooltip": "Uredi info",
+  "batchEmptyHint": "Tapnite + za dodajanje hloda",
+  "batchAddTitleCount": "Dodaj (+{count})",
+  "@batchAddTitleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchValidatorEnter": "Vnesi",
+  "batchVolumeLine": "Volumen: {volume} m³",
+  "@batchVolumeLine": {
+    "placeholders": {
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "batchNotesHint": "Dodatne opombe",
+  "forestTitle": "Moj Gozd",
+  "forestFilterByOwner": "Filtriraj po lastniku",
+  "forestMoreOptionsTooltip": "Več možnosti gozda",
+  "forestExportKml": "Izvozi KML",
+  "forestSummaryArea": "Površina",
+  "forestSummaryParcels": "Parcel",
+  "forestSummaryTrees": "Dreves",
+  "forestSummaryCut": "Posekano",
+  "forestLoadError": "Napaka pri nalaganju: {error}",
+  "@forestLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "forestDeleteError": "Napaka pri brisanju: {error}",
+  "@forestDeleteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "forestExportError": "Napaka pri izvozu: {error}",
+  "@forestExportError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "forestDeleteTitle": "Izbriši parcelo",
+  "forestDeleteConfirm": "Ali ste prepričani, da želite izbrisati \"{name}\"?\n\nIzbrisane bodo tudi vse točke, sečnje in hlodovina znotraj parcele.",
+  "@forestDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "forestDeleted": "Parcela izbrisana{extra}",
+  "@forestDeleted": {
+    "placeholders": {
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "forestCountPoints": "{count, plural, one{{count} točka} two{{count} točki} few{{count} točke} other{{count} točk}}",
+  "@forestCountPoints": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forestCountParcels": "{count, plural, one{{count} parcela} two{{count} parceli} few{{count} parcele} other{{count} parcel}}",
+  "@forestCountParcels": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forestCountTrees": "{count, plural, one{{count} drevo} two{{count} drevesi} few{{count} drevesa} other{{count} dreves}}",
+  "@forestCountTrees": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forestNoParcelsToExport": "Ni parcel za izvoz",
+  "forestKmlExported": "KML uspešno izvožen",
+  "forestNoOwners": "Ni parcel z določenimi lastniki",
+  "forestShowAll": "Prikaži vse",
+  "forestNoParcelsForOwner": "Ni parcel za \"{owner}\"",
+  "@forestNoParcelsForOwner": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "forestEmptyTitle": "Ni še parcel",
+  "forestEmptyHint": "Poiščite parcelo v katastru\nali jo uvozite iz KML",
+  "forestSearchParcel": "Išči parcelo",
+  "forestNoKo": "Brez KO",
+  "forestKoLabel": "KO {code}",
+  "@forestKoLabel": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabMejnikName": "Mejnik {number} ({parcela})",
+  "@mapTabMejnikName": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "parcela": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabLocationServicesDisabled": "Lokacijske storitve so onemogočene",
+  "mapTabLocationPermissionDenied": "Dovoljenje za lokacijo zavrnjeno",
+  "mapTabLocationPermissionDeniedForever": "Dovoljenje za lokacijo trajno zavrnjeno",
+  "mapTabLocationError": "Napaka pri pridobivanju lokacije: {error}",
+  "@mapTabLocationError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabLocationAdded": "Dodano \"{name}\"",
+  "@mapTabLocationAdded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabErrorWithMessage": "Napaka: {error}",
+  "@mapTabErrorWithMessage": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabLocationAddError": "Napaka pri dodajanju lokacije: {error}",
+  "@mapTabLocationAddError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabSecnjaMarked": "Sečnja \"{name}\" označena",
+  "@mapTabSecnjaMarked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabSecnjaMarkError": "Napaka pri označevanju sečnje: {error}",
+  "@mapTabSecnjaMarkError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabLogAdded": "Hlod dodan ({volume} m³)",
+  "@mapTabLogAdded": {
+    "placeholders": {
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabLogAddError": "Napaka pri dodajanju hloda: {error}",
+  "@mapTabLogAddError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabLocationDeleted": "Izbrisano \"{name}\"",
+  "@mapTabLocationDeleted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabLocationDeleteError": "Napaka pri brisanju lokacije: {error}",
+  "@mapTabLocationDeleteError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabNoCadastreData": "Za regijo {region} ni podatkov katastra.",
+  "@mapTabNoCadastreData": {
+    "placeholders": {
+      "region": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabRegionNotInList": "Regije {name} ni v seznamu.",
+  "@mapTabRegionNotInList": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabRegionDownloaded": "{name}: prenesenih {count} parcel.",
+  "@mapTabRegionDownloaded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapTabDownloadCancelled": "Prenos preklican.",
+  "mapTabDownloadFailed": "Prenos ni uspel: {error}",
+  "@mapTabDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabNoParcelAtLocation": "Na tej lokaciji ni najdene parcele",
+  "mapTabParcelSearchError": "Napaka pri iskanju parcele: {error}",
+  "@mapTabParcelSearchError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabUnknownOwner": "Neznan lastnik",
+  "mapTabParcelKo": "Parcela {parcela} (KO {ko})",
+  "@mapTabParcelKo": {
+    "placeholders": {
+      "parcela": {
+        "type": "String"
+      },
+      "ko": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabOwnerOffline": "Lastnik (offline)",
+  "mapTabApproximateOffline": "≈ približno (brez povezave)",
+  "mapTabParcelExistsTitle": "Parcela že obstaja",
+  "mapTabParcelExistsBody": "Parcela {ko} - {number} je že v vaših parcelah.",
+  "@mapTabParcelExistsBody": {
+    "placeholders": {
+      "ko": {
+        "type": "Object"
+      },
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabParcelExistsLabelBody": "Parcela {label} je že v vaših parcelah.",
+  "@mapTabParcelExistsLabelBody": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabShowInMyParcels": "Prikaži v mojih parcelah",
+  "mapTabImportParcelTitle": "Uvozi parcelo",
+  "mapTabImportParcelQuestion": "Ali želite uvoziti to parcelo v \"Moj gozd\"?",
+  "mapTabPrint": "Natisni",
+  "mapTabImport": "Uvozi",
+  "mapTabPdfOpenFailed": "PDF ni mogoče odpreti: {message}",
+  "@mapTabPdfOpenFailed": {
+    "placeholders": {
+      "message": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabPdfError": "Napaka pri pripravi PDF: {error}",
+  "@mapTabPdfError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabParcelImported": "Parcela {ko} - {number} uspešno uvožena",
+  "@mapTabParcelImported": {
+    "placeholders": {
+      "ko": {
+        "type": "Object"
+      },
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabParcelImportError": "Napaka pri uvozu parcele: {error}",
+  "@mapTabParcelImportError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabKmlUnsupported": "KML/KMZ uvoz še ni podprt preko karte",
+  "mapTabImportError": "Napaka pri uvozu: {error}",
+  "@mapTabImportError": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabParcelTitle": "Parc. {number} • KO {ko}",
+  "@mapTabParcelTitle": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      },
+      "ko": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabParcelTitleWithKo": "Parc. {number} • KO {ko} {koName}",
+  "@mapTabParcelTitleWithKo": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      },
+      "ko": {
+        "type": "Object"
+      },
+      "koName": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabParcelShort": "Parc. {number}",
+  "@mapTabParcelShort": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "mapTabSelectedPoint": "Izbrana točka",
+  "mapTabMejnikiHint": "Dolgo pritisnite na parcelo za prikaz mejnikov.",
+  "mapTabNoActiveMeasurement": "Ni aktivnega merjenja",
+  "mapTabHintStart": "Dolgo pritisnite na karto za začetek merjenja.",
+  "mapTabHintFinished": "Merjenje je zaključeno.",
+  "mapTabHintMoveMap": "Premaknite karto, da nitni križ kaže na točko, in tapnite »Dodaj točko«.",
+  "mapTabHintNextPointDistance": "Naslednjo točko dodajte z nitnim križem ali zaključite merjenje.",
+  "mapTabHintMinPointsArea": "Z nitnim križem dodajte vsaj 3 točke za površino.",
+  "mapTabHintNextPointPolygon": "Naslednjo točko dodajte z nitnim križem ali zaključite poligon.",
+  "mapTabMeasureArea": "Merjenje površine",
+  "mapTabMeasureDistance": "Merjenje razdalje",
+  "mapTabAddPoint": "Dodaj točko",
+  "mapTabUndo": "Razveljavi",
+  "mapTabFinish": "Zaključi",
+  "mapTabLoadingMap": "Nalagam karto...",
+  "mapTabParcelLabel": "Parcela {label}",
+  "@mapTabParcelLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabTilesDownloadPercent": "Prenos kart {percent}%",
+  "@mapTabTilesDownloadPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabTilesDownloadStats": "Preneseno {downloaded}, v predpomnilniku {cached}, napake {failed} / {total}",
+  "@mapTabTilesDownloadStats": {
+    "placeholders": {
+      "downloaded": {
+        "type": "int"
+      },
+      "cached": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mapTabSearchingParcel": "Iskanje parcele...",
+  "mapTabRegionDownloading": "Prenašam {name}… {mb}/{totMb} MB",
+  "@mapTabRegionDownloading": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "mb": {
+        "type": "String"
+      },
+      "totMb": {
+        "type": "String"
+      }
+    }
+  },
+  "mapTabParcelImportedSimple": "Parcela je bila uvožena",
+  "mapTabUsageRightsTitle": "Pravice uporabe podatkov",
+  "mapTabUsageGuName": "Geodetska uprava RS",
+  "mapTabUsageGuDesc": "Podatki Geodetske uprave Republike Slovenije (ortofoto, kataster, topografske karte) so na voljo pod pogoji odprtih podatkov. Uporaba je dovoljena za nekomercialne in komercialne namene ob navedbi vira.",
+  "mapTabUsageZgsName": "Zavod za gozdove Slovenije",
+  "mapTabUsageZgsDesc": "Gozdarski podatki (gozdne združbe, sestojna karta, rastiščni koeficienti) so javno dostopni. Uporaba je dovoljena za informativne namene. Za komercialno uporabo je potrebno pridobiti dovoljenje ZGS.",
+  "mapTabUsageOsmDesc": "Kartografski podatki OpenStreetMap so na voljo pod licenco Open Database License (ODbL). Uporaba je dovoljena ob navedbi \"© OpenStreetMap contributors\".",
+  "mapTabUsageEsriDesc": "Esri satelitski posnetki so na voljo za osebno in nekomercialno uporabo. Za komercialno uporabo je potrebna licenca.",
+  "mapTabUsageDisclaimer": "Ta aplikacija je namenjena informativni uporabi. Za uradne podatke se obrnite na pristojne institucije.",
+  "mapTabLocationRenamed": "Lokacija preimenovana v \"{newName}\"",
+  "@mapTabLocationRenamed": {
+    "placeholders": {
+      "newName": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwAddLocationTitle": "Dodaj lokacijo",
+  "mapwAddLocationHint": "Koordinate iz dolgo-pritiska ali vnesite svoje",
+  "mapwLatLabel": "Zemljepisna širina (Lat)",
+  "mapwLngLabel": "Zemljepisna dolžina (Lng)",
+  "mapwLatExample": "npr. 46.0569",
+  "mapwLngExample": "npr. 14.5058",
+  "mapwEnterLat": "Vnesite širino",
+  "mapwEnterLng": "Vnesite dolžino",
+  "mapwInvalidNumber": "Neveljavna številka",
+  "mapwLatRange": "Širina mora biti med -90 in 90",
+  "mapwLngRange": "Dolžina mora biti med -180 in 180",
+  "mapwLatNotInSlovenia": "Lokacija ni v Sloveniji ali na Hrvaškem (42.3-46.9)",
+  "mapwLngNotInSlovenia": "Lokacija ni v Sloveniji ali na Hrvaškem (13.3-19.5)",
+  "mapwLocationNameLabel": "Ime lokacije",
+  "mapwLocationNameHint": "Vnesite ime za to lokacijo",
+  "mapwEnterName": "Vnesite ime",
+  "mapwMarkFellingTitle": "Označi sečnjo",
+  "mapwTreeDescLabel": "Opis drevesa",
+  "mapwTreeDescHint": "npr. Hrast, Bukev, Smreka...",
+  "mapwEnterDescription": "Prosim vnesite opis",
+  "mapwMarkAction": "Označi",
+  "mapwDeleteLocationTitle": "Izbriši lokacijo",
+  "mapwDeleteLocationSure": "Ali ste prepričani, da želite izbrisati \"{name}\"?",
+  "@mapwDeleteLocationSure": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwAddLocationByCoordsTitle": "Dodaj lokacijo s koordinatami",
+  "mapwEnterWgs84Hint": "Vnesite koordinate v WGS84 formatu (decimalne stopinje)",
+  "mapwRenameLocationTitle": "Preimenuj lokacijo",
+  "mapwNameLabel": "Ime",
+  "mapwParcelTitle": "Parcela {number}",
+  "@mapwParcelTitle": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwCadastralParcel": "Katastrska parcela",
+  "mapwCadastralMunicipality": "Katastrska občina",
+  "mapwArea": "Površina",
+  "mapwOwner": "Lastnik",
+  "mapwDeleteLocationQuestion": "Ali res želite izbrisati lokacijo \"{name}\"?",
+  "@mapwDeleteLocationQuestion": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwResetOnboardingTitle": "Ponastavi uvodni vodič",
+  "mapwResetOnboardingBody": "Ali res želite ponastaviti uvodni vodič? Ponovno zaženite aplikacijo.",
+  "mapwReset": "Ponastavi",
+  "mapwMenuMeasure": "Merjenje",
+  "mapwMenuNavigate": "Navigiraj",
+  "mapwMenuParcel": "Parcela",
+  "mapwMenuImport": "Uvozi",
+  "mapwPublicParcel": "Javna parcela • {category}",
+  "@mapwPublicParcel": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwMenuPoint": "Točka",
+  "mapwMenuLogs": "Hlodovina",
+  "mapwMenuFelling": "Sečnja",
+  "mapwMenuDistance": "Razdalja",
+  "mapwMenuBoundaries": "Mejniki",
+  "mapwSelectLayer": "Izberi sloj",
+  "mapwSearchParcelByKo": "Išči parcelo po KO",
+  "mapwZoomIn": "Povečaj karto",
+  "mapwZoomOut": "Pomanjšaj karto",
+  "mapwCenterOnGps": "Centriraj na GPS lokacijo",
+  "mapwSavedLocations": "Shranjene lokacije",
+  "mapwLayersTitle": "Sloji karte",
+  "mapwTabBase": "Podlaga",
+  "mapwTabOverlays": "Prekrivni sloji",
+  "mapwInternationalMaps": "Mednarodne karte",
+  "mapwSlovenianMaps": "Slovenske karte",
+  "mapwDownloadOffline": "Prenesi za delo brez povezave",
+  "mapwImportGeodata": "Uvozi geodatke (KML, KMZ)",
+  "mapwNoResults": "Ni rezultatov",
+  "mapwActiveCount": "{count} aktivnih",
+  "@mapwActiveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwPublicParcels": "Javne parcele",
+  "mapwVlakeHint": "Vlake (pri večji povečavi)",
+  "mapwAddByCoordinates": "Dodaj s koordinatami",
+  "mapwSectionPoints": "Točke",
+  "mapwNoSavedLocations": "Ni shranjenih lokacij",
+  "mapwRename": "Preimenuj",
+  "mapwNavAppOpenFailed": "Aplikacije za navigacijo ni bilo mogoče odpreti.",
+  "mapwGoogleMaps": "Google Zemljevidi",
+  "mapwAppleMaps": "Apple Zemljevidi",
+  "mapwRoadNavigation": "Navigacija po cesti",
+  "mapwInAppCompass": "Kompas v aplikaciji",
+  "mapwInAppCompassHint": "Smer in razdalja do cilja, tudi brez spleta",
+  "mapwCopyCoordinates": "Kopiraj koordinate",
+  "mapwCoordinatesCopied": "Koordinate kopirane",
+  "mapwCompassN": "S",
+  "mapwCompassE": "V",
+  "mapwCompassS": "J",
+  "mapwCompassW": "Z",
+  "mapwCompassNE": "SV",
+  "mapwCompassSE": "JV",
+  "mapwCompassSW": "JZ",
+  "mapwCompassNW": "SZ",
+  "mapwCompassLowAccuracy": "Nizka natančnost kompasa (±{degrees}°). Kalibrirajte napravo.",
+  "@mapwCompassLowAccuracy": {
+    "placeholders": {
+      "degrees": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwCompassMediumAccuracy": "Zmerna natančnost kompasa (±{degrees}°)",
+  "@mapwCompassMediumAccuracy": {
+    "placeholders": {
+      "degrees": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwLocationPermissionDenied": "Dovoljenje za lokacijo zavrnjeno — razdalja ni na voljo",
+  "mapwCompass": "Kompas",
+  "mapwDistance": "Razdalja",
+  "mapwAzimuth": "Azimut",
+  "mapwDirection": "Smer",
+  "mapwTileTemplateUnavailable": "URL predloge ni na voljo",
+  "mapwDownloadComplete": "Prenos končan",
+  "mapwClearCacheTitle": "Počisti predpomnilnik?",
+  "mapwClearCacheBody": "Vse prenesene ploščice bodo izbrisane. Te operacije ni mogoče razveljaviti.",
+  "mapwCacheCleared": "Predpomnilnik izpraznjen",
+  "mapwSyncing": "Sinhroniziram {name}",
+  "@mapwSyncing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwSyncDownloaded": "Preneseno {done}/{total}",
+  "@mapwSyncDownloaded": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwSyncFromCache": "Iz predpomnilnika {done}/{total}",
+  "@mapwSyncFromCache": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwSyncDone": "Končano! {downloaded} prenesenih, {skipped} iz predpomnilnika, {failed} neuspešnih",
+  "@mapwSyncDone": {
+    "placeholders": {
+      "downloaded": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwSyncCancelled": "Sinhronizacija preklicana",
+  "mapwTileSharing": "Deljenje ploščic",
+  "mapwShareMyTiles": "Deli moje ploščice",
+  "mapwSharingOnHint": "Druge naprave lahko prenesejo ploščice s te naprave",
+  "mapwSharingOffHint": "Začni deliti predpomnjene ploščice z bližnjimi napravami",
+  "mapwMyCachedMaps": "Moje predpomnjene karte",
+  "mapwTilesAndSize": "{tiles} ploščic, {size}",
+  "@mapwTilesAndSize": {
+    "placeholders": {
+      "tiles": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwNearbyDevices": "Bližnje naprave",
+  "mapwRefresh": "Osveži",
+  "mapwAddDeviceManually": "Ročno dodaj napravo",
+  "mapwNoDevicesFound": "V lokalnem omrežju ni najdenih naprav.\nPreverite, da imajo druge naprave vključeno deljenje ploščic.",
+  "mapwFetchingCatalog": "Pridobivam katalog",
+  "mapwNoCachedTilesOnDevice": "Na tej napravi ni predpomnjenih ploščic",
+  "mapwYouHave": " (imate {count})",
+  "@mapwYouHave": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwDownloadAll": "Prenesi vse",
+  "mapwAddDeviceTitle": "Dodaj napravo",
+  "mapwIpAddress": "IP naslov",
+  "mapwDeleteStyleTitle": "Izbriši {name}?",
+  "@mapwDeleteStyleTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwDeleteStyleBody": "{tiles} ploščic, {size} bo izbrisanih.",
+  "@mapwDeleteStyleBody": {
+    "placeholders": {
+      "tiles": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwTileDownloadTitle": "Prenos kart",
+  "mapwForOfflineWork": "Za delo brez povezave",
+  "mapwSharingEnabled": "Deljenje ploščic vključeno",
+  "mapwSharingDisabled": "Deljenje ploščic izklopljeno",
+  "mapwLayersShort": "Sloji",
+  "mapwZoomLevel": "Povečava",
+  "mapwEstimate": "Ocena",
+  "mapwEstimatedTiles": "~{count} ploščic",
+  "@mapwEstimatedTiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwDownloadingPercent": "Prenašam... {percent}%",
+  "@mapwDownloadingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwLayerNotDownloadable": "Sloj ni na voljo za prenos",
+  "mapwNoXyzTemplate": "Za ta sloj ni bilo mogoče določiti XYZ predloge.",
+  "mapwCache": "Predpomnilnik",
+  "mapwCacheStats": "{tiles} ploščic ({size} MB)",
+  "@mapwCacheStats": {
+    "placeholders": {
+      "tiles": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "mapwClearCache": "Počisti predpomnilnik",
+  "mapwParcelAlreadyInDb": "Parcela {municipality} - {number} je že v bazi podatkov",
+  "@mapwParcelAlreadyInDb": {
+    "placeholders": {
+      "municipality": {
+        "type": "String"
+      },
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelPointUnknown": "Točka ?",
+  "parcelPointNumbered": "Točka {number}",
+  "parcelDetailUpdateError": "Napaka pri posodabljanju: {error}",
+  "parcelDetailPreparingPdf": "Pripravljam PDF …",
+  "parcelDetailPdfOpenError": "PDF ni mogoče odpreti: {message}",
+  "parcelDetailPdfError": "Napaka pri pripravi PDF: {error}",
+  "parcelDetailPreparingExport": "Pripravljam izvoz …",
+  "parcelDetailExportDone": "Izvoz zaključen",
+  "parcelDetailExportError": "Napaka pri izvozu: {error}",
+  "parcelForestTypeTitle": "Vrsta gozda",
+  "parcelForestTypeDeciduous": "Listavci",
+  "parcelForestTypeMixed": "Mešani gozd",
+  "parcelForestTypeConiferous": "Iglavci",
+  "parcelOwnerTitle": "Lastnik",
+  "parcelOwnerNameLabel": "Ime lastnika",
+  "parcelOwnerNameHint": "Vnesite ime lastnika",
+  "parcelNotesTitle": "Opombe",
+  "parcelAllowanceTitle": "Dovoljen posek",
+  "parcelAllowanceAmountLabel": "Količina (m³)",
+  "parcelAllowanceAmountHint": "Vnesite dovoljeno količino",
+  "parcelInvalidNumber": "Neveljavna številka",
+  "parcelLogCutTitle": "Zabeleži posek",
+  "parcelCutCurrent": "Trenutno posekano: {volume} m³",
+  "parcelCutRemaining": "Še na voljo: {volume} m³",
+  "parcelCutAddLabel": "Dodaj posek (m³)",
+  "parcelCutAddHint": "Vnesite količino",
+  "parcelTreesCountLabel": "Število dreves",
+  "parcelTreesCountHint": "Vnesite število",
+  "parcelTreesUnit": "dreves",
+  "parcelCutInvalidAmount": "Vnesite veljavno količino poseka",
+  "parcelCutAddedWithTrees": "Dodano {volume} m³ poseka ({trees} dreves)",
+  "parcelCutAdded": "Dodano {volume} m³ poseka",
+  "parcelResetCutTitle": "Ponastavi posek",
+  "parcelResetCutMessage": "Ali ste prepričani, da želite ponastaviti količino posekanega lesa na 0?",
+  "parcelReset": "Ponastavi",
+  "parcelAddTreesTitle": "Dodaj posekana drevesa",
+  "parcelResetTreesTitle": "Ponastavi drevesa",
+  "parcelResetTreesMessage": "Ali ste prepričani, da želite ponastaviti število posekanih dreves na 0?",
+  "parcelDeleteTitle": "Izbriši parcelo",
+  "parcelDeleteMessage": "Ali ste prepričani, da želite izbrisati \"{name}\"?\n\nIzbrisane bodo tudi vse točke, sečnje in hlodovina znotraj parcele.",
+  "parcelDeletedLogsExtra": "{count} hlodov",
+  "parcelDeletedPointsExtra": "{count} točk",
+  "parcelDeleted": "Parcela izbrisana",
+  "parcelDeletedWithExtras": "Parcela izbrisana ({extras})",
+  "parcelDeleteError": "Napaka pri brisanju: {error}",
+  "parcelEditShape": "Uredi obliko",
+  "parcelPrint": "Natisni",
+  "parcelExportKml": "Izvozi KML",
+  "parcelViewOnMap": "Poglej na karti",
+  "parcelNavigate": "Navigiraj",
+  "@parcelPointNumbered": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelDetailUpdateError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelDetailPdfOpenError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelDetailPdfError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelDetailExportError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelCutCurrent": {
+    "placeholders": {
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelCutRemaining": {
+    "placeholders": {
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelCutAddedWithTrees": {
+    "placeholders": {
+      "volume": {
+        "type": "String"
+      },
+      "trees": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelCutAdded": {
+    "placeholders": {
+      "volume": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelDeleteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelDeletedLogsExtra": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelDeletedPointsExtra": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelDeletedWithExtras": {
+    "placeholders": {
+      "extras": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelDeleteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelEditorNeedThreePoints": "Narišite vsaj 3 točke",
+  "parcelEditorNameRequired": "Prosim vnesite ime",
+  "parcelEditorBaseLayer": "Osnovni sloj",
+  "parcelEditorOverlayLayers": "Prekrivni sloji",
+  "parcelEditorAddTitle": "Dodaj parcelo",
+  "parcelEditorEditTitle": "Uredi parcelo",
+  "parcelEditorNameLabel": "Ime parcele",
+  "parcelForestTypeMixedShort": "Mešani",
+  "parcelEditorTapToAdd": "Tapnite na zemljevid za dodajanje točk ({count} točk)",
+  "parcelEditorDrawingDone": "Risanje zaključeno",
+  "parcelEditorArea": "Površina: {area}",
+  "parcelEditorClear": "Počisti",
+  "@parcelEditorTapToAdd": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelEditorArea": {
+    "placeholders": {
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelLogsCardTitle": "Hlodovina na parceli ({count})",
+  "parcelManualEntry": "Ročni vnos",
+  "parcelLogName": "Hlod {id}",
+  "parcelMoreLogs": "... in še {count} hlodov",
+  "parcelSavedPointsTitle": "Shranjene točke ({count})",
+  "parcelSecnjaTitle": "Sečnja ({count})",
+  "parcelFoundTitle": "Parcela {label}",
+  "parcelFoundKo": "KO {ko}",
+  "parcelFoundHide": "Skrij",
+  "parcelFoundOpen": "Odpri parcelo",
+  "parcelFoundImport": "Uvozi parcelo",
+  "@parcelLogsCardTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelLogName": {
+    "placeholders": {
+      "id": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelMoreLogs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelSavedPointsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelSecnjaTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelFoundTitle": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelFoundKo": {
+    "placeholders": {
+      "ko": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelPointsCount": "{count} točk",
+  "parcelInfoAdded": "Dodano",
+  "parcelInfoParcel": "Parcela",
+  "parcelNotSet": "Ni določen",
+  "parcelFromCadastre": "iz katastra (GURS)",
+  "parcelNoNotes": "Ni opomb",
+  "parcelWoodTitle": "Posek lesa",
+  "parcelCutLabel": "Posekano",
+  "parcelWoodUsed": "{percent}% izkoriščeno",
+  "parcelTreesCutLabel": "Posekanih dreves",
+  "parcelLogCutButton": "Posek m³",
+  "parcelTreeButton": "Drevo",
+  "@parcelPointsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@parcelWoodUsed": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelSearchNotFound": "Parcela {number} ni najdena.",
+  "parcelSearchError": "Napaka pri iskanju: {error}",
+  "parcelSearchTitle": "Iskanje parcele",
+  "parcelSearchAllKo": "Vse katastrske občine",
+  "parcelSearchByMapPosition": "Po legi na zemljevidu",
+  "parcelSearchRemoveKo": "Odstrani katastrsko občino",
+  "parcelSearchHint": "Parcela, lastnik, naslov ali k.o.",
+  "parcelSearchHelper": "npr. 123/4, Novak Babno ali Škofja Loka",
+  "parcelSearchPromptNoKo": "Vnesite številko parcele, ime lastnika, naslov ali katastrsko občino.",
+  "parcelSearchPromptWithKo": "Vnesite številko parcele (npr. 123/4), ime lastnika ali naslov.",
+  "parcelSearchNeedsKoHint": "Za parcelo {number} izberite katastrsko občino: vnesite njeno ime.",
+  "parcelSearchNoResults": "Ni zadetkov.",
+  "parcelSearchNeedsKo": "Za parcelo {number} izberite katastrsko občino.",
+  "@parcelSearchNotFound": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelSearchError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelSearchNeedsKoHint": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "@parcelSearchNeedsKo": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelMapPreviewLabel": "Karta",
+  "parcelPdfKo": "Katastrska občina",
+  "parcelPdfNumber": "Parcelna številka",
+  "parcelPdfArea": "Površina",
+  "parcelPdfAddress": "Naslov",
+  "parcelPdfMunicipality": "Občina",
+  "parcelPdfMapFailed": "Zemljevida ni bilo mogoče naložiti",
+  "parcelPdfFooter": "Gozdar • Izpisano: {date}",
+  "parcelPdfSource": "Vir: © GURS, © ZGS",
+  "@parcelPdfFooter": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "parcelSearchKoSubtitle": "Katastrska občina {sifko}",
+  "@parcelSearchKoSubtitle": {
+    "placeholders": {
+      "sifko": {
+        "type": "int"
+      }
+    }
+  },
+  "svcKmlExportSubject": "Gozdar Parcels Export",
+  "svcKmlExportText": "Exported {count} parcels",
+  "@svcKmlExportText": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "svcKmlParcelShareSubject": "Parcela {name}",
+  "@svcKmlParcelShareSubject": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "svcKmlParcelShareText": "Izvoz parcele {name} z {logs} hlodi, {fellings} sečnjami in {points} točkami",
+  "@svcKmlParcelShareText": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "logs": {
+        "type": "int"
+      },
+      "fellings": {
+        "type": "int"
+      },
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "svcDownloadFailedHttp": "Prenos ni uspel (HTTP {status}).",
+  "@svcDownloadFailedHttp": {
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "svcParcelDisplayName": "Parcela {number} (KO {ko})",
+  "@svcParcelDisplayName": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      },
+      "ko": {
+        "type": "int"
+      }
+    }
+  },
+  "svcParcelDisplayNameRef": "Parcela {label} ({ref})",
+  "@svcParcelDisplayNameRef": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "svcLayerParcel": "Parcela",
+  "svcLayerStand": "Sestoj",
+  "svcLayerSection": "Odsek",
+  "svcLayerDistrict": "Revir",
+  "svcLayerGge": "GGE",
+  "svcLayerGgo": "GGO",
+  "svcLayerForestReserve": "Gozdni rezervat",
+  "svcLayerProtectiveForest": "Varovalni gozd",
+  "svcLayerProtectedArea": "Zavarovano območje",
+  "svcLayerNaturalValue": "Naravna vrednota",
+  "svcLayerEpo": "EPO",
+  "svcLayerHuntingGround": "Lovišče",
+  "svcLayerFireRisk": "Požarna ogroženost",
+  "svcLayerMunicipality": "Občina",
+  "svcLayerCadastralMunicipality": "Katastrska občina",
+  "svcAesBadFormat": "Datoteka ni v pričakovani obliki (napačna glava).",
+  "svcAesCorrupt": "Datoteka je okvarjena ali nepopolna.",
+  "svcAesWrongPassword": "Napačno geslo.",
+  "svcNetTimeout": "Povezava je potekla. Prosimo, poskusite znova.",
+  "svcNetNoConnection": "Ni internetne povezave. Preverite omrežje.",
+  "svcNetServerError": "Strežnik ni dosegljiv. Poskusite pozneje.",
+  "svcNetUnknown": "Prišlo je do napake. Poskusite znova.",
+  "aboutTitle": "O aplikaciji",
+  "aboutSectionMapSources": "Viri kartografskih podatkov",
+  "aboutSectionLegal": "Pravne informacije",
+  "aboutSectionOpenSource": "Odprtokodne knjižnice",
+  "aboutSectionSupport": "Podpora",
+  "aboutTagline": "Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji",
+  "aboutInfoTitle": "Informacije o aplikaciji",
+  "aboutVersion": "Verzija",
+  "aboutBuildNumber": "Številka gradnje",
+  "aboutPackage": "Paket",
+  "aboutDeveloperOptions": "Razvijalske moznosti",
+  "aboutOwnersDb": "Baza lastnikov (kataster)",
+  "aboutNotImported": "Ni uvozena.",
+  "aboutOwnersCount": "{count} lastnikov{size}",
+  "@aboutOwnersCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutOwnersDownloading": "Prenašam bazo lastnikov…",
+  "aboutOwnersUpdateButton": "Posodobi (~300 MB)",
+  "aboutOwnersDownloadButton": "Prenesi (~300 MB)",
+  "aboutImportFromFile": "Uvozi iz datoteke (.sqlite)",
+  "aboutRemove": "Odstrani",
+  "aboutOfflineOwnerSearch": "Iskanje lastnika brez povezave",
+  "aboutOfflineOwnerSearchDesc": "Ko ni povezave, določi lastnika iz približnih mej parcel (lokalna baza).",
+  "aboutVlake": "Vlake (gozdne vlake)",
+  "aboutVlakeDesc": "Omogoči sloj — prikaže se v izbiri slojev (Infrastruktura)",
+  "aboutHttpCache": "Predpomnilnik HTTP",
+  "aboutHttpCacheDesc": "Predpomni odgovore državnih API-jev (prostor.zgs.gov.si).",
+  "aboutTileCache": "Predpomnilnik ploščic",
+  "aboutTileCacheDesc": "Predpomni karte (ločeno od HTTP predpomnilnika).",
+  "aboutClearMapCache": "Počisti predpomnilnik karte",
+  "aboutPickSqlite": "Izberi datoteko .sqlite.",
+  "aboutOwnersImported": "Uvozenih {count} lastnikov.",
+  "@aboutOwnersImported": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutImportFailed": "Uvoz ni uspel: {error}",
+  "@aboutImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutOwnersRemoved": "Baza lastnikov odstranjena.",
+  "aboutClearCacheTitle": "Počisti predpomnilnik karte?",
+  "aboutClearCacheBody": "Izbrisane bodo vse shranjene karte, tudi tiste, prenesene za delo brez povezave. Brez signala jih ne bo mogoče prikazati, dokler jih znova ne prenesete.",
+  "aboutCacheCleared": "Predpomnilnik karte počiščen.",
+  "aboutCacheClearFailed": "Brisanje predpomnilnika ni uspelo: {error}",
+  "@aboutCacheClearFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutOfflineKataster": "Offline kataster (parcele)",
+  "aboutKatasterNotLoaded": "Ni naložena — kataster se prikazuje prek spleta.",
+  "aboutParcelsSummary": "{regions}{count} parcel{size}{date} • brez spleta",
+  "@aboutParcelsSummary": {
+    "placeholders": {
+      "regions": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutAddRegion": "Dodaj regijo",
+  "aboutDownloadRegion": "Prenesi regijo",
+  "aboutDownloadRegionHint": "Prenesi le svojo statistično regijo — priporočena povezava Wi-Fi.",
+  "aboutShareKataster": "Deli offline kataster",
+  "aboutShareKatasterActive": "Na voljo v lokalnem omrežju • najdenih naprav: {count}",
+  "@aboutShareKatasterActive": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aboutShareKatasterDesc": "Dovoli drugim napravam v istem omrežju prenos naloženih regij.",
+  "aboutPublicOwners": "javni lastniki",
+  "aboutKatasterUpdateAvailable": "Na voljo je novejši kataster ({date})",
+  "@aboutKatasterUpdateAvailable": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutKatasterOutdated": "Zastarelo: {parts}{size}",
+  "@aboutKatasterOutdated": {
+    "placeholders": {
+      "parts": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "updateLater": "Pozneje",
+  "updateNow": "Posodobi",
+  "aboutPublicOwnersLabel": "Javni lastniki…",
+  "aboutPublicOwnersFailed": "Prenos javnih lastnikov ni uspel.",
+  "aboutErrorWithDetail": "Napaka: {error}",
+  "@aboutErrorWithDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutPickRegionsTitle": "Izberi statistične regije",
+  "aboutRegionParcels": " • {count} parcel",
+  "@aboutRegionParcels": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutRegionLoaded": " • naloženo",
+  "aboutDownloadSelected": "Prenesi {count} (~{mb} MB)",
+  "@aboutDownloadSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "mb": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutRegionProgress": "{name} ({index}/{total})…",
+  "@aboutRegionProgress": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "aboutRegionsDownloaded": "Prenesenih regij: {count}.",
+  "@aboutRegionsDownloaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aboutRegionsFailed": " Neuspešno: {names}.",
+  "@aboutRegionsFailed": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutPasswordLabel": "Geslo",
+  "aboutUnlock": "Odkleni",
+  "aboutOwnersPasswordTitle": "Geslo za bazo lastnikov",
+  "aboutOwnersDownloaded": "Prenesenih {count} lastnikov.",
+  "@aboutOwnersDownloaded": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutDownloadCancelled": "Prenos preklican.",
+  "aboutDownloadFailed": "Prenos ni uspel: {error}",
+  "@aboutDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutParcelsImported": "Uvoženih {count} parcel.",
+  "@aboutParcelsImported": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutParcelsRemoved": "Baze parcel odstranjene.",
+  "aboutWipeSection": "Pobriši podatke (baze parcel + lastnikov)",
+  "aboutWipeImported": "Uvožene",
+  "aboutWipeDownloaded": "Prenesene",
+  "aboutWipeAll": "Vse",
+  "aboutWipeScopeAll": "vse baze",
+  "aboutWipeScopeImported": "uvožene baze",
+  "aboutWipeScopeDownloaded": "prenesene baze",
+  "aboutWipeTitle": "Pobriši podatke",
+  "aboutWipeConfirm": "Ali res želiš pobrisati {scope}? Tega ni mogoče razveljaviti.",
+  "@aboutWipeConfirm": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutWipeButton": "Pobriši",
+  "aboutWipeNone": "Ni ustreznih baz za brisanje.",
+  "aboutWipeDone": "Pobrisanih baz: {count}.",
+  "@aboutWipeDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aboutSrcZgsDesc": "Gozdarski sloji, sestoji, odseki, revirji, gozdni rezervati, varovalni gozdovi, požarna ogroženost, vetrolomi, podlubniki",
+  "aboutSrcGursDesc": "Ortofoto posnetki (2022-2024), kataster, katastrske občine, občine, upravne enote, DMR",
+  "aboutSrcOsmDesc": "Osnovni zemljevid in topografski podatki",
+  "aboutSrcTopoDesc": "Topografski zemljevid (Seznam.cz)",
+  "aboutSrcEsriDesc": "Satelitski posnetki in topografski zemljevid",
+  "aboutTermsTitle": "Pogoji uporabe",
+  "aboutDisclaimerTitle": "Omejitev odgovornosti",
+  "aboutCopyrightTitle": "Avtorske pravice",
+  "aboutPrivacyTitle": "Zasebnost",
+  "aboutTermsBody": "Aplikacija Gozdar je namenjena izključno informativnim namenom. Podatki o parcelah, gozdnih sestojih in drugih kartografskih slojih so povzeti iz javno dostopnih virov in morda niso posodobljeni ali popolnoma točni.",
+  "aboutDisclaimerBody": "Razvijalec ne prevzema odgovornosti za morebitno škodo, ki bi nastala zaradi uporabe aplikacije ali podatkov v njej. Za uradne podatke o lastništvu in mejah parcel se obrnite na pristojne organe (GURS, ZGS).",
+  "aboutCopyrightBody": "Kartografski podatki ZGS in GURS so last Republike Slovenije. OpenStreetMap podatki so na voljo pod licenco ODbL. ESRI podatki so last Esri Inc.",
+  "aboutPrivacyBody": "Aplikacija zbira anonimne podatke o uporabi za izboljšanje delovanja (Firebase Analytics). Lokacijski podatki se ne pošiljajo na strežnik - vsi podatki o parcelah in hlodih se hranijo lokalno na napravi.",
+  "aboutShowLicenses": "Prikaži licence",
+  "aboutLicensesDesc": "Flutter in odprtokodne knjižnice",
+  "aboutReportBug": "Prijavi napako",
+  "aboutContact": "Kontakt",
+  "aboutContactDesc": "Pošljite povratne informacije",
+  "aboutSourceCode": "Izvorna koda",
+  "aboutSourceCodeDesc": "Odprtokodni projekt na GitHub",
+  "aboutLanguage": "Jezik",
+  "aboutLanguageAuto": "Samodejno",
+  "aboutDownloadingRegion": "Prenašam regijo…",
+  "updateAvailableTitle": "Nova posodobitev na voljo",
+  "updateVersion": "Verzija {version}",
+  "@updateVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateDownloading": "Prenašanje posodobitve...",
+  "updateReadyTitle": "Posodobitev pripravljena",
+  "updateReadyHint": "Tapni za namestitev",
+  "updateInstall": "Namesti",
+  "updateErrorTitle": "Napaka pri posodobitvi",
+  "updateRetry": "Ponovi",
+  "updateKatasterBanner": "Na voljo je novejši kataster ({date}{size}).",
+  "@updateKatasterBanner": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "updateErrorAlreadyRunning": "Prenos že poteka",
+  "updateErrorPermission": "Dovoljenje za namestitev je zavrnjeno",
+  "updateErrorInternal": "Notranja napaka",
+  "updateErrorDownload": "Prenos ni uspel",
+  "updateErrorChecksum": "Preverjanje kontrolne vsote ni uspelo",
+  "updateErrorInstall": "Namestitev ni uspela",
+  "navTabMap": "Karta",
+  "navTabForest": "Gozd",
+  "navTabLogs": "Hlodi",
+  "navTabSemantic": "Tab {name}",
+  "@navTabSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "navOnboardingReset": "Uvodni vodič ponastavljen. Ponovno zaženi aplikacijo.",
+  "introSkip": "Preskoči",
+  "introStart": "Začni",
+  "introWelcomeTitle": "Dobrodošli v Gozdar",
+  "introWelcomeBody": "Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji.\n\nSledite poseku, belezite hlodovino in uporabljajte GPS za delo na terenu.",
+  "introNavTitle": "Navigacija",
+  "introNavMapDesc": "Interaktivni zemljevid z vašimi parcelami",
+  "introNavForestDesc": "Seznam parcel in iskanje v katastru",
+  "introNavLogsDesc": "Beleženje hlodovine z izračunom volumna",
+  "introLogsTitle": "Beleženje hlodovine",
+  "introLogsDiameter": "Premer: 45 cm",
+  "introLogsLength": "Dolžina: 4.5 m",
+  "introLogsVolume": "Volumen: 0.716 m³",
+  "introLogsSpecies": "Drevesne vrste",
+  "introLogsSpeciesDesc": "Beležite vrsto lesa (Smreka, Bukev, Jelka, ...)",
+  "introLogsAutoCalc": "Samodejni izračun",
+  "introLogsAutoCalcDesc": "Aplikacija izračuna volumen iz premera in dolžine",
+  "introLogsGrouping": "Razvrščanje",
+  "introLogsGroupingDesc": "Hlodi se samodejno razvrstijo po vrstah",
+  "introLogsManage": "Upravljanje vrst",
+  "introLogsManageDesc": "Dodajte ali odstranite vrste v meniju ⋮",
+  "introLongPressTitle": "Dolg pritisk na karti",
+  "introLongPressAddPoint": "Dodaj točko",
+  "introLongPressAddPointDesc": "Shrani lokacijo (mejnik, skladišče)",
+  "introLongPressAddLogs": "Dodaj hlodovino",
+  "introLongPressAddLogsDesc": "Beleženje hloda z GPS koordinatami",
+  "introLongPressMarkCut": "Označi sečnjo",
+  "introLongPressMarkCutDesc": "Označi drevo za posek na karti",
+  "introLongPressImport": "Uvozi parcelo",
+  "introLongPressImportDesc": "Pridobi parcelo iz katastra na trenutni lokaciji",
+  "introLongPressHint": "Držite prst na karti za prikaz menija",
+  "introMarkersTitle": "Označbe na karti",
+  "introMarkerPoint": "Točka",
+  "introMarkerLog": "Hlod",
+  "introMarkerCut": "Sečnja",
+  "introMarkersRed": "Rdeče",
+  "introMarkersRedDesc": "Shranjene lokacije (mejniki, skladišča)",
+  "introMarkersBrown": "Rjave",
+  "introMarkersBrownDesc": "Hlodovina z GPS lokacijo",
+  "introMarkersOrange": "Oranžne",
+  "introMarkersOrangeDesc": "Drevesa označena za sečnjo",
+  "introMarkersLinked": "Hlodi in sečnje se samodejno povežejo s parcelo",
+  "introLayersTitle": "Sloji na karti",
+  "introLayersButtonHint": "Pritisnite za izbiro slojev",
+  "introLayersOrthoDesc": "Satelitski posnetki Slovenije",
+  "introLayersCadastreDesc": "Meje parcel iz katastra",
+  "introLayersStands": "Gozdni sestoji",
+  "introLayersStandsDesc": "Podatki Zavoda za gozdove",
+  "introLayersTopo": "Topografija",
+  "introLayersTopoDesc": "DTK in druge karte",
+  "introOfflineTitle": "Delo brez povezave",
+  "introOfflineAutoCache": "Samodejno predpomnjenje",
+  "introOfflineAutoCacheDesc": "Ogledane karte se shranijo za kasnejšo uporabo",
+  "introOfflineOnSearch": "Ob iskanju parcele",
+  "introOfflineOnSearchDesc": "Karte za območje parcele se prenesejo samodejno",
+  "introOfflineManual": "Ročni prenos",
+  "introOfflineManualDesc": "Uporabite gumb za sloje na karti za prenos območja",
+  "introOfflineHint": "Karte delujejo tudi v gozdu brez signala!",
+  "introCompassTitle": "Navigacija do mejnika",
+  "introCompassMarker": "Mejnik 1 • 45m",
+  "introCompassStep1": "Odprite parcelo",
+  "introCompassStep1Desc": "V zavihku Gozd izberite parcelo",
+  "introCompassStep2": "Tapnite mejno točko",
+  "introCompassStep2Desc": "Izberite točko na karti parcele",
+  "introCompassStep3": "Aktivirajte kompas",
+  "introCompassStep3Desc": "Tapnite oranžni navigacijski trak",
+  "introCompassStep4": "Sledite smeri",
+  "introCompassStep4Desc": "Kompas kaže smer in razdaljo do točke",
+  "introTermsTitle": "Pogoji uporabe",
+  "introTermsBody": "Aplikacija uporablja javne podatke Zavoda za gozdove Slovenije.\n\nZ uporabo te aplikacije se strinjate s pogoji uporabe podatkov:\n\n"
+}

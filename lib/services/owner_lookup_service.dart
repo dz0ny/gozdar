@@ -11,6 +11,7 @@ import 'aes_file_decryptor.dart';
 import 'parcel_lookup_service.dart';
 import 'public_parcel_settings.dart';
 import 'remote_asset.dart';
+import '../l10n/l10n.dart';
 
 /// Thrown when an owners-database download is cancelled by the caller.
 class OwnerDownloadCancelled implements Exception {
@@ -80,6 +81,17 @@ class OwnerLookupService {
   String? _source; // 'imported' | 'downloaded'
 
   Database? _publicDb;
+
+  /// Croatian public owners (state property register), a separate file with the
+  /// same schema. Parcel codes never clash with the Slovenian ones.
+  static const _publicHrFileName = 'public_owners_hr.sqlite';
+  static String get _publicHrUrl =>
+      '${ParcelLookupService.r2BaseUrl}/$_publicHrFileName';
+  Database? _publicHrDb;
+
+  Iterable<Database> get _publicDbs =>
+      [?_publicDb, ?_publicHrDb];
+
   int _publicRowCount = 0;
   String? _publicBuilt;
 
@@ -105,7 +117,8 @@ class OwnerLookupService {
 
   /// Whether owner lookups can be answered — either the embedded public DB or
   /// an imported/downloaded private DB is open.
-  bool get isAvailable => _db != null || _publicDb != null;
+  bool get isAvailable =>
+      _db != null || _publicDb != null || _publicHrDb != null;
 
   /// Number of owner rows in the imported database (0 when unavailable).
   int get rowCount => _rowCount;
@@ -169,6 +182,40 @@ class OwnerLookupService {
       _publicDb?.close();
       _publicDb = null;
     }
+  }
+
+  /// Open the Croatian public-owners database. When it is missing it is only
+  /// downloaded if a Croatian parcels region is loaded, so Slovenian users never
+  /// fetch it. Call again after a region download.
+  Future<void> initPublicHr() async {
+    try {
+      final path = await RemoteAsset.localPath(_publicHrFileName);
+      if (File(path).existsSync()) {
+        _openPublicHr(path);
+        return;
+      }
+      if (!ParcelLookupService.instance.hasCroatianRegion) return;
+      final fetched = await RemoteAsset.ensure(_publicHrUrl, _publicHrFileName);
+      if (fetched != null) _openPublicHr(fetched);
+    } catch (e) {
+      debugPrint('OwnerLookupService.initPublicHr failed: $e');
+      _publicHrDb?.close();
+      _publicHrDb = null;
+    }
+  }
+
+  void _openPublicHr(String path) {
+    final db = sqlite3.open(path);
+    final ok = db.select(
+      "SELECT name FROM sqlite_master WHERE type='table' "
+      "AND name IN ('owners','names')",
+    );
+    if (ok.length < 2) {
+      db.close();
+      throw const FormatException('Neveljavna javna baza lastnikov.');
+    }
+    _publicHrDb?.close();
+    _publicHrDb = db;
   }
 
   Future<void> _downloadPublic() async {
@@ -466,7 +513,9 @@ class OwnerLookupService {
     try {
       final response = await client.send(http.Request('GET', Uri.parse(url)));
       if (response.statusCode != 200) {
-        throw FormatException('Prenos ni uspel (HTTP ${response.statusCode}).');
+        throw FormatException(
+          L10n.current.svcDownloadFailedHttp(response.statusCode),
+        );
       }
       final total = response.contentLength;
       final sink = part.openWrite();
@@ -599,15 +648,8 @@ class OwnerLookupService {
   /// suffixed " (upravljavec)" so they read distinctly from owners. Returns null
   /// when the public DB is absent or has no row for the parcel.
   OwnerInfo? _lookupPublic(int sifko, String key) {
-    final db = _publicDb;
-    if (db == null) return null;
     try {
-      final rows = db.select(
-        'SELECT n.naziv AS naziv, o.vloga AS vloga '
-        'FROM owners o JOIN names n ON n.id = o.name_id '
-        'WHERE o.sifko = ? AND o.parcela = ?',
-        [sifko, key],
-      );
+      final rows = _publicRows(sifko, key);
       if (rows.isEmpty) return null;
       final owners = <String>[];
       final managers = <String>[];
@@ -638,17 +680,11 @@ class OwnerLookupService {
   /// municipality over company. Fast (indexed). Used to colour parcels by
   /// owner type on the map.
   PublicOwnerCategory? publicCategory(int? sifko, String? parcela) {
-    final db = _publicDb;
-    if (db == null || sifko == null || parcela == null) return null;
+    if (sifko == null || parcela == null) return null;
     final key = parcela.trim();
     if (key.isEmpty) return null;
     try {
-      final rows = db.select(
-        'SELECT n.naziv AS naziv, o.vloga AS vloga '
-        'FROM owners o JOIN names n ON n.id = o.name_id '
-        'WHERE o.sifko = ? AND o.parcela = ?',
-        [sifko, key],
-      );
+      final rows = _publicRows(sifko, key);
       if (rows.isEmpty) return null;
       PublicOwnerCategory? owner;
       PublicOwnerCategory? manager;
@@ -669,10 +705,26 @@ class OwnerLookupService {
     }
   }
 
+  /// Rows (name, role) for one parcel from every open public-owners database.
+  List<Row> _publicRows(int sifko, String key) => [
+        for (final db in _publicDbs)
+          ...db.select(
+            'SELECT n.naziv AS naziv, o.vloga AS vloga '
+            'FROM owners o JOIN names n ON n.id = o.name_id '
+            'WHERE o.sifko = ? AND o.parcela = ?',
+            [sifko, key],
+          ),
+      ];
+
+  static final _localGovernment = RegExp(r'\b(GRAD|OPĆINA|OPĆINE|ŽUPANIJA)\b');
+
   static PublicOwnerCategory _classifyOwner(String name) {
     final u = name.toUpperCase();
-    if (u.contains('REPUBLIKA SLOVENIJA')) return PublicOwnerCategory.state;
+    if (u.contains('REPUBLIKA SLOVENIJA') || u.contains('REPUBLIKA HRVATSKA')) {
+      return PublicOwnerCategory.state;
+    }
     if (u.contains('OBČIN')) return PublicOwnerCategory.obcina; // OBČINA/OBČINE
+    if (_localGovernment.hasMatch(u)) return PublicOwnerCategory.obcina;
     return PublicOwnerCategory.company;
   }
 

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:latlong2/latlong.dart';
+import '../l10n/l10n.dart';
 import '../services/location_settings.dart';
 import 'compass_painter.dart';
 
@@ -168,7 +169,17 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
   }
 
   String _bearingToCardinal(double bearing) {
-    const directions = ['S', 'SV', 'V', 'JV', 'J', 'JZ', 'Z', 'SZ'];
+    final l = L10n.current;
+    final directions = [
+      l.mapwCompassN,
+      l.mapwCompassNE,
+      l.mapwCompassE,
+      l.mapwCompassSE,
+      l.mapwCompassS,
+      l.mapwCompassSW,
+      l.mapwCompassW,
+      l.mapwCompassNW,
+    ];
     final index = ((bearing + 22.5) / 45).floor() % 8;
     return directions[index];
   }
@@ -198,9 +209,9 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
   // Check if compass accuracy is low
   String? get _accuracyWarning {
     if (_compassAccuracy != null && _compassAccuracy! > 30) {
-      return 'Nizka natančnost kompasa (±${_compassAccuracy!.round()}°). Kalibrirajte napravo.';
+      return L10n.current.mapwCompassLowAccuracy(_compassAccuracy!.round());
     } else if (_compassAccuracy != null && _compassAccuracy! > 15) {
-      return 'Zmerna natančnost kompasa (±${_compassAccuracy!.round()}°)';
+      return L10n.current.mapwCompassMediumAccuracy(_compassAccuracy!.round());
     }
     return null;
   }
@@ -239,7 +250,7 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Dovoljenje za lokacijo zavrnjeno — razdalja ni na voljo',
+                      context.l10n.mapwLocationPermissionDenied,
                       style: TextStyle(
                         color: Colors.orange.shade700,
                         fontSize: 13,
@@ -338,7 +349,7 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
             child: Column(
               children: [
                 Text(
-                  'Kompas',
+                  context.l10n.mapwCompass,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -367,17 +378,17 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         _buildInfoCard(
-          'Razdalja',
+          context.l10n.mapwDistance,
           distance != null ? _formatDistance(distance) : '--',
           Icons.straighten,
         ),
         _buildInfoCard(
-          'Azimut',
+          context.l10n.mapwAzimuth,
           bearing != null ? '${bearing.round()}°' : '--',
           Icons.navigation,
         ),
         _buildInfoCard(
-          'Smer',
+          context.l10n.mapwDirection,
           bearing != null ? _bearingToCardinal(bearing) : '--',
           Icons.explore,
         ),
@@ -463,7 +474,7 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
             const SizedBox(width: 4),
             IconButton(
               icon: const Icon(Icons.copy, size: 18),
-              tooltip: 'Kopiraj koordinate',
+              tooltip: context.l10n.mapwCopyCoordinates,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
               onPressed: () {
@@ -471,9 +482,9 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
                     '${widget.targetLocation.latitude.toStringAsFixed(6)}, ${widget.targetLocation.longitude.toStringAsFixed(6)}';
                 Clipboard.setData(ClipboardData(text: copyText));
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Koordinate kopirane'),
-                    duration: Duration(seconds: 2),
+                  SnackBar(
+                    content: Text(context.l10n.mapwCoordinatesCopied),
+                    duration: const Duration(seconds: 2),
                   ),
                 );
               },

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/parcel.dart';
 import '../services/owner_lookup_service.dart';
 import '../screens/forest_tab.dart';
+import '../l10n/l10n.dart';
 
 /// Info row widget for displaying label-value pairs
 class _InfoRow extends StatelessWidget {
@@ -67,7 +68,7 @@ class ParcelInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('d. M. yyyy');
+    final dateFormat = DateFormat('d. M. yyyy', context.l10n.localeName);
 
     return Card(
       child: Padding(
@@ -108,7 +109,7 @@ class ParcelInfoCard extends StatelessWidget {
                             ),
                       ),
                       Text(
-                        '${parcel.polygon.length} točk',
+                        context.l10n.parcelPointsCount(parcel.polygon.length),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -121,7 +122,7 @@ class ParcelInfoCard extends StatelessWidget {
             const Divider(height: 24),
             _InfoRow(
               icon: Icons.calendar_today,
-              label: 'Dodano',
+              label: context.l10n.parcelInfoAdded,
               value: dateFormat.format(parcel.createdAt),
             ),
             if (parcel.isCadastral) ...[
@@ -134,7 +135,7 @@ class ParcelInfoCard extends StatelessWidget {
               const SizedBox(height: 8),
               _InfoRow(
                 icon: Icons.tag,
-                label: 'Parcela',
+                label: context.l10n.parcelInfoParcel,
                 value: parcel.parcelNumber!,
               ),
             ],
@@ -180,7 +181,7 @@ class ParcelOwnerCard extends StatelessWidget {
 
     Widget subtitle;
     if (name == null) {
-      subtitle = const Text('Ni določen');
+      subtitle = Text(context.l10n.parcelNotSet);
     } else {
       subtitle = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +197,7 @@ class ParcelOwnerCard extends StatelessWidget {
             ),
           if (showsCadastre)
             Text(
-              'iz katastra (GURS)',
+              context.l10n.parcelFromCadastre,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.primary,
                 fontStyle: FontStyle.italic,
@@ -209,7 +210,7 @@ class ParcelOwnerCard extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.person),
-        title: const Text('Lastnik'),
+        title: Text(context.l10n.parcelOwnerTitle),
         subtitle: subtitle,
         isThreeLine: name != null && (hasLookupAddress || showsCadastre),
         trailing: const Icon(Icons.edit),
@@ -231,8 +232,8 @@ class ParcelNotesCard extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.note),
-        title: const Text('Opombe'),
-        subtitle: Text(notes ?? 'Ni opomb'),
+        title: Text(context.l10n.parcelNotesTitle),
+        subtitle: Text(notes ?? context.l10n.parcelNoNotes),
         trailing: const Icon(Icons.edit),
         onTap: onEdit,
       ),

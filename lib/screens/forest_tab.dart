@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../models/parcel.dart';
@@ -8,7 +9,6 @@ import '../router/route_names.dart';
 import '../services/database_service.dart';
 import '../services/kml_service.dart';
 import '../services/owner_lookup_service.dart';
-import '../utils/sl_plural.dart';
 import '../widgets/parcel_silhouette.dart';
 
 /// Get icon and color for forest type
@@ -91,7 +91,7 @@ class ForestTabState extends State<ForestTab> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Napaka pri nalaganju: $e')));
+        ).showSnackBar(SnackBar(content: Text(context.l10n.forestLoadError('$e'))));
       }
     }
   }
@@ -117,20 +117,17 @@ class ForestTabState extends State<ForestTab> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Izbriši parcelo'),
-        content: Text(
-          'Ali ste prepričani, da želite izbrisati "${parcel.name}"?\n\n'
-          'Izbrisane bodo tudi vse točke, sečnje in hlodovina znotraj parcele.',
-        ),
+        title: Text(context.l10n.forestDeleteTitle),
+        content: Text(context.l10n.forestDeleteConfirm(parcel.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Prekliči'),
+            child: Text(context.l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Izbriši'),
+            child: Text(context.l10n.commonDelete),
           ),
         ],
       ),
@@ -154,24 +151,22 @@ class ForestTabState extends State<ForestTab> {
           final locationsCount = deleted['locations'] ?? 0;
           final extras = <String>[];
           if (logsCount > 0) {
-            extras.add(slCount(logsCount, 'hlod', 'hloda', 'hlodi', 'hlodov'));
+            extras.add(context.l10n.logsCountLogs(logsCount));
           }
           if (locationsCount > 0) {
-            extras.add(
-              slCount(locationsCount, 'točka', 'točki', 'točke', 'točk'),
-            );
+            extras.add(context.l10n.forestCountPoints(locationsCount));
           }
           final extraText = extras.isNotEmpty ? ' (${extras.join(', ')})' : '';
 
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Parcela izbrisana$extraText')),
+            SnackBar(content: Text(context.l10n.forestDeleted(extraText))),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('Napaka pri brisanju: $e')));
+          ).showSnackBar(SnackBar(content: Text(context.l10n.forestDeleteError('$e'))));
         }
       }
     }
@@ -181,7 +176,7 @@ class ForestTabState extends State<ForestTab> {
     if (_parcels.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Ni parcel za izvoz')));
+      ).showSnackBar(SnackBar(content: Text(context.l10n.forestNoParcelsToExport)));
       return;
     }
 
@@ -190,13 +185,13 @@ class ForestTabState extends State<ForestTab> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('KML uspešno izvožen')));
+        ).showSnackBar(SnackBar(content: Text(context.l10n.forestKmlExported)));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Napaka pri izvozu: $e')));
+        ).showSnackBar(SnackBar(content: Text(context.l10n.forestExportError('$e'))));
       }
     }
   }
@@ -206,7 +201,7 @@ class ForestTabState extends State<ForestTab> {
 
     if (owners.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ni parcel z določenimi lastniki')),
+        SnackBar(content: Text(context.l10n.forestNoOwners)),
       );
       return;
     }
@@ -224,7 +219,7 @@ class ForestTabState extends State<ForestTab> {
                   const Icon(Icons.filter_list),
                   const SizedBox(width: 8),
                   Text(
-                    'Filtriraj po lastniku',
+                    context.l10n.forestFilterByOwner,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ],
@@ -239,7 +234,7 @@ class ForestTabState extends State<ForestTab> {
                     ? Theme.of(context).colorScheme.primary
                     : null,
               ),
-              title: const Text('Prikaži vse'),
+              title: Text(context.l10n.forestShowAll),
               selected: _selectedOwnerFilter == null,
               onTap: () {
                 setState(() => _selectedOwnerFilter = null);
@@ -267,15 +262,7 @@ class ForestTabState extends State<ForestTab> {
                           : null,
                     ),
                     title: Text(owner),
-                    subtitle: Text(
-                      slCount(
-                        parcelCount,
-                        'parcela',
-                        'parceli',
-                        'parcele',
-                        'parcel',
-                      ),
-                    ),
+                    subtitle: Text(context.l10n.forestCountParcels(parcelCount)),
                     selected: isSelected,
                     onTap: () {
                       setState(() => _selectedOwnerFilter = owner);
@@ -315,7 +302,7 @@ class ForestTabState extends State<ForestTab> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Moj Gozd'),
+        title: Text(context.l10n.forestTitle),
         actions: [
           // Filter own parcels by owner. Importing parcels is done from the
           // map's parcel search.
@@ -324,11 +311,11 @@ class ForestTabState extends State<ForestTab> {
               isLabelVisible: _selectedOwnerFilter != null,
               child: const Icon(Icons.person),
             ),
-            tooltip: 'Filtriraj po lastniku',
+            tooltip: context.l10n.forestFilterByOwner,
             onPressed: _showOwnerFilterDialog,
           ),
           PopupMenuButton<String>(
-            tooltip: 'Več možnosti gozda',
+            tooltip: context.l10n.forestMoreOptionsTooltip,
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
               if (value == 'export') {
@@ -336,13 +323,13 @@ class ForestTabState extends State<ForestTab> {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'export',
                 child: Row(
                   children: [
-                    Icon(Icons.file_download),
-                    SizedBox(width: 8),
-                    Text('Izvozi KML'),
+                    const Icon(Icons.file_download),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.forestExportKml),
                   ],
                 ),
               ),
@@ -367,22 +354,22 @@ class ForestTabState extends State<ForestTab> {
                           _SummaryItem(
                             icon: Icons.park,
                             value: totalAreaFormatted,
-                            label: 'Površina',
+                            label: context.l10n.forestSummaryArea,
                           ),
                           _SummaryItem(
                             icon: Icons.grid_view,
                             value: '${displayParcels.length}',
-                            label: 'Parcel',
+                            label: context.l10n.forestSummaryParcels,
                           ),
                           _SummaryItem(
                             icon: Icons.nature,
                             value: '$totalTrees',
-                            label: 'Dreves',
+                            label: context.l10n.forestSummaryTrees,
                           ),
                           _SummaryItem(
                             icon: Icons.inventory,
                             value: '${totalVolume.toStringAsFixed(1)} m³',
-                            label: 'Posekano',
+                            label: context.l10n.forestSummaryCut,
                           ),
                         ],
                       ),
@@ -412,7 +399,7 @@ class ForestTabState extends State<ForestTab> {
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                        'Ni parcel za "$_selectedOwnerFilter"',
+                                        context.l10n.forestNoParcelsForOwner(_selectedOwnerFilter!),
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleLarge
@@ -427,7 +414,7 @@ class ForestTabState extends State<ForestTab> {
                                           );
                                         },
                                         icon: const Icon(Icons.clear_all),
-                                        label: const Text('Prikaži vse'),
+                                        label: Text(context.l10n.forestShowAll),
                                       ),
                                     ],
                                   )
@@ -442,7 +429,7 @@ class ForestTabState extends State<ForestTab> {
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                        'Ni še parcel',
+                                        context.l10n.forestEmptyTitle,
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleLarge
@@ -450,7 +437,7 @@ class ForestTabState extends State<ForestTab> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Poiščite parcelo v katastru\nali jo uvozite iz KML',
+                                        context.l10n.forestEmptyHint,
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyMedium
@@ -459,14 +446,14 @@ class ForestTabState extends State<ForestTab> {
                                       ),
                                       const SizedBox(height: 24),
                                       Tooltip(
-                                        message: 'Išči parcelo',
+                                        message: context.l10n.forestSearchParcel,
                                         child: FilledButton.icon(
                                           onPressed: () {
                                             context.read<NavigationNotifier>().navigateToMapWithSearch();
                                             context.go(AppRoutes.map);
                                           },
                                           icon: const Icon(Icons.search),
-                                          label: const Text('Išči parcelo'),
+                                          label: Text(context.l10n.forestSearchParcel),
                                         ),
                                       ),
                                     ],
@@ -485,11 +472,12 @@ class ForestTabState extends State<ForestTab> {
 
   Widget _buildGroupedParcelsList(BuildContext context, List<Parcel> parcels) {
     // Group parcels by cadastral municipality (KO)
+    final noKo = context.l10n.forestNoKo;
     final groupedParcels = <String, List<Parcel>>{};
     for (final parcel in parcels) {
       final ko = parcel.cadastralMunicipality != null
-          ? 'KO ${parcel.cadastralMunicipality}'
-          : 'Brez KO';
+          ? context.l10n.forestKoLabel('${parcel.cadastralMunicipality}')
+          : noKo;
       if (!groupedParcels.containsKey(ko)) {
         groupedParcels[ko] = [];
       }
@@ -504,11 +492,15 @@ class ForestTabState extends State<ForestTab> {
     // Sort KOs, but put "Brez KO" at the end
     final sortedKOs = groupedParcels.keys.toList()
       ..sort((a, b) {
-        if (a == 'Brez KO') return 1;
-        if (b == 'Brez KO') return -1;
+        if (a == noKo) return 1;
+        if (b == noKo) return -1;
         // Extract numeric KO for proper sorting
-        final aNum = int.tryParse(a.replaceAll('KO ', ''));
-        final bNum = int.tryParse(b.replaceAll('KO ', ''));
+        final aNum = int.tryParse(
+          '${groupedParcels[a]!.first.cadastralMunicipality}',
+        );
+        final bNum = int.tryParse(
+          '${groupedParcels[b]!.first.cadastralMunicipality}',
+        );
         if (aNum != null && bNum != null) {
           return aNum.compareTo(bNum);
         }
@@ -565,7 +557,7 @@ class ForestTabState extends State<ForestTab> {
                     ),
                   ),
                   Text(
-                    '${slCount(count, 'parcela', 'parceli', 'parcele', 'parcel')} • $areaFormatted',
+                    '${context.l10n.forestCountParcels(count)} • $areaFormatted',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -648,13 +640,7 @@ class ForestTabState extends State<ForestTab> {
                     Text(' · ', style: TextStyle(color: Colors.grey[400])),
                     if (parcel.treesCut > 0)
                       Text(
-                        slCount(
-                          parcel.treesCut,
-                          'drevo',
-                          'drevesi',
-                          'drevesa',
-                          'dreves',
-                        ),
+                        context.l10n.forestCountTrees(parcel.treesCut),
                         style: TextStyle(color: Colors.orange[700]),
                       ),
                     if (parcel.treesCut > 0 && parcel.woodCut > 0)
