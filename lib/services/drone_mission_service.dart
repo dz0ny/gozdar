@@ -23,15 +23,24 @@ class DroneMissionOptions {
   /// Conservative value for a ~24 mm-equivalent lens in 4:3.
   final double footprintPerMetre;
 
+  /// Overlap between consecutive photos along a line, 0..1.
+  final double frontOverlap;
+
   const DroneMissionOptions({
     this.altitudeM = 60,
     this.speedMs = 5,
     this.sideOverlap = 0.7,
     this.headingDeg = 0,
     this.footprintPerMetre = 1.2,
+    this.frontOverlap = 0.8,
   });
 
   double get lineSpacingM => altitudeM * footprintPerMetre * (1 - sideOverlap);
+
+  /// Distance between shots along a line. The camera's short side (3/4 of the
+  /// long side in 4:3) points along the flight direction.
+  double get photoSpacingM =>
+      altitudeM * footprintPerMetre * 0.75 * (1 - frontOverlap);
 }
 
 /// A waypoint of the generated flight plan (WGS84).
@@ -137,6 +146,64 @@ class DroneMissionService {
         : 0.0;
     final distance = pathLengthM(waypoints);
 
+    // Each line is a (start, end) waypoint pair. Shoot every photoSpacingM
+    // between them; point the gimbal straight down at the very first point.
+    String actions(int i) {
+      if (i.isOdd) return '';
+      final b = StringBuffer();
+      var groupId = i;
+      if (i == 0) {
+        b.write('''
+
+        <wpml:actionGroup>
+          <wpml:actionGroupId>${groupId++}</wpml:actionGroupId>
+          <wpml:actionGroupStartIndex>0</wpml:actionGroupStartIndex>
+          <wpml:actionGroupEndIndex>0</wpml:actionGroupEndIndex>
+          <wpml:actionGroupMode>sequence</wpml:actionGroupMode>
+          <wpml:actionTrigger>
+            <wpml:actionTriggerType>reachPoint</wpml:actionTriggerType>
+          </wpml:actionTrigger>
+          <wpml:action>
+            <wpml:actionId>0</wpml:actionId>
+            <wpml:actionActuatorFunc>gimbalRotate</wpml:actionActuatorFunc>
+            <wpml:actionActuatorFuncParam>
+              <wpml:gimbalHeadingYawBase>aircraft</wpml:gimbalHeadingYawBase>
+              <wpml:gimbalRotateMode>absoluteAngle</wpml:gimbalRotateMode>
+              <wpml:gimbalPitchRotateEnable>1</wpml:gimbalPitchRotateEnable>
+              <wpml:gimbalPitchRotateAngle>-90</wpml:gimbalPitchRotateAngle>
+              <wpml:gimbalRollRotateEnable>0</wpml:gimbalRollRotateEnable>
+              <wpml:gimbalRollRotateAngle>0</wpml:gimbalRollRotateAngle>
+              <wpml:gimbalYawRotateEnable>0</wpml:gimbalYawRotateEnable>
+              <wpml:gimbalYawRotateAngle>0</wpml:gimbalYawRotateAngle>
+              <wpml:gimbalRotateTimeEnable>0</wpml:gimbalRotateTimeEnable>
+              <wpml:gimbalRotateTime>0</wpml:gimbalRotateTime>
+              <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
+            </wpml:actionActuatorFuncParam>
+          </wpml:action>
+        </wpml:actionGroup>''');
+      }
+      b.write('''
+
+        <wpml:actionGroup>
+          <wpml:actionGroupId>$groupId</wpml:actionGroupId>
+          <wpml:actionGroupStartIndex>$i</wpml:actionGroupStartIndex>
+          <wpml:actionGroupEndIndex>${i + 1}</wpml:actionGroupEndIndex>
+          <wpml:actionGroupMode>sequence</wpml:actionGroupMode>
+          <wpml:actionTrigger>
+            <wpml:actionTriggerType>multipleDistance</wpml:actionTriggerType>
+            <wpml:actionTriggerParam>${options.photoSpacingM.toStringAsFixed(1)}</wpml:actionTriggerParam>
+          </wpml:actionTrigger>
+          <wpml:action>
+            <wpml:actionId>0</wpml:actionId>
+            <wpml:actionActuatorFunc>takePhoto</wpml:actionActuatorFunc>
+            <wpml:actionActuatorFuncParam>
+              <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
+            </wpml:actionActuatorFuncParam>
+          </wpml:action>
+        </wpml:actionGroup>''');
+      return b.toString();
+    }
+
     String placemarks({required bool executable}) {
       final b = StringBuffer();
       for (var i = 0; i < waypoints.length; i++) {
@@ -150,7 +217,7 @@ class DroneMissionService {
         <wpml:useGlobalHeight>${executable ? 0 : 1}</wpml:useGlobalHeight>
         <wpml:useGlobalSpeed>${executable ? 0 : 1}</wpml:useGlobalSpeed>
         <wpml:useGlobalHeadingParam>1</wpml:useGlobalHeadingParam>
-        <wpml:useGlobalTurnParam>1</wpml:useGlobalTurnParam>
+        <wpml:useGlobalTurnParam>1</wpml:useGlobalTurnParam>${actions(i)}
       </Placemark>''');
       }
       return b.toString();
@@ -183,6 +250,12 @@ $missionConfig
       <wpml:globalHeight>${options.altitudeM}</wpml:globalHeight>
       <wpml:globalWaypointTurnMode>toPointAndStopWithDiscontinuityCurvature</wpml:globalWaypointTurnMode>
       <wpml:globalUseStraightLine>1</wpml:globalUseStraightLine>
+      <wpml:globalWaypointHeadingParam>
+        <wpml:waypointHeadingMode>followWayline</wpml:waypointHeadingMode>
+        <wpml:waypointHeadingAngle>0</wpml:waypointHeadingAngle>
+        <wpml:waypointPoiPoint>0.000000,0.000000,0.000000</wpml:waypointPoiPoint>
+        <wpml:waypointHeadingPoiIndex>0</wpml:waypointHeadingPoiIndex>
+      </wpml:globalWaypointHeadingParam>
 ${placemarks(executable: false)}
     </Folder>
   </Document>

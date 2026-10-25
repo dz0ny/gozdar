@@ -20,6 +20,8 @@ import '../services/database_service.dart';
 import '../models/map_layer.dart';
 import '../services/drone_bundle_service.dart';
 import '../services/drone_mission_service.dart';
+import '../services/drone_mosaic_service.dart';
+import '../services/drone_photo_service.dart';
 import '../services/drone_settings.dart';
 import '../services/kml_service.dart';
 import '../services/map_preferences_service.dart';
@@ -63,6 +65,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     _loadLocationsInParcel();
     _loadLogsInParcel();
     _lookUpOwner();
+    _loadMosaic();
   }
 
   /// Look up the owner/address (with občina) from the imported cadastral
@@ -261,8 +264,139 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     }
   }
 
-  /// Builds a ZIP with flight plan, parcel boundary, reference orthophoto and
-  /// (optionally) the flown photos, then opens the share sheet.
+  Directory? _mosaicDir;
+  DroneMosaic? _mosaic;
+
+  Future<Directory> _mosaicDirectory() async {
+    final base = await getApplicationSupportDirectory();
+    return _mosaicDir ??= Directory(
+      '${base.path}/drone_mosaics/${_parcel.id}',
+    );
+  }
+
+  Future<void> _loadMosaic() async {
+    if (!DroneSettings.instance.enabled) return;
+    final mosaic = await DroneMosaicService.instance.load(
+      await _mosaicDirectory(),
+    );
+    if (mounted && mosaic != null) setState(() => _mosaic = mosaic);
+  }
+
+  /// Picks many photos and keeps those that touch this parcel.
+  Future<PhotoScan?> _pickAndScanPhotos() async {
+    // File extensions keep the GPS data that the iOS photo library removes.
+    final picked = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg'],
+    );
+    if (picked.isEmpty || !mounted) return null;
+    final files = [
+      for (final f in picked)
+        if (f.path != null) File(f.path!),
+    ];
+    final progress = ValueNotifier<String>('Berem metapodatke …');
+    _showProgress(progress);
+    try {
+      final scan = await DronePhotoService.instance.readAll(
+        files,
+        _parcel.polygon,
+        onProgress: (done, total) =>
+            progress.value = 'Fotografije $done / $total',
+      );
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+      if (!mounted) return null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Na parceli: ${scan.inside.length} od ${scan.total}. '
+            'Preskočeno: ${scan.outside} zunaj parcele, '
+            '${scan.notNadir} ne navpično, '
+            '${scan.unreadable} brez GPS podatkov.',
+          ),
+          duration: const Duration(seconds: 8),
+        ),
+      );
+      return scan;
+    } catch (e) {
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+      rethrow;
+    }
+  }
+
+  void _showProgress(ValueNotifier<String> text) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: ValueListenableBuilder<String>(
+            valueListenable: text,
+            builder: (_, value, _) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const LinearProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(value),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Puts the photos on the ground by GPS and heading. This is a preview.
+  Future<void> _buildMosaic() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final scan = await _pickAndScanPhotos();
+      if (scan == null || !mounted) return;
+      if (scan.inside.isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Nobena fotografija ni na parceli.')),
+        );
+        return;
+      }
+      final progress = ValueNotifier<String>('Sestavljam mozaik …');
+      _showProgress(progress);
+      DroneMosaic? saved;
+      try {
+        final image = await DroneMosaicService.instance.render(
+          scan.inside,
+          _parcel.polygon,
+          onProgress: (done, total) =>
+              progress.value = 'Mozaik: fotografija $done / $total',
+        );
+        if (image != null) {
+          saved = await DroneMosaicService.instance.save(
+            await _mosaicDirectory(),
+            image,
+            scan.inside.length,
+          );
+        }
+      } finally {
+        if (mounted) Navigator.of(context, rootNavigator: true).pop();
+      }
+      if (!mounted) return;
+      if (saved == null) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Mozaika ni mogoče sestaviti.')),
+        );
+        return;
+      }
+      imageCache.clear();
+      setState(() => _mosaic = saved);
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Napaka pri mozaiku: $e')),
+        );
+      }
+    }
+  }
+
+  /// Builds a ZIP with the plan, the boundary, the orthophoto and the photos.
   Future<void> _exportDroneBundle() async {
     final messenger = ScaffoldMessenger.of(context);
     final mapProvider = context.read<MapProvider>();
@@ -300,16 +434,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
 
     var photos = <File>[];
     if (attach) {
-      // Custom extensions avoid the iOS photo-library path that strips GPS EXIF.
-      final picked = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'dng', 'tif', 'tiff'],
-      );
-      photos = [
-        for (final f in picked)
-          if (f.path != null) File(f.path!),
-      ];
-      if (!mounted) return;
+      final scan = await _pickAndScanPhotos();
+      if (scan == null || !mounted) return;
+      photos = [for (final ph in scan.inside) ph.file];
     }
 
     messenger.showSnackBar(
@@ -875,6 +1002,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                 _exportDroneMission();
               } else if (value == 'drone_bundle') {
                 _exportDroneBundle();
+              } else if (value == 'drone_mosaic') {
+                _buildMosaic();
               } else if (value == 'delete') {
                 _deleteParcel();
               }
@@ -922,6 +1051,17 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                     ],
                   ),
                 ),
+              if (DroneSettings.instance.enabled)
+                const PopupMenuItem(
+                  value: 'drone_mosaic',
+                  child: Row(
+                    children: [
+                      Icon(Icons.grid_on),
+                      SizedBox(width: 8),
+                      Text('Mozaik iz fotografij'),
+                    ],
+                  ),
+                ),
               PopupMenuItem(
                 value: 'delete',
                 child: Row(
@@ -955,6 +1095,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                           workerUrl: mapProvider.workerUrl,
                           outlineColor:
                               getForestTypeIcon(_parcel.forestType).$2,
+                          mosaic: _mosaic,
                         );
                       },
                     ),

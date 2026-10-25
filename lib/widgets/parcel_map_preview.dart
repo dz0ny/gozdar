@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/map_layer.dart';
+import '../services/drone_mosaic_service.dart';
 import 'map_layer_renderer.dart';
 
 /// Non-interactive embedded map preview of a parcel, using the same base layer
@@ -38,6 +39,9 @@ class ParcelMapPreview extends StatelessWidget {
   /// being sized by [aspectRatio]. Use inside an Expanded/sized container.
   final bool fill;
 
+  /// Optional drone mosaic. It draws above the base layer.
+  final DroneMosaic? mosaic;
+
   const ParcelMapPreview({
     super.key,
     required this.polygon,
@@ -49,6 +53,7 @@ class ParcelMapPreview extends StatelessWidget {
     this.onTap,
     this.interactive = false,
     this.fill = false,
+    this.mosaic,
   });
 
   /// Build base + overlay tile layers, falling back to ESRI World Imagery if
@@ -103,6 +108,15 @@ class ParcelMapPreview extends StatelessWidget {
           ),
           children: [
             ..._tileLayers(),
+            if (mosaic != null)
+              OverlayImageLayer(
+                overlayImages: [
+                  OverlayImage(
+                    bounds: LatLngBounds(mosaic!.southWest, mosaic!.northEast),
+                    imageProvider: FileImage(mosaic!.image),
+                  ),
+                ],
+              ),
             PolygonLayer(
               polygons: [
                 Polygon(
