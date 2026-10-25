@@ -35,6 +35,9 @@ class DroneMosaicService {
 
   static const _r = 6378137.0;
 
+  /// Share of each photo edge that fades out.
+  static const _feather = 0.25;
+
   // Web Mercator helpers (metres).
   double _mx(double lon) => _r * lon * math.pi / 180;
   double _my(double lat) =>
@@ -116,16 +119,38 @@ class DroneMosaicService {
         canvas.save();
         canvas.translate(px, py);
         canvas.rotate(photo.headingDeg * math.pi / 180);
+        final dst = ui.Rect.fromCenter(
+          center: ui.Offset.zero,
+          width: dstW,
+          height: dstH,
+        );
+        // Fade the edges so that overlapping photos blend without a seam.
+        canvas.saveLayer(dst.inflate(1), ui.Paint());
         canvas.drawImageRect(
           img,
           ui.Rect.fromLTWH((iw - cropW) / 2, (ih - cropH) / 2, cropW, cropH),
-          ui.Rect.fromCenter(
-            center: ui.Offset.zero,
-            width: dstW,
-            height: dstH,
-          ),
+          dst,
           paint,
         );
+        for (final horizontal in [true, false]) {
+          canvas.drawRect(
+            dst,
+            ui.Paint()
+              ..blendMode = ui.BlendMode.dstIn
+              ..shader = ui.Gradient.linear(
+                horizontal ? dst.centerLeft : dst.topCenter,
+                horizontal ? dst.centerRight : dst.bottomCenter,
+                const [
+                  ui.Color(0x00000000),
+                  ui.Color(0xFF000000),
+                  ui.Color(0xFF000000),
+                  ui.Color(0x00000000),
+                ],
+                const [0, _feather, 1 - _feather, 1],
+              ),
+          );
+        }
+        canvas.restore();
         canvas.restore();
         img.dispose();
       }

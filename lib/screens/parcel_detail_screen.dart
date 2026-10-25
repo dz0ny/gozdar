@@ -19,6 +19,7 @@ import '../services/cadastral_service.dart';
 import '../services/database_service.dart';
 import '../models/map_layer.dart';
 import '../services/drone_bundle_service.dart';
+import '../services/drone_align_service.dart';
 import '../services/drone_mission_service.dart';
 import '../services/drone_mosaic_service.dart';
 import '../services/drone_photo_service.dart';
@@ -361,9 +362,25 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       final progress = ValueNotifier<String>('Sestavljam mozaik …');
       _showProgress(progress);
       DroneMosaic? saved;
+      String? alignNote;
       try {
+        var photos = scan.inside;
+        try {
+          final (aligned, result) = await DroneAlignService.instance.align(
+            photos,
+            _parcel.polygon,
+            onProgress: (m) => progress.value = m,
+          );
+          photos = aligned;
+          if (result != null) {
+            alignNote =
+                'Poravnava: ${result.pairsUsed} od ${result.pairsTried} parov.';
+          }
+        } catch (_) {
+          alignNote = 'Poravnava ni uspela, uporabljen je GPS.';
+        }
         final image = await DroneMosaicService.instance.render(
-          scan.inside,
+          photos,
           _parcel.polygon,
           onProgress: (done, total) =>
               progress.value = 'Mozaik: fotografija $done / $total',
@@ -387,6 +404,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       }
       imageCache.clear();
       setState(() => _mosaic = saved);
+      if (alignNote != null) {
+        messenger.showSnackBar(SnackBar(content: Text(alignNote)));
+      }
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
