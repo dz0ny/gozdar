@@ -961,10 +961,12 @@ class AppLocalizationsHr extends AppLocalizations {
   String get mapwLngRange => 'Duljina mora biti između -180 i 180';
 
   @override
-  String get mapwLatNotInSlovenia => 'Lokacija nije u Sloveniji (45.4-46.9)';
+  String get mapwLatNotInSlovenia =>
+      'Lokacija nije u Sloveniji ili Hrvatskoj (42.3-46.9)';
 
   @override
-  String get mapwLngNotInSlovenia => 'Lokacija nije u Sloveniji (13.3-16.6)';
+  String get mapwLngNotInSlovenia =>
+      'Lokacija nije u Sloveniji ili Hrvatskoj (13.3-19.5)';
 
   @override
   String get mapwLocationNameLabel => 'Naziv lokacije';

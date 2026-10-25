@@ -64,7 +64,7 @@ class MapDialogs {
                       return context.l10n.mapwLatRange;
                     }
                     // Slovenia bounds check (rough)
-                    if (lat < 45.4 || lat > 46.9) {
+                    if (lat < 42.3 || lat > 46.9) {
                       return context.l10n.mapwLatNotInSlovenia;
                     }
                     return null;
@@ -92,7 +92,7 @@ class MapDialogs {
                       return context.l10n.mapwLngRange;
                     }
                     // Slovenia bounds check (rough)
-                    if (lng < 13.3 || lng > 16.6) {
+                    if (lng < 13.3 || lng > 19.5) {
                       return context.l10n.mapwLngNotInSlovenia;
                     }
                     return null;
@@ -296,7 +296,7 @@ class MapDialogs {
                       return context.l10n.mapwLatRange;
                     }
                     // Slovenia bounds check (rough)
-                    if (lat < 45.4 || lat > 46.9) {
+                    if (lat < 42.3 || lat > 46.9) {
                       return context.l10n.mapwLatNotInSlovenia;
                     }
                     return null;
@@ -324,7 +324,7 @@ class MapDialogs {
                       return context.l10n.mapwLngRange;
                     }
                     // Slovenia bounds check (rough)
-                    if (lng < 13.3 || lng > 16.6) {
+                    if (lng < 13.3 || lng > 19.5) {
                       return context.l10n.mapwLngNotInSlovenia;
                     }
                     return null;

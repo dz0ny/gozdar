@@ -1618,13 +1618,13 @@ abstract class AppLocalizations {
   /// No description provided for @mapwLatNotInSlovenia.
   ///
   /// In sl, this message translates to:
-  /// **'Lokacija ni v Sloveniji (45.4-46.9)'**
+  /// **'Lokacija ni v Sloveniji ali na Hrvaškem (42.3-46.9)'**
   String get mapwLatNotInSlovenia;
 
   /// No description provided for @mapwLngNotInSlovenia.
   ///
   /// In sl, this message translates to:
-  /// **'Lokacija ni v Sloveniji (13.3-16.6)'**
+  /// **'Lokacija ni v Sloveniji ali na Hrvaškem (13.3-19.5)'**
   String get mapwLngNotInSlovenia;
 
   /// No description provided for @mapwLocationNameLabel.

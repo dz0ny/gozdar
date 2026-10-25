@@ -968,10 +968,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapwLngRange => 'Dolžina mora biti med -180 in 180';
 
   @override
-  String get mapwLatNotInSlovenia => 'Lokacija ni v Sloveniji (45.4-46.9)';
+  String get mapwLatNotInSlovenia =>
+      'Lokacija ni v Sloveniji ali na Hrvaškem (42.3-46.9)';
 
   @override
-  String get mapwLngNotInSlovenia => 'Lokacija ni v Sloveniji (13.3-16.6)';
+  String get mapwLngNotInSlovenia =>
+      'Lokacija ni v Sloveniji ali na Hrvaškem (13.3-19.5)';
 
   @override
   String get mapwLocationNameLabel => 'Ime lokacije';
