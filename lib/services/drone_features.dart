@@ -40,7 +40,26 @@ class FeatureMatch {
   final double shiftX;
   final double shiftY;
 
-  const FeatureMatch(this.inliers, this.inlierRatio, this.shiftX, this.shiftY);
+  /// Rotation from B to A, radians, positive counter-clockwise.
+  final double angle;
+
+  /// Scale from B to A. Below 1 means B content is too large.
+  final double scale;
+
+  /// Centre of the inliers in B, in cells. The shift is measured here.
+  final double centreX;
+  final double centreY;
+
+  const FeatureMatch(
+    this.inliers,
+    this.inlierRatio,
+    this.shiftX,
+    this.shiftY,
+    this.angle,
+    this.scale,
+    this.centreX,
+    this.centreY,
+  );
 }
 
 const _circle = <(int, int)>[
@@ -279,7 +298,16 @@ FeatureMatch? robustSimilarity(
   cx /= bestInliers.length;
   cy /= bestInliers.length;
   final (qx, qy) = fit.apply(cx, cy);
-  return FeatureMatch(bestInliers.length, ratio, qx - cx, qy - cy);
+  return FeatureMatch(
+    bestInliers.length,
+    ratio,
+    qx - cx,
+    qy - cy,
+    math.atan2(fit.ai, fit.ar),
+    math.sqrt(fit.ar * fit.ar + fit.ai * fit.ai),
+    cx,
+    cy,
+  );
 }
 
 Similarity? _fit2(

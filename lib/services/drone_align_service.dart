@@ -42,19 +42,51 @@ class AlignResult {
   /// Estimated position correction per photo, metres east and north.
   final List<double> dx;
   final List<double> dy;
+
+  /// Heading correction per photo, degrees. Add it to the heading.
+  final List<double> dHeadingDeg;
+
+  /// Height scale per photo. Multiply the height by it.
+  final List<double> heightScale;
   final int pairsTried;
   final int pairsUsed;
 
-  const AlignResult(this.dx, this.dy, this.pairsTried, this.pairsUsed);
+  const AlignResult(
+    this.dx,
+    this.dy,
+    this.dHeadingDeg,
+    this.heightScale,
+    this.pairsTried,
+    this.pairsUsed,
+  );
 }
 
 class _Constraint {
   final int a;
   final int b;
+
+  /// Content shift from B to A, metres, measured at point (mx, my).
   final double sx;
   final double sy;
+  final double mx;
+  final double my;
+
+  /// Rotation from B to A in radians, and log of the scale from B to A.
+  /// Null when the pair came from correlation, which fixes both at 0.
+  final double? rot;
+  final double? logScale;
   final double w;
-  const _Constraint(this.a, this.b, this.sx, this.sy, this.w);
+  const _Constraint(
+    this.a,
+    this.b,
+    this.sx,
+    this.sy,
+    this.mx,
+    this.my,
+    this.rot,
+    this.logScale,
+    this.w,
+  );
 }
 
 /// Solves for position corrections from the overlap of neighbouring patches.
@@ -84,16 +116,39 @@ AlignResult solveAlign(AlignJob job) {
     for (final c in candidates.take(5)) {
       tried++;
       // Features first. They work for large shifts. Correlation is the backup.
-      final res =
-          _featureShift(keypoints(i), keypoints(c.$2)) ??
-          _correlate(patches[i], patches[c.$2], r);
+      final pa = patches[i], pb = patches[c.$2];
+      final fm = _featureFit(keypoints(i), keypoints(c.$2));
+      if (fm != null) {
+        constraints.add(
+          _Constraint(
+            i,
+            c.$2,
+            fm.shiftX * job.cell,
+            fm.shiftY * job.cell,
+            fm.centreX * job.cell,
+            fm.centreY * job.cell,
+            fm.angle,
+            math.log(fm.scale),
+            (fm.inliers / 80).clamp(0.1, 1.0),
+          ),
+        );
+        continue;
+      }
+      final res = _correlate(pa, pb, r);
       if (res != null) {
+        // The shift refers to the middle of the overlap of the two patches.
+        final mx = (math.max(pa.ox, pb.ox) + math.min(pa.ox + pa.w, pb.ox + pb.w)) / 2;
+        final my = (math.max(pa.oy, pb.oy) + math.min(pa.oy + pa.h, pb.oy + pb.h)) / 2;
         constraints.add(
           _Constraint(
             i,
             c.$2,
             res.$1 * job.cell,
             res.$2 * job.cell,
+            mx * job.cell,
+            my * job.cell,
+            null,
+            null,
             res.$3,
           ),
         );
@@ -101,28 +156,98 @@ AlignResult solveAlign(AlignJob job) {
     }
   }
 
+  final centres = [
+    for (final p in patches)
+      ((p.ox + p.w / 2) * job.cell, (p.oy + p.h / 2) * job.cell),
+  ];
+  // Square of a typical half patch size, metres. It puts rotation and scale
+  // in the same units as shifts: metres of error at the patch edge.
+  final halves = [for (final p in patches) p.w * job.cell / 2]..sort();
+  final span2 = math.pow(halves[halves.length ~/ 2], 2).toDouble();
+  return _solveJoint(n, constraints, centres, span2, tried);
+}
+
+/// Solves shift, rotation and scale of every photo together.
+///
+/// Photo i draws ground point g at g + d_i + l_i (g - c_i) + r_i J(g - c_i),
+/// with J a turn of 90 degrees counter-clockwise. A pair (A, B) measured at
+/// point m gives three equations: the content shift s = e_A(m) - e_B(m), the
+/// rotation r_A - r_B and the log scale l_A - l_B. Weak priors at 0 remove
+/// the free choice. The GPS centres c_i then fix absolute rotation and scale.
+AlignResult _solveJoint(
+  int n,
+  List<_Constraint> constraints,
+  List<(double, double)> centres,
+  double span2,
+  int tried,
+) {
   final dx = List<double>.filled(n, 0);
   final dy = List<double>.filled(n, 0);
-  const prior = 0.01;
+  final rot = List<double>.filled(n, 0);
+  final ls = List<double>.filled(n, 0);
+  // The pose priors are weaker than the shift prior, so a bias shared by all
+  // photos becomes a common rotation or scale, not a field of shifts.
+  const priorD = 0.02;
+  final priorR = 0.002 * span2, priorL = 0.002 * span2;
+
+  // Error of photo i at point m without its own shift.
+  (double, double) poseError(int i, double mx, double my) {
+    final gx = mx - centres[i].$1, gy = my - centres[i].$2;
+    return (ls[i] * gx - rot[i] * gy, ls[i] * gy + rot[i] * gx);
+  }
+
   for (var iter = 0; iter < 200; iter++) {
     for (var i = 0; i < n; i++) {
-      var numX = 0.0, numY = 0.0, den = prior;
+      var nx = 0.0, ny = 0.0, nd = priorD;
+      var nr = 0.0, dr = priorR;
+      var nl = 0.0, dl = priorL;
       for (final c in constraints) {
-        if (c.b == i) {
-          numX += c.w * (dx[c.a] + c.sx);
-          numY += c.w * (dy[c.a] + c.sy);
-          den += c.w;
-        } else if (c.a == i) {
-          numX += c.w * (dx[c.b] - c.sx);
-          numY += c.w * (dy[c.b] - c.sy);
-          den += c.w;
+        if (c.a != i && c.b != i) continue;
+        final isA = c.a == i;
+        final j = isA ? c.b : c.a;
+        final sign = isA ? 1.0 : -1.0;
+        final (ei, eiY) = poseError(i, c.mx, c.my);
+        final (ej, ejY) = poseError(j, c.mx, c.my);
+        // Residual that the pose of i must explain: s = e_A - e_B.
+        final rx = sign * c.sx + dx[j] + ej - ei;
+        final ry = sign * c.sy + dy[j] + ejY - eiY;
+        nx += c.w * rx;
+        ny += c.w * ry;
+        nd += c.w;
+        // Rotation and scale of i from the shift equation, by projection.
+        final gx = c.mx - centres[i].$1, gy = c.my - centres[i].$2;
+        final g2 = gx * gx + gy * gy;
+        if (g2 > 1) {
+          final tx = rx + ei - dx[i], ty = ry + eiY - dy[i];
+          nr += c.w * (ty * gx - tx * gy);
+          dr += c.w * g2;
+          nl += c.w * (tx * gx + ty * gy);
+          dl += c.w * g2;
+        }
+        if (c.rot != null) {
+          nr += c.w * span2 * (rot[j] + sign * c.rot!);
+          dr += c.w * span2;
+          nl += c.w * span2 * (ls[j] + sign * c.logScale!);
+          dl += c.w * span2;
         }
       }
-      dx[i] = numX / den;
-      dy[i] = numY / den;
+      dx[i] = nx / nd;
+      dy[i] = ny / nd;
+      rot[i] = nr / dr;
+      ls[i] = nl / dl;
     }
   }
-  return AlignResult(dx, dy, tried, constraints.length);
+  // d is the drawing error, so the position correction is its negative.
+  // Content turned counter-clockwise means the heading was too small, and
+  // content that is too large means the height was too large.
+  return AlignResult(
+    [for (final v in dx) -v],
+    [for (final v in dy) -v],
+    [for (final r in rot) r * 180 / math.pi],
+    [for (final l in ls) math.exp(-l)],
+    tried,
+    constraints.length,
+  );
 }
 
 /// Keypoints of [p] in global grid cells, so that two patches compare directly.
@@ -131,12 +256,10 @@ List<Keypoint> _globalKeypoints(AlignPatch p) => [
     Keypoint(k.x + p.ox, k.y + p.oy, k.score, k.descriptor),
 ];
 
-/// Returns (shiftX, shiftY, weight) in cells from matched features, or null.
-(double, double, double)? _featureShift(List<Keypoint> a, List<Keypoint> b) {
+/// Fits B onto A from matched features, or null when the match is weak.
+FeatureMatch? _featureFit(List<Keypoint> a, List<Keypoint> b) {
   if (a.length < 12 || b.length < 12) return null;
-  final fm = robustSimilarity(a, b, matchKeypoints(a, b));
-  if (fm == null) return null;
-  return (fm.shiftX, fm.shiftY, (fm.inliers / 80).clamp(0.1, 1.0));
+  return robustSimilarity(a, b, matchKeypoints(a, b));
 }
 
 int _overlapArea(AlignPatch a, AlignPatch b) {
@@ -284,61 +407,76 @@ class DroneAlignService {
     final cell = longs[longs.length ~/ 2] / _cells;
     if (cell <= 0) return (photos, null);
 
-    final patches = <AlignPatch>[];
+    final smalls = <_SmallGray>[];
     for (var i = 0; i < photos.length; i++) {
       onProgress?.call('Poravnava: fotografija ${i + 1} / ${photos.length}');
-      patches.add(
-        await _buildPatch(photos[i], origin, cell, ps, options.footprintPerMetre,
-            full.keep),
-      );
+      smalls.add(await _decodeSmall(photos[i]));
     }
-    onProgress?.call('Poravnava: iskanje ujemanj …');
-    final result = await compute(
-      solveAlign,
-      AlignJob(patches, cell, _radiusCells),
-    );
 
-    final out = <DronePhoto>[];
-    for (var i = 0; i < photos.length; i++) {
-      out.add(_shift(photos[i], result.dx[i], result.dy[i]));
+    // Pass 1 finds heading and height errors. Those bias the shifts, so
+    // pass 2 resamples with the corrected pose and solves the shifts again.
+    var current = photos;
+    AlignResult? result;
+    for (var pass = 1; pass <= 2; pass++) {
+      onProgress?.call('Poravnava: iskanje ujemanj ($pass/2) …');
+      final patches = [
+        for (var i = 0; i < photos.length; i++)
+          _resample(
+            current[i],
+            smalls[i],
+            origin,
+            cell,
+            ps,
+            options.footprintPerMetre,
+            full.keep,
+          ),
+      ];
+      final r = await compute(
+        solveAlign,
+        AlignJob(patches, cell, _radiusCells),
+      );
+      result = r;
+      current = [
+        for (var i = 0; i < photos.length; i++)
+          _correct(
+            current[i],
+            pass == 2 ? r.dx[i] : 0,
+            pass == 2 ? r.dy[i] : 0,
+            r.dHeadingDeg[i],
+            r.heightScale[i],
+          ),
+      ];
     }
-    return (out, result);
+    return (current, result);
   }
 
-  DronePhoto _shift(DronePhoto p, double dxM, double dyM) {
-    if (dxM == 0 && dyM == 0) return p;
+  DronePhoto _correct(
+    DronePhoto p,
+    double dxM,
+    double dyM,
+    double dHeadingDeg,
+    double heightScale,
+  ) {
     final lat = p.position.latitude + dyM / _earthR * 180 / math.pi;
     final cosLat = math.cos(p.position.latitude * math.pi / 180);
     final lon = p.position.longitude + dxM / (_earthR * cosLat) * 180 / math.pi;
     return DronePhoto(
       file: p.file,
       position: LatLng(lat, lon),
-      relativeAltitudeM: p.relativeAltitudeM,
-      headingDeg: p.headingDeg,
+      relativeAltitudeM: p.relativeAltitudeM * heightScale,
+      headingDeg: p.headingDeg + dHeadingDeg,
       pitchDeg: p.pitchDeg,
       width: p.width,
       height: p.height,
     );
   }
 
-  Future<AlignPatch> _buildPatch(
-    DronePhoto photo,
-    LatLng origin,
-    double cell,
-    DronePhotoService ps,
-    double footprintPerMetre,
-    double keep,
-  ) async {
-    final (cx, cy) = ps.toLocal(photo.position, origin);
-    final long = photo.relativeAltitudeM * footprintPerMetre;
+  /// Decodes [photo] small and converts it to gray. Done once per photo.
+  Future<_SmallGray> _decodeSmall(DronePhoto photo) async {
     final landscape = photo.width >= photo.height;
     final ratio = landscape
         ? photo.height / photo.width
         : photo.width / photo.height;
-    final wm = landscape ? long : long * ratio;
-    final hm = landscape ? long * ratio : long;
-
-    // Decode small. Gray values come from the red, green and blue bytes.
     final bytes = await photo.file.readAsBytes();
     final codec = await ui.instantiateImageCodec(
       bytes,
@@ -349,13 +487,38 @@ class DroneAlignService {
     final data = (await img.toByteData())!;
     final iw = img.width, ih = img.height;
     img.dispose();
-    double grayAt(int x, int y) {
-      final k = (y.clamp(0, ih - 1) * iw + x.clamp(0, iw - 1)) * 4;
-      return (0.299 * data.getUint8(k) +
-              0.587 * data.getUint8(k + 1) +
-              0.114 * data.getUint8(k + 2)) /
+    final gray = Float32List(iw * ih);
+    for (var i = 0; i < iw * ih; i++) {
+      gray[i] =
+          (0.299 * data.getUint8(i * 4) +
+              0.587 * data.getUint8(i * 4 + 1) +
+              0.114 * data.getUint8(i * 4 + 2)) /
           255.0;
     }
+    return _SmallGray(gray, iw, ih);
+  }
+
+  /// Resamples [small] onto the ground grid with the photo's current pose.
+  AlignPatch _resample(
+    DronePhoto photo,
+    _SmallGray small,
+    LatLng origin,
+    double cell,
+    DronePhotoService ps,
+    double footprintPerMetre,
+    double keep,
+  ) {
+    final (cx, cy) = ps.toLocal(photo.position, origin);
+    final long = photo.relativeAltitudeM * footprintPerMetre;
+    final landscape = photo.width >= photo.height;
+    final ratio = landscape
+        ? photo.height / photo.width
+        : photo.width / photo.height;
+    final wm = landscape ? long : long * ratio;
+    final hm = landscape ? long * ratio : long;
+    final iw = small.w, ih = small.h;
+    double grayAt(int x, int y) =>
+        small.gray[y.clamp(0, ih - 1) * iw + x.clamp(0, iw - 1)];
 
     final half = math.sqrt(wm * wm + hm * hm) / 2;
     final ox = ((cx - half) / cell).floor();
@@ -386,4 +549,11 @@ class DroneAlignService {
     }
     return AlignPatch(gray: gray, w: n, h: n, ox: ox, oy: oy);
   }
+}
+
+class _SmallGray {
+  final Float32List gray;
+  final int w;
+  final int h;
+  const _SmallGray(this.gray, this.w, this.h);
 }

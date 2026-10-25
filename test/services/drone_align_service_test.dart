@@ -95,12 +95,14 @@ void main() {
           final ey = (rnd.nextDouble() - 0.5) * 6;
           truth.add((tx, ty));
           errors.add((ex, ey));
+          // Every other photo also lies about heading and height.
+          final lie = n.isEven;
           photos.add(
             DronePhoto(
               file: file,
               position: toLatLng(tx + ex, ty + ey),
-              relativeAltitudeM: 60,
-              headingDeg: 30,
+              relativeAltitudeM: lie ? 60 * 1.12 : 60,
+              headingDeg: lie ? 30 + 5 : 30,
               pitchDeg: -90,
               width: 192,
               height: 144,
@@ -133,6 +135,18 @@ void main() {
       expect(result!.pairsUsed, greaterThan(8));
       expect(after, lessThan(before * 0.5));
       expect(after, lessThan(1.5));
+      // Nothing fixes the absolute heading or height, so the solver can only
+      // make the photos agree with each other. The two groups must converge.
+      final headings = aligned.map((p) => p.headingDeg).toList();
+      final heights = aligned.map((p) => p.relativeAltitudeM).toList();
+      expect(
+        headings.reduce(math.max) - headings.reduce(math.min),
+        lessThan(1.0),
+      );
+      expect(
+        heights.reduce(math.max) / heights.reduce(math.min),
+        lessThan(1.02),
+      );
     });
   });
 
