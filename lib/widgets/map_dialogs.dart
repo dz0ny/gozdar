@@ -4,6 +4,7 @@ import '../l10n/l10n.dart';
 import '../models/map_location.dart';
 import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
+import 'owner_list.dart';
 
 /// Helper class for map-related dialogs
 class MapDialogs {
@@ -498,7 +499,7 @@ class MapDialogs {
               context,
               Icons.person,
               context.l10n.mapwOwner,
-              owner.displayOwners,
+              ownerSummary(owner.owners),
               secondary: owner.address,
             ),
         ],

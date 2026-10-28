@@ -113,6 +113,18 @@ class KoLocator {
 
   KoInfo? bySifko(int? sifko) => sifko == null ? null : _bySifko[sifko];
 
+  /// Name for a newly imported parcel: "DELNICE - 10000" when the KO is
+  /// known, else the KO number ([fallbackKo] when [sifko] did not parse).
+  static Future<String> defaultParcelName(
+    int? sifko,
+    String parcelNumber, {
+    String? fallbackKo,
+  }) async {
+    await instance.ensureLoaded();
+    final ko = instance.bySifko(sifko)?.name ?? fallbackKo ?? '$sifko';
+    return '$ko - $parcelNumber';
+  }
+
   /// The KO containing [point]. Falls back to the closest boundary vertex
   /// within roughly 300 m, to absorb the simplified borders.
   KoInfo? koAt(LatLng point) {

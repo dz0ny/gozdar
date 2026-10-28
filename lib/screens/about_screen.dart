@@ -16,6 +16,8 @@ import '../services/kataster_update_service.dart';
 import '../services/tile_cache_service.dart';
 import '../services/vlake_service.dart';
 import '../services/vlake_settings.dart';
+import '../widgets/download_progress_view.dart';
+import '../widgets/region_picker_sheet.dart';
 
 /// Which offline reference databases a wipe action targets.
 enum _WipeScope { all, imported, downloaded }
@@ -103,17 +105,47 @@ class _AboutScreenState extends State<AboutScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // App header
+          // App name and version (long-press for developer options)
           _buildAppHeader(context, colorScheme),
           const SizedBox(height: 24),
 
-          // Version info
-          _buildVersionCard(context, colorScheme),
+          // Settings first: they are what people come here for.
+          _buildSectionTitle(context, context.l10n.aboutSectionGeneral),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildLanguageRow(context, colorScheme),
+            ),
+          ),
           const SizedBox(height: 16),
 
-          // Settings
-          _buildSectionTitle(context, context.l10n.commonSettings),
-          _buildSettingsCard(context, colorScheme),
+          _buildSectionTitle(context, context.l10n.aboutOfflineKataster),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: _buildParcelsDbSection(context, colorScheme),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          _buildSectionTitle(context, context.l10n.aboutSectionMapCache),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: _buildMapCacheSection(context, colorScheme),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          if (_showDeveloperOptions) ...[
+            _buildSectionTitle(context, context.l10n.aboutDeveloperOptions),
+            Card(child: _buildDeveloperOptions(context, colorScheme)),
+            const SizedBox(height: 16),
+          ],
+
+          // Contact & Support
+          _buildSectionTitle(context, context.l10n.aboutSectionSupport),
+          _buildSupportCard(context, colorScheme),
           const SizedBox(height: 16),
 
           // Map sources
@@ -121,102 +153,67 @@ class _AboutScreenState extends State<AboutScreen> {
           _buildMapSourcesCard(context, colorScheme),
           const SizedBox(height: 16),
 
-          // Legal section
+          // Legal texts (collapsed) and open source licenses
           _buildSectionTitle(context, context.l10n.aboutSectionLegal),
           _buildLegalCard(context, colorScheme),
-          const SizedBox(height: 16),
-
-          // Open source libraries
-          _buildSectionTitle(context, context.l10n.aboutSectionOpenSource),
-          _buildOpenSourceCard(context, colorScheme),
-          const SizedBox(height: 16),
-
-          // Contact & Support
-          _buildSectionTitle(context, context.l10n.aboutSectionSupport),
-          _buildSupportCard(context, colorScheme),
           const SizedBox(height: 32),
         ],
       ),
     );
   }
 
+  /// Icon, name, tagline and version in one card. Long-press it to toggle
+  /// the hidden developer options.
   Widget _buildAppHeader(BuildContext context, ColorScheme colorScheme) {
-    return Column(
-      children: [
-        Container(
-          width: 96,
-          height: 96,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: colorScheme.primary.withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Image.asset(
-              'icon.png',
-              width: 96,
-              height: 96,
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Gozdar',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          context.l10n.aboutTagline,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildVersionCard(BuildContext context, ColorScheme colorScheme) {
+    final textTheme = Theme.of(context).textTheme;
     final version = _packageInfo?.version ?? '...';
     final buildNumber = _packageInfo?.buildNumber ?? '...';
-
-    return GestureDetector(
-      // Hidden developer options: long-press the version card to reveal them
-      // inline in the settings card below.
-      onLongPress: () =>
-          setState(() => _showDeveloperOptions = !_showDeveloperOptions),
-      child: Card(
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onLongPress: () =>
+            setState(() => _showDeveloperOptions = !_showDeveloperOptions),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Icon(Icons.info_outline, color: colorScheme.primary),
-                  const SizedBox(width: 12),
-                  Text(
-                    context.l10n.aboutInfoTitle,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.asset(
+                  'icon.png',
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                ),
               ),
-              const Divider(height: 24),
-              _buildInfoRow(context.l10n.aboutVersion, version),
-              _buildInfoRow(context.l10n.aboutBuildNumber, buildNumber),
-              _buildInfoRow(context.l10n.aboutPackage, _packageInfo?.packageName ?? '...'),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Gozdar',
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      context.l10n.aboutTagline,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${context.l10n.aboutVersion} $version ($buildNumber)',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -229,23 +226,10 @@ class _AboutScreenState extends State<AboutScreen> {
   Widget _buildDeveloperOptions(BuildContext context, ColorScheme colorScheme) {
     final service = OwnerLookupService.instance;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.developer_mode, color: colorScheme.primary),
-              const SizedBox(width: 12),
-              Text(
-                context.l10n.aboutDeveloperOptions,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
           Text(
             context.l10n.aboutOwnersDb,
             style: Theme.of(context).textTheme.titleSmall,
@@ -489,11 +473,6 @@ class _AboutScreenState extends State<AboutScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.l10n.aboutOfflineKataster,
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-        const SizedBox(height: 4),
         FutureBuilder<int?>(
           future: service.fileSizeBytes(),
           builder: (context, snapshot) {
@@ -552,14 +531,8 @@ class _AboutScreenState extends State<AboutScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              IconButton.outlined(
-                onPressed: _importParcels,
-                icon: const Icon(Icons.file_open),
-                tooltip: context.l10n.aboutImportFromFile,
-              ),
               if (service.isAvailable) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 IconButton.outlined(
                   onPressed: _removeParcels,
                   icon: const Icon(Icons.delete_outline),
@@ -727,100 +700,7 @@ class _AboutScreenState extends State<AboutScreen> {
       return;
     }
     if (!mounted || regions.isEmpty) return;
-    regions.sort((a, b) => a.name.compareTo(b.name));
-
-    final chosen = await showModalBottomSheet<List<ParcelRegion>>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        final selected = <String>{};
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final loadedFiles = ParcelLookupService.instance.loadedFiles;
-            final selectedBytes = regions
-                .where((r) => selected.contains(r.file))
-                .fold<int>(0, (sum, r) => sum + (r.bytes ?? 0));
-            final mb = (selectedBytes / (1024 * 1024)).toStringAsFixed(0);
-            return SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        context.l10n.aboutPickRegionsTitle,
-                        style: Theme.of(sheetContext).textTheme.titleMedium,
-                      ),
-                    ),
-                  ),
-                  Flexible(
-                    child: ListView(
-                      shrinkWrap: true,
-                      children: [
-                        for (final region in regions)
-                          CheckboxListTile(
-                            value: selected.contains(region.file),
-                            onChanged: (v) => setSheetState(() {
-                              if (v == true) {
-                                selected.add(region.file);
-                              } else {
-                                selected.remove(region.file);
-                              }
-                            }),
-                            secondary: Icon(
-                              loadedFiles.contains(region.file)
-                                  ? Icons.check_circle
-                                  : Icons.map_outlined,
-                              color: loadedFiles.contains(region.file)
-                                  ? Colors.green
-                                  : null,
-                            ),
-                            title: Text(region.name),
-                            subtitle: region.sizeMb != null
-                                ? Text(
-                                    '${region.sizeMb!.toStringAsFixed(0)} MB'
-                                    '${region.rows != null ? context.l10n.aboutRegionParcels(_formatCount(region.rows!)) : ''}'
-                                    '${loadedFiles.contains(region.file) ? context.l10n.aboutRegionLoaded : ''}',
-                                  )
-                                : null,
-                          ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: selected.isEmpty
-                            ? null
-                            : () => Navigator.of(sheetContext).pop(
-                                regions
-                                    .where((r) => selected.contains(r.file))
-                                    .toList(),
-                              ),
-                        icon: const Icon(Icons.cloud_download_outlined),
-                        label: Text(
-                          selected.isEmpty
-                              ? context.l10n.commonDownload
-                              : context.l10n.aboutDownloadSelected(
-                                  selected.length,
-                                  mb,
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
+    final chosen = await RegionPickerSheet.show(context, regions);
     if (chosen != null && chosen.isNotEmpty) {
       await _downloadRegions(chosen);
     }
@@ -897,35 +777,11 @@ class _AboutScreenState extends State<AboutScreen> {
     required String label,
     required VoidCallback onCancel,
   }) {
-    final pct = (total != null && total > 0) ? received / total : null;
-    final mb = received / (1024 * 1024);
-    final totalMb = total != null ? total / (1024 * 1024) : null;
-    final sizes = totalMb != null
-        ? '${mb.toStringAsFixed(0)} / ${totalMb.toStringAsFixed(0)} MB'
-        : '${mb.toStringAsFixed(0)} MB';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        LinearProgressIndicator(value: pct),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                '$label $sizes'
-                '${pct != null ? ' • ${(pct * 100).toStringAsFixed(0)}%' : ''}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: onCancel,
-              child: Text(context.l10n.commonCancel),
-            ),
-          ],
-        ),
-      ],
+    return DownloadProgressView(
+      title: label,
+      received: received,
+      total: total,
+      onCancel: onCancel,
     );
   }
 
@@ -1008,34 +864,6 @@ class _AboutScreenState extends State<AboutScreen> {
           _cancelOwnerDownload = false;
         });
       }
-    }
-  }
-
-  Future<void> _importParcels() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final file = await FilePicker.pickFile(type: FileType.any);
-    final path = file?.path;
-    if (path == null) return;
-
-    final lower = path.toLowerCase();
-    if (!lower.endsWith('.sqlite') && !lower.endsWith('.db')) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(L10n.current.aboutPickSqlite)),
-      );
-      return;
-    }
-
-    try {
-      final imported = await ParcelLookupService.instance.importFromFile(path);
-      if (mounted) setState(() {});
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(L10n.current.aboutParcelsImported(_formatCount(imported.rows))),
-        ),
-      );
-    } catch (e) {
-      final message = e is FormatException ? e.message : L10n.current.aboutImportFailed('$e');
-      messenger.showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -1182,49 +1010,6 @@ class _AboutScreenState extends State<AboutScreen> {
     );
   }
 
-  Widget _buildSettingsCard(BuildContext context, ColorScheme colorScheme) {
-    return Card(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Column(
-              children: [
-                _buildLanguageRow(context, colorScheme),
-                const Divider(height: 16),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: _buildParcelsDbSection(context, colorScheme),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: _buildMapCacheSection(context, colorScheme),
-          ),
-          if (_showDeveloperOptions) ...[
-            const Divider(height: 1),
-            _buildDeveloperOptions(context, colorScheme),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, left: 4),
@@ -1344,107 +1129,81 @@ class _AboutScreenState extends State<AboutScreen> {
   }
 
   Widget _buildLegalCard(BuildContext context, ColorScheme colorScheme) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.l10n.aboutTermsTitle,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+    Widget legalTile(IconData icon, String title, String body) {
+      return ExpansionTile(
+        leading: Icon(icon, color: colorScheme.primary),
+        title: Text(title),
+        shape: const Border(),
+        collapsedShape: const Border(),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        expandedAlignment: Alignment.centerLeft,
+        children: [
+          Text(
+            body,
+            style: TextStyle(
+              fontSize: 13,
+              color: colorScheme.onSurfaceVariant,
+              height: 1.5,
             ),
-            const SizedBox(height: 8),
-            Text(
-              context.l10n.aboutTermsBody,
-              style: TextStyle(
-                fontSize: 13,
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              context.l10n.aboutDisclaimerTitle,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              context.l10n.aboutDisclaimerBody,
-              style: TextStyle(
-                fontSize: 13,
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              context.l10n.aboutCopyrightTitle,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              context.l10n.aboutCopyrightBody,
-              style: TextStyle(
-                fontSize: 13,
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              context.l10n.aboutPrivacyTitle,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              context.l10n.aboutPrivacyBody,
-              style: TextStyle(
-                fontSize: 13,
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+          ),
+        ],
+      );
+    }
 
-  Widget _buildOpenSourceCard(BuildContext context, ColorScheme colorScheme) {
     return Card(
-      child: ListTile(
-        leading: Icon(Icons.code, color: colorScheme.primary),
-        title: Text(context.l10n.aboutShowLicenses),
-        subtitle: Text(context.l10n.aboutLicensesDesc),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () {
-          showLicensePage(
-            context: context,
-            applicationName: 'Gozdar',
-            applicationVersion: _packageInfo?.version,
-            applicationIcon: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  'icon.png',
-                  width: 64,
-                  height: 64,
-                  fit: BoxFit.cover,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          legalTile(
+            Icons.description_outlined,
+            context.l10n.aboutTermsTitle,
+            context.l10n.aboutTermsBody,
+          ),
+          const Divider(height: 1),
+          legalTile(
+            Icons.warning_amber_outlined,
+            context.l10n.aboutDisclaimerTitle,
+            context.l10n.aboutDisclaimerBody,
+          ),
+          const Divider(height: 1),
+          legalTile(
+            Icons.copyright,
+            context.l10n.aboutCopyrightTitle,
+            context.l10n.aboutCopyrightBody,
+          ),
+          const Divider(height: 1),
+          legalTile(
+            Icons.privacy_tip_outlined,
+            context.l10n.aboutPrivacyTitle,
+            context.l10n.aboutPrivacyBody,
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: Icon(Icons.code, color: colorScheme.primary),
+            title: Text(context.l10n.aboutShowLicenses),
+            subtitle: Text(context.l10n.aboutLicensesDesc),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              showLicensePage(
+                context: context,
+                applicationName: 'Gozdar',
+                applicationVersion: _packageInfo?.version,
+                applicationIcon: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(
+                      'icon.png',
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ],
       ),
     );
   }

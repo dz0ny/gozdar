@@ -19,9 +19,28 @@ class OwnerDownloadCancelled implements Exception {
 }
 
 /// Owner(s) + address looked up for a single cadastral parcel.
+/// One owner/holder of a parcel, with the share and address when the source
+/// has them (the Croatian cadastre does).
+class OwnerHolder {
+  final String name;
+
+  /// Ownership share as written in the register, e.g. "28/560".
+  final String? share;
+  final String? address;
+
+  const OwnerHolder(this.name, {this.share, this.address});
+}
+
 class OwnerInfo {
+  /// Separator between co-owners in [displayOwners] and in a parcel's stored
+  /// `owner` field.
+  static const separator = ' • ';
+
   /// Distinct owner names (co-owners), already de-duplicated.
   final List<String> owners;
+
+  /// Per-owner share and address, in [owners] order, when known.
+  final List<OwnerHolder> holders;
 
   /// First non-empty owner address found for the parcel, if any.
   final String? address;
@@ -34,13 +53,26 @@ class OwnerInfo {
 
   const OwnerInfo({
     required this.owners,
+    this.holders = const [],
     this.address,
     this.koName,
     this.municipality,
   });
 
   /// Owner names joined for display, e.g. "NOVAK JANEZ • KOVAC ANA".
-  String get displayOwners => owners.join(' • ');
+  String get displayOwners => owners.join(separator);
+
+  /// The owners in a stored or joined owner string, one name each.
+  static List<String> split(String? owners) => [
+        for (final o in (owners ?? '').split(separator))
+          if (o.trim().isNotEmpty) o.trim(),
+      ];
+
+  /// The holder record for [name], or a bare one when there is none.
+  OwnerHolder holder(String name) => holders.firstWhere(
+        (h) => h.name == name,
+        orElse: () => OwnerHolder(name),
+      );
 }
 
 /// Result of importing an owners database file.

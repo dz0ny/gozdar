@@ -15,6 +15,7 @@ import '../models/navigation_target.dart';
 import '../router/app_router.dart';
 import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
+import '../services/hr_owner_service.dart';
 import '../services/cadastral_service.dart';
 import '../services/database_service.dart';
 import '../models/map_layer.dart';
@@ -75,11 +76,18 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   /// even when an owner name is already stored. Read-only; never modifies the
   /// parcel.
   void _lookUpOwner() {
-    if (!_parcel.isCadastral || !OwnerLookupService.instance.isAvailable) return;
-    final info = OwnerLookupService.instance.lookup(
-      _parcel.cadastralMunicipality,
-      _parcel.parcelNumber,
-    );
+    if (!_parcel.isCadastral) return;
+    final ko = _parcel.cadastralMunicipality;
+    final number = _parcel.parcelNumber;
+    if (HrOwnerService.isCroatianKo(ko)) {
+      // Croatian holders (with shares) come live from the DGU cadastre.
+      HrOwnerService.instance.lookup(ko!, number!).then((info) {
+        if (info != null && mounted) setState(() => _lookedUpOwner = info);
+      });
+      return;
+    }
+    if (!OwnerLookupService.instance.isAvailable) return;
+    final info = OwnerLookupService.instance.lookup(ko, number);
     if (info != null && mounted) {
       setState(() => _lookedUpOwner = info);
     }
@@ -286,11 +294,20 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
 
   /// Picks many photos and keeps those that touch this parcel.
   Future<PhotoScan?> _pickAndScanPhotos() async {
-    // File extensions keep the GPS data that the iOS photo library removes.
-    final picked = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['jpg', 'jpeg'],
-    );
+    // iOS: the photo gallery, asking for the original file so the GPS and
+    // DJI gimbal metadata survive. Android: the file picker, because its
+    // photo picker strips the location from photos.
+    final picked = Platform.isIOS
+        ? await FilePicker.pickFiles(
+            type: FileType.image,
+            darwinOptions: const DarwinOptions(
+              assetRepresentationMode: DarwinAssetRepresentationMode.current,
+            ),
+          )
+        : await FilePicker.pickFiles(
+            type: FileType.custom,
+            allowedExtensions: ['jpg', 'jpeg'],
+          );
     if (picked.isEmpty || !mounted) return null;
     final files = [
       for (final f in picked)
@@ -1139,8 +1156,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                   ParcelOwnerCard(
                     owner: _parcel.owner,
                     onEdit: _editOwner,
-                    lookedUpOwner: _lookedUpOwner?.displayOwners,
-                    lookedUpAddress: _lookedUpOwner?.address,
+                    lookedUp: _lookedUpOwner,
                   ),
 
                   const SizedBox(height: 16),

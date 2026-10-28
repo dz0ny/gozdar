@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/parcel.dart';
 import '../services/cadastral_service.dart';
+import '../services/hr_owner_service.dart';
+import 'owner_list.dart';
 import '../services/ko_locator.dart';
 import '../services/owner_lookup_service.dart';
 import 'parcel_silhouette.dart';
@@ -56,6 +58,55 @@ class ParcelFoundSheet extends StatelessWidget {
     );
     return controller;
   }
+
+  /// First owner and how many more, the address below; tap lists everyone.
+  Widget _ownerText(OwnerInfo info, ThemeData theme) => Builder(
+        builder: (context) {
+          final many = info.owners.length > 1;
+          return InkWell(
+            onTap: many
+                ? () => OwnersSheet.show(
+                      context,
+                      owners: info.owners,
+                      info: info,
+                    )
+                : null,
+            borderRadius: BorderRadius.circular(6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        ownerSummary(info.owners),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                    ),
+                    if (many)
+                      Icon(
+                        Icons.chevron_right,
+                        size: 20,
+                        color: theme.colorScheme.primary,
+                      ),
+                  ],
+                ),
+                if (info.address != null)
+                  Text(
+                    info.address!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -123,13 +174,26 @@ class ParcelFoundSheet extends StatelessWidget {
                       Text(context.l10n.parcelFoundKo(koLabel), style: muted),
                       Text(wfsParcel.formattedArea, style: muted),
                       if (ownerInfo != null)
-                        Text(
-                          ownerInfo.address != null
-                              ? '${ownerInfo.displayOwners} • ${ownerInfo.address}'
-                              : ownerInfo.displayOwners,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyLarge,
+                        _ownerText(ownerInfo, theme)
+                      else if (HrOwnerService.isCroatianKo(sifko))
+                        // Croatian holders come live from the DGU cadastre.
+                        FutureBuilder<OwnerInfo?>(
+                          future: HrOwnerService.instance.lookup(
+                            sifko!,
+                            wfsParcel.parcelNumber,
+                          ),
+                          builder: (context, snapshot) {
+                            final info = snapshot.data;
+                            if (info != null) return _ownerText(info, theme);
+                            if (snapshot.connectionState ==
+                                ConnectionState.done) {
+                              return const SizedBox.shrink();
+                            }
+                            return Text(
+                              context.l10n.parcelFoundOwnersLoading,
+                              style: muted,
+                            );
+                          },
                         ),
                     ],
                   ),

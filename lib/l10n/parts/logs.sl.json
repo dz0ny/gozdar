@@ -327,6 +327,55 @@
   },
   "forestNoParcelsToExport": "Ni parcel za izvoz",
   "forestKmlExported": "KML uspešno izvožen",
+  "forestImportKml": "Uvozi KML",
+  "forestImportTitle": "Uvozi parcele",
+  "forestImportConfirm": "Najdeno: {count}. Jih uvozim?",
+  "@forestImportConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "forestImportButton": "Uvozi",
+  "forestImportDone": "Uvoženo: {count} ({area})",
+  "@forestImportDone": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "forestImportNoParcels": "V datoteki ni veljavnih parcel.",
+  "forestImportFullTitle": "Uvozi parcelo s podatki",
+  "forestImportFound": "Najdeno:",
+  "forestImportFellings": "{count, plural, one{{count} sečnja} two{{count} sečnji} few{{count} sečnje} other{{count} sečenj}}",
+  "@forestImportFellings": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forestImportFullDone": "Uvožena parcela \"{name}\"",
+  "@forestImportFullDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "forestImportError": "Napaka pri uvozu: {error}",
+  "@forestImportError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "forestNoOwners": "Ni parcel z določenimi lastniki",
   "forestShowAll": "Prikaži vse",
   "forestNoParcelsForOwner": "Ni parcel za \"{owner}\"",

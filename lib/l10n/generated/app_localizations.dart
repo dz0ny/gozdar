@@ -1064,6 +1064,72 @@ abstract class AppLocalizations {
   /// **'KML uspešno izvožen'**
   String get forestKmlExported;
 
+  /// No description provided for @forestImportKml.
+  ///
+  /// In sl, this message translates to:
+  /// **'Uvozi KML'**
+  String get forestImportKml;
+
+  /// No description provided for @forestImportTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Uvozi parcele'**
+  String get forestImportTitle;
+
+  /// No description provided for @forestImportConfirm.
+  ///
+  /// In sl, this message translates to:
+  /// **'Najdeno: {count}. Jih uvozim?'**
+  String forestImportConfirm(String count);
+
+  /// No description provided for @forestImportButton.
+  ///
+  /// In sl, this message translates to:
+  /// **'Uvozi'**
+  String get forestImportButton;
+
+  /// No description provided for @forestImportDone.
+  ///
+  /// In sl, this message translates to:
+  /// **'Uvoženo: {count} ({area})'**
+  String forestImportDone(String count, String area);
+
+  /// No description provided for @forestImportNoParcels.
+  ///
+  /// In sl, this message translates to:
+  /// **'V datoteki ni veljavnih parcel.'**
+  String get forestImportNoParcels;
+
+  /// No description provided for @forestImportFullTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Uvozi parcelo s podatki'**
+  String get forestImportFullTitle;
+
+  /// No description provided for @forestImportFound.
+  ///
+  /// In sl, this message translates to:
+  /// **'Najdeno:'**
+  String get forestImportFound;
+
+  /// No description provided for @forestImportFellings.
+  ///
+  /// In sl, this message translates to:
+  /// **'{count, plural, one{{count} sečnja} two{{count} sečnji} few{{count} sečnje} other{{count} sečenj}}'**
+  String forestImportFellings(int count);
+
+  /// No description provided for @forestImportFullDone.
+  ///
+  /// In sl, this message translates to:
+  /// **'Uvožena parcela \"{name}\"'**
+  String forestImportFullDone(String name);
+
+  /// No description provided for @forestImportError.
+  ///
+  /// In sl, this message translates to:
+  /// **'Napaka pri uvozu: {error}'**
+  String forestImportError(String error);
+
   /// No description provided for @forestNoOwners.
   ///
   /// In sl, this message translates to:
@@ -2767,6 +2833,30 @@ abstract class AppLocalizations {
   /// **'KO {ko}'**
   String parcelFoundKo(String ko);
 
+  /// No description provided for @parcelFoundOwnersLoading.
+  ///
+  /// In sl, this message translates to:
+  /// **'Iščem lastnike …'**
+  String get parcelFoundOwnersLoading;
+
+  /// No description provided for @ownerAndMore.
+  ///
+  /// In sl, this message translates to:
+  /// **'{first} in še {count}'**
+  String ownerAndMore(String first, int count);
+
+  /// No description provided for @ownersTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Lastniki ({count})'**
+  String ownersTitle(int count);
+
+  /// No description provided for @ownersShowAll.
+  ///
+  /// In sl, this message translates to:
+  /// **'Pokaži vse ({count})'**
+  String ownersShowAll(int count);
+
   /// No description provided for @parcelFoundHide.
   ///
   /// In sl, this message translates to:
@@ -2802,6 +2892,12 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Parcela'**
   String get parcelInfoParcel;
+
+  /// No description provided for @parcelInfoKo.
+  ///
+  /// In sl, this message translates to:
+  /// **'Katastrska občina'**
+  String get parcelInfoKo;
 
   /// No description provided for @parcelNotSet.
   ///
@@ -3199,6 +3295,18 @@ abstract class AppLocalizations {
   /// **'Podpora'**
   String get aboutSectionSupport;
 
+  /// No description provided for @aboutSectionGeneral.
+  ///
+  /// In sl, this message translates to:
+  /// **'Splošno'**
+  String get aboutSectionGeneral;
+
+  /// No description provided for @aboutSectionMapCache.
+  ///
+  /// In sl, this message translates to:
+  /// **'Predpomnilnik zemljevida'**
+  String get aboutSectionMapCache;
+
   /// No description provided for @aboutTagline.
   ///
   /// In sl, this message translates to:
@@ -3497,6 +3605,18 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Izberi statistične regije'**
   String get aboutPickRegionsTitle;
+
+  /// No description provided for @aboutCountrySi.
+  ///
+  /// In sl, this message translates to:
+  /// **'Slovenija'**
+  String get aboutCountrySi;
+
+  /// No description provided for @aboutCountryHr.
+  ///
+  /// In sl, this message translates to:
+  /// **'Hrvaška'**
+  String get aboutCountryHr;
 
   /// No description provided for @aboutRegionParcels.
   ///

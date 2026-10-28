@@ -1,3 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:archive/archive.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import 'package:go_router/go_router.dart';
@@ -7,8 +12,10 @@ import '../providers/map_provider.dart';
 import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
 import '../services/database_service.dart';
+import '../services/ko_locator.dart';
 import '../services/kml_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../widgets/owner_list.dart';
 import '../widgets/parcel_silhouette.dart';
 
 /// Get icon and color for forest type
@@ -42,12 +49,8 @@ class ForestTabState extends State<ForestTab> {
 
   /// Get unique owners from all parcels
   List<String> get _uniqueOwners {
-    final owners = _parcels
-        .map(_ownerForParcel)
-        .where((owner) => owner != null && owner.isNotEmpty)
-        .cast<String>()
-        .toSet()
-        .toList();
+    // Co-owners count separately, so a shared parcel lists under each.
+    final owners = _parcels.expand(_ownersForParcel).toSet().toList();
     owners.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return owners;
   }
@@ -58,9 +61,12 @@ class ForestTabState extends State<ForestTab> {
       return _parcels;
     }
     return _parcels
-        .where((p) => _ownerForParcel(p) == _selectedOwnerFilter)
+        .where((p) => _ownersForParcel(p).contains(_selectedOwnerFilter))
         .toList();
   }
+
+  List<String> _ownersForParcel(Parcel parcel) =>
+      OwnerInfo.split(_ownerForParcel(parcel));
 
   String? _ownerForParcel(Parcel parcel) {
     if (parcel.owner != null && parcel.owner!.isNotEmpty) return parcel.owner;
@@ -73,6 +79,10 @@ class ForestTabState extends State<ForestTab> {
   @override
   void initState() {
     super.initState();
+    // KO names for the group headers; rebuild once the index is in.
+    KoLocator.instance.ensureLoaded().then((_) {
+      if (mounted) setState(() {});
+    });
     _loadData();
   }
 
@@ -196,6 +206,161 @@ class ForestTabState extends State<ForestTab> {
     }
   }
 
+  /// Read a picked KML, or the first .kml inside a KMZ.
+  Future<String> _readKml(String path) async {
+    if (!path.toLowerCase().endsWith('.kmz')) {
+      return File(path).readAsString();
+    }
+    final archive = ZipDecoder().decodeBytes(await File(path).readAsBytes());
+    final kml = archive.files.firstWhere(
+      (f) => f.isFile && f.name.toLowerCase().endsWith('.kml'),
+      orElse: () => throw FormatException(L10n.current.forestImportNoParcels),
+    );
+    return utf8.decode(kml.content);
+  }
+
+  Future<void> _importKml() async {
+    try {
+      final picked = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['kml', 'kmz'],
+      );
+      final path = picked?.path;
+      if (path == null) return;
+      final content = await _readKml(path);
+
+      // A single-parcel export from Gozdar also carries logs, fellings and
+      // points; import it with all of them.
+      final full = KmlService.importParcelWithData(content);
+      if (full != null && full.totalItems > 0) {
+        await _importFullParcel(full);
+        return;
+      }
+
+      final parcels = KmlService.importFromKml(content);
+      if (!mounted) return;
+      if (parcels.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.forestImportNoParcels)),
+        );
+        return;
+      }
+
+      final count = context.l10n.forestCountParcels(parcels.length);
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.forestImportTitle),
+          content: Text(context.l10n.forestImportConfirm(count)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(context.l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(context.l10n.forestImportButton),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+
+      for (final parcel in parcels) {
+        await _databaseService.insertParcel(parcel);
+      }
+      await _loadData();
+      if (!mounted) return;
+      final totalArea = parcels.fold(0.0, (double sum, p) => sum + p.areaM2);
+      final area = totalArea >= 10000
+          ? '${(totalArea / 10000).toStringAsFixed(2)} ha'
+          : '${totalArea.toStringAsFixed(0)} m²';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.forestImportDone(count, area))),
+      );
+    } catch (e) {
+      if (mounted) {
+        final message = e is FormatException ? e.message : '$e';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.forestImportError(message))),
+        );
+      }
+    }
+  }
+
+  Future<void> _importFullParcel(ParcelImportData data) async {
+    if (!mounted) return;
+    final items = [
+      data.parcel.name,
+      if (data.logs.isNotEmpty) context.l10n.logsCountLogs(data.logs.length),
+      if (data.secnja.isNotEmpty)
+        context.l10n.forestImportFellings(data.secnja.length),
+      if (data.locations.isNotEmpty)
+        context.l10n.forestCountPoints(data.locations.length),
+    ];
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.l10n.forestImportFullTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(context.l10n.forestImportFound),
+            const SizedBox(height: 8),
+            for (final item in items)
+              Padding(
+                padding: const EdgeInsets.only(left: 8, bottom: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check, size: 16, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(item)),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(context.l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(context.l10n.forestImportButton),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      final parcelId = await _databaseService.insertParcel(data.parcel);
+      for (final log in data.logs) {
+        await _databaseService.insertLog(log.copyWith(parcelId: parcelId));
+      }
+      for (final loc in [...data.secnja, ...data.locations]) {
+        await _databaseService.insertLocation(loc);
+      }
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.forestImportFullDone(data.parcel.name)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.forestImportError('$e'))),
+        );
+      }
+    }
+  }
+
   Future<void> _showOwnerFilterDialog() async {
     final owners = _uniqueOwners;
 
@@ -208,6 +373,7 @@ class ForestTabState extends State<ForestTab> {
 
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -250,7 +416,7 @@ class ForestTabState extends State<ForestTab> {
                 itemBuilder: (context, index) {
                   final owner = owners[index];
                   final parcelCount = _parcels
-                      .where((p) => _ownerForParcel(p) == owner)
+                      .where((p) => _ownersForParcel(p).contains(owner))
                       .length;
                   final isSelected = _selectedOwnerFilter == owner;
 
@@ -304,8 +470,7 @@ class ForestTabState extends State<ForestTab> {
       appBar: AppBar(
         title: Text(context.l10n.forestTitle),
         actions: [
-          // Filter own parcels by owner. Importing parcels is done from the
-          // map's parcel search.
+          // Filter own parcels by owner.
           IconButton(
             icon: Badge(
               isLabelVisible: _selectedOwnerFilter != null,
@@ -318,11 +483,23 @@ class ForestTabState extends State<ForestTab> {
             tooltip: context.l10n.forestMoreOptionsTooltip,
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
-              if (value == 'export') {
+              if (value == 'import') {
+                _importKml();
+              } else if (value == 'export') {
                 _exportKml();
               }
             },
             itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'import',
+                child: Row(
+                  children: [
+                    const Icon(Icons.file_upload),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.forestImportKml),
+                  ],
+                ),
+              ),
               PopupMenuItem(
                 value: 'export',
                 child: Row(
@@ -456,6 +633,12 @@ class ForestTabState extends State<ForestTab> {
                                           label: Text(context.l10n.forestSearchParcel),
                                         ),
                                       ),
+                                      const SizedBox(height: 8),
+                                      TextButton.icon(
+                                        onPressed: _importKml,
+                                        icon: const Icon(Icons.file_upload),
+                                        label: Text(context.l10n.forestImportKml),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -513,10 +696,12 @@ class ForestTabState extends State<ForestTab> {
       itemBuilder: (context, groupIndex) {
         final ko = sortedKOs[groupIndex];
         final groupParcels = groupedParcels[ko]!;
-        // When the owners DB is imported, label the group with the cadastral
-        // municipality (KO) name, e.g. "STARI TRG (1650)" instead of "KO 1650".
+        // Label the group with the cadastral municipality (KO) name, e.g.
+        // "STARI TRG (1650)" instead of "KO 1650", from the owners DB or the
+        // bundled KO index.
         final sifko = groupParcels.first.cadastralMunicipality;
-        final koName = OwnerLookupService.instance.koName(sifko);
+        final koName = OwnerLookupService.instance.koName(sifko) ??
+            KoLocator.instance.bySifko(sifko)?.name;
         final koLabel = koName != null ? '$koName ($sifko)' : ko;
         final count = groupParcels.length;
         final totalArea = groupParcels.fold<double>(
@@ -585,7 +770,8 @@ class ForestTabState extends State<ForestTab> {
   }
 
   Widget _buildParcelCard(BuildContext context, Parcel parcel) {
-    final owner = _ownerForParcel(parcel);
+    final owners = _ownersForParcel(parcel);
+    final owner = ownerSummary(owners);
     return Dismissible(
       key: Key('parcel_${parcel.id}'),
       direction: DismissDirection.endToStart,
@@ -627,7 +813,7 @@ class ForestTabState extends State<ForestTab> {
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (owner != null && owner.isNotEmpty)
+              if (owner.isNotEmpty)
                 Text(
                   owner,
                   overflow: TextOverflow.ellipsis,

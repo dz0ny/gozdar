@@ -598,6 +598,56 @@ class AppLocalizationsHr extends AppLocalizations {
   String get forestKmlExported => 'KML uspješno izvezen';
 
   @override
+  String get forestImportKml => 'Uvezi KML';
+
+  @override
+  String get forestImportTitle => 'Uvezi čestice';
+
+  @override
+  String forestImportConfirm(String count) {
+    return 'Pronađeno: $count. Uvesti ih?';
+  }
+
+  @override
+  String get forestImportButton => 'Uvezi';
+
+  @override
+  String forestImportDone(String count, String area) {
+    return 'Uvezeno: $count ($area)';
+  }
+
+  @override
+  String get forestImportNoParcels => 'U datoteci nema valjanih čestica.';
+
+  @override
+  String get forestImportFullTitle => 'Uvezi česticu s podacima';
+
+  @override
+  String get forestImportFound => 'Pronađeno:';
+
+  @override
+  String forestImportFellings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sječa',
+      few: '$count sječe',
+      one: '$count sječa',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String forestImportFullDone(String name) {
+    return 'Uvezena čestica \"$name\"';
+  }
+
+  @override
+  String forestImportError(String error) {
+    return 'Pogreška pri uvozu: $error';
+  }
+
+  @override
   String get forestNoOwners => 'Nema čestica s određenim vlasnicima';
 
   @override
@@ -1636,6 +1686,24 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
+  String get parcelFoundOwnersLoading => 'Tražim posjednike …';
+
+  @override
+  String ownerAndMore(String first, int count) {
+    return '$first i još $count';
+  }
+
+  @override
+  String ownersTitle(int count) {
+    return 'Vlasnici ($count)';
+  }
+
+  @override
+  String ownersShowAll(int count) {
+    return 'Prikaži sve ($count)';
+  }
+
+  @override
   String get parcelFoundHide => 'Sakrij';
 
   @override
@@ -1654,6 +1722,9 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get parcelInfoParcel => 'Čestica';
+
+  @override
+  String get parcelInfoKo => 'Katastarska općina';
 
   @override
   String get parcelNotSet => 'Nije određen';
@@ -1889,6 +1960,12 @@ class AppLocalizationsHr extends AppLocalizations {
   String get aboutSectionSupport => 'Podrška';
 
   @override
+  String get aboutSectionGeneral => 'Općenito';
+
+  @override
+  String get aboutSectionMapCache => 'Predmemorija karte';
+
+  @override
   String get aboutTagline =>
       'Aplikacija za vlasnike šuma i šumarske radnike u Sloveniji';
 
@@ -2067,6 +2144,12 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get aboutPickRegionsTitle => 'Odaberi statističke regije';
+
+  @override
+  String get aboutCountrySi => 'Slovenija';
+
+  @override
+  String get aboutCountryHr => 'Hrvatska';
 
   @override
   String aboutRegionParcels(String count) {

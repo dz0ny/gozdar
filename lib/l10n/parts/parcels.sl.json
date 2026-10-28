@@ -184,6 +184,34 @@
   "parcelSecnjaTitle": "Sečnja ({count})",
   "parcelFoundTitle": "Parcela {label}",
   "parcelFoundKo": "KO {ko}",
+  "parcelFoundOwnersLoading": "Iščem lastnike …",
+  "ownerAndMore": "{first} in še {count}",
+  "@ownerAndMore": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownersTitle": "Lastniki ({count})",
+  "@ownersTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownersShowAll": "Pokaži vse ({count})",
+  "@ownersShowAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "parcelFoundHide": "Skrij",
   "parcelFoundOpen": "Odpri parcelo",
   "parcelFoundImport": "Uvozi parcelo",
@@ -239,6 +267,7 @@
   "parcelPointsCount": "{count} točk",
   "parcelInfoAdded": "Dodano",
   "parcelInfoParcel": "Parcela",
+  "parcelInfoKo": "Katastrska občina",
   "parcelNotSet": "Ni določen",
   "parcelFromCadastre": "iz katastra (GURS)",
   "parcelNoNotes": "Ni opomb",

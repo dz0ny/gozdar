@@ -31,6 +31,11 @@ class ParcelRegion {
   /// Data source of this region when it differs from the manifest's.
   final String? source;
 
+  /// ISO country code ('si', 'hr'). Taken from the manifest when it says,
+  /// else inferred from [source] ("DGU DKP (HR)" is Croatian, the rest is
+  /// Slovenian GURS data).
+  final String country;
+
   const ParcelRegion({
     required this.code,
     required this.name,
@@ -39,6 +44,7 @@ class ParcelRegion {
     this.rows,
     this.date,
     this.source,
+    this.country = 'si',
   });
 
   factory ParcelRegion.fromJson(Map<String, dynamic> j) => ParcelRegion(
@@ -49,6 +55,8 @@ class ParcelRegion {
         rows: (j['rows'] as num?)?.toInt(),
         date: j['date']?.toString(),
         source: j['source']?.toString(),
+        country: (j['country']?.toString().toLowerCase()) ??
+            ((j['source']?.toString() ?? '').contains('(HR)') ? 'hr' : 'si'),
       );
 
   /// Approximate size in MB, or null when unknown.

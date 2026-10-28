@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import '../l10n/l10n.dart';
 import '../models/parcel.dart';
+import '../services/owner_lookup_service.dart';
 import '../services/public_parcel_settings.dart';
+import 'owner_list.dart';
 
 /// Top-level groups in the long-press menu. Tapping a group drills into its
 /// sub-icons (replacing the row, with a back arrow to return).
@@ -38,6 +40,10 @@ class MapLongPressMenu extends StatefulWidget {
   final String? parcelOwner;
   final String? parcelAddress;
 
+  /// Owners still being looked up (Croatian parcels, from the DGU cadastre),
+  /// shown in place of [parcelOwner] once they arrive.
+  final Future<OwnerInfo?>? parcelOwnerLookup;
+
   /// Public-owner category when the parcel is publicly owned/managed (javna
   /// parcela), shown as a coloured badge. Null for private parcels.
   final PublicOwnerCategory? parcelPublicCategory;
@@ -70,6 +76,7 @@ class MapLongPressMenu extends StatefulWidget {
     this.parcelSubtitle,
     this.parcelOwner,
     this.parcelAddress,
+    this.parcelOwnerLookup,
     this.parcelPublicCategory,
     required this.onNavigate,
     required this.onMeasureDistance,
@@ -104,6 +111,7 @@ class MapLongPressMenu extends StatefulWidget {
     String? parcelSubtitle,
     String? parcelOwner,
     String? parcelAddress,
+    Future<OwnerInfo?>? parcelOwnerLookup,
     PublicOwnerCategory? parcelPublicCategory,
     required VoidCallback onNavigate,
     required VoidCallback onMeasureDistance,
@@ -133,6 +141,7 @@ class MapLongPressMenu extends StatefulWidget {
           parcelSubtitle: parcelSubtitle,
           parcelOwner: parcelOwner,
           parcelAddress: parcelAddress,
+          parcelOwnerLookup: parcelOwnerLookup,
           parcelPublicCategory: parcelPublicCategory,
           onNavigate: onNavigate,
           onMeasureDistance: onMeasureDistance,
@@ -156,6 +165,27 @@ class MapLongPressMenu extends StatefulWidget {
 class _MapLongPressMenuState extends State<MapLongPressMenu> {
   /// Open drill-down group, or null at the top level.
   _MenuSection? _section;
+
+  /// Owners from [MapLongPressMenu.parcelOwnerLookup] once it answers.
+  OwnerInfo? _lookedUp;
+  bool _lookingUp = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final lookup = widget.parcelOwnerLookup;
+    if (lookup != null) {
+      _lookingUp = true;
+      lookup.then((info) {
+        if (mounted) {
+          setState(() {
+            _lookingUp = false;
+            _lookedUp = info;
+          });
+        }
+      });
+    }
+  }
 
   /// Compact icon tile: an icon over a short label, sized for a toolbar grid.
   Widget _tile({
@@ -269,10 +299,13 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
   /// press. Kept deliberately small so the sheet stays low.
   Widget _parcelInfoHeader() {
     final cs = Theme.of(context).colorScheme;
-    final hasOwner =
-        widget.parcelOwner != null && widget.parcelOwner!.isNotEmpty;
-    final hasAddress =
-        widget.parcelAddress != null && widget.parcelAddress!.isNotEmpty;
+    final looked = _lookedUp;
+    final owner = widget.parcelOwner ??
+        (looked == null ? null : ownerSummary(looked.owners));
+    final address = widget.parcelAddress ?? looked?.address;
+    final hasOwner = owner != null && owner.isNotEmpty;
+    final hasAddress = address != null && address.isNotEmpty;
+    final manyOwners = looked != null && looked.owners.length > 1;
     final cat = widget.parcelPublicCategory;
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 2, 4, 8),
@@ -314,19 +347,47 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
             ],
           ),
           if (hasOwner)
+            InkWell(
+              onTap: manyOwners
+                  ? () => OwnersSheet.show(
+                        context,
+                        owners: looked.owners,
+                        info: looked,
+                      )
+                  : null,
+              borderRadius: BorderRadius.circular(6),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.person, size: 18, color: cs.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        owner,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    if (manyOwners)
+                      Icon(Icons.chevron_right, size: 18, color: cs.primary),
+                  ],
+                ),
+              ),
+            )
+          else if (_lookingUp)
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.person, size: 18, color: cs.primary),
+                  Icon(Icons.person, size: 18, color: cs.onSurfaceVariant),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.parcelOwner!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                  Text(
+                    context.l10n.parcelFoundOwnersLoading,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -342,7 +403,7 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      widget.parcelAddress!,
+                      address,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(

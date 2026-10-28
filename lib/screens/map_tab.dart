@@ -19,6 +19,10 @@ import '../models/parcel.dart';
 import '../models/navigation_target.dart';
 import '../models/log_entry.dart';
 import '../services/database_service.dart';
+import '../services/hr_owner_service.dart';
+import '../services/ko_locator.dart';
+import '../widgets/download_progress_view.dart';
+import '../widgets/owner_list.dart';
 import '../widgets/log_entry_form.dart';
 import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
@@ -1630,17 +1634,30 @@ class MapTabState extends State<MapTab> {
     String? parcelSubtitle;
     String? parcelOwner;
     String? parcelAddress;
+    Future<OwnerInfo?>? parcelOwnerLookup;
     PublicOwnerCategory? parcelPublicCategory;
     if (offlineParcelAtPosition != null) {
       final p = offlineParcelAtPosition;
       final ownerSvc = OwnerLookupService.instance;
-      final koName = ownerSvc.koName(p.cadastralMunicipality);
+      await KoLocator.instance.ensureLoaded();
+      if (!mounted) return;
+      final koName = ownerSvc.koName(p.cadastralMunicipality) ??
+          KoLocator.instance.bySifko(p.cadastralMunicipality)?.name;
       final ownerInfo = ownerSvc.lookup(
         p.cadastralMunicipality,
         p.parcelNumber,
       );
-      parcelOwner = ownerInfo?.displayOwners;
+      parcelOwner = ownerInfo == null ? null : ownerSummary(ownerInfo.owners);
       parcelAddress = ownerInfo?.address;
+      // Croatian holders come from the DGU cadastre (cached on disk).
+      if (ownerInfo == null &&
+          HrOwnerService.isCroatianKo(p.cadastralMunicipality)) {
+        parcelOwnerLookup = HrOwnerService.instance.lookup(
+          p.cadastralMunicipality,
+          p.parcelNumber,
+          parcelId: p.id,
+        );
+      }
       parcelPublicCategory = ownerSvc.publicCategory(
         p.cadastralMunicipality,
         p.parcelNumber,
@@ -1674,6 +1691,7 @@ class MapTabState extends State<MapTab> {
       parcelSubtitle: parcelSubtitle,
       parcelOwner: parcelOwner,
       parcelAddress: parcelAddress,
+      parcelOwnerLookup: parcelOwnerLookup,
       parcelPublicCategory: parcelPublicCategory,
       onMeasureDistance: () => _startMeasurement(_MeasurementTool.distance),
       onMeasureArea: () => _startMeasurement(_MeasurementTool.area),
@@ -2676,50 +2694,16 @@ class MapTabState extends State<MapTab> {
   Widget _buildRegionDownloadCard(BuildContext context) {
     return Material(
       elevation: 4,
-      borderRadius: const BorderRadius.all(Radius.circular(12)),
+      borderRadius: const BorderRadius.all(Radius.circular(16)),
       color: Theme.of(context).colorScheme.surface,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-        child: Builder(
-          builder: (context) {
-            final total = _regionTotal;
-            final pct = (total != null && total > 0)
-                ? _regionReceived / total
-                : null;
-            final mb = (_regionReceived / (1024 * 1024))
-                .toStringAsFixed(0);
-            final totMb = total != null
-                ? (total / (1024 * 1024)).toStringAsFixed(0)
-                : '?';
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${L10n.current.mapTabRegionDownloading(
-                          _downloadingRegionName ?? '',
-                          mb,
-                          totMb,
-                        )}'
-                        '${pct != null ? ' • ${(pct * 100).toStringAsFixed(0)}%' : ''}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => setState(
-                        () => _cancelRegionDownload = true,
-                      ),
-                      child: Text(L10n.current.commonCancel),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                LinearProgressIndicator(value: pct),
-              ],
-            );
-          },
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: DownloadProgressView(
+          title: L10n.current.aboutDownloadingRegion,
+          name: _downloadingRegionName,
+          received: _regionReceived,
+          total: _regionTotal,
+          onCancel: () => setState(() => _cancelRegionDownload = true),
         ),
       ),
     );
@@ -2875,12 +2859,25 @@ class MapTabState extends State<MapTab> {
         return;
       }
 
+      // Croatian holders are only fetched live, so keep them with the parcel.
+      final hrOwner = HrOwnerService.isCroatianKo(koInt)
+          ? await HrOwnerService.instance.lookup(
+              koInt!,
+              wfsParcel.parcelNumber,
+            )
+          : null;
+
       // Convert WfsParcel to Parcel model
       final parcel = Parcel(
-        name: '${wfsParcel.koNumber} - ${wfsParcel.parcelNumber}',
+        name: await KoLocator.defaultParcelName(
+          koInt,
+          wfsParcel.parcelNumber,
+          fallbackKo: wfsParcel.koNumber,
+        ),
         polygon: wfsParcel.polygon,
         cadastralMunicipality: koInt,
         parcelNumber: wfsParcel.parcelNumber,
+        owner: hrOwner?.displayOwners,
         createdAt: DateTime.now(),
       );
 

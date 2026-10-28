@@ -9,6 +9,8 @@ import '../models/navigation_target.dart';
 import '../services/database_service.dart';
 import '../services/map_preferences_service.dart';
 import '../services/cadastral_service.dart';
+import '../services/hr_owner_service.dart';
+import '../services/ko_locator.dart';
 import '../services/parcel_lookup_service.dart';
 
 /// Provider for map state management
@@ -320,11 +322,25 @@ class MapProvider extends ChangeNotifier {
         return false;
       }
 
+      // Croatian holders are only fetched live, so keep them with the parcel.
+      final ko = cadastralParcel.cadastralMunicipality;
+      final hrOwner = HrOwnerService.isCroatianKo(ko)
+          ? await HrOwnerService.instance.lookup(
+              ko,
+              cadastralParcel.parcelNumber,
+              parcelId: cadastralParcel.id,
+            )
+          : null;
+
       final parcel = Parcel(
-        name: '${cadastralParcel.cadastralMunicipality} - ${cadastralParcel.parcelNumber}',
+        name: await KoLocator.defaultParcelName(
+          cadastralParcel.cadastralMunicipality,
+          cadastralParcel.parcelNumber,
+        ),
         polygon: cadastralParcel.polygon,
         cadastralMunicipality: cadastralParcel.cadastralMunicipality,
         parcelNumber: cadastralParcel.parcelNumber,
+        owner: hrOwner?.displayOwners,
       );
 
       await _databaseService.insertParcel(parcel);

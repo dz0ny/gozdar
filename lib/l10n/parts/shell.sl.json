@@ -4,6 +4,8 @@
   "aboutSectionLegal": "Pravne informacije",
   "aboutSectionOpenSource": "Odprtokodne knjižnice",
   "aboutSectionSupport": "Podpora",
+  "aboutSectionGeneral": "Splošno",
+  "aboutSectionMapCache": "Predpomnilnik zemljevida",
   "aboutTagline": "Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji",
   "aboutInfoTitle": "Informacije o aplikaciji",
   "aboutVersion": "Verzija",
@@ -131,6 +133,8 @@
     }
   },
   "aboutPickRegionsTitle": "Izberi statistične regije",
+  "aboutCountrySi": "Slovenija",
+  "aboutCountryHr": "Hrvaška",
   "aboutRegionParcels": " • {count} parcel",
   "@aboutRegionParcels": {
     "placeholders": {

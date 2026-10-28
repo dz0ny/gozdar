@@ -348,6 +348,55 @@
   },
   "forestNoParcelsToExport": "Ni parcel za izvoz",
   "forestKmlExported": "KML uspešno izvožen",
+  "forestImportKml": "Uvozi KML",
+  "forestImportTitle": "Uvozi parcele",
+  "forestImportConfirm": "Najdeno: {count}. Jih uvozim?",
+  "@forestImportConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "forestImportButton": "Uvozi",
+  "forestImportDone": "Uvoženo: {count} ({area})",
+  "@forestImportDone": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "forestImportNoParcels": "V datoteki ni veljavnih parcel.",
+  "forestImportFullTitle": "Uvozi parcelo s podatki",
+  "forestImportFound": "Najdeno:",
+  "forestImportFellings": "{count, plural, one{{count} sečnja} two{{count} sečnji} few{{count} sečnje} other{{count} sečenj}}",
+  "@forestImportFellings": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "forestImportFullDone": "Uvožena parcela \"{name}\"",
+  "@forestImportFullDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "forestImportError": "Napaka pri uvozu: {error}",
+  "@forestImportError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "forestNoOwners": "Ni parcel z določenimi lastniki",
   "forestShowAll": "Prikaži vse",
   "forestNoParcelsForOwner": "Ni parcel za \"{owner}\"",
@@ -1180,6 +1229,34 @@
   "parcelSecnjaTitle": "Sečnja ({count})",
   "parcelFoundTitle": "Parcela {label}",
   "parcelFoundKo": "KO {ko}",
+  "parcelFoundOwnersLoading": "Iščem lastnike …",
+  "ownerAndMore": "{first} in še {count}",
+  "@ownerAndMore": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownersTitle": "Lastniki ({count})",
+  "@ownersTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ownersShowAll": "Pokaži vse ({count})",
+  "@ownersShowAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "parcelFoundHide": "Skrij",
   "parcelFoundOpen": "Odpri parcelo",
   "parcelFoundImport": "Uvozi parcelo",
@@ -1235,6 +1312,7 @@
   "parcelPointsCount": "{count} točk",
   "parcelInfoAdded": "Dodano",
   "parcelInfoParcel": "Parcela",
+  "parcelInfoKo": "Katastrska občina",
   "parcelNotSet": "Ni določen",
   "parcelFromCadastre": "iz katastra (GURS)",
   "parcelNoNotes": "Ni opomb",
@@ -1414,6 +1492,8 @@
   "aboutSectionLegal": "Pravne informacije",
   "aboutSectionOpenSource": "Odprtokodne knjižnice",
   "aboutSectionSupport": "Podpora",
+  "aboutSectionGeneral": "Splošno",
+  "aboutSectionMapCache": "Predpomnilnik zemljevida",
   "aboutTagline": "Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji",
   "aboutInfoTitle": "Informacije o aplikaciji",
   "aboutVersion": "Verzija",
@@ -1541,6 +1621,8 @@
     }
   },
   "aboutPickRegionsTitle": "Izberi statistične regije",
+  "aboutCountrySi": "Slovenija",
+  "aboutCountryHr": "Hrvaška",
   "aboutRegionParcels": " • {count} parcel",
   "@aboutRegionParcels": {
     "placeholders": {

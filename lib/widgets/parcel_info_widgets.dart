@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/parcel.dart';
+import '../services/ko_locator.dart';
 import '../services/owner_lookup_service.dart';
 import '../screens/forest_tab.dart';
 import '../l10n/l10n.dart';
+import 'owner_list.dart';
 
-/// Info row widget for displaying label-value pairs
-class _InfoRow extends StatelessWidget {
+/// One fact about the parcel: a tinted icon, a small label and the value in
+/// large type, so it reads at arm's length outdoors.
+class _InfoTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
 
-  const _InfoRow({
+  const _InfoTile({
     required this.icon,
     required this.label,
     required this.value,
@@ -19,31 +22,43 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 20,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '$label:',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: cs.primary),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            value,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-            textAlign: TextAlign.end,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -59,10 +74,12 @@ class ParcelInfoCard extends StatelessWidget {
     required this.onEditForestType,
   });
 
-  /// KO code, enriched with the cadastral municipality name when the owners
-  /// DB is imported, e.g. "STARI TRG (1650)" instead of "1650".
+  /// KO name with its number, e.g. "STARI TRG (1650)", from the owners DB or
+  /// the bundled KO index (which covers Croatia too); the bare number when
+  /// neither knows it.
   String _koValue(int? sifko) {
-    final name = OwnerLookupService.instance.koName(sifko);
+    final name = OwnerLookupService.instance.koName(sifko) ??
+        KoLocator.instance.bySifko(sifko)?.name;
     return name != null ? '$name ($sifko)' : sifko.toString();
   }
 
@@ -120,25 +137,27 @@ class ParcelInfoCard extends StatelessWidget {
               ],
             ),
             const Divider(height: 24),
-            _InfoRow(
-              icon: Icons.calendar_today,
-              label: context.l10n.parcelInfoAdded,
-              value: dateFormat.format(parcel.createdAt),
-            ),
             if (parcel.isCadastral) ...[
-              const SizedBox(height: 8),
-              _InfoRow(
-                icon: Icons.location_city,
-                label: 'KO',
-                value: _koValue(parcel.cadastralMunicipality),
+              // The KO index loads lazily; rebuild with the name once it has.
+              FutureBuilder<void>(
+                future: KoLocator.instance.ensureLoaded(),
+                builder: (context, _) => _InfoTile(
+                  icon: Icons.location_city,
+                  label: context.l10n.parcelInfoKo,
+                  value: _koValue(parcel.cadastralMunicipality),
+                ),
               ),
-              const SizedBox(height: 8),
-              _InfoRow(
+              _InfoTile(
                 icon: Icons.tag,
                 label: context.l10n.parcelInfoParcel,
                 value: parcel.parcelNumber!,
               ),
             ],
+            _InfoTile(
+              icon: Icons.calendar_today,
+              label: context.l10n.parcelInfoAdded,
+              value: dateFormat.format(parcel.createdAt),
+            ),
           ],
         ),
       ),
@@ -146,75 +165,92 @@ class ParcelInfoCard extends StatelessWidget {
   }
 }
 
-/// Owner information card
+/// Owner information card: one row per owner (with share and address when
+/// known), the first few inline and the rest behind "Pokaži vse".
 class ParcelOwnerCard extends StatelessWidget {
+  /// Owners typed in or saved on import, joined with [OwnerInfo.separator].
   final String? owner;
   final VoidCallback onEdit;
 
-  /// Owner name(s) looked up from the imported cadastral owners database.
-  /// Shown (read-only, labelled "iz katastra") only when the manual [owner]
-  /// field is empty.
-  final String? lookedUpOwner;
-  final String? lookedUpAddress;
+  /// Owners looked up from the cadastre. Their names show when [owner] is
+  /// empty; their shares and addresses fill in the rows either way.
+  final OwnerInfo? lookedUp;
+
+  static const _inline = 3;
 
   const ParcelOwnerCard({
     super.key,
     required this.owner,
     required this.onEdit,
-    this.lookedUpOwner,
-    this.lookedUpAddress,
+    this.lookedUp,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hasManual = owner != null && owner!.isNotEmpty;
-    final hasLookupOwner = lookedUpOwner != null && lookedUpOwner!.isNotEmpty;
-    final hasLookupAddress =
-        lookedUpAddress != null && lookedUpAddress!.isNotEmpty;
+    final manual = OwnerInfo.split(owner);
+    final lookedUpOwners = lookedUp?.owners ?? const <String>[];
+    final names = manual.isNotEmpty ? manual : lookedUpOwners;
+    final fromCadastre = manual.isEmpty && lookedUpOwners.isNotEmpty;
+    final hasHolderAddresses =
+        lookedUp?.holders.any((h) => h.address != null) ?? false;
+    // A parcel-level address (Slovenian owners DB) when there are no
+    // per-owner ones.
+    final address = hasHolderAddresses ? null : lookedUp?.address;
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
 
-    // Owner name: manual takes priority, otherwise the looked-up name.
-    final name = hasManual ? owner : (hasLookupOwner ? lookedUpOwner : null);
-    // Show the looked-up address (NASLOV, OBČINA) whenever available; show the
-    // GURS caption whenever any data comes from the cadastre.
-    final showsCadastre = hasLookupAddress || (!hasManual && hasLookupOwner);
-
-    Widget subtitle;
-    if (name == null) {
-      subtitle = Text(context.l10n.parcelNotSet);
-    } else {
-      subtitle = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(name),
-          if (hasLookupAddress)
-            Text(
-              lookedUpAddress!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: Text(
+              names.length > 1
+                  ? context.l10n.ownersTitle(names.length)
+                  : context.l10n.parcelOwnerTitle,
             ),
-          if (showsCadastre)
-            Text(
-              context.l10n.parcelFromCadastre,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.primary,
-                fontStyle: FontStyle.italic,
+            subtitle: names.isEmpty ? Text(context.l10n.parcelNotSet) : null,
+            trailing: const Icon(Icons.edit),
+            onTap: onEdit,
+          ),
+          if (names.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final name in names.take(_inline))
+                    OwnerTile(
+                      holder: lookedUp?.holder(name) ?? OwnerHolder(name),
+                      dense: true,
+                    ),
+                  if (names.length > _inline)
+                    TextButton.icon(
+                      onPressed: () => OwnersSheet.show(
+                        context,
+                        owners: names,
+                        info: lookedUp,
+                      ),
+                      icon: const Icon(Icons.people_outline),
+                      label: Text(context.l10n.ownersShowAll(names.length)),
+                    ),
+                  if (address != null && address.isNotEmpty)
+                    Text(address, style: muted),
+                  if (fromCadastre || address != null)
+                    Text(
+                      context.l10n.parcelFromCadastre,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                ],
               ),
             ),
         ],
-      );
-    }
-
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.person),
-        title: Text(context.l10n.parcelOwnerTitle),
-        subtitle: subtitle,
-        isThreeLine: name != null && (hasLookupAddress || showsCadastre),
-        trailing: const Icon(Icons.edit),
-        onTap: onEdit,
       ),
     );
   }
