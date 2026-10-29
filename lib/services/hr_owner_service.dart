@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
+import 'cache_settings.dart';
 import 'owner_lookup_service.dart';
 
 /// Holders (posjednici) of a Croatian parcel, fetched from the public DGU
@@ -57,11 +58,13 @@ class HrOwnerService {
     String parcela,
     String? parcelId,
   ) async {
+    // The HTTP cache switch in About covers this cache too.
+    final useCache = CacheSettings.instance.httpEnabled;
     final stored = await _load();
-    final hit = stored[key];
+    final hit = useCache ? stored[key] : null;
     if (hit is Map<String, dynamic>) return _fromJson(hit);
     final info = await _fetch(sifko, parcela, parcelId);
-    if (info != null) {
+    if (info != null && useCache) {
       stored[key] = _toJson(info);
       unawaited(_save(stored));
     }

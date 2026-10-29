@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/parcel.dart';
 import '../services/ko_locator.dart';
 import '../services/owner_lookup_service.dart';
+import '../services/si_valuation_service.dart';
+import 'sheet_parts.dart';
 import '../screens/forest_tab.dart';
 import '../l10n/l10n.dart';
 import 'owner_list.dart';
@@ -250,6 +253,310 @@ class ParcelOwnerCard extends StatelessWidget {
                 ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Whole euros above 10, cents below, as GURS shows them.
+String euros(BuildContext context, num value) {
+  final digits = value.abs() < 10 ? 2 : 0;
+  return NumberFormat.decimalPatternDigits(
+    locale: context.l10n.localeName,
+    decimalDigits: digits,
+  ).format(value);
+}
+
+/// "3.190 € · 0,91 €/m²" for one-line places.
+String valuationSummary(BuildContext context, ParcelValuation v) {
+  final perM2 = v.perSquareMeter;
+  return [
+    '${euros(context, v.total)} €',
+    if (perM2 != null) context.l10n.valuationPerM2(euros(context, perM2)),
+  ].join(' · ');
+}
+
+String _modelName(BuildContext context, String model) {
+  final l10n = context.l10n;
+  return switch (model) {
+    'GOZ' => l10n.valuationModelGOZ,
+    'KME' => l10n.valuationModelKME,
+    'STZ' => l10n.valuationModelSTZ,
+    'ZPS' => l10n.valuationModelZPS,
+    'DRZ' => l10n.valuationModelDRZ,
+    _ => model,
+  };
+}
+
+/// "Parc. 456/4" with "KO 1650 BABNA POLICA" on the line under it.
+String _parcelLine(BuildContext context, ParcelValuation v) {
+  final name = KoLocator.instance.bySifko(v.sifko)?.name;
+  return '${context.l10n.mapTabParcelShort(v.parcela)}\n'
+      '${context.l10n.parcelFoundKo(name != null ? '${v.sifko} $name' : '${v.sifko}')}';
+}
+
+/// GURS generalised market value of a Slovenian parcel on the parcel page:
+/// a card around [ParcelValuationView]. Hidden when GURS has no answer.
+class ParcelValuationCard extends StatelessWidget {
+  final Future<ParcelValuation?> valuation;
+
+  const ParcelValuationCard({super.key, required this.valuation});
+
+  /// The full breakdown of [v] in a sheet, for places that show only the
+  /// one-line summary (the map's long-press quick view, the search result).
+  static Future<void> show(BuildContext context, ParcelValuation v) {
+    return showModalBottomSheet<void>(
+      context: context,
+      // Above the tab bar, not inside the tab's navigator.
+      useRootNavigator: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SheetHandle(),
+              SheetHeader(
+                icon: Icons.euro,
+                title: context.l10n.valuationTitle,
+                subtitle: _parcelLine(context, v),
+              ),
+              const SizedBox(height: 12),
+              ParcelValuationView(valuation: v),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ParcelValuation?>(
+      future: valuation,
+      builder: (context, snapshot) {
+        final v = snapshot.data;
+        if (v != null) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.euro,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          context.l10n.valuationTitle,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ParcelValuationView(valuation: v),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        if (snapshot.connectionState == ConnectionState.done) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Card(
+            child: ListTile(
+              leading: const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              title: Text(context.l10n.valuationTitle),
+              subtitle: Text(context.l10n.valuationLoading),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The valuation itself: the total and €/m² in large type with the kind of
+/// land under it, a row per kind only when there are several, the forest
+/// factors with a plain-words line each, and the source with a link to GURS.
+class ParcelValuationView extends StatelessWidget {
+  final ParcelValuation valuation;
+
+  const ParcelValuationView({super.key, required this.valuation});
+
+  /// "Gozd · raven 6 od 10".
+  static String _partLine(BuildContext context, ValuationPart part) => [
+        _modelName(context, part.model),
+        if (part.level != null)
+          context.l10n.valuationLevel(part.level!.replaceAll('/', ' od ')),
+      ].join(' · ');
+
+  @override
+  Widget build(BuildContext context) {
+    final v = valuation;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final l10n = context.l10n;
+    final muted = theme.textTheme.bodyMedium?.copyWith(
+      color: cs.onSurfaceVariant,
+    );
+    final perM2 = v.perSquareMeter;
+    final date = v.modelDate;
+    final single = v.parts.length == 1;
+    final shareFormat = NumberFormat.decimalPatternDigits(
+      locale: l10n.localeName,
+      decimalDigits: 0,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (v.isUnvalued)
+          Text(l10n.valuationUnvalued, style: theme.textTheme.bodyLarge)
+        else ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '${euros(context, v.total)} €',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: cs.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (perM2 != null)
+                Text(
+                  l10n.valuationPerM2(euros(context, perM2)),
+                  style: theme.textTheme.titleMedium,
+                ),
+            ],
+          ),
+          if (single)
+            Text(_partLine(context, v.parts.single), style: muted),
+        ],
+        // Several kinds of land: each with its share and value.
+        if (!single) ...[
+          const SizedBox(height: 8),
+          for (final part in v.parts)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _partLine(context, part),
+                          style: theme.textTheme.bodyLarge,
+                        ),
+                        Text(
+                          '${shareFormat.format(part.sharePercent)} %',
+                          style: muted,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Land under a building is valued with the building.
+                  if (!part.isUnderBuilding)
+                    Text(
+                      '${euros(context, part.value)} €',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+        if (v.isForest) ...[
+          const SizedBox(height: 8),
+          Divider(height: 16, color: cs.outlineVariant),
+          if (v.boniteta != null)
+            _factor(context, l10n.valuationBoniteta,
+                l10n.valuationBonitetaHint, '${v.boniteta}'),
+          if (v.siteIndex != null)
+            _factor(context, l10n.valuationSiteIndex,
+                l10n.valuationSiteIndexHint, '${v.siteIndex}'),
+          if (v.openness != null)
+            _factor(context, l10n.valuationOpenness,
+                l10n.valuationOpennessHint, '${v.openness} %'),
+        ],
+        Divider(height: 32, color: cs.outlineVariant),
+        Text(
+          date != null
+              ? l10n.valuationSource(
+                  DateFormat('MMMM yyyy', l10n.localeName).format(date),
+                )
+              : l10n.valuationSourceUndated,
+          style: muted,
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            onPressed: () => launchUrl(
+              Uri.parse(v.gursUrl),
+              mode: LaunchMode.externalApplication,
+            ),
+            icon: const Icon(Icons.open_in_new, size: 18),
+            label: Text(l10n.valuationOpenGurs),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// One forest factor: label with a plain-words line under it, value right.
+  Widget _factor(
+    BuildContext context,
+    String label,
+    String hint,
+    String value,
+  ) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: theme.textTheme.bodyLarge),
+                Text(
+                  hint,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            value,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );

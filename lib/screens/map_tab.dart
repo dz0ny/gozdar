@@ -20,6 +20,8 @@ import '../models/navigation_target.dart';
 import '../models/log_entry.dart';
 import '../services/database_service.dart';
 import '../services/hr_owner_service.dart';
+import '../services/auction_service.dart';
+import '../services/si_valuation_service.dart';
 import '../services/ko_locator.dart';
 import '../widgets/download_progress_view.dart';
 import '../widgets/owner_list.dart';
@@ -41,6 +43,7 @@ import '../widgets/navigate_to_sheet.dart';
 import '../widgets/map_controls.dart';
 import '../widgets/map_layer_selector.dart';
 import '../widgets/map_dialogs.dart';
+import '../widgets/sheet_parts.dart';
 import '../widgets/saved_locations_sheet.dart';
 import '../widgets/parcel_search_dialog.dart';
 import '../widgets/map_marker_renderer.dart';
@@ -337,6 +340,12 @@ class MapTabState extends State<MapTab> {
   // When set, a non-modal import panel is shown over the map for this parcel.
   // The map stays pannable while the panel is open.
   CadastralParcel? _pendingImportParcel;
+
+  /// Long-press point the import panel was opened from, for its back button.
+  LatLng? _importBackTo;
+
+  /// Long-press point measuring was started from, for its back button.
+  LatLng? _measureBackTo;
   // True while a PDF is being generated for the pending import panel.
   bool _printingParcel = false;
   _MeasurementState _measurement = const _MeasurementState();
@@ -393,6 +402,14 @@ class MapTabState extends State<MapTab> {
           ),
       ];
     });
+  }
+
+  /// Gold of the court auctions layer.
+  static const _auctionGold = Color(0xFFFFB300);
+
+  /// Redraw when the auction list, its outlines or the layer toggle change.
+  void _onAuctionsChanged() {
+    if (mounted) setState(() {});
   }
 
   /// The public-owner category a parcel should be highlighted with, or null
@@ -472,6 +489,10 @@ class MapTabState extends State<MapTab> {
   @override
   void initState() {
     super.initState();
+    AuctionService.instance.addListener(_onAuctionsChanged);
+    if (AuctionService.instance.visible) {
+      unawaited(AuctionService.instance.ensureLoaded());
+    }
     _locationTracker = LocationTracker(
       onLocationUpdate: (position, heading) {
         if (mounted) {
@@ -516,6 +537,7 @@ class MapTabState extends State<MapTab> {
 
   @override
   void dispose() {
+    AuctionService.instance.removeListener(_onAuctionsChanged);
     _offlineZoomDebounce?.cancel();
     _locationTracker.dispose();
     _mapController.dispose();
@@ -588,6 +610,7 @@ class MapTabState extends State<MapTab> {
     final result = await MapDialogs.showAddLocationDialog(
       context: context,
       position: position,
+      onBack: () => _showLongPressMenu(position),
     );
 
     if (result != null) {
@@ -627,6 +650,7 @@ class MapTabState extends State<MapTab> {
     final name = await MapDialogs.showAddSecnjaDialog(
       context: context,
       position: position,
+      onBack: () => _showLongPressMenu(position),
     );
 
     if (name != null) {
@@ -870,15 +894,15 @@ class MapTabState extends State<MapTab> {
     _offlineOutlinePolygons = _offlineParcels.map((p) {
       // Colour the outline by public-owner category when on; otherwise the
       // default red kataster outline.
-      final cat = _highlightCategory(p);
+      final color = _highlightCategory(p)?.color;
       return Polygon(
         points: p.polygon,
         color: const Color(0x00000000),
-        borderColor: cat?.color ?? const Color(0xFFD50000),
+        borderColor: color ?? const Color(0xFFD50000),
         borderStrokeWidth: 2.5,
         label: labels ? p.parcelNumber : null,
         labelStyle: TextStyle(
-          color: cat?.color ?? const Color(0xFFB71C1C),
+          color: color ?? const Color(0xFFB71C1C),
           fontWeight: FontWeight.w700,
           fontSize: 12,
           // White hard-edge outline so red numbers stay readable over aerial
@@ -1259,7 +1283,10 @@ class MapTabState extends State<MapTab> {
         context.read<NavigationNotifier>().navigateToForestWithParcel(
           existingParcel,
         );
-        context.go(AppRoutes.parcelDetail(existingParcel.id));
+        context.go(
+          AppRoutes.parcelDetail(existingParcel.id),
+          extra: existingParcel,
+        );
       }
       return;
     }
@@ -1278,6 +1305,31 @@ class MapTabState extends State<MapTab> {
       _pendingImportParcel = null;
       _previewParcel = null;
     });
+  }
+
+  /// "KO 1650 BABNA POLICA" (or just the number when the name is unknown),
+  /// shown on a line of its own under the parcel number.
+  String _koLine(int ko, String? koName) => L10n.current.parcelFoundKo(
+        koName != null && koName.isNotEmpty ? '$ko $koName' : '$ko',
+      );
+
+  /// KO line for a parcel about to be imported.
+  String _importKo(CadastralParcel parcel) {
+    final ko = parcel.cadastralMunicipality;
+    return _koLine(
+      ko,
+      OwnerLookupService.instance.koName(ko) ??
+          KoLocator.instance.bySifko(ko)?.name,
+    );
+  }
+
+  /// Back from the import panel: close it and, when it came from the
+  /// long-press menu, open that menu again for the same point.
+  void _backFromImportPanel() {
+    final backTo = _importBackTo;
+    _importBackTo = null;
+    _dismissImportPanel();
+    if (backTo != null) _showLongPressMenu(backTo);
   }
 
   /// Confirm the import from the panel, then close it and clear the preview.
@@ -1337,60 +1389,41 @@ class MapTabState extends State<MapTab> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Drag handle — swipe the panel down to dismiss.
-                      Center(
-                        child: Container(
-                          width: 36,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: cs.onSurfaceVariant.withValues(alpha: 0.4),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+                      // Swipe the panel down to dismiss.
+                      const SheetHandle(),
+                      SheetHeader(
+                        icon: Icons.download,
+                        color: Colors.blue,
+                        title: L10n.current.mapTabImportParcelTitle,
+                        onBack:
+                            _printingParcel ? () {} : _backFromImportPanel,
+                      ),
+                      const SizedBox(height: 8),
+                      MapDialogs.importParcelDetails(
+                        context,
+                        parcel,
+                        title: L10n.current.mapTabParcelShort(
+                          parcel.parcelNumber,
                         ),
+                        koLine: _importKo(parcel),
                       ),
-                      Text(
-                        L10n.current.mapTabImportParcelTitle,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
+                      const SizedBox(height: 8),
+                      SheetTileRow([
+                        SheetTile(
+                          icon: _printingParcel
+                              ? Icons.hourglass_top
+                              : Icons.print,
+                          label: L10n.current.mapTabPrint,
+                          color: cs.onSurfaceVariant,
+                          onTap: _printingParcel ? null : _printPendingParcel,
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      MapDialogs.importParcelInfoCard(context, parcel),
-                      const SizedBox(height: 16),
-                      Text(
-                        L10n.current.mapTabImportParcelQuestion,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton.icon(
-                            onPressed: _printingParcel
-                                ? null
-                                : _printPendingParcel,
-                            icon: _printingParcel
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.print),
-                            label: Text(L10n.current.mapTabPrint),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton.icon(
-                            onPressed: _printingParcel
-                                ? null
-                                : _confirmImportPanel,
-                            icon: const Icon(Icons.download),
-                            label: Text(L10n.current.mapTabImport),
-                          ),
-                        ],
-                      ),
+                        SheetTile(
+                          icon: Icons.download,
+                          label: L10n.current.mapTabImport,
+                          color: Colors.blue,
+                          onTap: _printingParcel ? null : _confirmImportPanel,
+                        ),
+                      ]),
                     ],
                   ),
                 ),
@@ -1582,6 +1615,12 @@ class MapTabState extends State<MapTab> {
         // loaded); otherwise nothing rebuilds them until the next pan.
         _refreshVlake();
       },
+      auctionsVisible: AuctionService.instance.visible,
+      onAuctionsToggled: (visible) async {
+        await AuctionService.instance.setVisible(visible);
+        // The tint follows through _onAuctionsChanged once the list loads.
+        if (visible) unawaited(AuctionService.instance.ensureLoaded());
+      },
       publicParcelsAvailable: ParcelLookupService.instance.isAvailable,
       onPublicParcelsChanged: () {
         // A category toggle changes which parcels are tinted. When the
@@ -1632,9 +1671,13 @@ class MapTabState extends State<MapTab> {
     // as a compact header in the sheet.
     String? parcelTitle;
     String? parcelSubtitle;
+    String? parcelKo;
+    OwnerInfo? parcelOwnerInfo;
     String? parcelOwner;
     String? parcelAddress;
     Future<OwnerInfo?>? parcelOwnerLookup;
+    Future<ParcelValuation?>? parcelValuationLookup;
+    (int, String)? parcelRef;
     PublicOwnerCategory? parcelPublicCategory;
     if (offlineParcelAtPosition != null) {
       final p = offlineParcelAtPosition;
@@ -1658,21 +1701,21 @@ class MapTabState extends State<MapTab> {
           parcelId: p.id,
         );
       }
+      // Slovenian value from the GURS register (cached on disk).
+      if (SiValuationService.covers(p.cadastralMunicipality)) {
+        parcelValuationLookup = SiValuationService.instance.lookup(
+          p.cadastralMunicipality,
+          p.parcelNumber,
+        );
+        parcelRef = (p.cadastralMunicipality, p.parcelNumber);
+      }
       parcelPublicCategory = ownerSvc.publicCategory(
         p.cadastralMunicipality,
         p.parcelNumber,
       );
-      parcelTitle =
-          (koName != null && koName.isNotEmpty)
-          ? L10n.current.mapTabParcelTitleWithKo(
-              p.parcelNumber,
-              p.cadastralMunicipality,
-              koName,
-            )
-          : L10n.current.mapTabParcelTitle(
-              p.parcelNumber,
-              p.cadastralMunicipality,
-            );
+      parcelTitle = L10n.current.mapTabParcelShort(p.parcelNumber);
+      parcelKo = _koLine(p.cadastralMunicipality, koName);
+      parcelOwnerInfo = ownerInfo;
       parcelSubtitle = p.area > 0 ? _formatArea(p.area) : null;
     }
 
@@ -1683,18 +1726,28 @@ class MapTabState extends State<MapTab> {
       onAddLocation: () => _showAddLocationDialog(position),
       onAddLog: () => _showAddLogDialog(position),
       onAddSecnja: () => _showAddSecnjaDialog(position),
-      onImportParcel: () => _queryParcelAtLocation(position),
+      onImportParcel: () {
+        // Back on the import panel returns to this menu.
+        _importBackTo = position;
+        _queryParcelAtLocation(position);
+      },
       onViewParcel: parcelAtPosition != null
           ? () => _navigateToParcelDetail(parcelAtPosition!)
           : null,
       parcelTitle: parcelTitle,
       parcelSubtitle: parcelSubtitle,
+      parcelKo: parcelKo,
+      parcelOwnerInfo: parcelOwnerInfo,
       parcelOwner: parcelOwner,
       parcelAddress: parcelAddress,
       parcelOwnerLookup: parcelOwnerLookup,
+      parcelValuationLookup: parcelValuationLookup,
+      parcelRef: parcelRef,
       parcelPublicCategory: parcelPublicCategory,
-      onMeasureDistance: () => _startMeasurement(_MeasurementTool.distance),
-      onMeasureArea: () => _startMeasurement(_MeasurementTool.area),
+      onMeasureDistance: () =>
+          _startMeasurement(_MeasurementTool.distance, backTo: position),
+      onMeasureArea: () =>
+          _startMeasurement(_MeasurementTool.area, backTo: position),
       onNavigate: () {
         // Navigate straight to the pressed point; name it after the parcel
         // under the press when there is one.
@@ -1715,6 +1768,7 @@ class MapTabState extends State<MapTab> {
             );
             showCompassForTarget();
           },
+          onBack: () => _showLongPressMenu(position),
         );
       },
       // Show Mejniki whenever the offline kataster is loaded (a permanent
@@ -1751,10 +1805,20 @@ class MapTabState extends State<MapTab> {
     }
   }
 
-  void _startMeasurement(_MeasurementTool tool) {
+  void _startMeasurement(_MeasurementTool tool, {LatLng? backTo}) {
+    _measureBackTo = backTo;
     setState(() {
       _measurement = _MeasurementState(tool: tool);
     });
+  }
+
+  /// Back from measuring: stop and, when it started from the long-press
+  /// menu, open that menu again for the same point.
+  void _backFromMeasurement() {
+    final backTo = _measureBackTo;
+    _measureBackTo = null;
+    _closeMeasurement();
+    if (backTo != null) _showLongPressMenu(backTo);
   }
 
   void _addMeasurementPoint(LatLng point) {
@@ -1970,125 +2034,80 @@ class MapTabState extends State<MapTab> {
 
   Widget _buildMeasurementPanel(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final isArea = _measurement.tool == _MeasurementTool.area;
     return Positioned(
       left: 0,
       right: 0,
       bottom: 0,
       child: Material(
-        elevation: 12,
+        elevation: 8,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        color: cs.surfaceContainerHighest,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            border: Border(top: BorderSide(color: cs.primary, width: 2)),
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+        color: cs.surface,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+              const SheetHandle(),
+              SheetHeader(
+                // Same icons and tints as the Merjenje tiles.
+                icon: isArea ? Icons.square_foot : Icons.route,
+                color: isArea ? Colors.deepPurple.shade200 : Colors.teal,
+                title: isArea
+                    ? L10n.current.mapTabMeasureArea
+                    : L10n.current.mapTabMeasureDistance,
+                subtitle: _measurementHintLabel(),
+                onBack: _backFromMeasurement,
               ),
-              Row(
-                children: [
-                  Icon(
-                    _measurement.tool == _MeasurementTool.area
-                        ? Icons.square_foot
-                        : Icons.route,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _measurement.tool == _MeasurementTool.area
-                          ? L10n.current.mapTabMeasureArea
-                          : L10n.current.mapTabMeasureDistance,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _measurementValueLabel(),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: cs.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
                       ),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: _closeMeasurement,
-                    child: Text(L10n.current.commonClose),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
-                      _measurementValueLabel(),
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ),
-                  _measurementUnitSelector(),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _measurementHintLabel(),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    _measurementUnitSelector(),
+                  ],
                 ),
               ),
               const SizedBox(height: 8),
-              // Primary action: add the point currently under the crosshair.
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _measurement.isFinished
+              SheetTileRow([
+                SheetTile(
+                  icon: Icons.undo,
+                  label: L10n.current.mapTabUndo,
+                  color: cs.onSurfaceVariant,
+                  onTap: _measurement.points.isEmpty
+                      ? null
+                      : _undoMeasurementPoint,
+                ),
+                // Main action: add the point under the crosshair.
+                SheetTile(
+                  icon: Icons.add_location_alt,
+                  label: L10n.current.mapTabAddPoint,
+                  color: cs.primary,
+                  onTap: _measurement.isFinished
                       ? null
                       : _addMeasurementPointAtCrosshair,
-                  icon: const Icon(Icons.add_location_alt, size: 20),
-                  label: Text(L10n.current.mapTabAddPoint),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _measurement.points.isEmpty
-                          ? null
-                          : _undoMeasurementPoint,
-                      icon: const Icon(Icons.undo, size: 18),
-                      label: Text(L10n.current.mapTabUndo),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed:
-                          (_measurement.hasEnoughPoints &&
-                              !_measurement.isFinished)
-                          ? _finishMeasurement
-                          : null,
-                      icon: const Icon(Icons.check, size: 18),
-                      label: Text(L10n.current.mapTabFinish),
-                    ),
-                  ),
-                ],
-              ),
+                SheetTile(
+                  icon: Icons.check,
+                  label: L10n.current.mapTabFinish,
+                  color: Colors.green.shade300,
+                  onTap: (_measurement.hasEnoughPoints &&
+                          !_measurement.isFinished)
+                      ? _finishMeasurement
+                      : null,
+                ),
+              ]),
             ],
           ),
         ),
@@ -2233,6 +2252,8 @@ class MapTabState extends State<MapTab> {
                     _refreshOfflineParcels();
                     // Offer to download the region's parcels when panning into it.
                     _maybePromptRegionDownload(event.camera.center);
+                    // A region downloaded since adds auction outlines.
+                    AuctionService.instance.refreshOutlines();
                   }
                   // Track zoom level for dynamic marker sizing
                   if (event.camera.zoom != _currentZoom) {
@@ -2315,6 +2336,21 @@ class MapTabState extends State<MapTab> {
                           ),
                         )
                         .toList(),
+                  ),
+                // Court auctions in downloaded regions, gold, at every zoom
+                // like the saved parcels.
+                if (AuctionService.instance.visible &&
+                    AuctionService.instance.outlines.isNotEmpty)
+                  PolygonLayer(
+                    polygons: [
+                      for (final p in AuctionService.instance.outlines)
+                        Polygon(
+                          points: p.polygon,
+                          color: _auctionGold.withValues(alpha: 0.35),
+                          borderColor: _auctionGold,
+                          borderStrokeWidth: 3.0,
+                        ),
+                    ],
                   ),
                 // Saved parcels as polygons
                 if (mapProvider.parcels.isNotEmpty)
@@ -2547,8 +2583,11 @@ class MapTabState extends State<MapTab> {
         onLocationsPressed: mapProvider.locations.isNotEmpty
             ? _showLocationsSheet
             : null,
-        hideBottomControls:
-            _measurement.isActive || _pendingImportParcel != null,
+        // The found-parcel sheet (open while _searchedParcel is set) would
+        // sit under the GPS button.
+        hideBottomControls: _measurement.isActive ||
+            _pendingImportParcel != null ||
+            _searchedParcel != null,
       ),
     );
   }
@@ -2792,7 +2831,10 @@ class MapTabState extends State<MapTab> {
           context.read<NavigationNotifier>().navigateToForestWithParcel(
             existingParcel,
           );
-          context.go(AppRoutes.parcelDetail(existingParcel.id));
+          context.go(
+            AppRoutes.parcelDetail(existingParcel.id),
+            extra: existingParcel,
+          );
         } else {
           // Parcel doesn't exist - import it
           await _importSearchedParcel(parcel);
@@ -2853,7 +2895,10 @@ class MapTabState extends State<MapTab> {
             context.read<NavigationNotifier>().navigateToForestWithParcel(
               existingParcel,
             );
-            context.go(AppRoutes.parcelDetail(existingParcel.id));
+            context.go(
+              AppRoutes.parcelDetail(existingParcel.id),
+              extra: existingParcel,
+            );
           }
         }
         return;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../services/parcel_lookup_service.dart';
+import 'kataster_share_tile.dart';
 
 /// Draggable sheet for picking offline kataster regions to download, grouped
 /// by country. The country matching the app language comes first. Pops with
@@ -164,6 +165,11 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
                     );
                   },
                 ),
+              ],
+              // Sharing only makes sense once this phone has regions.
+              if (ParcelLookupService.instance.isAvailable) ...[
+                const SliverToBoxAdapter(child: Divider(height: 32)),
+                const SliverToBoxAdapter(child: KatasterShareTile()),
               ],
               const SliverToBoxAdapter(child: SizedBox(height: 8)),
             ],

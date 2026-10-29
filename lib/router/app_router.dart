@@ -95,6 +95,10 @@ GoRouter createRouter({required bool showOnboarding, String? initialLocation}) {
                   // Parcel detail nested under forest
                   GoRoute(
                     path: 'parcel/:id',
+                    // The screen needs the Parcel itself; without it (a bare
+                    // link) fall back to the list instead of crashing.
+                    redirect: (context, state) =>
+                        state.extra is Parcel ? null : AppRoutes.forest,
                     builder: (context, state) {
                       final parcel = state.extra as Parcel;
                       return ParcelDetailScreen(parcel: parcel);

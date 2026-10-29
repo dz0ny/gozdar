@@ -26,6 +26,10 @@ class MapLayerSelector extends StatefulWidget {
   final bool publicParcelsAvailable;
   final VoidCallback? onPublicParcelsChanged;
 
+  /// Court auctions layer (Slovenia), under Posebno.
+  final bool auctionsVisible;
+  final ValueChanged<bool>? onAuctionsToggled;
+
   const MapLayerSelector({
     super.key,
     required this.currentBaseLayer,
@@ -40,6 +44,8 @@ class MapLayerSelector extends StatefulWidget {
     this.onVlakeToggled,
     this.publicParcelsAvailable = false,
     this.onPublicParcelsChanged,
+    this.auctionsVisible = false,
+    this.onAuctionsToggled,
   });
 
   /// Show the layer selector as a modal bottom sheet
@@ -57,6 +63,8 @@ class MapLayerSelector extends StatefulWidget {
     ValueChanged<bool>? onVlakeToggled,
     bool publicParcelsAvailable = false,
     VoidCallback? onPublicParcelsChanged,
+    bool auctionsVisible = false,
+    ValueChanged<bool>? onAuctionsToggled,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -84,6 +92,8 @@ class MapLayerSelector extends StatefulWidget {
             onVlakeToggled: onVlakeToggled,
             publicParcelsAvailable: publicParcelsAvailable,
             onPublicParcelsChanged: onPublicParcelsChanged,
+            auctionsVisible: auctionsVisible,
+            onAuctionsToggled: onAuctionsToggled,
           ),
         ),
       ),
@@ -105,6 +115,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
   late MapLayer _selectedBaseLayer;
   late Set<MapLayerType> _selectedOverlays;
   late bool _vlakeVisible;
+  late bool _auctionsVisible;
 
   @override
   void initState() {
@@ -115,6 +126,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     _selectedBaseLayer = widget.currentBaseLayer;
     _selectedOverlays = Set.from(widget.activeOverlays);
     _vlakeVisible = widget.vlakeVisible;
+    _auctionsVisible = widget.auctionsVisible;
 
     // Expand categories that have active overlays
     for (final category in OverlayCategory.values) {
@@ -129,6 +141,9 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     // user can see its toggle right away.
     if (widget.vlakeAvailable && _vlakeVisible) {
       _expandedCategories[OverlayCategory.infrastruktura] = true;
+    }
+    if (_auctionsVisible) {
+      _expandedCategories[OverlayCategory.posebno] = true;
     }
   }
 
@@ -497,8 +512,13 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
         category == OverlayCategory.infrastruktura && widget.vlakeAvailable;
     final showPublicParcelTiles =
         category == OverlayCategory.posebno && widget.publicParcelsAvailable;
+    final showAuctionsTile =
+        category == OverlayCategory.posebno && widget.onAuctionsToggled != null;
 
-    if (filteredLayers.isEmpty && !showVlakeTile && !showPublicParcelTiles) {
+    if (filteredLayers.isEmpty &&
+        !showVlakeTile &&
+        !showPublicParcelTiles &&
+        !showAuctionsTile) {
       return const SizedBox.shrink();
     }
 
@@ -507,6 +527,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
             .where((layer) => _selectedOverlays.contains(layer.type))
             .length +
         (showVlakeTile && _vlakeVisible ? 1 : 0) +
+        (showAuctionsTile && _auctionsVisible ? 1 : 0) +
         (showPublicParcelTiles
             ? PublicOwnerCategory.values
                 .where(PublicParcelSettings.instance.isOn)
@@ -583,6 +604,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
               children: [
                 ...filteredLayers.map((layer) => _buildOverlayTile(layer)),
                 if (showVlakeTile) _buildVlakeTile(),
+                if (showAuctionsTile) _buildAuctionsTile(),
                 if (showPublicParcelTiles) _buildPublicParcelTiles(),
               ],
             ),
@@ -649,6 +671,60 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Court auctions layer: pins on parcels currently up for auction.
+  Widget _buildAuctionsTile() {
+    void toggle() {
+      setState(() => _auctionsVisible = !_auctionsVisible);
+      widget.onAuctionsToggled?.call(_auctionsVisible);
+    }
+
+    return InkWell(
+      onTap: toggle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: Checkbox(
+                value: _auctionsVisible,
+                onChanged: (_) => toggle(),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.auctionLayer,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: _auctionsVisible
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    context.l10n.auctionLayerHint,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.gavel, color: Color(0xFFFFB300)),
           ],
         ),
       ),

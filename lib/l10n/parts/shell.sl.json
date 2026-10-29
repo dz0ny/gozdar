@@ -5,7 +5,7 @@
   "aboutSectionOpenSource": "Odprtokodne knjižnice",
   "aboutSectionSupport": "Podpora",
   "aboutSectionGeneral": "Splošno",
-  "aboutSectionMapCache": "Predpomnilnik zemljevida",
+  "aboutSectionMapCache": "Shramba",
   "aboutTagline": "Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji",
   "aboutInfoTitle": "Informacije o aplikaciji",
   "aboutVersion": "Verzija",
@@ -34,11 +34,11 @@
   "aboutOfflineOwnerSearchDesc": "Ko ni povezave, določi lastnika iz približnih mej parcel (lokalna baza).",
   "aboutVlake": "Vlake (gozdne vlake)",
   "aboutVlakeDesc": "Omogoči sloj — prikaže se v izbiri slojev (Infrastruktura)",
-  "aboutHttpCache": "Predpomnilnik HTTP",
-  "aboutHttpCacheDesc": "Predpomni odgovore državnih API-jev (prostor.zgs.gov.si).",
-  "aboutTileCache": "Predpomnilnik ploščic",
-  "aboutTileCacheDesc": "Predpomni karte (ločeno od HTTP predpomnilnika).",
-  "aboutClearMapCache": "Počisti predpomnilnik karte",
+  "aboutHttpCache": "Shranjuj podatke o parcelah",
+  "aboutHttpCacheDesc": "Lastniki, vrednosti in sloji ZGS ostanejo v telefonu, zato se hitreje odprejo in delujejo tudi brez signala.",
+  "aboutTileCache": "Shranjuj zemljevide",
+  "aboutTileCacheDesc": "Ogledani zemljevidi ostanejo v telefonu za delo brez signala.",
+  "aboutClearMapCache": "Izbriši shranjene zemljevide",
   "aboutPickSqlite": "Izberi datoteko .sqlite.",
   "aboutOwnersImported": "Uvozenih {count} lastnikov.",
   "@aboutOwnersImported": {
@@ -57,10 +57,10 @@
     }
   },
   "aboutOwnersRemoved": "Baza lastnikov odstranjena.",
-  "aboutClearCacheTitle": "Počisti predpomnilnik karte?",
+  "aboutClearCacheTitle": "Izbrišem shranjene zemljevide?",
   "aboutClearCacheBody": "Izbrisane bodo vse shranjene karte, tudi tiste, prenesene za delo brez povezave. Brez signala jih ne bo mogoče prikazati, dokler jih znova ne prenesete.",
-  "aboutCacheCleared": "Predpomnilnik karte počiščen.",
-  "aboutCacheClearFailed": "Brisanje predpomnilnika ni uspelo: {error}",
+  "aboutCacheCleared": "Shranjeni zemljevidi izbrisani.",
+  "aboutCacheClearFailed": "Brisanje ni uspelo: {error}",
   "@aboutCacheClearFailed": {
     "placeholders": {
       "error": {
@@ -90,8 +90,8 @@
   "aboutAddRegion": "Dodaj regijo",
   "aboutDownloadRegion": "Prenesi regijo",
   "aboutDownloadRegionHint": "Prenesi le svojo statistično regijo — priporočena povezava Wi-Fi.",
-  "aboutShareKataster": "Deli offline kataster",
-  "aboutShareKatasterActive": "Na voljo v lokalnem omrežju • najdenih naprav: {count}",
+  "aboutShareKataster": "Deli regije s telefoni v bližini",
+  "aboutShareKatasterActive": "Deljenje vključeno • telefonov v bližini: {count}",
   "@aboutShareKatasterActive": {
     "placeholders": {
       "count": {
@@ -99,7 +99,7 @@
       }
     }
   },
-  "aboutShareKatasterDesc": "Dovoli drugim napravam v istem omrežju prenos naloženih regij.",
+  "aboutShareKatasterDesc": "Telefoni v istem omrežju Wi-Fi lahko regije, ki ste jih že prenesli, dobijo od vas – hitreje in brez mobilnih podatkov.",
   "aboutPublicOwners": "javni lastniki",
   "aboutKatasterUpdateAvailable": "Na voljo je novejši kataster ({date})",
   "@aboutKatasterUpdateAvailable": {
@@ -241,7 +241,7 @@
     }
   },
   "aboutSrcZgsDesc": "Gozdarski sloji, sestoji, odseki, revirji, gozdni rezervati, varovalni gozdovi, požarna ogroženost, vetrolomi, podlubniki",
-  "aboutSrcGursDesc": "Ortofoto posnetki (2022-2024), kataster, katastrske občine, občine, upravne enote, DMR",
+  "aboutSrcGursDesc": "Ortofoto posnetki (2022-2024), kataster, katastrske občine, občine, upravne enote, DMR, vrednotenje nepremičnin",
   "aboutSrcOsmDesc": "Osnovni zemljevid in topografski podatki",
   "aboutSrcTopoDesc": "Topografski zemljevid (Seznam.cz)",
   "aboutSrcEsriDesc": "Satelitski posnetki in topografski zemljevid",

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../l10n/l10n.dart';
 import '../models/parcel.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/public_parcel_settings.dart';
+import '../services/si_valuation_service.dart';
 import 'owner_list.dart';
+import 'auction_sheet.dart';
+import 'parcel_info_widgets.dart';
+import 'sheet_parts.dart';
 
 /// Top-level groups in the long-press menu. Tapping a group drills into its
 /// sub-icons (replacing the row, with a back arrow to return).
@@ -30,19 +35,32 @@ class MapLongPressMenu extends StatefulWidget {
   final Parcel? existingParcel;
 
   /// Concise info about the parcel under the press, shown as a compact header.
-  /// [parcelTitle] is the main line (e.g. "Parc. 123/4 • KO 1234 Ime"),
+  /// [parcelTitle] is the main line (e.g. "Parc. 123/4"),
   /// [parcelSubtitle] a smaller line (e.g. the area "1.234 m²"), [parcelOwner]
   /// the owner(s) and [parcelAddress] their address, each on its own line. All
   /// null when no parcel sits under the long-press point (or the value is
   /// unknown).
   final String? parcelTitle;
   final String? parcelSubtitle;
+
+  /// "KO 1650 BABNA POLICA", always on a line of its own.
+  final String? parcelKo;
+
+  /// Owners already known (offline database), so the owner line can list
+  /// them all like a lookup's answer does.
+  final OwnerInfo? parcelOwnerInfo;
   final String? parcelOwner;
   final String? parcelAddress;
 
   /// Owners still being looked up (Croatian parcels, from the DGU cadastre),
   /// shown in place of [parcelOwner] once they arrive.
   final Future<OwnerInfo?>? parcelOwnerLookup;
+
+  /// GURS value of a Slovenian parcel, still being looked up.
+  final Future<ParcelValuation?>? parcelValuationLookup;
+
+  /// KO and parcel number, for its court auctions (Slovenia only).
+  final (int, String)? parcelRef;
 
   /// Public-owner category when the parcel is publicly owned/managed (javna
   /// parcela), shown as a coloured badge. Null for private parcels.
@@ -74,9 +92,13 @@ class MapLongPressMenu extends StatefulWidget {
     this.existingParcel,
     this.parcelTitle,
     this.parcelSubtitle,
+    this.parcelKo,
+    this.parcelOwnerInfo,
     this.parcelOwner,
     this.parcelAddress,
     this.parcelOwnerLookup,
+    this.parcelValuationLookup,
+    this.parcelRef,
     this.parcelPublicCategory,
     required this.onNavigate,
     required this.onMeasureDistance,
@@ -109,9 +131,13 @@ class MapLongPressMenu extends StatefulWidget {
     VoidCallback? onViewParcel,
     String? parcelTitle,
     String? parcelSubtitle,
+    String? parcelKo,
+    OwnerInfo? parcelOwnerInfo,
     String? parcelOwner,
     String? parcelAddress,
     Future<OwnerInfo?>? parcelOwnerLookup,
+    Future<ParcelValuation?>? parcelValuationLookup,
+    (int, String)? parcelRef,
     PublicOwnerCategory? parcelPublicCategory,
     required VoidCallback onNavigate,
     required VoidCallback onMeasureDistance,
@@ -123,7 +149,9 @@ class MapLongPressMenu extends StatefulWidget {
     _open?.close();
     late final PersistentBottomSheetController controller;
     controller = Scaffold.of(context).showBottomSheet(
-      showDragHandle: true,
+      // A slim handle of our own (see build); the stock one reserves a tall
+      // empty strip above the content.
+      showDragHandle: false,
       // Strip the inherited bottom safe-area inset: the sheet sits above the
       // app's nav bar (which already clears the home indicator), so reserving it
       // again just leaves dead space under the actions.
@@ -139,9 +167,13 @@ class MapLongPressMenu extends StatefulWidget {
           onViewParcel: onViewParcel,
           parcelTitle: parcelTitle,
           parcelSubtitle: parcelSubtitle,
+          parcelKo: parcelKo,
+          parcelOwnerInfo: parcelOwnerInfo,
           parcelOwner: parcelOwner,
           parcelAddress: parcelAddress,
           parcelOwnerLookup: parcelOwnerLookup,
+          parcelValuationLookup: parcelValuationLookup,
+          parcelRef: parcelRef,
           parcelPublicCategory: parcelPublicCategory,
           onNavigate: onNavigate,
           onMeasureDistance: onMeasureDistance,
@@ -170,9 +202,14 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
   OwnerInfo? _lookedUp;
   bool _lookingUp = false;
 
+  /// Value from [MapLongPressMenu.parcelValuationLookup] once it answers.
+  ParcelValuation? _valuation;
+  bool _valuing = false;
+
   @override
   void initState() {
     super.initState();
+    _lookedUp = widget.parcelOwnerInfo;
     final lookup = widget.parcelOwnerLookup;
     if (lookup != null) {
       _lookingUp = true;
@@ -185,40 +222,28 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
         }
       });
     }
+    final valuation = widget.parcelValuationLookup;
+    if (valuation != null) {
+      _valuing = true;
+      valuation.then((v) {
+        if (mounted) {
+          setState(() {
+            _valuing = false;
+            _valuation = v;
+          });
+        }
+      });
+    }
   }
 
-  /// Compact icon tile: an icon over a short label, sized for a toolbar grid.
   Widget _tile({
     required IconData icon,
     required String label,
     required Color color,
     required VoidCallback onTap,
-  }) {
-    return SizedBox(
-      width: 80,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 26),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  }) => SheetTile(icon: icon, label: label, color: color, onTap: onTap);
+
+  Widget _tileRow(List<Widget> tiles) => SheetTileRow(tiles);
 
   /// Leaf action: closes the sheet, then runs [onTap].
   Widget _action({
@@ -254,54 +279,75 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
   }
 
   Widget _topLevel() {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 4,
-      runSpacing: 4,
-      children: [
-        _group(
-          icon: Icons.add_circle_outline,
-          label: context.l10n.commonAdd,
-          color: Colors.red,
-          section: _MenuSection.add,
-        ),
-        _group(
-          icon: Icons.straighten,
-          label: context.l10n.mapwMenuMeasure,
-          color: Colors.teal,
-          section: _MenuSection.measure,
-        ),
+    return _tileRow([
+      _group(
+        icon: Icons.add_circle_outline,
+        label: context.l10n.commonAdd,
+        color: Colors.red,
+        section: _MenuSection.add,
+      ),
+      _group(
+        icon: Icons.straighten,
+        label: context.l10n.mapwMenuMeasure,
+        color: Colors.teal,
+        section: _MenuSection.measure,
+      ),
+      _action(
+        icon: Icons.navigation,
+        label: context.l10n.mapwMenuNavigate,
+        color: Colors.indigo.shade200,
+        onTap: widget.onNavigate,
+      ),
+      if (widget.existingParcel != null)
         _action(
-          icon: Icons.navigation,
-          label: context.l10n.mapwMenuNavigate,
-          color: Colors.indigo,
-          onTap: widget.onNavigate,
+          icon: Icons.visibility,
+          label: context.l10n.mapwMenuParcel,
+          color: Colors.blue,
+          onTap: () => widget.onViewParcel?.call(),
+        )
+      else
+        _action(
+          icon: Icons.download,
+          label: context.l10n.mapwMenuImport,
+          color: Colors.blue,
+          onTap: widget.onImportParcel,
         ),
-        if (widget.existingParcel != null)
-          _action(
-            icon: Icons.visibility,
-            label: context.l10n.mapwMenuParcel,
-            color: Colors.blue,
-            onTap: () => widget.onViewParcel?.call(),
-          )
-        else
-          _action(
-            icon: Icons.download,
-            label: context.l10n.mapwMenuImport,
-            color: Colors.blue,
-            onTap: widget.onImportParcel,
+    ]);
+  }
+
+  /// One header line: an accent icon and the text.
+  Widget _headerLine(IconData icon, String text, {bool bold = false}) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: bold
+                  ? theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)
+                  : theme.textTheme.bodyLarge,
+            ),
           ),
-      ],
+        ],
+      ),
     );
   }
 
-  /// Compact one/two-line header with basic info about the parcel under the
-  /// press. Kept deliberately small so the sheet stays low.
+  /// The parcel under the press, one line per fact: parcel, KO, area,
+  /// owners, address, value and the public-parcel badge.
   Widget _parcelInfoHeader() {
     final cs = Theme.of(context).colorScheme;
     final looked = _lookedUp;
-    final owner = widget.parcelOwner ??
-        (looked == null ? null : ownerSummary(looked.owners));
+    final owner = looked != null
+        ? ownerSummary(looked.owners)
+        : widget.parcelOwner;
     final address = widget.parcelAddress ?? looked?.address;
     final hasOwner = owner != null && owner.isNotEmpty;
     final hasAddress = address != null && address.isNotEmpty;
@@ -313,47 +359,20 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(Icons.terrain, size: 18, color: cs.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.parcelTitle!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (widget.parcelSubtitle != null &&
-                        widget.parcelSubtitle!.isNotEmpty)
-                      Text(
-                        widget.parcelSubtitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          _headerLine(Icons.terrain, widget.parcelTitle!, bold: true),
+          if (widget.parcelKo != null)
+            _headerLine(Icons.location_city, widget.parcelKo!),
+          if (widget.parcelSubtitle != null &&
+              widget.parcelSubtitle!.isNotEmpty)
+            _headerLine(Icons.straighten, widget.parcelSubtitle!),
           if (hasOwner)
             InkWell(
               onTap: manyOwners
                   ? () => OwnersSheet.show(
-                        context,
-                        owners: looked.owners,
-                        info: looked,
-                      )
+                      context,
+                      owners: looked.owners,
+                      info: looked,
+                    )
                   : null,
               borderRadius: BorderRadius.circular(6),
               child: Padding(
@@ -361,18 +380,18 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.person, size: 18, color: cs.primary),
+                    Icon(Icons.person, size: 20, color: cs.primary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         owner,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),
                     if (manyOwners)
-                      Icon(Icons.chevron_right, size: 18, color: cs.primary),
+                      Icon(Icons.chevron_right, size: 20, color: cs.primary),
                   ],
                 ),
               ),
@@ -382,13 +401,12 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
               padding: const EdgeInsets.only(top: 4),
               child: Row(
                 children: [
-                  Icon(Icons.person, size: 18, color: cs.onSurfaceVariant),
+                  Icon(Icons.person, size: 20, color: cs.onSurfaceVariant),
                   const SizedBox(width: 8),
                   Text(
                     context.l10n.parcelFoundOwnersLoading,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium
+                        ?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -399,21 +417,58 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.home_outlined, size: 18, color: cs.primary),
+                  Icon(Icons.home_outlined, size: 20, color: cs.primary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       address,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium
+                          ?.copyWith(color: cs.onSurfaceVariant),
                     ),
                   ),
                 ],
               ),
             ),
+          if (_valuation != null && !_valuation!.isUnvalued)
+            InkWell(
+              onTap: () => ParcelValuationCard.show(context, _valuation!),
+              borderRadius: BorderRadius.circular(6),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.euro, size: 20, color: cs.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        valuationSummary(context, _valuation!),
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, size: 20, color: cs.primary),
+                  ],
+                ),
+              ),
+            )
+          else if (_valuing)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  Icon(Icons.euro, size: 20, color: cs.onSurfaceVariant),
+                  const SizedBox(width: 8),
+                  Text(
+                    context.l10n.valuationLoading,
+                    style: Theme.of(context).textTheme.bodyMedium
+                        ?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          if (widget.parcelRef case (final sifko, final parcela))
+            ParcelAuctionLine(sifko: sifko, parcela: parcela),
           if (cat != null)
             Padding(
               padding: const EdgeInsets.only(top: 6),
@@ -430,7 +485,7 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
                   const SizedBox(width: 8),
                   Text(
                     context.l10n.mapwPublicParcel(cat.label),
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: cat.color,
                       fontWeight: FontWeight.w700,
                     ),
@@ -443,70 +498,63 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
     );
   }
 
-  Widget _addSection() {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 4,
-      runSpacing: 4,
-      children: [
-        _action(
-          icon: Icons.add_location_alt,
-          label: context.l10n.mapwMenuPoint,
-          color: Colors.red,
-          onTap: widget.onAddLocation,
-        ),
-        _action(
-          icon: Icons.forest,
-          label: context.l10n.mapwMenuLogs,
-          color: Colors.brown,
-          onTap: widget.onAddLog,
-        ),
-        _action(
-          icon: Icons.carpenter,
-          label: context.l10n.mapwMenuFelling,
-          color: Colors.deepOrange,
-          onTap: widget.onAddSecnja,
-        ),
-      ],
+  /// First tile of a group's row: back to the top level.
+  Widget _backTile() {
+    return _tile(
+      icon: Icons.arrow_back,
+      label: context.l10n.commonBack,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+      onTap: () => setState(() => _section = null),
     );
+  }
+
+  Widget _addSection() {
+    return _tileRow([
+      _backTile(),
+      _action(
+        icon: Icons.add_location_alt,
+        label: context.l10n.mapwMenuPoint,
+        color: Colors.red,
+        onTap: widget.onAddLocation,
+      ),
+      _action(
+        icon: Icons.forest,
+        label: context.l10n.mapwMenuLogs,
+        color: Colors.brown.shade300,
+        onTap: widget.onAddLog,
+      ),
+      _action(
+        icon: Icons.carpenter,
+        label: context.l10n.mapwMenuFelling,
+        color: Colors.deepOrange,
+        onTap: widget.onAddSecnja,
+      ),
+    ]);
   }
 
   Widget _measureSection() {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 4,
-      runSpacing: 4,
-      children: [
+    return _tileRow([
+      _backTile(),
+      _action(
+        icon: Icons.route,
+        label: context.l10n.mapwMenuDistance,
+        color: Colors.teal,
+        onTap: widget.onMeasureDistance,
+      ),
+      _action(
+        icon: Icons.square_foot,
+        label: context.l10n.mapwArea,
+        color: Colors.deepPurple.shade200,
+        onTap: widget.onMeasureArea,
+      ),
+      if (widget.mejnikiAvailable)
         _action(
-          icon: Icons.route,
-          label: context.l10n.mapwMenuDistance,
-          color: Colors.teal,
-          onTap: widget.onMeasureDistance,
+          icon: Icons.scatter_plot,
+          label: context.l10n.mapwMenuBoundaries,
+          color: widget.showMejniki ? Colors.orange : Colors.green,
+          onTap: () => widget.onToggleMejniki(!widget.showMejniki),
         ),
-        _action(
-          icon: Icons.square_foot,
-          label: context.l10n.mapwArea,
-          color: Colors.deepPurple,
-          onTap: widget.onMeasureArea,
-        ),
-        if (widget.mejnikiAvailable)
-          _action(
-            icon: Icons.scatter_plot,
-            label: context.l10n.mapwMenuBoundaries,
-            color: widget.showMejniki ? Colors.orange : Colors.green,
-            onTap: () => widget.onToggleMejniki(!widget.showMejniki),
-          ),
-      ],
-    );
-  }
-
-  String _sectionTitle(_MenuSection section) {
-    switch (section) {
-      case _MenuSection.add:
-        return context.l10n.commonAdd;
-      case _MenuSection.measure:
-        return context.l10n.mapwMenuMeasure;
-    }
+    ]);
   }
 
   Widget _sectionContent(_MenuSection section) {
@@ -531,31 +579,13 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: section == null
-              ? [
-                  if (widget.parcelTitle != null) _parcelInfoHeader(),
-                  _topLevel(),
-                ]
-              : [
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        tooltip: context.l10n.commonBack,
-                        onPressed: () => setState(() => _section = null),
-                      ),
-                      Text(
-                        _sectionTitle(section),
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-                    child: _sectionContent(section),
-                  ),
-                ],
+          children: [
+            const SheetHandle(),
+            // The parcel stays in view in the groups too, so the sheet keeps
+            // its height; a group's row starts with a back tile.
+            if (widget.parcelTitle != null) _parcelInfoHeader(),
+            section == null ? _topLevel() : _sectionContent(section),
+          ],
         ),
       ),
     );

@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../services/auction_service.dart';
 import '../services/cadastral_service.dart';
 import '../services/ko_locator.dart';
 import '../services/parcel_search_service.dart';
+import 'auction_sheet.dart';
+import 'parcel_info_widgets.dart';
 import 'parcel_search_controller.dart';
 import '../l10n/l10n.dart';
 
@@ -84,6 +87,9 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   /// not overwrite it.
   bool _koTouched = false;
   bool _koFromMap = false;
+
+  /// Court auctions instead of the parcel search.
+  bool _auctions = false;
 
   /// Key of the suggestion whose geometry is being fetched.
   String? _locatingKey;
@@ -189,7 +195,8 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
 
   /// Keyboard "search": open the first parcel/owner row, else take the KO.
   void _submit() {
-    if (_locatingKey != null) return;
+    // The auctions tab filters as you type; there is nothing to submit.
+    if (_locatingKey != null || _auctions) return;
     final rows = _controller.suggestions;
     if (rows.isEmpty) return;
     final target = rows.firstWhere(
@@ -217,7 +224,8 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _header(context),
-              _koChip(context),
+              _tabs(context),
+              if (!_auctions) _koChip(context),
               _field(context),
               SizedBox(
                 height: 2,
@@ -226,7 +234,9 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
                     : const Divider(height: 1),
               ),
               if (_error != null) _errorBox(context, _error!),
-              Expanded(child: _body(context)),
+              Expanded(
+                child: _auctions ? _auctionList(context) : _body(context),
+              ),
             ],
           ),
         ),
@@ -257,6 +267,134 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _tabs(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: SegmentedButton<bool>(
+        showSelectedIcon: false,
+        segments: [
+          ButtonSegment(
+            value: false,
+            icon: const Icon(Icons.grid_on),
+            label: Text(context.l10n.searchTabParcels),
+          ),
+          ButtonSegment(
+            value: true,
+            icon: const Icon(Icons.gavel),
+            label: Text(context.l10n.searchTabAuctions),
+          ),
+        ],
+        selected: {_auctions},
+        onSelectionChanged: (v) => setState(() {
+          _auctions = v.first;
+          _error = null;
+        }),
+      ),
+    );
+  }
+
+  /// Distance in degrees² from the map centre to the middle of [a]'s KO,
+  /// for "nearest first"; KOs the index doesn't know go last.
+  double _distance(Auction a) {
+    final ko = KoLocator.instance.bySifko(a.sifko);
+    final c = widget.center;
+    if (ko == null || c == null) return double.infinity;
+    final dLat = (ko.minLat + ko.maxLat) / 2 - c.latitude;
+    final dLon = (ko.minLon + ko.maxLon) / 2 - c.longitude;
+    return dLat * dLat + dLon * dLon;
+  }
+
+  /// Current court auctions, nearest first, filtered by the field's KO name,
+  /// KO code or parcel number. Tapping one opens the parcel on the map.
+  Widget _auctionList(BuildContext context) {
+    return FutureBuilder<void>(
+      future: AuctionService.instance.ensureLoaded(),
+      builder: (context, snapshot) {
+        final all = AuctionService.instance.all;
+        if (all.isEmpty) {
+          return snapshot.connectionState == ConnectionState.done
+              ? _hint(context, Icons.gavel, context.l10n.auctionsEmpty)
+              : _hint(context, Icons.gavel, context.l10n.auctionsLoading);
+        }
+        final words = KoLocator.fold(_controller.text.text)
+            .split(RegExp(r'\s+'))
+            .where((w) => w.isNotEmpty)
+            .toList();
+        bool matches(Auction a) {
+          final hay = KoLocator.fold('${a.sifko} ${a.koName ?? ''} ${a.parcela}');
+          return words.every(hay.contains);
+        }
+
+        final list = [for (final a in all) if (matches(a)) a]
+          ..sort((a, b) => _distance(a).compareTo(_distance(b)));
+        if (list.isEmpty) {
+          return _hint(context, Icons.search_off, context.l10n.auctionsEmpty);
+        }
+        return ListView.separated(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          itemCount: list.length + 1,
+          separatorBuilder: (_, _) => const Divider(height: 1),
+          itemBuilder: (context, i) {
+            if (i == 0) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  context.l10n.auctionsHint,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              );
+            }
+            return _auctionTile(context, list[i - 1]);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _auctionTile(BuildContext context, Auction a) {
+    final cs = Theme.of(context).colorScheme;
+    final suggestion = ParcelSuggestion(
+      kind: ParcelSuggestionKind.parcel,
+      title: context.l10n.mapTabParcelShort(a.parcela),
+      sifko: a.sifko,
+      parcela: a.parcela,
+    );
+    final locating = _locatingKey == _key(suggestion);
+    final ko = a.koName != null ? '${a.sifko} ${a.koName}' : '${a.sifko}';
+    return ListTile(
+      minVerticalPadding: 10,
+      leading: Icon(Icons.gavel, color: cs.primary),
+      title: Text(
+        '${context.l10n.mapTabParcelShort(a.parcela)} · '
+        '${context.l10n.parcelFoundKo(ko)}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+      subtitle: Text(
+        [
+          if (a.startingPrice != null) '${euros(context, a.startingPrice!)} €',
+          auctionDate(context, a.saleStartAt),
+          if (a.kind != null) a.kind!,
+        ].join(' · '),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: locating
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(Icons.my_location, color: cs.onSurfaceVariant),
+      onTap: _locatingKey != null ? null : () => _open(suggestion),
     );
   }
 

@@ -268,6 +268,81 @@
   "parcelInfoAdded": "Dodano",
   "parcelInfoParcel": "Parcela",
   "parcelInfoKo": "Katastrska občina",
+  "valuationTitle": "Vrednost parcele",
+  "valuationLoading": "Iščem vrednost pri GURS …",
+  "valuationPerM2": "{value} €/m²",
+  "valuationUnvalued": "GURS za zemljišče te parcele nima vrednosti.",
+  "valuationLevel": "raven {level}",
+  "valuationBoniteta": "Boniteta",
+  "valuationSiteIndex": "Rastiščni koeficient",
+  "valuationOpenness": "Odprtost",
+  "valuationBonitetaHint": "Kakovost tal, od 0 do 100 – več je bolje",
+  "valuationSiteIndexHint": "Kako dobro na rastišču raste drevje – več je bolje",
+  "valuationOpennessHint": "Kolikšen del gozda je dostopen s cestami in vlakami",
+  "auctionLine": "Na dražbi: {price} € · {date}",
+  "auctionLineNoPrice": "Na dražbi · {date}",
+  "auctionTitle": "Sodna dražba",
+  "auctionStarting": "Izklicna cena",
+  "auctionEstimated": "Ocenjena vrednost",
+  "auctionShare": "Delež v prodaji",
+  "auctionDate": "Začetek prodaje",
+  "auctionCourt": "Sodišče",
+  "auctionActive": "Dražba poteka",
+  "auctionOpen": "Odpri objavo na sodnedrazbe.si",
+  "auctionSource": "Podatki: sodnedrazbe.si. Pred oddajo ponudbe preverite objavo.",
+  "auctionLayer": "Sodne dražbe",
+  "auctionLayerHint": "Parcele, ki so trenutno na sodni dražbi",
+  "searchTabParcels": "Parcele",
+  "searchTabAuctions": "Dražbe",
+  "auctionsLoading": "Nalagam sodne dražbe …",
+  "auctionsEmpty": "Ni dražb, ki bi ustrezale iskanju.",
+  "auctionsHint": "Najbližje dražbe so na vrhu. Iščete lahko po katastrski občini ali številki parcele.",
+  "@auctionLine": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@auctionLineNoPrice": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "valuationSource": "Posplošena tržna vrednost GURS, izračun {date}. Podatki so informativni.",
+  "valuationSourceUndated": "Posplošena tržna vrednost GURS. Podatki so informativni.",
+  "valuationOpenGurs": "Odpri v evidenci vrednotenja",
+  "valuationModelGOZ": "Gozd",
+  "valuationModelKME": "Kmetijsko zemljišče",
+  "valuationModelSTZ": "Stavbno zemljišče",
+  "valuationModelZPS": "Zemljišče pod stavbo",
+  "valuationModelDRZ": "Druga zemljišča",
+  "@valuationPerM2": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@valuationLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "@valuationSource": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "parcelNotSet": "Ni določen",
   "parcelFromCadastre": "iz katastra (GURS)",
   "parcelNoNotes": "Ni opomb",

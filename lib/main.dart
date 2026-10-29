@@ -18,6 +18,7 @@ import 'services/public_parcel_settings.dart';
 import 'services/drone_settings.dart';
 import 'services/owner_offline_settings_service.dart';
 import 'services/update_service.dart';
+import 'services/auction_service.dart';
 import 'services/vlake_settings.dart';
 import 'services/locale_settings.dart';
 import 'l10n/l10n.dart';
@@ -41,6 +42,7 @@ void main() async {
   await CacheSettings.instance.load();
   await PublicParcelSettings.instance.load();
   await VlakeSettings.instance.load();
+  await AuctionService.instance.loadSettings();
   await initializeDateFormatting();
   await LocaleSettings.instance.load();
 
@@ -106,6 +108,7 @@ class _GozdarAppState extends State<GozdarApp> {
         ),
         ChangeNotifierProvider.value(value: _navigationNotifier),
         ChangeNotifierProvider.value(value: VlakeSettings.instance),
+        ChangeNotifierProvider.value(value: AuctionService.instance),
         ChangeNotifierProvider.value(value: LocaleSettings.instance),
         if (Platform.isAndroid && !isPlayDistribution)
           ChangeNotifierProvider.value(value: UpdateService()),

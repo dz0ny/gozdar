@@ -1313,6 +1313,81 @@
   "parcelInfoAdded": "Dodano",
   "parcelInfoParcel": "Parcela",
   "parcelInfoKo": "Katastrska občina",
+  "valuationTitle": "Vrednost parcele",
+  "valuationLoading": "Iščem vrednost pri GURS …",
+  "valuationPerM2": "{value} €/m²",
+  "valuationUnvalued": "GURS za zemljišče te parcele nima vrednosti.",
+  "valuationLevel": "raven {level}",
+  "valuationBoniteta": "Boniteta",
+  "valuationSiteIndex": "Rastiščni koeficient",
+  "valuationOpenness": "Odprtost",
+  "valuationBonitetaHint": "Kakovost tal, od 0 do 100 – več je bolje",
+  "valuationSiteIndexHint": "Kako dobro na rastišču raste drevje – več je bolje",
+  "valuationOpennessHint": "Kolikšen del gozda je dostopen s cestami in vlakami",
+  "auctionLine": "Na dražbi: {price} € · {date}",
+  "auctionLineNoPrice": "Na dražbi · {date}",
+  "auctionTitle": "Sodna dražba",
+  "auctionStarting": "Izklicna cena",
+  "auctionEstimated": "Ocenjena vrednost",
+  "auctionShare": "Delež v prodaji",
+  "auctionDate": "Začetek prodaje",
+  "auctionCourt": "Sodišče",
+  "auctionActive": "Dražba poteka",
+  "auctionOpen": "Odpri objavo na sodnedrazbe.si",
+  "auctionSource": "Podatki: sodnedrazbe.si. Pred oddajo ponudbe preverite objavo.",
+  "auctionLayer": "Sodne dražbe",
+  "auctionLayerHint": "Parcele, ki so trenutno na sodni dražbi",
+  "searchTabParcels": "Parcele",
+  "searchTabAuctions": "Dražbe",
+  "auctionsLoading": "Nalagam sodne dražbe …",
+  "auctionsEmpty": "Ni dražb, ki bi ustrezale iskanju.",
+  "auctionsHint": "Najbližje dražbe so na vrhu. Iščete lahko po katastrski občini ali številki parcele.",
+  "@auctionLine": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@auctionLineNoPrice": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "valuationSource": "Posplošena tržna vrednost GURS, izračun {date}. Podatki so informativni.",
+  "valuationSourceUndated": "Posplošena tržna vrednost GURS. Podatki so informativni.",
+  "valuationOpenGurs": "Odpri v evidenci vrednotenja",
+  "valuationModelGOZ": "Gozd",
+  "valuationModelKME": "Kmetijsko zemljišče",
+  "valuationModelSTZ": "Stavbno zemljišče",
+  "valuationModelZPS": "Zemljišče pod stavbo",
+  "valuationModelDRZ": "Druga zemljišča",
+  "@valuationPerM2": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@valuationLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "@valuationSource": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "parcelNotSet": "Ni določen",
   "parcelFromCadastre": "iz katastra (GURS)",
   "parcelNoNotes": "Ni opomb",
@@ -1493,7 +1568,7 @@
   "aboutSectionOpenSource": "Odprtokodne knjižnice",
   "aboutSectionSupport": "Podpora",
   "aboutSectionGeneral": "Splošno",
-  "aboutSectionMapCache": "Predpomnilnik zemljevida",
+  "aboutSectionMapCache": "Shramba",
   "aboutTagline": "Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji",
   "aboutInfoTitle": "Informacije o aplikaciji",
   "aboutVersion": "Verzija",
@@ -1522,11 +1597,11 @@
   "aboutOfflineOwnerSearchDesc": "Ko ni povezave, določi lastnika iz približnih mej parcel (lokalna baza).",
   "aboutVlake": "Vlake (gozdne vlake)",
   "aboutVlakeDesc": "Omogoči sloj — prikaže se v izbiri slojev (Infrastruktura)",
-  "aboutHttpCache": "Predpomnilnik HTTP",
-  "aboutHttpCacheDesc": "Predpomni odgovore državnih API-jev (prostor.zgs.gov.si).",
-  "aboutTileCache": "Predpomnilnik ploščic",
-  "aboutTileCacheDesc": "Predpomni karte (ločeno od HTTP predpomnilnika).",
-  "aboutClearMapCache": "Počisti predpomnilnik karte",
+  "aboutHttpCache": "Shranjuj podatke o parcelah",
+  "aboutHttpCacheDesc": "Lastniki, vrednosti in sloji ZGS ostanejo v telefonu, zato se hitreje odprejo in delujejo tudi brez signala.",
+  "aboutTileCache": "Shranjuj zemljevide",
+  "aboutTileCacheDesc": "Ogledani zemljevidi ostanejo v telefonu za delo brez signala.",
+  "aboutClearMapCache": "Izbriši shranjene zemljevide",
   "aboutPickSqlite": "Izberi datoteko .sqlite.",
   "aboutOwnersImported": "Uvozenih {count} lastnikov.",
   "@aboutOwnersImported": {
@@ -1545,10 +1620,10 @@
     }
   },
   "aboutOwnersRemoved": "Baza lastnikov odstranjena.",
-  "aboutClearCacheTitle": "Počisti predpomnilnik karte?",
+  "aboutClearCacheTitle": "Izbrišem shranjene zemljevide?",
   "aboutClearCacheBody": "Izbrisane bodo vse shranjene karte, tudi tiste, prenesene za delo brez povezave. Brez signala jih ne bo mogoče prikazati, dokler jih znova ne prenesete.",
-  "aboutCacheCleared": "Predpomnilnik karte počiščen.",
-  "aboutCacheClearFailed": "Brisanje predpomnilnika ni uspelo: {error}",
+  "aboutCacheCleared": "Shranjeni zemljevidi izbrisani.",
+  "aboutCacheClearFailed": "Brisanje ni uspelo: {error}",
   "@aboutCacheClearFailed": {
     "placeholders": {
       "error": {
@@ -1578,8 +1653,8 @@
   "aboutAddRegion": "Dodaj regijo",
   "aboutDownloadRegion": "Prenesi regijo",
   "aboutDownloadRegionHint": "Prenesi le svojo statistično regijo — priporočena povezava Wi-Fi.",
-  "aboutShareKataster": "Deli offline kataster",
-  "aboutShareKatasterActive": "Na voljo v lokalnem omrežju • najdenih naprav: {count}",
+  "aboutShareKataster": "Deli regije s telefoni v bližini",
+  "aboutShareKatasterActive": "Deljenje vključeno • telefonov v bližini: {count}",
   "@aboutShareKatasterActive": {
     "placeholders": {
       "count": {
@@ -1587,7 +1662,7 @@
       }
     }
   },
-  "aboutShareKatasterDesc": "Dovoli drugim napravam v istem omrežju prenos naloženih regij.",
+  "aboutShareKatasterDesc": "Telefoni v istem omrežju Wi-Fi lahko regije, ki ste jih že prenesli, dobijo od vas – hitreje in brez mobilnih podatkov.",
   "aboutPublicOwners": "javni lastniki",
   "aboutKatasterUpdateAvailable": "Na voljo je novejši kataster ({date})",
   "@aboutKatasterUpdateAvailable": {
@@ -1729,7 +1804,7 @@
     }
   },
   "aboutSrcZgsDesc": "Gozdarski sloji, sestoji, odseki, revirji, gozdni rezervati, varovalni gozdovi, požarna ogroženost, vetrolomi, podlubniki",
-  "aboutSrcGursDesc": "Ortofoto posnetki (2022-2024), kataster, katastrske občine, občine, upravne enote, DMR",
+  "aboutSrcGursDesc": "Ortofoto posnetki (2022-2024), kataster, katastrske občine, občine, upravne enote, DMR, vrednotenje nepremičnin",
   "aboutSrcOsmDesc": "Osnovni zemljevid in topografski podatki",
   "aboutSrcTopoDesc": "Topografski zemljevid (Seznam.cz)",
   "aboutSrcEsriDesc": "Satelitski posnetki in topografski zemljevid",

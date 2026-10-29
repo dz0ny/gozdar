@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import '../models/parcel.dart';
 import '../services/cadastral_service.dart';
 import '../services/hr_owner_service.dart';
+import 'auction_sheet.dart';
 import 'owner_list.dart';
 import '../services/ko_locator.dart';
 import '../services/owner_lookup_service.dart';
+import '../services/si_valuation_service.dart';
+import 'parcel_info_widgets.dart';
 import 'parcel_silhouette.dart';
 import '../l10n/l10n.dart';
 
@@ -194,6 +197,50 @@ class ParcelFoundSheet extends StatelessWidget {
                               style: muted,
                             );
                           },
+                        ),
+                      if (SiValuationService.covers(sifko))
+                        // GURS value, live from the valuation register.
+                        FutureBuilder<ParcelValuation?>(
+                          future: SiValuationService.instance.lookup(
+                            sifko!,
+                            wfsParcel.parcelNumber,
+                          ),
+                          builder: (context, snapshot) {
+                            final v = snapshot.data;
+                            if (v == null || v.isUnvalued) {
+                              return const SizedBox.shrink();
+                            }
+                            return InkWell(
+                              onTap: () =>
+                                  ParcelValuationCard.show(context, v),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      valuationSummary(context, v),
+                                      style: theme.textTheme.bodyLarge
+                                          ?.copyWith(
+                                            color: cs.primary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.chevron_right,
+                                    size: 20,
+                                    color: cs.primary,
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      if (SiValuationService.covers(sifko))
+                        ParcelAuctionLine(
+                          sifko: sifko!,
+                          parcela: wfsParcel.parcelNumber,
+                          showIcon: false,
                         ),
                     ],
                   ),

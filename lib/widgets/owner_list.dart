@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/l10n.dart';
 import '../services/owner_lookup_service.dart';
+import 'sheet_parts.dart';
 
 /// "HORVAT IVA in še 11": the first owner and how many more, for one-line
 /// places. A single owner is returned as is.
@@ -19,81 +21,76 @@ class OwnersSheet extends StatelessWidget {
 
   const OwnersSheet({super.key, required this.owners, this.info});
 
+  /// Lists that fit on screen take only the room they need; long ones
+  /// (Croatian parcels can have dozens of holders) scroll in a tall sheet.
+  static const _fitLimit = 6;
+
   static Future<void> show(
     BuildContext context, {
     required List<String> owners,
     OwnerInfo? info,
   }) {
+    final sheet = OwnersSheet(owners: owners, info: info);
     return showModalBottomSheet<void>(
       context: context,
       // Above the tab bar, not inside the tab's navigator.
       useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
-      showDragHandle: true,
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: owners.length > 6 ? 0.7 : 0.45,
-        minChildSize: 0.3,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => OwnersSheet(
-          owners: owners,
-          info: info,
-        )._build(context, scrollController),
-      ),
+      builder: (context) => owners.length <= _fitLimit
+          ? SafeArea(child: sheet._build(context, null))
+          : DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.7,
+              minChildSize: 0.4,
+              maxChildSize: 0.95,
+              builder: (context, scrollController) =>
+                  sheet._build(context, scrollController),
+            ),
     );
   }
 
   @override
   Widget build(BuildContext context) => _build(context, null);
 
+  /// Fits its content without [scrollController], fills the sheet with it.
   Widget _build(BuildContext context, ScrollController? scrollController) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 4, 8),
-          child: Row(
-            children: [
-              Icon(Icons.people_outline, color: cs.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  context.l10n.ownersTitle(owners.length),
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: context.l10n.commonClose,
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
+    final rows = [
+      for (final name in owners)
+        OwnerTile(holder: info?.holder(name) ?? OwnerHolder(name)),
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 16, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SheetHandle(),
+          SheetHeader(
+            icon: Icons.people_outline,
+            title: context.l10n.ownersTitle(owners.length),
+            subtitle: info?.koName,
           ),
-        ),
-        const Divider(height: 1),
-        Expanded(
-          child: ListView.separated(
-            controller: scrollController,
-            itemCount: owners.length,
-            separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
-            itemBuilder: (context, i) => OwnerTile(
-              holder: info?.holder(owners[i]) ?? OwnerHolder(owners[i]),
+          const SizedBox(height: 8),
+          if (scrollController == null)
+            ...rows
+          else
+            Expanded(
+              child: ListView(controller: scrollController, children: rows),
             ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-/// One owner: name, address below, share on the right.
+/// One owner, like a quick-view line: an accent icon, the name with the
+/// address under it, and the share on the right. Tapping searches the web
+/// for the owner (company register entries, contacts).
 class OwnerTile extends StatelessWidget {
   final OwnerHolder holder;
+
+  /// Kept for callers; rows are the same size everywhere now.
   final bool dense;
 
   const OwnerTile({super.key, required this.holder, this.dense = false});
@@ -101,22 +98,56 @@ class OwnerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return ListTile(
-      dense: dense,
-      contentPadding: dense ? EdgeInsets.zero : null,
-      leading: const Icon(Icons.person_outline),
-      minLeadingWidth: dense ? 24 : null,
-      title: Text(holder.name),
-      subtitle: holder.address != null ? Text(holder.address!) : null,
-      trailing: holder.share != null
-          ? Text(
-              holder.share!,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w600,
+    final cs = theme.colorScheme;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => launchUrl(
+        Uri.https('www.google.com', '/search', {'q': holder.name}),
+        mode: LaunchMode.externalApplication,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 4, top: 2),
+              child: Icon(Icons.person, size: 20, color: cs.primary),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(holder.name, style: theme.textTheme.bodyLarge),
+                  if (holder.address != null)
+                    Text(
+                      holder.address!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                ],
               ),
-            )
-          : null,
+            ),
+            if (holder.share != null) ...[
+              const SizedBox(width: 12),
+              Text(
+                holder.share!,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: cs.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const SizedBox(width: 8),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Icon(Icons.travel_explore, size: 20, color: cs.primary),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

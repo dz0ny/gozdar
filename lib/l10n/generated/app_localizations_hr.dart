@@ -1727,6 +1727,134 @@ class AppLocalizationsHr extends AppLocalizations {
   String get parcelInfoKo => 'Katastarska općina';
 
   @override
+  String get valuationTitle => 'Vrijednost čestice';
+
+  @override
+  String get valuationLoading => 'Tražim vrijednost u GURS-u …';
+
+  @override
+  String valuationPerM2(String value) {
+    return '$value €/m²';
+  }
+
+  @override
+  String get valuationUnvalued =>
+      'GURS za zemljište ove čestice nema vrijednost.';
+
+  @override
+  String valuationLevel(String level) {
+    return 'razina $level';
+  }
+
+  @override
+  String get valuationBoniteta => 'Bonitet';
+
+  @override
+  String get valuationSiteIndex => 'Koeficijent staništa';
+
+  @override
+  String get valuationOpenness => 'Otvorenost';
+
+  @override
+  String get valuationBonitetaHint =>
+      'Kvaliteta tla, od 0 do 100 – više je bolje';
+
+  @override
+  String get valuationSiteIndexHint =>
+      'Koliko dobro drveće raste na staništu – više je bolje';
+
+  @override
+  String get valuationOpennessHint =>
+      'Koliki je dio šume dostupan cestama i vlakama';
+
+  @override
+  String auctionLine(String price, String date) {
+    return 'Na dražbi: $price € · $date';
+  }
+
+  @override
+  String auctionLineNoPrice(String date) {
+    return 'Na dražbi · $date';
+  }
+
+  @override
+  String get auctionTitle => 'Sudska dražba';
+
+  @override
+  String get auctionStarting => 'Početna cijena';
+
+  @override
+  String get auctionEstimated => 'Procijenjena vrijednost';
+
+  @override
+  String get auctionShare => 'Udio u prodaji';
+
+  @override
+  String get auctionDate => 'Početak prodaje';
+
+  @override
+  String get auctionCourt => 'Sud';
+
+  @override
+  String get auctionActive => 'Dražba je u tijeku';
+
+  @override
+  String get auctionOpen => 'Otvori objavu na sodnedrazbe.si';
+
+  @override
+  String get auctionSource =>
+      'Podaci: sodnedrazbe.si. Prije ponude provjerite objavu.';
+
+  @override
+  String get auctionLayer => 'Sudske dražbe';
+
+  @override
+  String get auctionLayerHint => 'Čestice koje su trenutno na sudskoj dražbi';
+
+  @override
+  String get searchTabParcels => 'Čestice';
+
+  @override
+  String get searchTabAuctions => 'Dražbe';
+
+  @override
+  String get auctionsLoading => 'Učitavam sudske dražbe …';
+
+  @override
+  String get auctionsEmpty => 'Nema dražbi koje odgovaraju pretrazi.';
+
+  @override
+  String get auctionsHint =>
+      'Najbliže dražbe su na vrhu. Možete tražiti po katastarskoj općini ili broju čestice.';
+
+  @override
+  String valuationSource(String date) {
+    return 'Generalizirana tržna vrijednost GURS, izračun $date. Podaci su informativni.';
+  }
+
+  @override
+  String get valuationSourceUndated =>
+      'Generalizirana tržna vrijednost GURS. Podaci su informativni.';
+
+  @override
+  String get valuationOpenGurs => 'Otvori u evidenciji vrednovanja';
+
+  @override
+  String get valuationModelGOZ => 'Šuma';
+
+  @override
+  String get valuationModelKME => 'Poljoprivredno zemljište';
+
+  @override
+  String get valuationModelSTZ => 'Građevinsko zemljište';
+
+  @override
+  String get valuationModelZPS => 'Zemljište pod zgradom';
+
+  @override
+  String get valuationModelDRZ => 'Ostala zemljišta';
+
+  @override
   String get parcelNotSet => 'Nije određen';
 
   @override
@@ -1963,7 +2091,7 @@ class AppLocalizationsHr extends AppLocalizations {
   String get aboutSectionGeneral => 'Općenito';
 
   @override
-  String get aboutSectionMapCache => 'Predmemorija karte';
+  String get aboutSectionMapCache => 'Pohrana';
 
   @override
   String get aboutTagline =>
@@ -2025,21 +2153,21 @@ class AppLocalizationsHr extends AppLocalizations {
       'Omogući sloj — prikazuje se u izboru slojeva (Infrastruktura)';
 
   @override
-  String get aboutHttpCache => 'HTTP predmemorija';
+  String get aboutHttpCache => 'Spremaj podatke o česticama';
 
   @override
   String get aboutHttpCacheDesc =>
-      'Sprema odgovore državnih API-ja (prostor.zgs.gov.si) u predmemoriju.';
+      'Vlasnici, vrijednosti i slojevi ZGS ostaju u telefonu pa se brže otvaraju i rade i bez signala.';
 
   @override
-  String get aboutTileCache => 'Predmemorija pločica';
+  String get aboutTileCache => 'Spremaj karte';
 
   @override
   String get aboutTileCacheDesc =>
-      'Sprema karte u predmemoriju (odvojeno od HTTP predmemorije).';
+      'Pregledane karte ostaju u telefonu za rad bez signala.';
 
   @override
-  String get aboutClearMapCache => 'Očisti predmemoriju karte';
+  String get aboutClearMapCache => 'Izbriši spremljene karte';
 
   @override
   String get aboutPickSqlite => 'Odaberi datoteku .sqlite.';
@@ -2058,18 +2186,18 @@ class AppLocalizationsHr extends AppLocalizations {
   String get aboutOwnersRemoved => 'Baza vlasnika uklonjena.';
 
   @override
-  String get aboutClearCacheTitle => 'Očistiti predmemoriju karte?';
+  String get aboutClearCacheTitle => 'Izbrisati spremljene karte?';
 
   @override
   String get aboutClearCacheBody =>
       'Izbrisat će se sve spremljene karte, uključujući one preuzete za rad izvan mreže. Bez signala ih neće biti moguće prikazati dok ih ponovno ne preuzmete.';
 
   @override
-  String get aboutCacheCleared => 'Predmemorija karte očišćena.';
+  String get aboutCacheCleared => 'Spremljene karte izbrisane.';
 
   @override
   String aboutCacheClearFailed(String error) {
-    return 'Brisanje predmemorije nije uspjelo: $error';
+    return 'Brisanje nije uspjelo: $error';
   }
 
   @override
@@ -2100,16 +2228,16 @@ class AppLocalizationsHr extends AppLocalizations {
       'Preuzmi samo svoju statističku regiju — preporučuje se Wi-Fi veza.';
 
   @override
-  String get aboutShareKataster => 'Podijeli katastar izvan mreže';
+  String get aboutShareKataster => 'Dijeli regije s telefonima u blizini';
 
   @override
   String aboutShareKatasterActive(int count) {
-    return 'Dostupno u lokalnoj mreži • pronađenih uređaja: $count';
+    return 'Dijeljenje uključeno • telefona u blizini: $count';
   }
 
   @override
   String get aboutShareKatasterDesc =>
-      'Dopusti drugim uređajima u istoj mreži preuzimanje učitanih regija.';
+      'Telefoni na istoj Wi-Fi mreži mogu od vas preuzeti regije koje ste već preuzeli – brže i bez mobilnih podataka.';
 
   @override
   String get aboutPublicOwners => 'javni vlasnici';
@@ -2255,7 +2383,7 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get aboutSrcGursDesc =>
-      'Ortofoto snimke (2022.-2024.), katastar, katastarske općine, općine, upravne jedinice, DMR';
+      'Ortofoto snimke (2022.-2024.), katastar, katastarske općine, općine, upravne jedinice, DMR, vrednovanje nekretnina';
 
   @override
   String get aboutSrcOsmDesc => 'Osnovna karta i topografski podaci';

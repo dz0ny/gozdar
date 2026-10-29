@@ -498,6 +498,27 @@ class ParcelLookupService {
     }
   }
 
+  /// Parcel [parcela] of KO [sifko] from the loaded regions, or null when no
+  /// region has it.
+  CadastralParcel? byNumber(int sifko, String parcela) {
+    for (final r in _dbs) {
+      try {
+        final rows = r.db.select(
+          'SELECT sifko, parcela, area, eid, poly FROM parcels '
+          'WHERE sifko = ? AND parcela = ? LIMIT 1',
+          [sifko, parcela],
+        );
+        if (rows.isNotEmpty) {
+          final parcel = _rowToParcel(rows.first);
+          if (parcel != null) return parcel;
+        }
+      } catch (e) {
+        debugPrint('ParcelLookupService.byNumber failed: $e');
+      }
+    }
+    return null;
+  }
+
   /// The parcel containing [point], or null. Searches each loaded region until a
   /// containing polygon is found.
   CadastralParcel? parcelAt(LatLng point) {

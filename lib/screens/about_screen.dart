@@ -54,20 +54,11 @@ class _AboutScreenState extends State<AboutScreen> {
   int _ownerReceived = 0;
   int? _ownerTotal;
 
-  StreamSubscription<Set<KatasterPeer>>? _katasterPeersSubscription;
-  bool _sharingKataster = false;
-  int _katasterPeerCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadPackageInfo();
-    _sharingKataster = KatasterSharingService.instance.isSharing;
-    _katasterPeerCount = KatasterSharingService.instance.peers.length;
-    _katasterPeersSubscription = KatasterSharingService.instance.peersStream
-        .listen((peers) {
-          if (mounted) setState(() => _katasterPeerCount = peers.length);
-        });
     KatasterSharingService.instance.startDiscovery();
     // Rate-limited (weekly) by the service; usually answers from cache.
     KatasterUpdateService.instance.check().then((_) {
@@ -77,7 +68,6 @@ class _AboutScreenState extends State<AboutScreen> {
 
   @override
   void dispose() {
-    _katasterPeersSubscription?.cancel();
     super.dispose();
   }
 
@@ -360,7 +350,7 @@ class _AboutScreenState extends State<AboutScreen> {
       children: [
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          secondary: Icon(Icons.http, color: colorScheme.primary),
+          secondary: Icon(Icons.cloud_download_outlined, color: colorScheme.primary),
           title: Text(context.l10n.aboutHttpCache),
           subtitle: Text(
             context.l10n.aboutHttpCacheDesc,
@@ -550,30 +540,6 @@ class _AboutScreenState extends State<AboutScreen> {
             ),
           ),
         ],
-        const Divider(height: 24),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          secondary: Icon(Icons.lan, color: colorScheme.primary),
-          title: Text(context.l10n.aboutShareKataster),
-          subtitle: Text(
-            _sharingKataster
-                ? context.l10n.aboutShareKatasterActive(_katasterPeerCount)
-                : context.l10n.aboutShareKatasterDesc,
-          ),
-          value: _sharingKataster,
-          onChanged: (enabled) async {
-            if (enabled) {
-              await KatasterSharingService.instance.startSharing();
-            } else {
-              await KatasterSharingService.instance.stopSharing();
-            }
-            if (mounted) {
-              setState(() {
-                _sharingKataster = KatasterSharingService.instance.isSharing;
-              });
-            }
-          },
-        ),
       ],
     );
   }

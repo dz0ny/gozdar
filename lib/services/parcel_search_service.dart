@@ -92,6 +92,12 @@ class ParcelSearchService {
         ? locator.search(parsed.words, limit: 6)
         : const <KoInfo>[];
 
+    // "1650 1000" or "1650 100/2": KO code, then the parcel number, the way
+    // GURS writes it. A typed code beats the selected KO, so it comes first;
+    // the other reading follows.
+    final codeFirst = _koCodeThenParcel(query);
+    if (codeFirst != null) out.add(_parcelFor(codeFirst.$1, codeFirst.$2));
+
     if (number != null) {
       final targets = ko != null
           ? [ko]
@@ -179,6 +185,20 @@ class ParcelSearchService {
       if (exact != null) return exact;
     }
     return locator.koAt(point);
+  }
+
+  /// The KO and parcel number of a query written as "šifra KO, parcel",
+  /// or null when it is not two such tokens or the code names no KO.
+  static (KoInfo, String)? _koCodeThenParcel(String query) {
+    final tokens = query.trim().split(RegExp(r'\s+'));
+    if (tokens.length != 2) return null;
+    final code = int.tryParse(tokens[0]);
+    if (code == null ||
+        !ParsedParcelQuery._parcelToken.hasMatch(tokens[1])) {
+      return null;
+    }
+    final k = KoLocator.instance.bySifko(code);
+    return k == null ? null : (k, tokens[1].toLowerCase());
   }
 
   static ParcelSuggestion _parcelFor(KoInfo k, String number) =>

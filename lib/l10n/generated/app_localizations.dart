@@ -2899,6 +2899,228 @@ abstract class AppLocalizations {
   /// **'Katastrska občina'**
   String get parcelInfoKo;
 
+  /// No description provided for @valuationTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Vrednost parcele'**
+  String get valuationTitle;
+
+  /// No description provided for @valuationLoading.
+  ///
+  /// In sl, this message translates to:
+  /// **'Iščem vrednost pri GURS …'**
+  String get valuationLoading;
+
+  /// No description provided for @valuationPerM2.
+  ///
+  /// In sl, this message translates to:
+  /// **'{value} €/m²'**
+  String valuationPerM2(String value);
+
+  /// No description provided for @valuationUnvalued.
+  ///
+  /// In sl, this message translates to:
+  /// **'GURS za zemljišče te parcele nima vrednosti.'**
+  String get valuationUnvalued;
+
+  /// No description provided for @valuationLevel.
+  ///
+  /// In sl, this message translates to:
+  /// **'raven {level}'**
+  String valuationLevel(String level);
+
+  /// No description provided for @valuationBoniteta.
+  ///
+  /// In sl, this message translates to:
+  /// **'Boniteta'**
+  String get valuationBoniteta;
+
+  /// No description provided for @valuationSiteIndex.
+  ///
+  /// In sl, this message translates to:
+  /// **'Rastiščni koeficient'**
+  String get valuationSiteIndex;
+
+  /// No description provided for @valuationOpenness.
+  ///
+  /// In sl, this message translates to:
+  /// **'Odprtost'**
+  String get valuationOpenness;
+
+  /// No description provided for @valuationBonitetaHint.
+  ///
+  /// In sl, this message translates to:
+  /// **'Kakovost tal, od 0 do 100 – več je bolje'**
+  String get valuationBonitetaHint;
+
+  /// No description provided for @valuationSiteIndexHint.
+  ///
+  /// In sl, this message translates to:
+  /// **'Kako dobro na rastišču raste drevje – več je bolje'**
+  String get valuationSiteIndexHint;
+
+  /// No description provided for @valuationOpennessHint.
+  ///
+  /// In sl, this message translates to:
+  /// **'Kolikšen del gozda je dostopen s cestami in vlakami'**
+  String get valuationOpennessHint;
+
+  /// No description provided for @auctionLine.
+  ///
+  /// In sl, this message translates to:
+  /// **'Na dražbi: {price} € · {date}'**
+  String auctionLine(String price, String date);
+
+  /// No description provided for @auctionLineNoPrice.
+  ///
+  /// In sl, this message translates to:
+  /// **'Na dražbi · {date}'**
+  String auctionLineNoPrice(String date);
+
+  /// No description provided for @auctionTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Sodna dražba'**
+  String get auctionTitle;
+
+  /// No description provided for @auctionStarting.
+  ///
+  /// In sl, this message translates to:
+  /// **'Izklicna cena'**
+  String get auctionStarting;
+
+  /// No description provided for @auctionEstimated.
+  ///
+  /// In sl, this message translates to:
+  /// **'Ocenjena vrednost'**
+  String get auctionEstimated;
+
+  /// No description provided for @auctionShare.
+  ///
+  /// In sl, this message translates to:
+  /// **'Delež v prodaji'**
+  String get auctionShare;
+
+  /// No description provided for @auctionDate.
+  ///
+  /// In sl, this message translates to:
+  /// **'Začetek prodaje'**
+  String get auctionDate;
+
+  /// No description provided for @auctionCourt.
+  ///
+  /// In sl, this message translates to:
+  /// **'Sodišče'**
+  String get auctionCourt;
+
+  /// No description provided for @auctionActive.
+  ///
+  /// In sl, this message translates to:
+  /// **'Dražba poteka'**
+  String get auctionActive;
+
+  /// No description provided for @auctionOpen.
+  ///
+  /// In sl, this message translates to:
+  /// **'Odpri objavo na sodnedrazbe.si'**
+  String get auctionOpen;
+
+  /// No description provided for @auctionSource.
+  ///
+  /// In sl, this message translates to:
+  /// **'Podatki: sodnedrazbe.si. Pred oddajo ponudbe preverite objavo.'**
+  String get auctionSource;
+
+  /// No description provided for @auctionLayer.
+  ///
+  /// In sl, this message translates to:
+  /// **'Sodne dražbe'**
+  String get auctionLayer;
+
+  /// No description provided for @auctionLayerHint.
+  ///
+  /// In sl, this message translates to:
+  /// **'Parcele, ki so trenutno na sodni dražbi'**
+  String get auctionLayerHint;
+
+  /// No description provided for @searchTabParcels.
+  ///
+  /// In sl, this message translates to:
+  /// **'Parcele'**
+  String get searchTabParcels;
+
+  /// No description provided for @searchTabAuctions.
+  ///
+  /// In sl, this message translates to:
+  /// **'Dražbe'**
+  String get searchTabAuctions;
+
+  /// No description provided for @auctionsLoading.
+  ///
+  /// In sl, this message translates to:
+  /// **'Nalagam sodne dražbe …'**
+  String get auctionsLoading;
+
+  /// No description provided for @auctionsEmpty.
+  ///
+  /// In sl, this message translates to:
+  /// **'Ni dražb, ki bi ustrezale iskanju.'**
+  String get auctionsEmpty;
+
+  /// No description provided for @auctionsHint.
+  ///
+  /// In sl, this message translates to:
+  /// **'Najbližje dražbe so na vrhu. Iščete lahko po katastrski občini ali številki parcele.'**
+  String get auctionsHint;
+
+  /// No description provided for @valuationSource.
+  ///
+  /// In sl, this message translates to:
+  /// **'Posplošena tržna vrednost GURS, izračun {date}. Podatki so informativni.'**
+  String valuationSource(String date);
+
+  /// No description provided for @valuationSourceUndated.
+  ///
+  /// In sl, this message translates to:
+  /// **'Posplošena tržna vrednost GURS. Podatki so informativni.'**
+  String get valuationSourceUndated;
+
+  /// No description provided for @valuationOpenGurs.
+  ///
+  /// In sl, this message translates to:
+  /// **'Odpri v evidenci vrednotenja'**
+  String get valuationOpenGurs;
+
+  /// No description provided for @valuationModelGOZ.
+  ///
+  /// In sl, this message translates to:
+  /// **'Gozd'**
+  String get valuationModelGOZ;
+
+  /// No description provided for @valuationModelKME.
+  ///
+  /// In sl, this message translates to:
+  /// **'Kmetijsko zemljišče'**
+  String get valuationModelKME;
+
+  /// No description provided for @valuationModelSTZ.
+  ///
+  /// In sl, this message translates to:
+  /// **'Stavbno zemljišče'**
+  String get valuationModelSTZ;
+
+  /// No description provided for @valuationModelZPS.
+  ///
+  /// In sl, this message translates to:
+  /// **'Zemljišče pod stavbo'**
+  String get valuationModelZPS;
+
+  /// No description provided for @valuationModelDRZ.
+  ///
+  /// In sl, this message translates to:
+  /// **'Druga zemljišča'**
+  String get valuationModelDRZ;
+
   /// No description provided for @parcelNotSet.
   ///
   /// In sl, this message translates to:
@@ -3304,7 +3526,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutSectionMapCache.
   ///
   /// In sl, this message translates to:
-  /// **'Predpomnilnik zemljevida'**
+  /// **'Shramba'**
   String get aboutSectionMapCache;
 
   /// No description provided for @aboutTagline.
@@ -3418,31 +3640,31 @@ abstract class AppLocalizations {
   /// No description provided for @aboutHttpCache.
   ///
   /// In sl, this message translates to:
-  /// **'Predpomnilnik HTTP'**
+  /// **'Shranjuj podatke o parcelah'**
   String get aboutHttpCache;
 
   /// No description provided for @aboutHttpCacheDesc.
   ///
   /// In sl, this message translates to:
-  /// **'Predpomni odgovore državnih API-jev (prostor.zgs.gov.si).'**
+  /// **'Lastniki, vrednosti in sloji ZGS ostanejo v telefonu, zato se hitreje odprejo in delujejo tudi brez signala.'**
   String get aboutHttpCacheDesc;
 
   /// No description provided for @aboutTileCache.
   ///
   /// In sl, this message translates to:
-  /// **'Predpomnilnik ploščic'**
+  /// **'Shranjuj zemljevide'**
   String get aboutTileCache;
 
   /// No description provided for @aboutTileCacheDesc.
   ///
   /// In sl, this message translates to:
-  /// **'Predpomni karte (ločeno od HTTP predpomnilnika).'**
+  /// **'Ogledani zemljevidi ostanejo v telefonu za delo brez signala.'**
   String get aboutTileCacheDesc;
 
   /// No description provided for @aboutClearMapCache.
   ///
   /// In sl, this message translates to:
-  /// **'Počisti predpomnilnik karte'**
+  /// **'Izbriši shranjene zemljevide'**
   String get aboutClearMapCache;
 
   /// No description provided for @aboutPickSqlite.
@@ -3472,7 +3694,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutClearCacheTitle.
   ///
   /// In sl, this message translates to:
-  /// **'Počisti predpomnilnik karte?'**
+  /// **'Izbrišem shranjene zemljevide?'**
   String get aboutClearCacheTitle;
 
   /// No description provided for @aboutClearCacheBody.
@@ -3484,13 +3706,13 @@ abstract class AppLocalizations {
   /// No description provided for @aboutCacheCleared.
   ///
   /// In sl, this message translates to:
-  /// **'Predpomnilnik karte počiščen.'**
+  /// **'Shranjeni zemljevidi izbrisani.'**
   String get aboutCacheCleared;
 
   /// No description provided for @aboutCacheClearFailed.
   ///
   /// In sl, this message translates to:
-  /// **'Brisanje predpomnilnika ni uspelo: {error}'**
+  /// **'Brisanje ni uspelo: {error}'**
   String aboutCacheClearFailed(String error);
 
   /// No description provided for @aboutOfflineKataster.
@@ -3537,19 +3759,19 @@ abstract class AppLocalizations {
   /// No description provided for @aboutShareKataster.
   ///
   /// In sl, this message translates to:
-  /// **'Deli offline kataster'**
+  /// **'Deli regije s telefoni v bližini'**
   String get aboutShareKataster;
 
   /// No description provided for @aboutShareKatasterActive.
   ///
   /// In sl, this message translates to:
-  /// **'Na voljo v lokalnem omrežju • najdenih naprav: {count}'**
+  /// **'Deljenje vključeno • telefonov v bližini: {count}'**
   String aboutShareKatasterActive(int count);
 
   /// No description provided for @aboutShareKatasterDesc.
   ///
   /// In sl, this message translates to:
-  /// **'Dovoli drugim napravam v istem omrežju prenos naloženih regij.'**
+  /// **'Telefoni v istem omrežju Wi-Fi lahko regije, ki ste jih že prenesli, dobijo od vas – hitreje in brez mobilnih podatkov.'**
   String get aboutShareKatasterDesc;
 
   /// No description provided for @aboutPublicOwners.
@@ -3783,7 +4005,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutSrcGursDesc.
   ///
   /// In sl, this message translates to:
-  /// **'Ortofoto posnetki (2022-2024), kataster, katastrske občine, občine, upravne enote, DMR'**
+  /// **'Ortofoto posnetki (2022-2024), kataster, katastrske občine, občine, upravne enote, DMR, vrednotenje nepremičnin'**
   String get aboutSrcGursDesc;
 
   /// No description provided for @aboutSrcOsmDesc.

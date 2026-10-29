@@ -28,6 +28,9 @@ import '../services/drone_settings.dart';
 import '../services/kml_service.dart';
 import '../services/map_preferences_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../services/si_valuation_service.dart';
+import '../services/auction_service.dart';
+import '../widgets/auction_sheet.dart';
 import '../services/parcel_pdf_service.dart';
 import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
@@ -61,6 +64,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   LogsProvider? _logsProvider;
   OwnerInfo? _lookedUpOwner;
 
+  /// GURS value of a Slovenian cadastral parcel; null elsewhere.
+  Future<ParcelValuation?>? _valuation;
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +74,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     _loadLocationsInParcel();
     _loadLogsInParcel();
     _lookUpOwner();
+    _lookUpValuation();
     _loadMosaic();
   }
 
@@ -91,6 +98,12 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     if (info != null && mounted) {
       setState(() => _lookedUpOwner = info);
     }
+  }
+
+  void _lookUpValuation() {
+    final ko = _parcel.cadastralMunicipality;
+    if (!_parcel.isCadastral || !SiValuationService.covers(ko)) return;
+    _valuation = SiValuationService.instance.lookup(ko!, _parcel.parcelNumber!);
   }
 
   @override
@@ -1160,6 +1173,37 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                   ),
 
                   const SizedBox(height: 16),
+
+                  // Brings its own bottom gap, so nothing is left when
+                  // GURS has no answer.
+                  if (_valuation != null)
+                    ParcelValuationCard(valuation: _valuation!),
+
+                  // A "Na dražbi" card when the parcel is up for sale.
+                  if (_valuation != null)
+                    FutureBuilder<List<Auction>>(
+                      future: AuctionService.instance.forParcel(
+                        _parcel.cadastralMunicipality!,
+                        _parcel.parcelNumber!,
+                      ),
+                      builder: (context, snapshot) {
+                        final list = snapshot.data ?? const [];
+                        if (list.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Card(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
+                              child: Column(
+                                children: [
+                                  for (final a in list) AuctionLine(auction: a),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
 
                   // Notes Card
                   ParcelNotesCard(notes: _parcel.notes, onEdit: _editNotes),

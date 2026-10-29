@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/l10n.dart';
+import 'sheet_parts.dart';
 
 /// "Navigiraj" chooser: hand the destination to the phone's navigation app
 /// (Google Maps, Apple Maps), use the in-app compass, or copy the coordinates.
@@ -19,11 +20,15 @@ class NavigateToSheet extends StatelessWidget {
   /// Start the in-app compass navigation to [destination].
   final VoidCallback onInAppNavigation;
 
+  /// Reopen the panel this sheet came from; plain close when null.
+  final VoidCallback? onBack;
+
   const NavigateToSheet({
     super.key,
     required this.destination,
     required this.name,
     required this.onInAppNavigation,
+    this.onBack,
   });
 
   static Future<void> show(
@@ -31,14 +36,15 @@ class NavigateToSheet extends StatelessWidget {
     required LatLng destination,
     required String name,
     required VoidCallback onInAppNavigation,
+    VoidCallback? onBack,
   }) {
     return showModalBottomSheet<void>(
       context: context,
-      showDragHandle: true,
       builder: (ctx) => NavigateToSheet(
         destination: destination,
         name: name,
         onInAppNavigation: onInAppNavigation,
+        onBack: onBack,
       ),
     );
   }
@@ -90,75 +96,79 @@ class NavigateToSheet extends StatelessWidget {
     );
   }
 
+  void _copy(BuildContext context) {
+    final messenger = ScaffoldMessenger.of(context);
+    Clipboard.setData(ClipboardData(text: coordinates(destination)));
+    Navigator.pop(context);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.mapwCoordinatesCopied),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return SafeArea(
-      child: SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Column(
-                children: [
-                  Text(name, style: Theme.of(context).textTheme.titleMedium),
-                  Text(
-                    coordinates(destination),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontFamily: 'monospace',
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
+            const SheetHandle(),
+            SheetHeader(
+              // Same icon and tint as the Navigiraj tile that opens this.
+              icon: Icons.navigation,
+              color: Colors.indigo.shade200,
+              title: name,
+              subtitle: coordinates(destination),
+              onBack: onBack == null
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                      onBack!();
+                    },
             ),
-            ListTile(
-              leading: const Icon(Icons.directions),
-              title: Text(context.l10n.mapwGoogleMaps),
-              subtitle: Text(context.l10n.mapwRoadNavigation),
-              onTap: () {
-                Navigator.pop(context);
-                _launchFirst(context, googleMapsUris(destination));
-              },
-            ),
-            if (_hasAppleMaps)
-              ListTile(
-                leading: const Icon(Icons.map_outlined),
-                title: Text(context.l10n.mapwAppleMaps),
-                subtitle: Text(context.l10n.mapwRoadNavigation),
+            const SizedBox(height: 12),
+            SheetTileRow([
+              SheetTile(
+                icon: Icons.directions,
+                label: context.l10n.mapwGoogleMaps,
+                color: Colors.green.shade300,
                 onTap: () {
                   Navigator.pop(context);
-                  _launchFirst(context, [appleMapsUri(destination)]);
+                  _launchFirst(context, googleMapsUris(destination));
                 },
               ),
-            ListTile(
-              leading: const Icon(Icons.explore),
-              title: Text(context.l10n.mapwInAppCompass),
-              subtitle: Text(context.l10n.mapwInAppCompassHint),
-              onTap: () {
-                Navigator.pop(context);
-                onInAppNavigation();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.copy),
-              title: Text(context.l10n.mapwCopyCoordinates),
-              onTap: () {
-                final messenger = ScaffoldMessenger.of(context);
-                Clipboard.setData(
-                  ClipboardData(text: coordinates(destination)),
-                );
-                Navigator.pop(context);
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(context.l10n.mapwCoordinatesCopied),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 8),
+              if (_hasAppleMaps)
+                SheetTile(
+                  icon: Icons.map_outlined,
+                  label: context.l10n.mapwAppleMaps,
+                  color: Colors.lightBlue.shade300,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _launchFirst(context, [appleMapsUri(destination)]);
+                  },
+                ),
+              SheetTile(
+                icon: Icons.explore,
+                label: context.l10n.mapwInAppCompass,
+                color: cs.primary,
+                onTap: () {
+                  Navigator.pop(context);
+                  onInAppNavigation();
+                },
+              ),
+              SheetTile(
+                icon: Icons.copy,
+                label: context.l10n.mapwCopyCoordinates,
+                color: cs.onSurfaceVariant,
+                onTap: () => _copy(context),
+              ),
+            ]),
           ],
         ),
       ),
