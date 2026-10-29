@@ -6,6 +6,7 @@ import { getMapHtml } from './map.js';
 import { handleTileRequest } from './tiles.js';
 import { cache } from './middleware/cache.js';
 import { getParcelByPoint, getParcelById, getParcelsByBbox, getCadastralZoning, getParcelByKoAndNumber } from './wfs.js';
+import { debugOffer, getOffers, refreshOffers } from './offers.js';
 
 // Create Hono app
 const app = new Hono();
@@ -58,6 +59,16 @@ app.get('/api/wfs/parcel/:id', getParcelById);
 app.get('/api/wfs/parcels/bbox', getParcelsByBbox);
 app.get('/api/wfs/zoning', getCadastralZoning);
 
+// Sale offers for farmland and forest (e-uprava), read by the cron job.
+app.get('/api/offers', getOffers);
+
+// Read one offer now. This uses Workers AI, so only local dev may call it.
+app.get('/api/offers/debug/:id', (c) => {
+  const host = new URL(c.req.url).hostname;
+  if (host !== 'localhost' && host !== '127.0.0.1') return c.notFound();
+  return debugOffer(c);
+});
+
 // 404 handler
 app.notFound((c) => {
   return c.json({ error: 'Not Found' }, 404);
@@ -69,4 +80,10 @@ app.onError((err, c) => {
   return c.json({ error: err.message }, 500);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  // The cron reads new sale offers. See wrangler.toml for the schedule.
+  async scheduled(_event, env, ctx) {
+    ctx.waitUntil(refreshOffers(env).then((r) => console.log('offers', r)));
+  },
+};

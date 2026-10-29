@@ -8,3 +8,14 @@ mode = "smart"
 [[r2_buckets]]
 binding = "TILES_BUCKET"
 bucket_name = "gozdar-v2"
+
+[ai]
+binding = "AI"
+
+# Read new e-uprava sale offers once a day, at 03:17 UTC.
+[triggers]
+crons = ["17 3 * * *"]
+
+# Decoding scanned PDFs needs more CPU time than tile proxying.
+[limits]
+cpu_ms = 120000
