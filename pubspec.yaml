@@ -58,7 +58,7 @@ dependencies:
   archive: any
   path: any
   pdf: ^3.11.1
-  open_filex: ^4.5.0
+  open_filex: ^5.0.0
 
   # Routing
   go_router: any
