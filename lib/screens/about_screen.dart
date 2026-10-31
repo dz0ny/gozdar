@@ -1009,12 +1009,22 @@ class _AboutScreenState extends State<AboutScreen> {
   }
 
   Widget _buildMapSourcesCard(BuildContext context, ColorScheme colorScheme) {
+    // Croatian users see their own source (DGU) first.
+    final isCroatian = context.l10n.localeName == 'hr';
+    final dgu = _buildMapSourceItem(
+      context,
+      'Državna geodetska uprava RH (DGU)',
+      context.l10n.aboutSrcDguDesc,
+      'https://oss.uredjenazemlja.hr',
+      Icons.badge_outlined,
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (isCroatian) ...[dgu, const Divider(height: 24)],
             _buildMapSourceItem(
               context,
               'Zavod za gozdove Slovenije (ZGS)',
@@ -1030,6 +1040,10 @@ class _AboutScreenState extends State<AboutScreen> {
               'https://www.e-prostor.gov.si',
               Icons.map,
             ),
+            if (!isCroatian) ...[
+              const Divider(height: 24),
+              dgu,
+            ],
             const Divider(height: 24),
             _buildMapSourceItem(
               context,

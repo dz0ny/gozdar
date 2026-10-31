@@ -16,4 +16,11 @@ void main() {
       TileDownloadService.tileUrl(template, 12, 4, 7),
     );
   });
+
+  test('tileUrl fills {bbox} for direct WMS layers', () {
+    expect(
+      TileDownloadService.tileUrl('https://w.example/wms?BBOX={bbox}', 1, 1, 1),
+      'https://w.example/wms?BBOX=0.00,-20037508.34,20037508.34,0.00',
+    );
+  });
 }

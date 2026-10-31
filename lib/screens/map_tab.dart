@@ -3021,6 +3021,14 @@ class MapTabState extends State<MapTab> {
                   controller: scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: [
+                    // Croatian users see their own source first.
+                    if (L10n.current.localeName == 'hr') _buildUsageRightsSection(
+                      context,
+                      L10n.current.mapTabUsageDguName,
+                      'DGU',
+                      L10n.current.mapTabUsageDguDesc,
+                      'https://oss.uredjenazemlja.hr/',
+                    ),
                     _buildUsageRightsSection(
                       context,
                       L10n.current.mapTabUsageGuName,
@@ -3034,6 +3042,13 @@ class MapTabState extends State<MapTab> {
                       'ZGS',
                       L10n.current.mapTabUsageZgsDesc,
                       'https://www.zgs.si/',
+                    ),
+                    if (L10n.current.localeName != 'hr') _buildUsageRightsSection(
+                      context,
+                      L10n.current.mapTabUsageDguName,
+                      'DGU',
+                      L10n.current.mapTabUsageDguDesc,
+                      'https://oss.uredjenazemlja.hr/',
                     ),
                     _buildUsageRightsSection(
                       context,

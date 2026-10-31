@@ -65,6 +65,8 @@
   "mapTabUsageRightsTitle": "Prava korištenja podataka",
   "mapTabUsageGuName": "Geodetska uprava RS",
   "mapTabUsageGuDesc": "Podaci Geodetske uprave Republike Slovenije (ortofoto, katastar, topografske karte) dostupni su pod uvjetima otvorenih podataka. Korištenje je dopušteno u nekomercijalne i komercijalne svrhe uz navođenje izvora.",
+  "mapTabUsageDguName": "Državna geodetska uprava RH",
+  "mapTabUsageDguDesc": "Katastarski podaci i podaci o posjednicima s portala Uređena zemlja službeni su podaci Republike Hrvatske. Informativnog su karaktera i služe isključivo za osobnu uporabu; ne smiju se koristiti u komercijalne svrhe niti dalje distribuirati.",
   "mapTabUsageZgsName": "Zavod za šume Slovenije",
   "mapTabUsageZgsDesc": "Šumarski podaci (šumske zajednice, sastojinska karta, stanišni koeficijenti) javno su dostupni. Korištenje je dopušteno u informativne svrhe. Za komercijalno korištenje potrebno je ishoditi dopuštenje ZGS-a.",
   "mapTabUsageOsmDesc": "Kartografski podaci OpenStreetMap dostupni su pod licencijom Open Database License (ODbL). Korištenje je dopušteno uz navođenje \"© OpenStreetMap contributors\".",

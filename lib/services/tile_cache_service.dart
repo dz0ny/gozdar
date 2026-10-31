@@ -21,8 +21,8 @@ class TileCacheService {
   static BuiltInMapCachingProvider? _builtInCachingProvider;
   /// App-lifetime HTTP client for tile fetches (see [initialize]).
   static late final Client _httpClient;
-  static NetworkTileProvider? _tileProvider;
-  static final Map<String, NetworkTileProvider> _headeredTileProviders = {};
+  static _WmsAwareTileProvider? _tileProvider;
+  static final Map<String, _WmsAwareTileProvider> _headeredTileProviders = {};
   static final ValueNotifier<TileDownloadVisualState> _downloadVisualState =
       ValueNotifier(const TileDownloadVisualState());
 
@@ -60,7 +60,7 @@ class TileCacheService {
     // (cached tiles kept showing, which hid it). Hand in our own client: a
     // provider never closes a client it did not create.
     _httpClient = RetryClient(Client());
-    _tileProvider = NetworkTileProvider(
+    _tileProvider = _WmsAwareTileProvider(
       httpClient: _httpClient,
       cachingProvider: _ToggleableCachingProvider(
         () => _builtInCachingProvider!,
@@ -96,7 +96,7 @@ class TileCacheService {
     return _headeredTileProviders.putIfAbsent(
       key,
       // Mutable copy: TileLayer putIfAbsents a User-Agent into this map.
-      () => NetworkTileProvider(
+      () => _WmsAwareTileProvider(
         headers: Map.of(layer.httpHeaders),
         httpClient: _httpClient,
         cachingProvider: _ToggleableCachingProvider(
@@ -505,4 +505,33 @@ class TileDownloadRequest {
     required this.maxZoom,
     this.layerName,
   });
+}
+
+/// Network tile provider that also fills `{bbox}`: direct WMS layers
+/// ([MapLayer.isDirectWms]) turn each XYZ tile into a GetMap of its EPSG:3857
+/// bounding box. The URL equals [TileDownloadService.tileUrl], so offline
+/// downloads hit the same cache entries.
+class _WmsAwareTileProvider extends NetworkTileProvider {
+  _WmsAwareTileProvider({
+    super.headers,
+    super.httpClient,
+    super.cachingProvider,
+  });
+
+  @override
+  Map<String, String> generateReplacementMap(
+    String urlTemplate,
+    TileCoordinates coordinates,
+    TileLayer options,
+  ) {
+    final map = super.generateReplacementMap(urlTemplate, coordinates, options);
+    if (urlTemplate.contains('{bbox}')) {
+      map['bbox'] = MapLayer.webMercatorTileBbox(
+        coordinates.z,
+        coordinates.x,
+        coordinates.y,
+      );
+    }
+    return map;
+  }
 }

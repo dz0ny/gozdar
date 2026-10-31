@@ -61,6 +61,28 @@ void main() {
       expect(template, isNull);
     });
 
+    test('requests Croatian DGU layers directly, without the worker', () {
+      final template = MapLayer.hrKataster.resolveUrlTemplate(null);
+
+      expect(template, startsWith('https://wms1-gs-oss.uredjenazemlja.hr/'));
+      expect(template, contains('LAYERS=oss%3ABZP_CESTICE'));
+      expect(template, contains('STYLES=jis_cestice_kathr'));
+      expect(template, contains('SRS=EPSG%3A3857'));
+      expect(template, endsWith('&BBOX={bbox}'));
+    });
+
+    test('computes EPSG:3857 tile bounds', () {
+      expect(
+        MapLayer.webMercatorTileBbox(0, 0, 0),
+        '-20037508.34,-20037508.34,20037508.34,20037508.34',
+      );
+      // z1 top-left quarter.
+      expect(
+        MapLayer.webMercatorTileBbox(1, 0, 0),
+        '-20037508.34,0.00,0.00,20037508.34',
+      );
+    });
+
     test(
       'caps native and download zoom at 19 while keeping app zoom at 22',
       () {

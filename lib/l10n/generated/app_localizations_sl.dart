@@ -990,6 +990,13 @@ class AppLocalizationsSl extends AppLocalizations {
       'Podatki Geodetske uprave Republike Slovenije (ortofoto, kataster, topografske karte) so na voljo pod pogoji odprtih podatkov. Uporaba je dovoljena za nekomercialne in komercialne namene ob navedbi vira.';
 
   @override
+  String get mapTabUsageDguName => 'Državna geodetska uprava RH';
+
+  @override
+  String get mapTabUsageDguDesc =>
+      'Katastrski podatki in podatki o posestnikih s portala Uređena zemlja so uradni podatki Republike Hrvaške. So informativni in namenjeni le osebni uporabi; ni jih dovoljeno uporabljati v komercialne namene ali jih posredovati naprej.';
+
+  @override
   String get mapTabUsageZgsName => 'Zavod za gozdove Slovenije';
 
   @override
@@ -1518,6 +1525,30 @@ class AppLocalizationsSl extends AppLocalizations {
   String get parcelSearchUseKo => 'Išči v tej k.o.';
 
   @override
+  String get mapwCatAdministrativno => 'Administrativno';
+
+  @override
+  String get mapwCatInfrastruktura => 'Infrastruktura';
+
+  @override
+  String get mapwCatGozdnoGospodarstvo => 'Gozdno gospodarstvo';
+
+  @override
+  String get mapwCatZavarovanaObmocja => 'Zavarovana območja';
+
+  @override
+  String get mapwCatNevarnostiInSkode => 'Nevarnosti in škode';
+
+  @override
+  String get mapwCatFunkcijeGozda => 'Funkcije gozda';
+
+  @override
+  String get mapwCatPosebno => 'Posebno';
+
+  @override
+  String get mapwCatHrvatska => 'Hrvaška (DGU)';
+
+  @override
   String get parcelPointUnknown => 'Točka ?';
 
   @override
@@ -1692,7 +1723,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get parcelExportKml => 'Izvozi KML';
 
   @override
-  String get parcelViewOnMap => 'Poglej na karti';
+  String get parcelViewOnMap => 'Na karti';
 
   @override
   String get parcelNavigate => 'Navigiraj';
@@ -2486,6 +2517,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Ortofoto posnetki (2022-2024), kataster, katastrske občine, občine, upravne enote, DMR, vrednotenje nepremičnin';
 
   @override
+  String get aboutSrcDguDesc =>
+      'Hrvaške katastrske parcele, katastrske občine in posestniki parcel (portal Uređena zemlja)';
+
+  @override
   String get aboutSrcOsmDesc => 'Osnovni zemljevid in topografski podatki';
 
   @override
@@ -2512,11 +2547,11 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get aboutDisclaimerBody =>
-      'Razvijalec ne prevzema odgovornosti za morebitno škodo, ki bi nastala zaradi uporabe aplikacije ali podatkov v njej. Za uradne podatke o lastništvu in mejah parcel se obrnite na pristojne organe (GURS, ZGS).';
+      'Razvijalec ne prevzema odgovornosti za morebitno škodo, ki bi nastala zaradi uporabe aplikacije ali podatkov v njej. Za uradne podatke o lastništvu in mejah parcel se obrnite na pristojne organe (v Sloveniji GURS in ZGS, na Hrvaškem DGU).';
 
   @override
   String get aboutCopyrightBody =>
-      'Kartografski podatki ZGS in GURS so last Republike Slovenije. OpenStreetMap podatki so na voljo pod licenco ODbL. ESRI podatki so last Esri Inc.';
+      'Kartografski podatki ZGS in GURS so last Republike Slovenije. Katastrski podatki in podatki o posestnikih DGU so last Republike Hrvaške in so namenjeni le osebni uporabi. OpenStreetMap podatki so na voljo pod licenco ODbL. ESRI podatki so last Esri Inc.';
 
   @override
   String get aboutPrivacyBody =>
@@ -2835,6 +2870,12 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get introTermsBody =>
       'Aplikacija uporablja javne podatke Zavoda za gozdove Slovenije.\n\nZ uporabo te aplikacije se strinjate s pogoji uporabe podatkov:\n\n';
+
+  @override
+  String get introTermsLinkLabel => 'prostor.zgs.gov.si/pregledovalnik';
+
+  @override
+  String get introTermsUrl => 'https://prostor.zgs.gov.si/pregledovalnik/';
 
   @override
   String get aboutShowIntro => 'Uvodni vodič';

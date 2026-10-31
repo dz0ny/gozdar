@@ -40,6 +40,9 @@ class ForestTab extends StatefulWidget {
 }
 
 class ForestTabState extends State<ForestTab> {
+  /// Height of the fade at the top of the parcel list.
+  static const double _listFade = 12;
+
   final DatabaseService _databaseService = DatabaseService();
 
   /// Public method to refresh data from outside
@@ -527,7 +530,7 @@ class ForestTabState extends State<ForestTab> {
                 children: [
                   // Summary card - compact
                   Card(
-                    margin: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(
@@ -559,14 +562,15 @@ class ForestTabState extends State<ForestTab> {
                   ),
 
                   // Parcels list. Top edge fades so cards sliding under the
-                  // summary card don't leave a hard-clipped strip.
+                  // summary card don't leave a hard-clipped strip; the lists
+                  // start below the fade so the first item isn't dimmed.
                   Expanded(
                     child: ShaderMask(
-                        shaderCallback: (rect) => const LinearGradient(
+                        shaderCallback: (rect) => LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [Colors.transparent, Colors.black],
-                          stops: [0, 0.03],
+                          stops: [0, _listFade / rect.height],
                         ).createShader(rect),
                         blendMode: BlendMode.dstIn,
                         child: displayParcels.isEmpty
@@ -703,7 +707,7 @@ class ForestTabState extends State<ForestTab> {
       });
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, _listFade, 16, 16),
       itemCount: sortedKOs.length,
       itemBuilder: (context, groupIndex) {
         final ko = sortedKOs[groupIndex];
@@ -792,7 +796,7 @@ class ForestTabState extends State<ForestTab> {
 
   Widget _buildSimpleParcelsList(BuildContext context, List<Parcel> parcels) {
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, _listFade, 16, 16),
       itemCount: parcels.length,
       itemBuilder: (context, index) {
         final parcel = parcels[index];

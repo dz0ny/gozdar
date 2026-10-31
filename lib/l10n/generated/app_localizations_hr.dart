@@ -982,6 +982,13 @@ class AppLocalizationsHr extends AppLocalizations {
       'Podaci Geodetske uprave Republike Slovenije (ortofoto, katastar, topografske karte) dostupni su pod uvjetima otvorenih podataka. Korištenje je dopušteno u nekomercijalne i komercijalne svrhe uz navođenje izvora.';
 
   @override
+  String get mapTabUsageDguName => 'Državna geodetska uprava RH';
+
+  @override
+  String get mapTabUsageDguDesc =>
+      'Katastarski podaci i podaci o posjednicima s portala Uređena zemlja službeni su podaci Republike Hrvatske. Informativnog su karaktera i služe isključivo za osobnu uporabu; ne smiju se koristiti u komercijalne svrhe niti dalje distribuirati.';
+
+  @override
   String get mapTabUsageZgsName => 'Zavod za šume Slovenije';
 
   @override
@@ -1510,6 +1517,30 @@ class AppLocalizationsHr extends AppLocalizations {
   String get parcelSearchUseKo => 'Traži u ovoj k.o.';
 
   @override
+  String get mapwCatAdministrativno => 'Administrativno';
+
+  @override
+  String get mapwCatInfrastruktura => 'Infrastruktura';
+
+  @override
+  String get mapwCatGozdnoGospodarstvo => 'Šumsko gospodarstvo';
+
+  @override
+  String get mapwCatZavarovanaObmocja => 'Zaštićena područja';
+
+  @override
+  String get mapwCatNevarnostiInSkode => 'Opasnosti i štete';
+
+  @override
+  String get mapwCatFunkcijeGozda => 'Funkcije šuma';
+
+  @override
+  String get mapwCatPosebno => 'Posebno';
+
+  @override
+  String get mapwCatHrvatska => 'Hrvatska (DGU)';
+
+  @override
   String get parcelPointUnknown => 'Točka ?';
 
   @override
@@ -1684,7 +1715,7 @@ class AppLocalizationsHr extends AppLocalizations {
   String get parcelExportKml => 'Izvezi KML';
 
   @override
-  String get parcelViewOnMap => 'Pogledaj na karti';
+  String get parcelViewOnMap => 'Na karti';
 
   @override
   String get parcelNavigate => 'Navigiraj';
@@ -2189,7 +2220,7 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get aboutTagline =>
-      'Aplikacija za vlasnike šuma i šumarske radnike u Sloveniji';
+      'Aplikacija za vlasnike šuma i šumarske radnike u Sloveniji i Hrvatskoj';
 
   @override
   String get aboutInfoTitle => 'Informacije o aplikaciji';
@@ -2251,7 +2282,7 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get aboutHttpCacheDesc =>
-      'Vlasnici, vrijednosti i slojevi ZGS ostaju u telefonu pa se brže otvaraju i rade i bez signala.';
+      'Posjednici, vrijednosti i slojevi ZGS-a ostaju u telefonu pa se brže otvaraju i rade i bez signala.';
 
   @override
   String get aboutTileCache => 'Spremaj karte';
@@ -2480,6 +2511,10 @@ class AppLocalizationsHr extends AppLocalizations {
       'Ortofoto snimke (2022.-2024.), katastar, katastarske općine, općine, upravne jedinice, DMR, vrednovanje nekretnina';
 
   @override
+  String get aboutSrcDguDesc =>
+      'Katastarske čestice, katastarske općine i posjednici čestica (portal Uređena zemlja)';
+
+  @override
   String get aboutSrcOsmDesc => 'Osnovna karta i topografski podaci';
 
   @override
@@ -2506,11 +2541,11 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get aboutDisclaimerBody =>
-      'Razvojni programer ne preuzima odgovornost za moguću štetu nastalu korištenjem aplikacije ili podataka u njoj. Za službene podatke o vlasništvu i granicama čestica obratite se nadležnim tijelima (GURS, ZGS).';
+      'Razvojni programer ne preuzima odgovornost za moguću štetu nastalu korištenjem aplikacije ili podataka u njoj. Za službene podatke o vlasništvu i granicama čestica obratite se nadležnim tijelima (u Hrvatskoj DGU, u Sloveniji GURS i ZGS).';
 
   @override
   String get aboutCopyrightBody =>
-      'Kartografski podaci ZGS-a i GURS-a vlasništvo su Republike Slovenije. Podaci OpenStreetMapa dostupni su pod licencijom ODbL. ESRI podaci vlasništvo su tvrtke Esri Inc.';
+      'Katastarski podaci i podaci o posjednicima DGU-a vlasništvo su Republike Hrvatske i namijenjeni su isključivo osobnoj uporabi. Kartografski podaci ZGS-a i GURS-a vlasništvo su Republike Slovenije. Podaci OpenStreetMapa dostupni su pod licencijom ODbL. ESRI podaci vlasništvo su tvrtke Esri Inc.';
 
   @override
   String get aboutPrivacyBody =>
@@ -2624,7 +2659,7 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get introWelcomeBody =>
-      'Aplikacija za vlasnike šuma i šumarske radnike u Sloveniji.\n\nPratite sječu, bilježite trupce i koristite GPS za rad na terenu.';
+      'Aplikacija za vlasnike šuma i šumarske radnike u Sloveniji i Hrvatskoj.\n\nPratite sječu, bilježite trupce i koristite GPS za rad na terenu.';
 
   @override
   String get introNavTitle => 'Navigacija';
@@ -2750,10 +2785,12 @@ class AppLocalizationsHr extends AppLocalizations {
   String get introLayersButtonHint => 'Pritisnite za odabir slojeva';
 
   @override
-  String get introLayersOrthoDesc => 'Satelitske snimke Slovenije';
+  String get introLayersOrthoDesc =>
+      'Snimke iz zraka (Slovenija), ESRI satelit za Hrvatsku';
 
   @override
-  String get introLayersCadastreDesc => 'Granice čestica iz katastra';
+  String get introLayersCadastreDesc =>
+      'Granice čestica iz katastra (DGU i GURS)';
 
   @override
   String get introLayersStands => 'Šumske sastojine';
@@ -2830,7 +2867,13 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get introTermsBody =>
-      'Aplikacija koristi javne podatke Zavoda za šume Slovenije.\n\nKorištenjem ove aplikacije slažete se s uvjetima korištenja podataka:\n\n';
+      'Aplikacija koristi javne podatke Državne geodetske uprave (DGU): katastar i posjednike čestica. Podaci su informativni i namijenjeni osobnoj uporabi.\n\nKorištenjem ove aplikacije slažete se s uvjetima korištenja portala Uređena zemlja:\n\n';
+
+  @override
+  String get introTermsLinkLabel => 'oss.uredjenazemlja.hr';
+
+  @override
+  String get introTermsUrl => 'https://oss.uredjenazemlja.hr/';
 
   @override
   String get aboutShowIntro => 'Uvodni vodič';

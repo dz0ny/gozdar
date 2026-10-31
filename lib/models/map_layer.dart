@@ -9,18 +9,8 @@ enum OverlayCategory {
   nevarnostiInSkode,
   funkcijeGozda,
   posebno,
+  hrvatska,
 }
-
-/// Slovenian display names for overlay categories
-const Map<OverlayCategory, String> overlayCategoryNames = {
-  OverlayCategory.administrativno: 'Administrativno',
-  OverlayCategory.infrastruktura: 'Infrastruktura',
-  OverlayCategory.gozdnoGospodarstvo: 'Gozdno gospodarstvo',
-  OverlayCategory.zavarovanaObmocja: 'Zavarovana območja',
-  OverlayCategory.nevarnostiInSkode: 'Nevarnosti in škode',
-  OverlayCategory.funkcijeGozda: 'Funkcije gozda',
-  OverlayCategory.posebno: 'Posebno',
-};
 
 enum MapLayerType {
   // Base layers
@@ -87,6 +77,12 @@ enum MapLayerType {
 
   // Special
   lovisca,
+
+  // Croatia (DGU). Appended: preferences store layers by name, but keep the
+  // Slovenian groups together above.
+  hrKataster,
+  hrKatasterNazivi,
+  hrKatastarskeOpcine,
 }
 
 class MapLayer {
@@ -149,6 +145,9 @@ class MapLayer {
   bool get isSlovenian =>
       isWms && (wmsBaseUrl?.contains('prostor.zgs.gov.si') ?? false);
 
+  /// Croatian DGU layer (cadastre from portal Uređena zemlja).
+  bool get isCroatian => category == OverlayCategory.hrvatska;
+
   /// Kebab-case slug used by the worker tile proxy.
   String get proxySlug =>
       proxySlugOverride ??
@@ -168,12 +167,51 @@ class MapLayer {
 
   int get downloadMaxZoom => nativeMaxZoom;
 
+  /// WMS layer the app requests itself: the server speaks EPSG:3857, so a
+  /// map tile is one GetMap of the tile's bounding box (DGU). Slovenian
+  /// layers need EPSG:3794 and go through the worker instead.
+  bool get isDirectWms => isWms && isCroatian;
+
+  /// GetMap template for a [isDirectWms] layer; `{bbox}` is filled per tile
+  /// by [webMercatorTileBbox].
+  String get _directWmsTemplate {
+    final params = {
+      'SERVICE': 'WMS',
+      'VERSION': '1.1.1',
+      'REQUEST': 'GetMap',
+      'LAYERS': wmsLayers!.join(','),
+      'STYLES': wmsStyles ?? '',
+      'FORMAT': wmsFormat ?? 'image/png',
+      'TRANSPARENT': '$isTransparent'.toUpperCase(),
+      'SRS': 'EPSG:3857',
+      'WIDTH': '256',
+      'HEIGHT': '256',
+    };
+    final query = params.entries
+        .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
+        .join('&');
+    return '$wmsBaseUrl$query&BBOX={bbox}';
+  }
+
+  /// EPSG:3857 bounding box of XYZ tile z/x/y as "minx,miny,maxx,maxy".
+  static String webMercatorTileBbox(int z, int x, int y) {
+    const origin = 20037508.342789244;
+    final size = 2 * origin / (1 << z);
+    final minX = -origin + x * size;
+    final maxY = origin - y * size;
+    return [minX, maxY - size, minX + size, maxY]
+        .map((v) => v.toStringAsFixed(2))
+        .join(',');
+  }
+
   /// Resolve the layer to an XYZ template.
-  /// Direct tile sources keep their own template, Slovenian layers use the proxy.
+  /// Direct tile sources keep their own template, [isDirectWms] layers get a
+  /// GetMap template with `{bbox}`, Slovenian layers use the proxy.
   String? resolveUrlTemplate(String? workerUrl) {
     if (urlTemplate != null && urlTemplate!.isNotEmpty) {
       return urlTemplate;
     }
+    if (isDirectWms) return _directWmsTemplate;
     if (workerUrl == null || workerUrl.isEmpty) {
       return null;
     }
@@ -930,6 +968,60 @@ class MapLayer {
     category: OverlayCategory.posebno,
   );
 
+  // ============ CROATIA (DGU) ============
+  // Served through the worker like the Slovenian layers; DGU's WMS takes
+  // Web Mercator directly, so the worker skips reprojection for them.
+
+  /// Katastarske čestice - Croatian cadastral parcels
+  static const hrKataster = MapLayer(
+    type: MapLayerType.hrKataster,
+    name: 'Katastarske čestice',
+    attribution: '© DGU',
+    minZoom: 15,
+    maxZoom: 19,
+    isWms: true,
+    wmsBaseUrl: 'https://wms1-gs-oss.uredjenazemlja.hr/ows2-m/wms?',
+    wmsLayers: ['oss:BZP_CESTICE'],
+    wmsFormat: 'image/png',
+    wmsStyles: 'jis_cestice_kathr',
+    isTransparent: true,
+    isOverlay: true,
+    category: OverlayCategory.hrvatska,
+  );
+
+  /// Katastarske čestice s brojevima - Croatian parcels with numbers
+  static const hrKatasterNazivi = MapLayer(
+    type: MapLayerType.hrKatasterNazivi,
+    name: 'Katastarske čestice s brojevima',
+    attribution: '© DGU',
+    minZoom: 15,
+    maxZoom: 19,
+    isWms: true,
+    wmsBaseUrl: 'https://wms1-gs-oss.uredjenazemlja.hr/ows2-m/wms?',
+    wmsLayers: ['oss:BZP_CESTICE'],
+    wmsFormat: 'image/png',
+    wmsStyles: 'jis_cestice_nazivi_kathr',
+    isTransparent: true,
+    isOverlay: true,
+    category: OverlayCategory.hrvatska,
+  );
+
+  /// Katastarske općine - Croatian cadastral municipalities
+  static const hrKatastarskeOpcine = MapLayer(
+    type: MapLayerType.hrKatastarskeOpcine,
+    name: 'Katastarske općine',
+    attribution: '© DGU',
+    minZoom: 14,
+    maxZoom: 19,
+    isWms: true,
+    wmsBaseUrl: 'https://wms1-gs-oss.uredjenazemlja.hr/ows2-m/wms?',
+    wmsLayers: ['oss:SIF_KATASTARSKE_OPCINE'],
+    wmsFormat: 'image/png',
+    isTransparent: true,
+    isOverlay: true,
+    category: OverlayCategory.hrvatska,
+  );
+
   /// Base layers (mutually exclusive)
   static const List<MapLayer> baseLayers = [
     openStreetMap,
@@ -992,6 +1084,10 @@ class MapLayer {
     rekreacija,
     // Special
     lovisca,
+    // Croatia
+    hrKataster,
+    hrKatasterNazivi,
+    hrKatastarskeOpcine,
   ];
 
   /// All layers for backwards compatibility

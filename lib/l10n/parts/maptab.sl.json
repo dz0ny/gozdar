@@ -321,6 +321,8 @@
   "mapTabUsageRightsTitle": "Pravice uporabe podatkov",
   "mapTabUsageGuName": "Geodetska uprava RS",
   "mapTabUsageGuDesc": "Podatki Geodetske uprave Republike Slovenije (ortofoto, kataster, topografske karte) so na voljo pod pogoji odprtih podatkov. Uporaba je dovoljena za nekomercialne in komercialne namene ob navedbi vira.",
+  "mapTabUsageDguName": "Državna geodetska uprava RH",
+  "mapTabUsageDguDesc": "Katastrski podatki in podatki o posestnikih s portala Uređena zemlja so uradni podatki Republike Hrvaške. So informativni in namenjeni le osebni uporabi; ni jih dovoljeno uporabljati v komercialne namene ali jih posredovati naprej.",
   "mapTabUsageZgsName": "Zavod za gozdove Slovenije",
   "mapTabUsageZgsDesc": "Gozdarski podatki (gozdne združbe, sestojna karta, rastiščni koeficienti) so javno dostopni. Uporaba je dovoljena za informativne namene. Za komercialno uporabo je potrebno pridobiti dovoljenje ZGS.",
   "mapTabUsageOsmDesc": "Kartografski podatki OpenStreetMap so na voljo pod licenco Open Database License (ODbL). Uporaba je dovoljena ob navedbi \"© OpenStreetMap contributors\".",

@@ -1621,6 +1621,18 @@ abstract class AppLocalizations {
   /// **'Podatki Geodetske uprave Republike Slovenije (ortofoto, kataster, topografske karte) so na voljo pod pogoji odprtih podatkov. Uporaba je dovoljena za nekomercialne in komercialne namene ob navedbi vira.'**
   String get mapTabUsageGuDesc;
 
+  /// No description provided for @mapTabUsageDguName.
+  ///
+  /// In sl, this message translates to:
+  /// **'Državna geodetska uprava RH'**
+  String get mapTabUsageDguName;
+
+  /// No description provided for @mapTabUsageDguDesc.
+  ///
+  /// In sl, this message translates to:
+  /// **'Katastrski podatki in podatki o posestnikih s portala Uređena zemlja so uradni podatki Republike Hrvaške. So informativni in namenjeni le osebni uporabi; ni jih dovoljeno uporabljati v komercialne namene ali jih posredovati naprej.'**
+  String get mapTabUsageDguDesc;
+
   /// No description provided for @mapTabUsageZgsName.
   ///
   /// In sl, this message translates to:
@@ -2551,6 +2563,54 @@ abstract class AppLocalizations {
   /// **'Išči v tej k.o.'**
   String get parcelSearchUseKo;
 
+  /// No description provided for @mapwCatAdministrativno.
+  ///
+  /// In sl, this message translates to:
+  /// **'Administrativno'**
+  String get mapwCatAdministrativno;
+
+  /// No description provided for @mapwCatInfrastruktura.
+  ///
+  /// In sl, this message translates to:
+  /// **'Infrastruktura'**
+  String get mapwCatInfrastruktura;
+
+  /// No description provided for @mapwCatGozdnoGospodarstvo.
+  ///
+  /// In sl, this message translates to:
+  /// **'Gozdno gospodarstvo'**
+  String get mapwCatGozdnoGospodarstvo;
+
+  /// No description provided for @mapwCatZavarovanaObmocja.
+  ///
+  /// In sl, this message translates to:
+  /// **'Zavarovana območja'**
+  String get mapwCatZavarovanaObmocja;
+
+  /// No description provided for @mapwCatNevarnostiInSkode.
+  ///
+  /// In sl, this message translates to:
+  /// **'Nevarnosti in škode'**
+  String get mapwCatNevarnostiInSkode;
+
+  /// No description provided for @mapwCatFunkcijeGozda.
+  ///
+  /// In sl, this message translates to:
+  /// **'Funkcije gozda'**
+  String get mapwCatFunkcijeGozda;
+
+  /// No description provided for @mapwCatPosebno.
+  ///
+  /// In sl, this message translates to:
+  /// **'Posebno'**
+  String get mapwCatPosebno;
+
+  /// No description provided for @mapwCatHrvatska.
+  ///
+  /// In sl, this message translates to:
+  /// **'Hrvaška (DGU)'**
+  String get mapwCatHrvatska;
+
   /// No description provided for @parcelPointUnknown.
   ///
   /// In sl, this message translates to:
@@ -2842,7 +2902,7 @@ abstract class AppLocalizations {
   /// No description provided for @parcelViewOnMap.
   ///
   /// In sl, this message translates to:
-  /// **'Poglej na karti'**
+  /// **'Na karti'**
   String get parcelViewOnMap;
 
   /// No description provided for @parcelNavigate.
@@ -4170,6 +4230,12 @@ abstract class AppLocalizations {
   /// **'Ortofoto posnetki (2022-2024), kataster, katastrske občine, občine, upravne enote, DMR, vrednotenje nepremičnin'**
   String get aboutSrcGursDesc;
 
+  /// No description provided for @aboutSrcDguDesc.
+  ///
+  /// In sl, this message translates to:
+  /// **'Hrvaške katastrske parcele, katastrske občine in posestniki parcel (portal Uređena zemlja)'**
+  String get aboutSrcDguDesc;
+
   /// No description provided for @aboutSrcOsmDesc.
   ///
   /// In sl, this message translates to:
@@ -4221,13 +4287,13 @@ abstract class AppLocalizations {
   /// No description provided for @aboutDisclaimerBody.
   ///
   /// In sl, this message translates to:
-  /// **'Razvijalec ne prevzema odgovornosti za morebitno škodo, ki bi nastala zaradi uporabe aplikacije ali podatkov v njej. Za uradne podatke o lastništvu in mejah parcel se obrnite na pristojne organe (GURS, ZGS).'**
+  /// **'Razvijalec ne prevzema odgovornosti za morebitno škodo, ki bi nastala zaradi uporabe aplikacije ali podatkov v njej. Za uradne podatke o lastništvu in mejah parcel se obrnite na pristojne organe (v Sloveniji GURS in ZGS, na Hrvaškem DGU).'**
   String get aboutDisclaimerBody;
 
   /// No description provided for @aboutCopyrightBody.
   ///
   /// In sl, this message translates to:
-  /// **'Kartografski podatki ZGS in GURS so last Republike Slovenije. OpenStreetMap podatki so na voljo pod licenco ODbL. ESRI podatki so last Esri Inc.'**
+  /// **'Kartografski podatki ZGS in GURS so last Republike Slovenije. Katastrski podatki in podatki o posestnikih DGU so last Republike Hrvaške in so namenjeni le osebni uporabi. OpenStreetMap podatki so na voljo pod licenco ODbL. ESRI podatki so last Esri Inc.'**
   String get aboutCopyrightBody;
 
   /// No description provided for @aboutPrivacyBody.
@@ -4829,6 +4895,18 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Aplikacija uporablja javne podatke Zavoda za gozdove Slovenije.\n\nZ uporabo te aplikacije se strinjate s pogoji uporabe podatkov:\n\n'**
   String get introTermsBody;
+
+  /// No description provided for @introTermsLinkLabel.
+  ///
+  /// In sl, this message translates to:
+  /// **'prostor.zgs.gov.si/pregledovalnik'**
+  String get introTermsLinkLabel;
+
+  /// No description provided for @introTermsUrl.
+  ///
+  /// In sl, this message translates to:
+  /// **'https://prostor.zgs.gov.si/pregledovalnik/'**
+  String get introTermsUrl;
 
   /// No description provided for @aboutShowIntro.
   ///

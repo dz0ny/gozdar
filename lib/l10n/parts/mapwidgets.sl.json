@@ -321,5 +321,13 @@
   "auctionsLoadError": "Napaka pri nalaganju dražb.",
   "auctionsRetry": "Poskusi znova",
   "parcelSearchShowOnMap": "Pokaži na karti",
-  "parcelSearchUseKo": "Išči v tej k.o."
+  "parcelSearchUseKo": "Išči v tej k.o.",
+  "mapwCatAdministrativno": "Administrativno",
+  "mapwCatInfrastruktura": "Infrastruktura",
+  "mapwCatGozdnoGospodarstvo": "Gozdno gospodarstvo",
+  "mapwCatZavarovanaObmocja": "Zavarovana območja",
+  "mapwCatNevarnostiInSkode": "Nevarnosti in škode",
+  "mapwCatFunkcijeGozda": "Funkcije gozda",
+  "mapwCatPosebno": "Posebno",
+  "mapwCatHrvatska": "Hrvaška (DGU)"
 }

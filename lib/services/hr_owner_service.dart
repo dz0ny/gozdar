@@ -17,7 +17,25 @@ class HrOwnerService {
   static final HrOwnerService instance = HrOwnerService._();
 
   static const _base = 'https://oss.uredjenazemlja.hr/oss/public';
-  static const _timeout = Duration(seconds: 15);
+  // parcel-info routinely takes 15-30 s; a short timeout drops answers
+  // that would have arrived.
+  static const _timeout = Duration(seconds: 60);
+
+  /// Sent as the portal's own web app does, so the API treats us like a
+  /// browser on oss.uredjenazemlja.hr.
+  static const _headers = {
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) '
+        'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 '
+        'Mobile/15E148 Safari/604.1',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'hr',
+    'Origin': 'https://oss.uredjenazemlja.hr',
+    'Referer': 'https://oss.uredjenazemlja.hr/',
+  };
+
+  /// One keep-alive connection for the search + parcel-info pair, like a
+  /// browser tab.
+  final _client = http.Client();
 
   /// The register's placeholder address for a holder whose residence is
   /// unknown; not worth showing.
@@ -153,8 +171,9 @@ class HrOwnerService {
   }
 
   Future<Map<String, dynamic>?> _parcelInfo(String parcelId) async {
-    final res = await http
-        .get(Uri.parse('$_base/cad/parcel-info?parcelId=$parcelId'))
+    final res = await _client
+        .get(Uri.parse('$_base/cad/parcel-info?parcelId=$parcelId'),
+            headers: _headers)
         .timeout(_timeout);
     if (res.statusCode != 200) return null;
     return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
@@ -166,7 +185,7 @@ class HrOwnerService {
     final uri = Uri.parse('$_base/search-cad-parcels/parcel-numbers').replace(
       queryParameters: {'search': parcela, 'municipalityRegNum': '$sifko'},
     );
-    final res = await http.get(uri).timeout(_timeout);
+    final res = await _client.get(uri, headers: _headers).timeout(_timeout);
     if (res.statusCode != 200) return null;
     final rows = jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
     for (final r in rows.cast<Map<String, dynamic>>()) {

@@ -699,7 +699,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                 children: [
                   TextSpan(text: context.l10n.introTermsBody),
                   TextSpan(
-                    text: 'prostor.zgs.gov.si/pregledovalnik',
+                    text: context.l10n.introTermsLinkLabel,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                       decoration: TextDecoration.underline,
@@ -708,7 +708,9 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                     recognizer: TapGestureRecognizer()
                       ..onTap = () {
                         launchUrl(
-                          Uri.parse('https://prostor.zgs.gov.si/pregledovalnik/'),
+                          // Each language links the terms of its own
+                          // country's data source (ZGS / DGU).
+                          Uri.parse(context.l10n.introTermsUrl),
                           mode: LaunchMode.externalApplication,
                         );
                       },

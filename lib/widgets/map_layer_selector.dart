@@ -263,25 +263,29 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
   }
 
   Widget _buildBaseLayersTab() {
+    final slovenian = _buildBaseLayerSection(context.l10n.mapwSlovenianMaps, [
+      MapLayer.ortofoto,
+      MapLayer.ortofoto2023,
+      MapLayer.ortofoto2022,
+      MapLayer.dofIr,
+      MapLayer.dmr,
+    ]);
+    final international =
+        _buildBaseLayerSection(context.l10n.mapwInternationalMaps, [
+      MapLayer.openStreetMap,
+      MapLayer.openTopoMap,
+      MapLayer.esriWorldImagery,
+      MapLayer.esriTopoMap,
+    ]);
+    // Slovenian maps only cover Slovenia, so Croatian users get the
+    // international ones (ESRI satellite covers Croatia) first.
+    final croatian = context.l10n.localeName == 'hr';
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
-        // Slovenian base layers first: the app is made for Slovenia.
-        _buildBaseLayerSection(context.l10n.mapwSlovenianMaps, [
-          MapLayer.ortofoto,
-          MapLayer.ortofoto2023,
-          MapLayer.ortofoto2022,
-          MapLayer.dofIr,
-          MapLayer.dmr,
-        ]),
+        croatian ? international : slovenian,
         const SizedBox(height: 16),
-        // International base layers
-        _buildBaseLayerSection(context.l10n.mapwInternationalMaps, [
-          MapLayer.openStreetMap,
-          MapLayer.openTopoMap,
-          MapLayer.esriWorldImagery,
-          MapLayer.esriTopoMap,
-        ]),
+        croatian ? slovenian : international,
         const SizedBox(height: 24),
         // Download tiles button
         if (widget.onDownloadTiles != null)
@@ -509,6 +513,11 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       }).toList();
       return layers.isNotEmpty;
     }).toList();
+    // In Croatian the DGU layers come first; in Slovenian they trail.
+    if (context.l10n.localeName == 'hr') {
+      final i = categories.indexWhere((e) => e.key == OverlayCategory.hrvatska);
+      if (i > 0) categories.insert(0, categories.removeAt(i));
+    }
 
     if (categories.isEmpty && _searchQuery.isNotEmpty) {
       return Center(
@@ -618,7 +627,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          overlayCategoryNames[category] ?? category.name,
+                          _categoryName(category),
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
@@ -923,6 +932,28 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     }
   }
 
+  String _categoryName(OverlayCategory category) {
+    final l10n = context.l10n;
+    switch (category) {
+      case OverlayCategory.administrativno:
+        return l10n.mapwCatAdministrativno;
+      case OverlayCategory.infrastruktura:
+        return l10n.mapwCatInfrastruktura;
+      case OverlayCategory.gozdnoGospodarstvo:
+        return l10n.mapwCatGozdnoGospodarstvo;
+      case OverlayCategory.zavarovanaObmocja:
+        return l10n.mapwCatZavarovanaObmocja;
+      case OverlayCategory.nevarnostiInSkode:
+        return l10n.mapwCatNevarnostiInSkode;
+      case OverlayCategory.funkcijeGozda:
+        return l10n.mapwCatFunkcijeGozda;
+      case OverlayCategory.posebno:
+        return l10n.mapwCatPosebno;
+      case OverlayCategory.hrvatska:
+        return l10n.mapwCatHrvatska;
+    }
+  }
+
   IconData _getCategoryIcon(OverlayCategory category) {
     switch (category) {
       case OverlayCategory.administrativno:
@@ -939,6 +970,8 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
         return Icons.eco;
       case OverlayCategory.posebno:
         return Icons.pets;
+      case OverlayCategory.hrvatska:
+        return Icons.flag_outlined;
     }
   }
 }

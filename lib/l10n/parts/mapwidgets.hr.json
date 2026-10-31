@@ -147,5 +147,13 @@
   "auctionsLoadError": "Greška pri učitavanju dražbi.",
   "auctionsRetry": "Pokušaj ponovno",
   "parcelSearchShowOnMap": "Prikaži na karti",
-  "parcelSearchUseKo": "Traži u ovoj k.o."
+  "parcelSearchUseKo": "Traži u ovoj k.o.",
+  "mapwCatAdministrativno": "Administrativno",
+  "mapwCatInfrastruktura": "Infrastruktura",
+  "mapwCatGozdnoGospodarstvo": "Šumsko gospodarstvo",
+  "mapwCatZavarovanaObmocja": "Zaštićena područja",
+  "mapwCatNevarnostiInSkode": "Opasnosti i štete",
+  "mapwCatFunkcijeGozda": "Funkcije šuma",
+  "mapwCatPosebno": "Posebno",
+  "mapwCatHrvatska": "Hrvatska (DGU)"
 }

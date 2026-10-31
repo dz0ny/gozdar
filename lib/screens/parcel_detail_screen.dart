@@ -1033,7 +1033,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     context.go(AppRoutes.map);
   }
 
-  /// "Poglej na karti" (outlined) and "Navigiraj" (filled).
+  /// "Na karti" (outlined) and "Navigiraj" (filled), one line each.
   Widget _buildMapActions(BuildContext context) {
     return Row(
       children: [
@@ -1041,7 +1041,11 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
           child: OutlinedButton.icon(
             onPressed: () => _navigateToPoint(_parcel.center, _parcel.name),
             icon: const Icon(Icons.map),
-            label: Text(context.l10n.parcelViewOnMap),
+            label: Text(
+              context.l10n.parcelViewOnMap,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -1058,7 +1062,11 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
               ),
             ),
             icon: const Icon(Icons.navigation),
-            label: Text(context.l10n.parcelNavigate),
+            label: Text(
+              context.l10n.parcelNavigate,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
       ],

@@ -12,6 +12,7 @@ import 'package:pdf/widgets.dart' as pw;
 import '../models/map_layer.dart';
 import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../services/tile_download_service.dart';
 import '../l10n/l10n.dart';
 
 /// Builds a printable PDF for a cadastral parcel: a snapshot of the map
@@ -173,10 +174,12 @@ class ParcelPdfService {
         for (var ty = minTileY; ty <= maxTileY; ty++) {
           if (ty < 0 || ty >= tilesPerAxis) continue;
           final wrappedX = tx % tilesPerAxis;
-          final url = template
-              .replaceAll('{z}', '$zoom')
-              .replaceAll('{x}', '$wrappedX')
-              .replaceAll('{y}', '$ty');
+          final url = TileDownloadService.tileUrl(
+            template,
+            zoom,
+            wrappedX,
+            ty,
+          );
           final dx = tx * _tileSize - x0;
           final dy = ty * _tileSize - y0;
           fetches.add(

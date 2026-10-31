@@ -71,7 +71,8 @@ class TileDownloadService {
         .replaceAll('{s}', subdomains[(x + y) % 3])
         .replaceAll('{z}', '$z')
         .replaceAll('{x}', '$x')
-        .replaceAll('{y}', '$y');
+        .replaceAll('{y}', '$y')
+        .replaceAll('{bbox}', MapLayer.webMercatorTileBbox(z, x, y));
   }
 
   /// Stores [bytes] in the cache the map reads from, as a long-lived tile.
