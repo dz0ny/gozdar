@@ -4,7 +4,7 @@
   "logsMenuManageSpecies": "Upravljanje vrst",
   "logsMenuExport": "Izvozi",
   "logsMenuDeleteAll": "Odstrani vse",
-  "logsSavedTooltip": "Shranjeno",
+  "logsSavedTooltip": "Shranjeni hlodi",
   "logsSaved": "Shranjeno",
   "logsSaveError": "Napaka pri shranjevanju",
   "logsEntryUpdated": "Vnos posodobljen",
@@ -197,8 +197,8 @@
       }
     }
   },
-  "logsSavedSheetTitle": "Shranjene meritve",
-  "logsSavedSheetEmpty": "Ni shranjenih meritev",
+  "logsSavedSheetTitle": "Shranjeni hlodi",
+  "logsSavedSheetEmpty": "Ni shranjenih hlodov",
   "logsSavedSheetNoName": "Brez imena",
   "logsSavedDeleteTitle": "Izbriši shranjene hlode",
   "logsSavedDeleteConfirm": "Ali ste prepričani, da želite izbrisati ta zapis?\n\nHlodi se vrnejo na seznam Hlodi.",
@@ -397,5 +397,46 @@
         "type": "String"
       }
     }
-  }
+  },
+  "logsInlineDiameterHint": "Premer",
+  "logsInlineLengthHint": "Dolžina",
+  "logsInlineDiameterRange": "Premer mora biti med {min} in {max} cm",
+  "@logsInlineDiameterRange": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "logsInlineLengthRange": "Dolžina mora biti med {min} in {max} m",
+  "@logsInlineLengthRange": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSpeciesExists": "Vrsta \"{name}\" že obstaja",
+  "@logsSpeciesExists": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSavedToBatch": "Shranjeno v »{name}« (Shranjeni hlodi)",
+  "@logsSavedToBatch": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "logsOpenAction": "Odpri"
 }

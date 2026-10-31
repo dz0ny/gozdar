@@ -23,6 +23,7 @@ import '../services/hr_owner_service.dart';
 import '../services/auction_service.dart';
 import '../services/si_valuation_service.dart';
 import '../services/ko_locator.dart';
+import '../utils/formats.dart';
 import '../widgets/download_progress_view.dart';
 import '../widgets/owner_list.dart';
 import '../widgets/log_entry_form.dart';
@@ -334,7 +335,7 @@ class MapTabState extends State<MapTab> {
 
   // Searched parcel from WFS query
   WfsParcel? _searchedParcel;
-  // Queried cadastral parcel shown as a green preview while the import dialog
+  // Queried cadastral parcel shown as a tan dashed preview while the import dialog
   // is open (not yet saved to the database).
   CadastralParcel? _previewParcel;
   // When set, a non-modal import panel is shown over the map for this parcel.
@@ -718,7 +719,7 @@ class MapTabState extends State<MapTab> {
                   SnackBar(
                     content: Text(
                       L10n.current.mapTabLogAdded(
-                        entry.volume.toStringAsFixed(3),
+                        Fmt.num(entry.volume, 3),
                       ),
                     ),
                   ),
@@ -1097,7 +1098,7 @@ class MapTabState extends State<MapTab> {
         return;
       }
 
-      // Preview the parcel geometry in green (without importing it). The camera
+      // Preview the parcel geometry (tan, dashed) without importing it. The camera
       // is left where the user is; no automatic zoom/recenter.
       setState(() => _previewParcel = parcel);
 
@@ -1107,7 +1108,7 @@ class MapTabState extends State<MapTab> {
       await _showImportParcelDialog(parcel);
     } catch (e) {
       if (!mounted) return;
-      // Drop any green preview drawn before the failure.
+      // Drop any preview drawn before the failure.
       if (_previewParcel != null) setState(() => _previewParcel = null);
       // Online lookup failed (timeout/connectivity) — try the offline fallback.
       if (_showOfflineOwnerFallback(location)) return;
@@ -1252,7 +1253,7 @@ class MapTabState extends State<MapTab> {
     if (!mounted) return;
 
     if (existingParcel != null) {
-      // No panel for this branch — drop the green preview.
+      // No panel for this branch — drop the preview.
       setState(() => _previewParcel = null);
       // Parcel already exists - show option to view it
       final viewParcel = await showDialog<bool>(
@@ -1299,7 +1300,7 @@ class MapTabState extends State<MapTab> {
     });
   }
 
-  /// Dismiss the import panel without importing, clearing the green preview.
+  /// Dismiss the import panel without importing, clearing the preview.
   void _dismissImportPanel() {
     setState(() {
       _pendingImportParcel = null;
@@ -1307,11 +1308,11 @@ class MapTabState extends State<MapTab> {
     });
   }
 
-  /// "KO 1650 BABNA POLICA" (or just the number when the name is unknown),
-  /// shown on a line of its own under the parcel number.
-  String _koLine(int ko, String? koName) => L10n.current.parcelFoundKo(
-        koName != null && koName.isNotEmpty ? '$ko $koName' : '$ko',
-      );
+  /// "BABNA POLICA (1650)", as in the Gozd list (or "KO 1650" when the name
+  /// is unknown), shown on a line of its own under the parcel number.
+  String _koLine(int ko, String? koName) => koName != null && koName.isNotEmpty
+      ? '$koName ($ko)'
+      : L10n.current.parcelFoundKo('$ko');
 
   /// KO line for a parcel about to be imported.
   String _importKo(CadastralParcel parcel) {
@@ -1634,10 +1635,7 @@ class MapTabState extends State<MapTab> {
   }
 
   /// Format a parcel area (m²) concisely — hectares once it's large enough.
-  String _formatArea(double m2) {
-    if (m2 >= 10000) return '${(m2 / 10000).toStringAsFixed(2)} ha';
-    return '${m2.toStringAsFixed(0)} m²';
-  }
+  String _formatArea(double m2) => Fmt.area(m2);
 
   /// Show the long-press action menu as a modal bottom sheet for the given map
   /// location.
@@ -1915,16 +1913,16 @@ class MapTabState extends State<MapTab> {
     if (_measurement.tool == _MeasurementTool.distance) {
       final meters = _measurementDistanceMeters(_measurement.points);
       if (_distanceUnit == _DistanceUnit.kilometers) {
-        return '${(meters / 1000).toStringAsFixed(2)} km';
+        return '${Fmt.num(meters / 1000, 2)} km';
       }
-      return '${meters.toStringAsFixed(0)} m';
+      return '${Fmt.num(meters, 0)} m';
     }
 
     final area = _measurementAreaM2(_measurement.points);
     if (_areaUnit == _AreaUnit.hectares) {
-      return '${(area / 10000).toStringAsFixed(2)} ha';
+      return '${Fmt.num(area / 10000, 2)} ha';
     }
-    return '${area.toStringAsFixed(0)} m²';
+    return '${Fmt.num(area, 0)} m²';
   }
 
   /// Compact segmented control to switch measurement display units.
@@ -2200,6 +2198,11 @@ class MapTabState extends State<MapTab> {
       );
     }
 
+    final previewParcelColor = Theme.of(context).colorScheme.primary;
+    // Raw window inset: MediaQuery padding/viewPadding read 0 inside this tab
+    // because an ancestor strips them, which made the status-bar scrim too short.
+    final view = View.of(context);
+    final topInset = view.padding.top / view.devicePixelRatio;
     return Scaffold(
       key: _scaffoldKey,
       body: Stack(
@@ -2367,8 +2370,10 @@ class MapTabState extends State<MapTab> {
                         .toList(),
                   ),
 
-                // Queried parcel preview (green). Skipped when an offline parcels
-                // DB is loaded — the red offline kataster outline already shows it.
+                // Queried parcel preview: theme tan with a thick dashed border,
+                // so green always means "my parcel". Skipped when an offline
+                // parcels DB is loaded — the red offline kataster outline
+                // already shows it.
                 if (!offlineKataster &&
                     _previewParcel != null &&
                     _previewParcel!.polygon.isNotEmpty)
@@ -2376,9 +2381,10 @@ class MapTabState extends State<MapTab> {
                     polygons: [
                       Polygon(
                         points: _previewParcel!.polygon,
-                        color: Colors.green.withValues(alpha: 0.2),
-                        borderColor: Colors.green,
-                        borderStrokeWidth: 2.0,
+                        color: previewParcelColor.withValues(alpha: 0.18),
+                        borderColor: previewParcelColor,
+                        borderStrokeWidth: 3.5,
+                        pattern: StrokePattern.dashed(segments: const [12, 6]),
                       ),
                     ],
                   ),
@@ -2511,6 +2517,30 @@ class MapTabState extends State<MapTab> {
                     },
                   ),
               ],
+            ),
+          ),
+          // Scrim behind the status bar so the clock and battery stay
+          // readable over bright imagery.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: topInset + 32,
+            child: const IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xA6000000),
+                      Color(0x66000000),
+                      Color(0x00000000),
+                    ],
+                    stops: [0, 0.55, 1],
+                  ),
+                ),
+              ),
             ),
           ),
           // Status cards (downloads, lookups) share one column at the top so
@@ -2646,7 +2676,7 @@ class MapTabState extends State<MapTab> {
               Expanded(
                 child: Text(
                   L10n.current.mapTabTilesDownloadPercent(
-                    (downloadState.percent * 100).toStringAsFixed(1),
+                    Fmt.num(downloadState.percent * 100, 1),
                   ),
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w700,

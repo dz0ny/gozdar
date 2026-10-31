@@ -43,7 +43,7 @@ class MapLongPressMenu extends StatefulWidget {
   final String? parcelTitle;
   final String? parcelSubtitle;
 
-  /// "KO 1650 BABNA POLICA", always on a line of its own.
+  /// "BABNA POLICA (1650)", always on a line of its own.
   final String? parcelKo;
 
   /// Owners already known (offline database), so the owner line can list
@@ -278,38 +278,45 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
     );
   }
 
+  /// Main action of a row: tinted with the theme's primary colour.
+  Color get _primary => Theme.of(context).colorScheme.primary;
+
+  /// Every other action: neutral, so colour never competes with the main one
+  /// (and nothing reads as destructive).
+  Color get _neutral => Theme.of(context).colorScheme.onSurfaceVariant;
+
   Widget _topLevel() {
     return _tileRow([
       _group(
         icon: Icons.add_circle_outline,
         label: context.l10n.commonAdd,
-        color: Colors.red,
+        color: _primary,
         section: _MenuSection.add,
       ),
       _group(
         icon: Icons.straighten,
         label: context.l10n.mapwMenuMeasure,
-        color: Colors.teal,
+        color: _neutral,
         section: _MenuSection.measure,
       ),
       _action(
         icon: Icons.navigation,
         label: context.l10n.mapwMenuNavigate,
-        color: Colors.indigo.shade200,
+        color: _neutral,
         onTap: widget.onNavigate,
       ),
       if (widget.existingParcel != null)
         _action(
           icon: Icons.visibility,
           label: context.l10n.mapwMenuParcel,
-          color: Colors.blue,
+          color: _neutral,
           onTap: () => widget.onViewParcel?.call(),
         )
       else
         _action(
           icon: Icons.download,
           label: context.l10n.mapwMenuImport,
-          color: Colors.blue,
+          color: _neutral,
           onTap: widget.onImportParcel,
         ),
     ]);
@@ -503,7 +510,7 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
     return _tile(
       icon: Icons.arrow_back,
       label: context.l10n.commonBack,
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
+      color: _neutral,
       onTap: () => setState(() => _section = null),
     );
   }
@@ -514,19 +521,19 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
       _action(
         icon: Icons.add_location_alt,
         label: context.l10n.mapwMenuPoint,
-        color: Colors.red,
+        color: _primary,
         onTap: widget.onAddLocation,
       ),
       _action(
         icon: Icons.forest,
         label: context.l10n.mapwMenuLogs,
-        color: Colors.brown.shade300,
+        color: _neutral,
         onTap: widget.onAddLog,
       ),
       _action(
         icon: Icons.carpenter,
         label: context.l10n.mapwMenuFelling,
-        color: Colors.deepOrange,
+        color: _neutral,
         onTap: widget.onAddSecnja,
       ),
     ]);
@@ -538,20 +545,21 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
       _action(
         icon: Icons.route,
         label: context.l10n.mapwMenuDistance,
-        color: Colors.teal,
+        color: _primary,
         onTap: widget.onMeasureDistance,
       ),
       _action(
         icon: Icons.square_foot,
         label: context.l10n.mapwArea,
-        color: Colors.deepPurple.shade200,
+        color: _neutral,
         onTap: widget.onMeasureArea,
       ),
       if (widget.mejnikiAvailable)
         _action(
           icon: Icons.scatter_plot,
           label: context.l10n.mapwMenuBoundaries,
-          color: widget.showMejniki ? Colors.orange : Colors.green,
+          // Tinted while the boundary points are shown (on/off state).
+          color: widget.showMejniki ? _primary : _neutral,
           onTap: () => widget.onToggleMejniki(!widget.showMejniki),
         ),
     ]);

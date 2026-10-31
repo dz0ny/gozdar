@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:latlong2/latlong.dart';
 import '../l10n/l10n.dart';
+import '../utils/formats.dart';
 import 'log_entry.dart';
 
 enum ForestType { mixed, deciduous, coniferous }
@@ -119,12 +120,7 @@ class Parcel {
     return area.abs() / 2.0;
   }
 
-  String get areaFormatted {
-    final area = areaM2;
-    return area >= 10000
-        ? '${(area / 10000).toStringAsFixed(2)} ha'
-        : '${area.toStringAsFixed(0)} m²';
-  }
+  String get areaFormatted => Fmt.area(areaM2);
 
   bool containsPoint(LatLng point) {
     final poly = polygon;

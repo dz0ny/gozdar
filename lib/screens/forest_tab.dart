@@ -15,8 +15,10 @@ import '../services/database_service.dart';
 import '../services/ko_locator.dart';
 import '../services/kml_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../utils/formats.dart';
 import '../widgets/owner_list.dart';
 import '../widgets/parcel_silhouette.dart';
+import '../widgets/sheet_parts.dart';
 
 /// Get icon and color for forest type
 (IconData, Color) getForestTypeIcon(ForestType type) {
@@ -24,7 +26,7 @@ import '../widgets/parcel_silhouette.dart';
     case ForestType.deciduous:
       return (Icons.nature, Colors.green.shade600); // Listavci - broadleaf
     case ForestType.coniferous:
-      return (Icons.park, Colors.green.shade800); // Iglavci - conifer
+      return (Icons.park, Colors.green.shade300); // Iglavci - conifer
     case ForestType.mixed:
       return (Icons.forest, Colors.green.shade400); // Mešani
   }
@@ -272,9 +274,7 @@ class ForestTabState extends State<ForestTab> {
       await _loadData();
       if (!mounted) return;
       final totalArea = parcels.fold(0.0, (double sum, p) => sum + p.areaM2);
-      final area = totalArea >= 10000
-          ? '${(totalArea / 10000).toStringAsFixed(2)} ha'
-          : '${totalArea.toStringAsFixed(0)} m²';
+      final area = Fmt.area(totalArea);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.forestImportDone(count, area))),
       );
@@ -378,20 +378,18 @@ class ForestTabState extends State<ForestTab> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const SheetHandle(),
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(Icons.filter_list),
-                  const SizedBox(width: 8),
-                  Text(
-                    context.l10n.forestFilterByOwner,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
+              padding: const EdgeInsets.fromLTRB(4, 0, 16, 8),
+              child: SheetHeader(
+                icon: Icons.filter_list,
+                title: context.l10n.forestFilterByOwner,
               ),
             ),
-            const Divider(height: 1),
+            Divider(
+              height: 1,
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
             // "Show all" option
             ListTile(
               leading: Icon(
@@ -407,7 +405,10 @@ class ForestTabState extends State<ForestTab> {
                 Navigator.of(context).pop();
               },
             ),
-            const Divider(height: 1),
+            Divider(
+              height: 1,
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
             // Owner options
             Flexible(
               child: ListView.builder(
@@ -444,6 +445,12 @@ class ForestTabState extends State<ForestTab> {
     );
   }
 
+  /// Opens the map's parcel search (the same path as the empty-state button).
+  void _openParcelSearch() {
+    context.read<NavigationNotifier>().navigateToMapWithSearch();
+    context.go(AppRoutes.map);
+  }
+
   @override
   Widget build(BuildContext context) {
     // Use filtered parcels for display
@@ -454,9 +461,7 @@ class ForestTabState extends State<ForestTab> {
       0.0,
       (double sum, p) => sum + p.areaM2,
     );
-    final totalAreaFormatted = totalArea >= 10000
-        ? '${(totalArea / 10000).toStringAsFixed(2)} ha'
-        : '${totalArea.toStringAsFixed(0)} m²';
+    final totalAreaFormatted = Fmt.area(totalArea);
 
     // Sum up wood cut and trees from filtered parcels
     int totalTrees = 0;
@@ -474,7 +479,7 @@ class ForestTabState extends State<ForestTab> {
           IconButton(
             icon: Badge(
               isLabelVisible: _selectedOwnerFilter != null,
-              child: const Icon(Icons.person),
+              child: const Icon(Icons.filter_list),
             ),
             tooltip: context.l10n.forestFilterByOwner,
             onPressed: _showOwnerFilterDialog,
@@ -545,7 +550,7 @@ class ForestTabState extends State<ForestTab> {
                           ),
                           _SummaryItem(
                             icon: Icons.inventory,
-                            value: '${totalVolume.toStringAsFixed(1)} m³',
+                            value: Fmt.m3(totalVolume, 1),
                             label: context.l10n.forestSummaryCut,
                           ),
                         ],
@@ -553,9 +558,18 @@ class ForestTabState extends State<ForestTab> {
                     ),
                   ),
 
-                  // Parcels list
+                  // Parcels list. Top edge fades so cards sliding under the
+                  // summary card don't leave a hard-clipped strip.
                   Expanded(
-                    child: displayParcels.isEmpty
+                    child: ShaderMask(
+                        shaderCallback: (rect) => const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Colors.black],
+                          stops: [0, 0.03],
+                        ).createShader(rect),
+                        blendMode: BlendMode.dstIn,
+                        child: displayParcels.isEmpty
                         ? LayoutBuilder(
                             builder: (context, constraints) => SingleChildScrollView(
                               physics: const AlwaysScrollableScrollPhysics(),
@@ -572,7 +586,7 @@ class ForestTabState extends State<ForestTab> {
                                       Icon(
                                         Icons.person_off,
                                         size: 64,
-                                        color: Colors.grey[600],
+                                        color: Colors.grey[400],
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
@@ -602,7 +616,7 @@ class ForestTabState extends State<ForestTab> {
                                       Icon(
                                         Icons.park_outlined,
                                         size: 64,
-                                        color: Colors.grey[600],
+                                        color: Colors.grey[400],
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
@@ -618,17 +632,14 @@ class ForestTabState extends State<ForestTab> {
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyMedium
-                                            ?.copyWith(color: Colors.grey[600]),
+                                            ?.copyWith(color: Colors.grey[400]),
                                         textAlign: TextAlign.center,
                                       ),
                                       const SizedBox(height: 24),
                                       Tooltip(
                                         message: context.l10n.forestSearchParcel,
                                         child: FilledButton.icon(
-                                          onPressed: () {
-                                            context.read<NavigationNotifier>().navigateToMapWithSearch();
-                                            context.go(AppRoutes.map);
-                                          },
+                                          onPressed: _openParcelSearch,
                                           icon: const Icon(Icons.search),
                                           label: Text(context.l10n.forestSearchParcel),
                                         ),
@@ -646,6 +657,7 @@ class ForestTabState extends State<ForestTab> {
                             ),
                           )
                         : _buildGroupedParcelsList(context, displayParcels),
+                    ),
                   ),
                 ],
               ),
@@ -691,7 +703,7 @@ class ForestTabState extends State<ForestTab> {
       });
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       itemCount: sortedKOs.length,
       itemBuilder: (context, groupIndex) {
         final ko = sortedKOs[groupIndex];
@@ -708,9 +720,7 @@ class ForestTabState extends State<ForestTab> {
           0,
           (sum, parcel) => sum + parcel.areaM2,
         );
-        final areaFormatted = totalArea >= 10000
-            ? '${(totalArea / 10000).toStringAsFixed(2)} ha'
-            : '${totalArea.toStringAsFixed(0)} m²';
+        final areaFormatted = Fmt.area(totalArea);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -723,35 +733,57 @@ class ForestTabState extends State<ForestTab> {
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(8),
               ),
+              // Name and KO number on top (wrapping rather than cutting the
+              // number off), counts on the line under it.
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.location_on,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Icon(
+                      Icons.location_on,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      koLabel,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Text(
-                    '${context.l10n.forestCountParcels(count)} • $areaFormatted',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          koLabel,
+                          maxLines: 2,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                        ),
+                        Text(
+                          '${context.l10n.forestCountParcels(count)} • $areaFormatted',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
             // Parcels in this group
-            ...groupParcels.map((parcel) => _buildParcelCard(context, parcel)),
+            ...groupParcels.map(
+              (parcel) => _buildParcelCard(
+                context,
+                parcel,
+                inKoGroup: true,
+                koName: koName,
+              ),
+            ),
           ],
         );
       },
@@ -760,7 +792,7 @@ class ForestTabState extends State<ForestTab> {
 
   Widget _buildSimpleParcelsList(BuildContext context, List<Parcel> parcels) {
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       itemCount: parcels.length,
       itemBuilder: (context, index) {
         final parcel = parcels[index];
@@ -769,9 +801,38 @@ class ForestTabState extends State<ForestTab> {
     );
   }
 
-  Widget _buildParcelCard(BuildContext context, Parcel parcel) {
+  /// Card title. Inside a KO group (whose header already names the KO) an
+  /// auto-generated "`KO - number`" name shows as just the number; custom
+  /// names stay as they are.
+  String _cardTitle(Parcel parcel, {required bool inKoGroup, String? koName}) {
+    final number = parcel.parcelNumber;
+    if (!inKoGroup || number == null || number.isEmpty) return parcel.name;
+    final sifko = parcel.cadastralMunicipality;
+    final prefixes = {
+      ?koName,
+      OwnerLookupService.instance.koName(sifko),
+      KoLocator.instance.bySifko(sifko)?.name,
+      '$sifko',
+    }.whereType<String>();
+    final name = parcel.name.trim().toLowerCase();
+    for (final ko in prefixes) {
+      if (name == '${ko.toLowerCase()} - ${number.toLowerCase()}') {
+        return number;
+      }
+    }
+    return parcel.name;
+  }
+
+  /// [inKoGroup] when the card sits under a KO group header.
+  Widget _buildParcelCard(
+    BuildContext context,
+    Parcel parcel, {
+    bool inKoGroup = false,
+    String? koName,
+  }) {
     final owners = _ownersForParcel(parcel);
     final owner = ownerSummary(owners);
+    final theme = Theme.of(context);
     return Dismissible(
       key: Key('parcel_${parcel.id}'),
       direction: DismissDirection.endToStart,
@@ -807,7 +868,7 @@ class ForestTabState extends State<ForestTab> {
                   color: getForestTypeIcon(parcel.forestType).$2,
                 ),
           title: Text(
-            parcel.name,
+            _cardTitle(parcel, inKoGroup: inKoGroup, koName: koName),
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           subtitle: Column(
@@ -817,7 +878,7 @@ class ForestTabState extends State<ForestTab> {
                 Text(
                   owner,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.grey[600]),
+                  style: TextStyle(color: theme.colorScheme.onSurface),
                 ),
               Row(
                 children: [
@@ -833,7 +894,7 @@ class ForestTabState extends State<ForestTab> {
                       Text(' · ', style: TextStyle(color: Colors.grey[400])),
                     if (parcel.woodCut > 0)
                       Text(
-                        '${parcel.woodCut.toStringAsFixed(1)} m³',
+                        Fmt.m3(parcel.woodCut, 1),
                         style: TextStyle(color: Colors.orange[700]),
                       ),
                   ],
@@ -848,7 +909,7 @@ class ForestTabState extends State<ForestTab> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        '${parcel.woodUsedPercent.toStringAsFixed(0)}%',
+                        '${Fmt.num(parcel.woodUsedPercent, 0)} %',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -865,7 +926,7 @@ class ForestTabState extends State<ForestTab> {
                         child: LinearProgressIndicator(
                           value: parcel.woodUsedPercent / 100,
                           minHeight: 4,
-                          backgroundColor: Colors.grey[300],
+                          backgroundColor: Colors.white12,
                           valueColor: AlwaysStoppedAnimation<Color>(
                             parcel.woodUsedPercent >= 100
                                 ? Colors.red

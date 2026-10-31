@@ -38,7 +38,7 @@ class MapControls extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Top right: layers and zoom
+        // Top right: layers and search (zoom is pinch-only)
         Positioned(
           top: 80,
           right: 4,
@@ -59,22 +59,6 @@ class MapControls extends StatelessWidget {
                 onPressed: onSearchPressed,
                 tooltip: context.l10n.mapwSearchParcelByKo,
                 child: const Icon(Icons.search),
-              ),
-              const SizedBox(height: 8),
-              FloatingActionButton(
-                heroTag: 'map_zoom_in',
-                mini: true,
-                onPressed: _zoomIn,
-                tooltip: context.l10n.mapwZoomIn,
-                child: const Icon(Icons.add),
-              ),
-              const SizedBox(height: 8),
-              FloatingActionButton(
-                heroTag: 'map_zoom_out',
-                mini: true,
-                onPressed: _zoomOut,
-                tooltip: context.l10n.mapwZoomOut,
-                child: const Icon(Icons.remove),
               ),
             ],
           ),
@@ -112,21 +96,5 @@ class MapControls extends StatelessWidget {
           ),
       ],
     );
-  }
-
-  void _zoomIn() {
-    final camera = mapController.camera;
-    final newZoom = camera.zoom + 1;
-    if (newZoom <= MapLayer.appMaxZoom) {
-      mapController.moveAndRotate(camera.center, newZoom, camera.rotation);
-    }
-  }
-
-  void _zoomOut() {
-    final camera = mapController.camera;
-    final newZoom = camera.zoom - 1;
-    if (newZoom >= 7.0) {
-      mapController.moveAndRotate(camera.center, newZoom, camera.rotation);
-    }
   }
 }

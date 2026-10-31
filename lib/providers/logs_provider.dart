@@ -4,6 +4,7 @@ import '../models/log_batch.dart';
 import '../services/database_service.dart';
 import '../services/export_service.dart';
 import '../services/log_input_prefs_service.dart';
+import '../services/species_service.dart';
 
 /// Conversion factors between solid wood (m³) and stacked/loose measures.
 ///
@@ -164,7 +165,18 @@ class LogsProvider extends ChangeNotifier {
 
   Future<void> _loadCurrentSpecies() async {
     _currentSpecies = await _inputPrefs.getCurrentSpecies();
-    notifyListeners();
+    await ensureValidSpecies();
+  }
+
+  /// Keeps a species always selected: the last pick while it still exists,
+  /// otherwise the first species in the list (null only when the list is empty).
+  Future<void> ensureValidSpecies() async {
+    final species = await SpeciesService().getSpecies();
+    if (_currentSpecies != null && species.contains(_currentSpecies)) {
+      notifyListeners();
+      return;
+    }
+    await setCurrentSpecies(species.isNotEmpty ? species.first : null);
   }
 
   /// Set the species that newly added logs get; persisted across restarts.

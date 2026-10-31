@@ -85,7 +85,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get logsMenuDeleteAll => 'Odstrani vse';
 
   @override
-  String get logsSavedTooltip => 'Shranjeno';
+  String get logsSavedTooltip => 'Shranjeni hlodi';
 
   @override
   String get logsSaved => 'Shranjeno';
@@ -427,10 +427,10 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get logsSavedSheetTitle => 'Shranjene meritve';
+  String get logsSavedSheetTitle => 'Shranjeni hlodi';
 
   @override
-  String get logsSavedSheetEmpty => 'Ni shranjenih meritev';
+  String get logsSavedSheetEmpty => 'Ni shranjenih hlodov';
 
   @override
   String get logsSavedSheetNoName => 'Brez imena';
@@ -683,6 +683,35 @@ class AppLocalizationsSl extends AppLocalizations {
   String forestKoLabel(String code) {
     return 'KO $code';
   }
+
+  @override
+  String get logsInlineDiameterHint => 'Premer';
+
+  @override
+  String get logsInlineLengthHint => 'Dolžina';
+
+  @override
+  String logsInlineDiameterRange(String min, String max) {
+    return 'Premer mora biti med $min in $max cm';
+  }
+
+  @override
+  String logsInlineLengthRange(String min, String max) {
+    return 'Dolžina mora biti med $min in $max m';
+  }
+
+  @override
+  String logsSpeciesExists(String name) {
+    return 'Vrsta \"$name\" že obstaja';
+  }
+
+  @override
+  String logsSavedToBatch(String name) {
+    return 'Shranjeno v »$name« (Shranjeni hlodi)';
+  }
+
+  @override
+  String get logsOpenAction => 'Odpri';
 
   @override
   String mapTabMejnikName(int number, String parcela) {
@@ -1436,6 +1465,59 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String get mapwLegendTitle => 'Legenda';
+
+  @override
+  String get mapwLegendOwnParcels => 'Moje parcele';
+
+  @override
+  String get mapwLegendCadastre => 'Kataster';
+
+  @override
+  String get mapwLegendSelected => 'Izbrana parcela';
+
+  @override
+  String get mapwLegendPreview => 'Predogled uvoza';
+
+  @override
+  String get mapwLegendSearched => 'Najdena parcela';
+
+  @override
+  String get mapwLegendAuctions => 'Dražbe';
+
+  @override
+  String get mapwGpsLost => 'Ni GPS signala';
+
+  @override
+  String get mapwGpsNoFixYet => 'čakam na položaj';
+
+  @override
+  String mapwGpsLastFixAge(int seconds) {
+    return 'zadnji položaj pred $seconds s';
+  }
+
+  @override
+  String mapwEstimatedTilesAndSize(int count, String size) {
+    return '~$count ploščic · približno $size';
+  }
+
+  @override
+  String get auctionsUnavailable =>
+      'Seznama dražb ni bilo mogoče naložiti. Preverite povezavo.';
+
+  @override
+  String get auctionsLoadError => 'Napaka pri nalaganju dražb.';
+
+  @override
+  String get auctionsRetry => 'Poskusi znova';
+
+  @override
+  String get parcelSearchShowOnMap => 'Pokaži na karti';
+
+  @override
+  String get parcelSearchUseKo => 'Išči v tej k.o.';
+
+  @override
   String get parcelPointUnknown => 'Točka ?';
 
   @override
@@ -1975,6 +2057,18 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String get notesDiscardTitle => 'Zavrzi spremembe?';
+
+  @override
+  String get notesDiscardMessage => 'Spremembe zapiskov še niso shranjene.';
+
+  @override
+  String get notesKeepEditing => 'Nadaljuj urejanje';
+
+  @override
+  String get notesDiscard => 'Zavrzi';
+
+  @override
   String get svcKmlExportSubject => 'Gozdar Parcels Export';
 
   @override
@@ -2080,7 +2174,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get svcNetUnknown => 'Prišlo je do napake. Poskusite znova.';
 
   @override
-  String get aboutTitle => 'O aplikaciji';
+  String get aboutTitle => 'Nastavitve';
 
   @override
   String get aboutSectionMapSources => 'Viri kartografskih podatkov';
@@ -2208,7 +2302,7 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get aboutOfflineKataster => 'Offline kataster (parcele)';
+  String get aboutOfflineKataster => 'Kataster brez povezave (parcele)';
 
   @override
   String get aboutKatasterNotLoaded =>
@@ -2536,7 +2630,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get introWelcomeBody =>
-      'Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji.\n\nSledite poseku, belezite hlodovino in uporabljajte GPS za delo na terenu.';
+      'Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji.\n\nSledite poseku, beležite hlodovino in uporabljajte GPS za delo na terenu.';
 
   @override
   String get introNavTitle => 'Navigacija';
@@ -2741,4 +2835,10 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get introTermsBody =>
       'Aplikacija uporablja javne podatke Zavoda za gozdove Slovenije.\n\nZ uporabo te aplikacije se strinjate s pogoji uporabe podatkov:\n\n';
+
+  @override
+  String get aboutShowIntro => 'Uvodni vodič';
+
+  @override
+  String get aboutShowIntroDesc => 'Ponovno si oglejte predstavitev aplikacije';
 }

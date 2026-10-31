@@ -25,7 +25,7 @@
   "logsMenuManageSpecies": "Upravljanje vrst",
   "logsMenuExport": "Izvozi",
   "logsMenuDeleteAll": "Odstrani vse",
-  "logsSavedTooltip": "Shranjeno",
+  "logsSavedTooltip": "Shranjeni hlodi",
   "logsSaved": "Shranjeno",
   "logsSaveError": "Napaka pri shranjevanju",
   "logsEntryUpdated": "Vnos posodobljen",
@@ -218,8 +218,8 @@
       }
     }
   },
-  "logsSavedSheetTitle": "Shranjene meritve",
-  "logsSavedSheetEmpty": "Ni shranjenih meritev",
+  "logsSavedSheetTitle": "Shranjeni hlodi",
+  "logsSavedSheetEmpty": "Ni shranjenih hlodov",
   "logsSavedSheetNoName": "Brez imena",
   "logsSavedDeleteTitle": "Izbriši shranjene hlode",
   "logsSavedDeleteConfirm": "Ali ste prepričani, da želite izbrisati ta zapis?\n\nHlodi se vrnejo na seznam Hlodi.",
@@ -419,6 +419,47 @@
       }
     }
   },
+  "logsInlineDiameterHint": "Premer",
+  "logsInlineLengthHint": "Dolžina",
+  "logsInlineDiameterRange": "Premer mora biti med {min} in {max} cm",
+  "@logsInlineDiameterRange": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "logsInlineLengthRange": "Dolžina mora biti med {min} in {max} m",
+  "@logsInlineLengthRange": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSpeciesExists": "Vrsta \"{name}\" že obstaja",
+  "@logsSpeciesExists": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "logsSavedToBatch": "Shranjeno v »{name}« (Shranjeni hlodi)",
+  "@logsSavedToBatch": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "logsOpenAction": "Odpri",
   "mapTabMejnikName": "Mejnik {number} ({parcela})",
   "@mapTabMejnikName": {
     "placeholders": {
@@ -1044,6 +1085,39 @@
       }
     }
   },
+  "mapwLegendTitle": "Legenda",
+  "mapwLegendOwnParcels": "Moje parcele",
+  "mapwLegendCadastre": "Kataster",
+  "mapwLegendSelected": "Izbrana parcela",
+  "mapwLegendPreview": "Predogled uvoza",
+  "mapwLegendSearched": "Najdena parcela",
+  "mapwLegendAuctions": "Dražbe",
+  "mapwGpsLost": "Ni GPS signala",
+  "mapwGpsNoFixYet": "čakam na položaj",
+  "mapwGpsLastFixAge": "zadnji položaj pred {seconds} s",
+  "@mapwGpsLastFixAge": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwEstimatedTilesAndSize": "~{count} ploščic · približno {size}",
+  "@mapwEstimatedTilesAndSize": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "auctionsUnavailable": "Seznama dražb ni bilo mogoče naložiti. Preverite povezavo.",
+  "auctionsLoadError": "Napaka pri nalaganju dražb.",
+  "auctionsRetry": "Poskusi znova",
+  "parcelSearchShowOnMap": "Pokaži na karti",
+  "parcelSearchUseKo": "Išči v tej k.o.",
   "parcelPointUnknown": "Točka ?",
   "parcelPointNumbered": "Točka {number}",
   "parcelDetailUpdateError": "Napaka pri posodabljanju: {error}",
@@ -1476,6 +1550,10 @@
       }
     }
   },
+  "notesDiscardTitle": "Zavrzi spremembe?",
+  "notesDiscardMessage": "Spremembe zapiskov še niso shranjene.",
+  "notesKeepEditing": "Nadaljuj urejanje",
+  "notesDiscard": "Zavrzi",
   "svcKmlExportSubject": "Gozdar Parcels Export",
   "svcKmlExportText": "Exported {count} parcels",
   "@svcKmlExportText": {
@@ -1562,7 +1640,7 @@
   "svcNetNoConnection": "Ni internetne povezave. Preverite omrežje.",
   "svcNetServerError": "Strežnik ni dosegljiv. Poskusite pozneje.",
   "svcNetUnknown": "Prišlo je do napake. Poskusite znova.",
-  "aboutTitle": "O aplikaciji",
+  "aboutTitle": "Nastavitve",
   "aboutSectionMapSources": "Viri kartografskih podatkov",
   "aboutSectionLegal": "Pravne informacije",
   "aboutSectionOpenSource": "Odprtokodne knjižnice",
@@ -1631,7 +1709,7 @@
       }
     }
   },
-  "aboutOfflineKataster": "Offline kataster (parcele)",
+  "aboutOfflineKataster": "Kataster brez povezave (parcele)",
   "aboutKatasterNotLoaded": "Ni naložena — kataster se prikazuje prek spleta.",
   "aboutParcelsSummary": "{regions}{count} parcel{size}{date} • brez spleta",
   "@aboutParcelsSummary": {
@@ -1873,7 +1951,7 @@
   "introSkip": "Preskoči",
   "introStart": "Začni",
   "introWelcomeTitle": "Dobrodošli v Gozdar",
-  "introWelcomeBody": "Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji.\n\nSledite poseku, belezite hlodovino in uporabljajte GPS za delo na terenu.",
+  "introWelcomeBody": "Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji.\n\nSledite poseku, beležite hlodovino in uporabljajte GPS za delo na terenu.",
   "introNavTitle": "Navigacija",
   "introNavMapDesc": "Interaktivni zemljevid z vašimi parcelami",
   "introNavForestDesc": "Seznam parcel in iskanje v katastru",
@@ -1938,5 +2016,7 @@
   "introCompassStep4": "Sledite smeri",
   "introCompassStep4Desc": "Kompas kaže smer in razdaljo do točke",
   "introTermsTitle": "Pogoji uporabe",
-  "introTermsBody": "Aplikacija uporablja javne podatke Zavoda za gozdove Slovenije.\n\nZ uporabo te aplikacije se strinjate s pogoji uporabe podatkov:\n\n"
+  "introTermsBody": "Aplikacija uporablja javne podatke Zavoda za gozdove Slovenije.\n\nZ uporabo te aplikacije se strinjate s pogoji uporabe podatkov:\n\n",
+  "aboutShowIntro": "Uvodni vodič",
+  "aboutShowIntroDesc": "Ponovno si oglejte predstavitev aplikacije"
 }

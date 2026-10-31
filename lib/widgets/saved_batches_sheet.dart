@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/log_batch.dart';
 import '../providers/logs_provider.dart';
 import '../screens/batch_detail_screen.dart';
+import '../utils/formats.dart';
 
 /// Bottom sheet displaying saved log batches/projects
 class SavedBatchesSheet extends StatefulWidget {
@@ -73,8 +73,6 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('d. M. yyyy HH:mm');
-
     return SafeArea(
       top: false,
       child: DraggableScrollableSheet(
@@ -128,7 +126,7 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.folder_open, size: 48, color: Colors.grey[600]),
+                          Icon(Icons.folder_open, size: 48, color: Colors.grey[400]),
                           const SizedBox(height: 16),
                           Text(
                             context.l10n.logsSavedSheetEmpty,
@@ -182,7 +180,7 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            '${batch.totalVolume.toStringAsFixed(2)} m³',
+                                            Fmt.m3(batch.totalVolume),
                                             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                                   fontWeight: FontWeight.bold,
                                                   color: Colors.green[400],
@@ -190,7 +188,7 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            '${prmVolume.toStringAsFixed(2)} PRM  •  ${nmVolume.toStringAsFixed(2)} NM',
+                                            '${Fmt.num(prmVolume, 2)} PRM  •  ${Fmt.num(nmVolume, 2)} NM',
                                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                   color: Colors.grey[500],
                                                 ),
@@ -232,8 +230,8 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                                       Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
                                       const SizedBox(width: 4),
                                       Text(
-                                        dateFormat.format(batch.createdAt),
-                                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                        Fmt.dateTime(batch.createdAt),
+                                        style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                                       ),
                                     ],
                                   ),

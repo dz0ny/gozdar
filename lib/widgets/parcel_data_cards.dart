@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/log_entry.dart';
 import '../models/map_location.dart';
 import '../l10n/l10n.dart';
+import '../utils/formats.dart';
 
 /// Card displaying logs within a parcel
 class ParcelLogsCard extends StatelessWidget {
@@ -21,7 +22,12 @@ class ParcelLogsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (logs.isEmpty) return const SizedBox.shrink();
 
+    final divider = Divider(
+      height: 1,
+      color: Theme.of(context).colorScheme.outlineVariant,
+    );
     return Card(
+      margin: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -29,7 +35,7 @@ class ParcelLogsCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                const Icon(Icons.inventory_2, color: Colors.brown),
+                const Icon(Icons.inventory_2, color: Color(0xFFD4A574)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -40,51 +46,51 @@ class ParcelLogsCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${totalVolume.toStringAsFixed(2)} m³',
+                  Fmt.m3(totalVolume),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.brown[700],
+                    color: Color(0xFFD4A574),
                   ),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
+          divider,
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: logs.length > 5 ? 5 : logs.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
+            separatorBuilder: (context, index) => divider,
             itemBuilder: (context, index) {
               final log = logs[index];
               return ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.brown.withValues(alpha: 0.1),
+                    color: const Color(0xFFD4A574).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
                     Icons.circle,
-                    color: Colors.brown,
+                    color: Color(0xFFD4A574),
                     size: 20,
                   ),
                 ),
                 title: Text(
-                  '${log.volume.toStringAsFixed(4)} m³',
+                  Fmt.m3(log.volume, 4),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Row(
                   children: [
                     if (log.diameter != null && log.length != null)
                       Text(
-                        'Ø ${log.diameter!.toStringAsFixed(0)} cm × ${log.length!.toStringAsFixed(1)} m',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        'Ø ${Fmt.num(log.diameter!, 0)} cm × ${Fmt.num(log.length!, 1)} m',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                       )
                     else
                       Text(
                         context.l10n.parcelManualEntry,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                       ),
                     if (log.hasLocation) ...[
                       const SizedBox(width: 8),
@@ -103,7 +109,7 @@ class ParcelLogsCard extends StatelessWidget {
                             Icon(
                               Icons.gps_fixed,
                               size: 12,
-                              color: Colors.green[700],
+                              color: Colors.green[300],
                             ),
                             const SizedBox(width: 3),
                             Text(
@@ -111,7 +117,7 @@ class ParcelLogsCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.green[700],
+                                color: Colors.green[300],
                               ),
                             ),
                           ],
@@ -139,7 +145,7 @@ class ParcelLogsCard extends StatelessWidget {
               child: Center(
                 child: Text(
                   context.l10n.parcelMoreLogs(logs.length - 5),
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
                 ),
               ),
             ),
@@ -164,7 +170,12 @@ class ParcelLocationsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (locations.isEmpty) return const SizedBox.shrink();
 
+    final divider = Divider(
+      height: 1,
+      color: Theme.of(context).colorScheme.outlineVariant,
+    );
     return Card(
+      margin: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -183,12 +194,12 @@ class ParcelLocationsCard extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 1),
+          divider,
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: locations.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
+            separatorBuilder: (context, index) => divider,
             itemBuilder: (context, index) {
               final location = locations[index];
               return ListTile(
@@ -210,7 +221,7 @@ class ParcelLocationsCard extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: Colors.grey[400],
                   ),
                 ),
                 trailing: IconButton(
@@ -249,7 +260,12 @@ class ParcelSecnjaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (secnja.isEmpty) return const SizedBox.shrink();
 
+    final divider = Divider(
+      height: 1,
+      color: Theme.of(context).colorScheme.outlineVariant,
+    );
     return Card(
+      margin: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -268,12 +284,12 @@ class ParcelSecnjaCard extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 1),
+          divider,
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: secnja.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
+            separatorBuilder: (context, index) => divider,
             itemBuilder: (context, index) {
               final location = secnja[index];
               return ListTile(
@@ -295,7 +311,7 @@ class ParcelSecnjaCard extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: Colors.grey[400],
                   ),
                 ),
                 trailing: IconButton(

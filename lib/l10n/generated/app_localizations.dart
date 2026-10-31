@@ -251,7 +251,7 @@ abstract class AppLocalizations {
   /// No description provided for @logsSavedTooltip.
   ///
   /// In sl, this message translates to:
-  /// **'Shranjeno'**
+  /// **'Shranjeni hlodi'**
   String get logsSavedTooltip;
 
   /// No description provided for @logsSaved.
@@ -809,13 +809,13 @@ abstract class AppLocalizations {
   /// No description provided for @logsSavedSheetTitle.
   ///
   /// In sl, this message translates to:
-  /// **'Shranjene meritve'**
+  /// **'Shranjeni hlodi'**
   String get logsSavedSheetTitle;
 
   /// No description provided for @logsSavedSheetEmpty.
   ///
   /// In sl, this message translates to:
-  /// **'Ni shranjenih meritev'**
+  /// **'Ni shranjenih hlodov'**
   String get logsSavedSheetEmpty;
 
   /// No description provided for @logsSavedSheetNoName.
@@ -1177,6 +1177,48 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'KO {code}'**
   String forestKoLabel(String code);
+
+  /// No description provided for @logsInlineDiameterHint.
+  ///
+  /// In sl, this message translates to:
+  /// **'Premer'**
+  String get logsInlineDiameterHint;
+
+  /// No description provided for @logsInlineLengthHint.
+  ///
+  /// In sl, this message translates to:
+  /// **'Dolžina'**
+  String get logsInlineLengthHint;
+
+  /// No description provided for @logsInlineDiameterRange.
+  ///
+  /// In sl, this message translates to:
+  /// **'Premer mora biti med {min} in {max} cm'**
+  String logsInlineDiameterRange(String min, String max);
+
+  /// No description provided for @logsInlineLengthRange.
+  ///
+  /// In sl, this message translates to:
+  /// **'Dolžina mora biti med {min} in {max} m'**
+  String logsInlineLengthRange(String min, String max);
+
+  /// No description provided for @logsSpeciesExists.
+  ///
+  /// In sl, this message translates to:
+  /// **'Vrsta \"{name}\" že obstaja'**
+  String logsSpeciesExists(String name);
+
+  /// No description provided for @logsSavedToBatch.
+  ///
+  /// In sl, this message translates to:
+  /// **'Shranjeno v »{name}« (Shranjeni hlodi)'**
+  String logsSavedToBatch(String name);
+
+  /// No description provided for @logsOpenAction.
+  ///
+  /// In sl, this message translates to:
+  /// **'Odpri'**
+  String get logsOpenAction;
 
   /// No description provided for @mapTabMejnikName.
   ///
@@ -2413,6 +2455,102 @@ abstract class AppLocalizations {
   /// **'Parcela {municipality} - {number} je že v bazi podatkov'**
   String mapwParcelAlreadyInDb(String municipality, String number);
 
+  /// No description provided for @mapwLegendTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Legenda'**
+  String get mapwLegendTitle;
+
+  /// No description provided for @mapwLegendOwnParcels.
+  ///
+  /// In sl, this message translates to:
+  /// **'Moje parcele'**
+  String get mapwLegendOwnParcels;
+
+  /// No description provided for @mapwLegendCadastre.
+  ///
+  /// In sl, this message translates to:
+  /// **'Kataster'**
+  String get mapwLegendCadastre;
+
+  /// No description provided for @mapwLegendSelected.
+  ///
+  /// In sl, this message translates to:
+  /// **'Izbrana parcela'**
+  String get mapwLegendSelected;
+
+  /// No description provided for @mapwLegendPreview.
+  ///
+  /// In sl, this message translates to:
+  /// **'Predogled uvoza'**
+  String get mapwLegendPreview;
+
+  /// No description provided for @mapwLegendSearched.
+  ///
+  /// In sl, this message translates to:
+  /// **'Najdena parcela'**
+  String get mapwLegendSearched;
+
+  /// No description provided for @mapwLegendAuctions.
+  ///
+  /// In sl, this message translates to:
+  /// **'Dražbe'**
+  String get mapwLegendAuctions;
+
+  /// No description provided for @mapwGpsLost.
+  ///
+  /// In sl, this message translates to:
+  /// **'Ni GPS signala'**
+  String get mapwGpsLost;
+
+  /// No description provided for @mapwGpsNoFixYet.
+  ///
+  /// In sl, this message translates to:
+  /// **'čakam na položaj'**
+  String get mapwGpsNoFixYet;
+
+  /// No description provided for @mapwGpsLastFixAge.
+  ///
+  /// In sl, this message translates to:
+  /// **'zadnji položaj pred {seconds} s'**
+  String mapwGpsLastFixAge(int seconds);
+
+  /// No description provided for @mapwEstimatedTilesAndSize.
+  ///
+  /// In sl, this message translates to:
+  /// **'~{count} ploščic · približno {size}'**
+  String mapwEstimatedTilesAndSize(int count, String size);
+
+  /// No description provided for @auctionsUnavailable.
+  ///
+  /// In sl, this message translates to:
+  /// **'Seznama dražb ni bilo mogoče naložiti. Preverite povezavo.'**
+  String get auctionsUnavailable;
+
+  /// No description provided for @auctionsLoadError.
+  ///
+  /// In sl, this message translates to:
+  /// **'Napaka pri nalaganju dražb.'**
+  String get auctionsLoadError;
+
+  /// No description provided for @auctionsRetry.
+  ///
+  /// In sl, this message translates to:
+  /// **'Poskusi znova'**
+  String get auctionsRetry;
+
+  /// No description provided for @parcelSearchShowOnMap.
+  ///
+  /// In sl, this message translates to:
+  /// **'Pokaži na karti'**
+  String get parcelSearchShowOnMap;
+
+  /// No description provided for @parcelSearchUseKo.
+  ///
+  /// In sl, this message translates to:
+  /// **'Išči v tej k.o.'**
+  String get parcelSearchUseKo;
+
   /// No description provided for @parcelPointUnknown.
   ///
   /// In sl, this message translates to:
@@ -3313,6 +3451,30 @@ abstract class AppLocalizations {
   /// **'Katastrska občina {sifko}'**
   String parcelSearchKoSubtitle(int sifko);
 
+  /// No description provided for @notesDiscardTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Zavrzi spremembe?'**
+  String get notesDiscardTitle;
+
+  /// No description provided for @notesDiscardMessage.
+  ///
+  /// In sl, this message translates to:
+  /// **'Spremembe zapiskov še niso shranjene.'**
+  String get notesDiscardMessage;
+
+  /// No description provided for @notesKeepEditing.
+  ///
+  /// In sl, this message translates to:
+  /// **'Nadaljuj urejanje'**
+  String get notesKeepEditing;
+
+  /// No description provided for @notesDiscard.
+  ///
+  /// In sl, this message translates to:
+  /// **'Zavrzi'**
+  String get notesDiscard;
+
   /// No description provided for @svcKmlExportSubject.
   ///
   /// In sl, this message translates to:
@@ -3490,7 +3652,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutTitle.
   ///
   /// In sl, this message translates to:
-  /// **'O aplikaciji'**
+  /// **'Nastavitve'**
   String get aboutTitle;
 
   /// No description provided for @aboutSectionMapSources.
@@ -3718,7 +3880,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutOfflineKataster.
   ///
   /// In sl, this message translates to:
-  /// **'Offline kataster (parcele)'**
+  /// **'Kataster brez povezave (parcele)'**
   String get aboutOfflineKataster;
 
   /// No description provided for @aboutKatasterNotLoaded.
@@ -4275,7 +4437,7 @@ abstract class AppLocalizations {
   /// No description provided for @introWelcomeBody.
   ///
   /// In sl, this message translates to:
-  /// **'Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji.\n\nSledite poseku, belezite hlodovino in uporabljajte GPS za delo na terenu.'**
+  /// **'Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji.\n\nSledite poseku, beležite hlodovino in uporabljajte GPS za delo na terenu.'**
   String get introWelcomeBody;
 
   /// No description provided for @introNavTitle.
@@ -4667,6 +4829,18 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Aplikacija uporablja javne podatke Zavoda za gozdove Slovenije.\n\nZ uporabo te aplikacije se strinjate s pogoji uporabe podatkov:\n\n'**
   String get introTermsBody;
+
+  /// No description provided for @aboutShowIntro.
+  ///
+  /// In sl, this message translates to:
+  /// **'Uvodni vodič'**
+  String get aboutShowIntro;
+
+  /// No description provided for @aboutShowIntroDesc.
+  ///
+  /// In sl, this message translates to:
+  /// **'Ponovno si oglejte predstavitev aplikacije'**
+  String get aboutShowIntroDesc;
 }
 
 class _AppLocalizationsDelegate

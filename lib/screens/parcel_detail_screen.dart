@@ -35,6 +35,7 @@ import '../services/parcel_pdf_service.dart';
 import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
 import '../utils/decimal_input.dart';
+import '../utils/formats.dart';
 import '../widgets/navigate_to_sheet.dart';
 import '../widgets/notes_editor_sheet.dart';
 import '../widgets/parcel_info_widgets.dart';
@@ -608,7 +609,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
             child: Row(
               children: [
                 Icon(Icons.nature, size: 20, color: Colors.green.shade600),
-                Icon(Icons.park, size: 20, color: Colors.green.shade800),
+                Icon(Icons.park, size: 20, color: Colors.green.shade300),
                 const SizedBox(width: 12),
                 Text(context.l10n.parcelForestTypeMixed),
               ],
@@ -618,7 +619,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
             onPressed: () => Navigator.of(context).pop(ForestType.coniferous),
             child: Row(
               children: [
-                Icon(Icons.park, color: Colors.green.shade800),
+                Icon(Icons.park, color: Colors.green.shade300),
                 const SizedBox(width: 16),
                 Text(context.l10n.parcelForestTypeConiferous),
               ],
@@ -763,13 +764,13 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              context.l10n.parcelCutCurrent(_parcel.woodCut.toStringAsFixed(2)),
+              context.l10n.parcelCutCurrent(Fmt.num(_parcel.woodCut, 2)),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             if (_parcel.woodAllowance > 0) ...[
               const SizedBox(height: 4),
               Text(
-                context.l10n.parcelCutRemaining(_parcel.woodRemaining.toStringAsFixed(2)),
+                context.l10n.parcelCutRemaining(Fmt.num(_parcel.woodRemaining, 2)),
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium?.copyWith(color: Colors.green),
@@ -841,10 +842,10 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     if (mounted) {
       final message = result.trees > 0
           ? context.l10n.parcelCutAddedWithTrees(
-              volume.toStringAsFixed(2),
+              Fmt.num(volume, 2),
               result.trees,
             )
-          : context.l10n.parcelCutAdded(volume.toStringAsFixed(2));
+          : context.l10n.parcelCutAdded(Fmt.num(volume, 2));
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
@@ -1032,6 +1033,38 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     context.go(AppRoutes.map);
   }
 
+  /// "Poglej na karti" (outlined) and "Navigiraj" (filled).
+  Widget _buildMapActions(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => _navigateToPoint(_parcel.center, _parcel.name),
+            icon: const Icon(Icons.map),
+            label: Text(context.l10n.parcelViewOnMap),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: () => NavigateToSheet.show(
+              context,
+              destination: _parcel.center,
+              name: _parcel.name,
+              onInAppNavigation: () => _navigateToPoint(
+                _parcel.center,
+                _parcel.name,
+                startNavigation: true,
+              ),
+            ),
+            icon: const Icon(Icons.navigation),
+            label: Text(context.l10n.parcelNavigate),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1139,23 +1172,35 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Embedded map preview (uses the main map's current layers)
+                  // Capped height so the key facts and actions stay above
+                  // the fold.
                   if (_parcel.polygon.isNotEmpty) ...[
-                    Builder(
-                      builder: (context) {
-                        final mapProvider = context.watch<MapProvider>();
-                        return ParcelMapPreview(
-                          polygon: _parcel.polygon,
-                          baseLayer: mapProvider.currentBaseLayer,
-                          activeOverlays: mapProvider.activeOverlays,
-                          workerUrl: mapProvider.workerUrl,
-                          outlineColor:
-                              getForestTypeIcon(_parcel.forestType).$2,
-                          mosaic: _mosaic,
-                        );
-                      },
+                    SizedBox(
+                      height: 200,
+                      width: double.infinity,
+                      child: Builder(
+                        builder: (context) {
+                          final mapProvider = context.watch<MapProvider>();
+                          return ParcelMapPreview(
+                            polygon: _parcel.polygon,
+                            baseLayer: mapProvider.currentBaseLayer,
+                            activeOverlays: mapProvider.activeOverlays,
+                            workerUrl: mapProvider.workerUrl,
+                            outlineColor:
+                                getForestTypeIcon(_parcel.forestType).$2,
+                            mosaic: _mosaic,
+                            fill: true,
+                          );
+                        },
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                   ],
+
+                  // The most used actions, right under the map: one filled
+                  // primary, the other outlined.
+                  _buildMapActions(context),
+                  const SizedBox(height: 16),
 
                   // Parcel Info Card
                   ParcelInfoCard(
@@ -1192,6 +1237,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16),
                           child: Card(
+                            margin: EdgeInsets.zero,
                             child: Padding(
                               padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
                               child: Column(
@@ -1218,38 +1264,6 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                     onResetTrees: _resetTreesCut,
                     onLogWoodCut: _logWoodCut,
                     onLogTreesCut: _logTreesCut,
-                  ),
-
-                  // See on map / navigate buttons
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () =>
-                              _navigateToPoint(_parcel.center, _parcel.name),
-                          icon: const Icon(Icons.map),
-                          label: Text(context.l10n.parcelViewOnMap),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: () => NavigateToSheet.show(
-                            context,
-                            destination: _parcel.center,
-                            name: _parcel.name,
-                            onInAppNavigation: () => _navigateToPoint(
-                              _parcel.center,
-                              _parcel.name,
-                              startNavigation: true,
-                            ),
-                          ),
-                          icon: const Icon(Icons.navigation),
-                          label: Text(context.l10n.parcelNavigate),
-                        ),
-                      ),
-                    ],
                   ),
 
                   // Logs Card (logs geolocated within parcel)

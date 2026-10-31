@@ -7,6 +7,7 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:latlong2/latlong.dart';
 import '../l10n/l10n.dart';
 import '../services/location_settings.dart';
+import '../utils/formats.dart';
 import 'compass_painter.dart';
 
 /// Compass-only navigation dialog (no map)
@@ -35,10 +36,41 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
   bool _showDMS = false;
   bool _locationDenied = false;
 
+  /// When the last GPS fix arrived, and whether the stream reported an error
+  /// since. Either makes the readings stale, which the UI must show.
+  DateTime? _lastFixAt;
+  bool _gpsError = false;
+
+  /// Ticks once a second so the age of the last fix stays current.
+  Timer? _ageTimer;
+
+  /// A fix older than this counts as a lost signal.
+  static const _staleAfter = Duration(seconds: 15);
+
   @override
   void initState() {
     super.initState();
     _initializeStreams();
+    _ageTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && _lastFixAt != null) setState(() {});
+    });
+  }
+
+  void _onFix(Position position) {
+    if (!mounted) return;
+    setState(() {
+      _currentPosition = position;
+      _lastFixAt = DateTime.now();
+      _gpsError = false;
+    });
+  }
+
+  /// No GPS signal: the stream errored or the last fix is too old.
+  bool get _gpsLost {
+    if (_locationDenied) return false;
+    if (_gpsError) return true;
+    final at = _lastFixAt;
+    return at != null && DateTime.now().difference(at) > _staleAfter;
   }
 
   Future<bool> _ensureLocationPermission() async {
@@ -79,15 +111,10 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
         Geolocator.getPositionStream(
           locationSettings: GozdarLocationSettings.stream,
         ).listen(
-          (position) {
-            if (mounted) {
-              setState(() {
-                _currentPosition = position;
-              });
-            }
-          },
+          _onFix,
           onError: (error) {
             debugPrint('Position stream error: $error');
+            if (mounted) setState(() => _gpsError = true);
           },
         );
 
@@ -100,18 +127,16 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: GozdarLocationSettings.currentPosition,
       );
-      if (mounted) {
-        setState(() {
-          _currentPosition = position;
-        });
-      }
+      _onFix(position);
     } catch (e) {
       debugPrint('Error getting current position: $e');
+      if (mounted && _lastFixAt == null) setState(() => _gpsError = true);
     }
   }
 
   @override
   void dispose() {
+    _ageTimer?.cancel();
     _compassSubscription?.cancel();
     _positionSubscription?.cancel();
     super.dispose();
@@ -186,9 +211,9 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
 
   String _formatDistance(double meters) {
     if (meters < 1000) {
-      return '${meters.round()}m';
+      return '${meters.round()} m';
     } else {
-      return '${(meters / 1000).toStringAsFixed(1)}km';
+      return '${Fmt.num(meters / 1000, 1)} km';
     }
   }
 
@@ -261,6 +286,9 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
                 ],
               ),
             ),
+
+          // Lost GPS signal: the readings below are from the last fix.
+          if (_gpsLost) _buildGpsLostBanner(context),
 
           // Accuracy warning
           if (accuracyWarning != null)
@@ -336,6 +364,38 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
     );
   }
 
+  Widget _buildGpsLostBanner(BuildContext context) {
+    final at = _lastFixAt;
+    final l10n = context.l10n;
+    final detail = at == null
+        ? l10n.mapwGpsNoFixYet
+        : l10n.mapwGpsLastFixAge(DateTime.now().difference(at).inSeconds);
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.gps_off, color: Colors.orange.shade700, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              '${l10n.mapwGpsLost} · $detail',
+              style: TextStyle(
+                color: Colors.orange.shade700,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -396,7 +456,9 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
           'GPS',
           gpsAccuracy != null ? '±${gpsAccuracy.round()}m' : '--',
           Icons.gps_fixed,
-          color: gpsAccuracy != null
+          color: _gpsLost
+              ? Theme.of(context).colorScheme.onSurfaceVariant
+              : gpsAccuracy != null
               ? (gpsAccuracy <= 5
                     ? Colors.green
                     : gpsAccuracy <= 15

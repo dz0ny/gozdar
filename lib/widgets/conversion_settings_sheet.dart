@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../utils/decimal_input.dart';
+import '../utils/formats.dart';
 import '../providers/logs_provider.dart';
 
 /// Bottom sheet for configuring volume conversion factors (m³ → PRM/NM).
-///
-/// When [availableSpecies] and [onSpeciesChanged] are given, it also lets the
-/// user pick the species that newly added logs get (Hlodi tab only).
+/// The species for new logs has its own picker on the Hlodi tab.
 class ConversionSettingsSheet extends StatefulWidget {
   final double totalVolume;
   final double prmFactor;
   final double nmFactor;
   final void Function(double prm, double nm) onChanged;
-  final List<String>? availableSpecies;
-  final String? selectedSpecies;
-  final void Function(String? species)? onSpeciesChanged;
 
   const ConversionSettingsSheet({
     super.key,
@@ -22,9 +18,6 @@ class ConversionSettingsSheet extends StatefulWidget {
     required this.prmFactor,
     required this.nmFactor,
     required this.onChanged,
-    this.availableSpecies,
-    this.selectedSpecies,
-    this.onSpeciesChanged,
   });
 
   @override
@@ -34,7 +27,6 @@ class ConversionSettingsSheet extends StatefulWidget {
 class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
   late double _prm;
   late double _nm;
-  String? _species;
   late final TextEditingController _prmController;
   late final TextEditingController _nmController;
 
@@ -43,10 +35,6 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
     super.initState();
     _prm = widget.prmFactor;
     _nm = widget.nmFactor;
-    // A species removed via "Upravljanje vrst" falls back to none.
-    _species = widget.availableSpecies?.contains(widget.selectedSpecies) == true
-        ? widget.selectedSpecies
-        : null;
     _prmController = TextEditingController(text: _formatFactor(_prm));
     _nmController = TextEditingController(text: _formatFactor(_nm));
   }
@@ -61,7 +49,8 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
   String _formatFactor(double value) {
     var text = value.toStringAsFixed(2);
     if (text.endsWith('0')) text = text.substring(0, text.length - 1);
-    return text;
+    // Decimal comma like the rest of the UI (sl/hr); parseDecimal accepts it.
+    return text.replaceAll('.', ',');
   }
 
   void _setPrm(double value) {
@@ -114,50 +103,20 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
               child: Column(
                 children: [
                   Text(
-                    '${widget.totalVolume.toStringAsFixed(2)} m³',
+                    Fmt.m3(widget.totalVolume),
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${ConversionFactors(prm: _prm, nm: _nm).toPrm(widget.totalVolume).toStringAsFixed(2)} PRM  •  '
-                    '${ConversionFactors(prm: _prm, nm: _nm).toNm(widget.totalVolume).toStringAsFixed(2)} NM',
+                    '${Fmt.num(ConversionFactors(prm: _prm, nm: _nm).toPrm(widget.totalVolume), 2)} PRM  •  '
+                    '${Fmt.num(ConversionFactors(prm: _prm, nm: _nm).toNm(widget.totalVolume), 2)} NM',
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-
-            // Species for new logs
-            if (widget.availableSpecies != null &&
-                widget.onSpeciesChanged != null) ...[
-              Text(context.l10n.logsSpeciesLabel, style: Theme.of(context).textTheme.titleSmall),
-              Text(
-                context.l10n.logsConvSpeciesHint,
-                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _Chip(
-                    label: context.l10n.logsNotSelected,
-                    selected: _species == null,
-                    onTap: () => setState(() => _species = null),
-                  ),
-                  ...widget.availableSpecies!.map(
-                    (species) => _Chip(
-                      label: species,
-                      selected: _species == species,
-                      onTap: () => setState(() => _species = species),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
 
             // PRM presets
             Text(context.l10n.logsConvPrmTitle, style: Theme.of(context).textTheme.titleSmall),
@@ -212,7 +171,6 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
               child: FilledButton(
                 onPressed: () {
                   widget.onChanged(_prm, _nm);
-                  widget.onSpeciesChanged?.call(_species);
                   Navigator.pop(context);
                 },
                 child: Text(context.l10n.logsConvConfirm),
@@ -240,7 +198,7 @@ class _FactorChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Chip(label: '$label ($value)', selected: selected, onTap: onTap);
+    return _Chip(label: '$label (${Fmt.num(value, 2)})', selected: selected, onTap: onTap);
   }
 }
 

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:intl/intl.dart';
 import '../models/log_batch.dart';
 import '../services/location_settings.dart';
+import '../utils/formats.dart';
 
 /// "Shrani hlode": name the current working list and file it away, with an
 /// optional GPS fix for where the pile sits. Notes can be added later from
@@ -23,7 +23,7 @@ class SaveBatchSheet extends StatefulWidget {
   /// Default name offered in the field: "Hlodi 18. 10. 2026".
   static String defaultName(DateTime now) =>
       L10n.current.logsSaveSheetDefaultName(
-        DateFormat('d. M. yyyy').format(now),
+        Fmt.date(now),
       );
 
   @override
@@ -131,7 +131,7 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
           Text(
             context.l10n.logsSaveSheetSummary(
               widget.logCount,
-              widget.totalVolume.toStringAsFixed(2),
+              Fmt.num(widget.totalVolume, 2),
             ),
             style: Theme.of(context)
                 .textTheme

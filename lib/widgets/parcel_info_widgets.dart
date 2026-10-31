@@ -5,6 +5,7 @@ import '../models/parcel.dart';
 import '../services/ko_locator.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/si_valuation_service.dart';
+import '../utils/formats.dart';
 import 'sheet_parts.dart';
 import '../screens/forest_tab.dart';
 import '../l10n/l10n.dart';
@@ -86,11 +87,16 @@ class ParcelInfoCard extends StatelessWidget {
     return name != null ? '$name ($sifko)' : sifko.toString();
   }
 
+  String _forestTypeLabel(BuildContext context) => switch (parcel.forestType) {
+        ForestType.deciduous => context.l10n.parcelForestTypeDeciduous,
+        ForestType.coniferous => context.l10n.parcelForestTypeConiferous,
+        ForestType.mixed => context.l10n.parcelForestTypeMixed,
+      };
+
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('d. M. yyyy', context.l10n.localeName);
-
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -128,8 +134,10 @@ class ParcelInfoCard extends StatelessWidget {
                               color: Theme.of(context).colorScheme.primary,
                             ),
                       ),
+                      // Forest type next to its (tappable) icon; the vertex
+                      // count meant nothing to an owner.
                       Text(
-                        context.l10n.parcelPointsCount(parcel.polygon.length),
+                        _forestTypeLabel(context),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -139,7 +147,10 @@ class ParcelInfoCard extends StatelessWidget {
                 ),
               ],
             ),
-            const Divider(height: 24),
+            Divider(
+              height: 24,
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
             if (parcel.isCadastral) ...[
               // The KO index loads lazily; rebuild with the name once it has.
               FutureBuilder<void>(
@@ -159,7 +170,7 @@ class ParcelInfoCard extends StatelessWidget {
             _InfoTile(
               icon: Icons.calendar_today,
               label: context.l10n.parcelInfoAdded,
-              value: dateFormat.format(parcel.createdAt),
+              value: Fmt.date(parcel.createdAt),
             ),
           ],
         ),
@@ -205,11 +216,12 @@ class ParcelOwnerCard extends StatelessWidget {
     );
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // No leading icon: each owner row below already has one.
           ListTile(
-            leading: const Icon(Icons.person),
             title: Text(
               names.length > 1
                   ? context.l10n.ownersTitle(names.length)
@@ -293,7 +305,7 @@ String _modelName(BuildContext context, String model) {
 String _parcelLine(BuildContext context, ParcelValuation v) {
   final name = KoLocator.instance.bySifko(v.sifko)?.name;
   return '${context.l10n.mapTabParcelShort(v.parcela)}\n'
-      '${context.l10n.parcelFoundKo(name != null ? '${v.sifko} $name' : '${v.sifko}')}';
+      '${name != null ? '$name (${v.sifko})' : context.l10n.parcelFoundKo('${v.sifko}')}';
 }
 
 /// GURS generalised market value of a Slovenian parcel on the parcel page:
@@ -343,6 +355,7 @@ class ParcelValuationCard extends StatelessWidget {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Card(
+              margin: EdgeInsets.zero,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -375,6 +388,7 @@ class ParcelValuationCard extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: Card(
+            margin: EdgeInsets.zero,
             child: ListTile(
               leading: const SizedBox(
                 width: 24,
@@ -573,6 +587,7 @@ class ParcelNotesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: ListTile(
         leading: const Icon(Icons.note),
         title: Text(context.l10n.parcelNotesTitle),

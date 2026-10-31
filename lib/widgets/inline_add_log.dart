@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../models/log_entry.dart';
 import '../services/log_input_prefs_service.dart';
 import '../utils/decimal_input.dart';
+import '../utils/formats.dart';
 
 /// Always-visible quick-add bar at the bottom of the Hlodi tab: diameter,
 /// length, then the round "+". Replaces the modal add sheet
@@ -28,6 +31,12 @@ class InlineAddLog extends StatefulWidget {
 }
 
 class _InlineAddLogState extends State<InlineAddLog> {
+  // Plausible ranges; anything outside is almost surely a typo (354 cm).
+  static const double _minDiameter = 1;
+  static const double _maxDiameter = 200;
+  static const double _minLength = 0.1;
+  static const double _maxLength = 30;
+
   final _formKey = GlobalKey<FormState>();
   final _diameterController = TextEditingController();
   final _lengthController = TextEditingController();
@@ -37,6 +46,9 @@ class _InlineAddLogState extends State<InlineAddLog> {
   double? _calculatedVolume;
   bool _isSaving = false;
   int _addedCount = 0;
+  bool _showAdded = false;
+  Timer? _addedTimer;
+  String? _rangeError;
 
   final _inputPrefs = LogInputPrefsService();
 
@@ -67,14 +79,42 @@ class _InlineAddLogState extends State<InlineAddLog> {
     return text;
   }
 
+  @override
+  void dispose() {
+    _addedTimer?.cancel();
+    _diameterController.dispose();
+    _lengthController.dispose();
+    _diameterFocus.dispose();
+    _lengthFocus.dispose();
+    super.dispose();
+  }
+
   void _updateVolume() {
     final diameter = parseDecimal(_diameterController.text);
     final length = parseDecimal(_lengthController.text);
+    // Zero counts as "still typing" (e.g. "0.5"), not as out of range.
+    final diameterBad = diameter != null &&
+        diameter > 0 &&
+        (diameter < _minDiameter || diameter > _maxDiameter);
+    final lengthBad = length != null &&
+        length > 0 &&
+        (length < _minLength || length > _maxLength);
     setState(() {
-      _calculatedVolume =
-          (diameter != null && length != null && diameter > 0 && length > 0)
-              ? LogEntry.calculateVolume(diameter, length)
+      _rangeError = diameterBad
+          ? context.l10n.logsInlineDiameterRange(
+              Fmt.num(_minDiameter, 0), Fmt.num(_maxDiameter, 0))
+          : lengthBad
+              ? context.l10n.logsInlineLengthRange(
+                  Fmt.num(_minLength, 1), Fmt.num(_maxLength, 0))
               : null;
+      _calculatedVolume = (diameter != null &&
+              length != null &&
+              diameter > 0 &&
+              length > 0 &&
+              !diameterBad &&
+              !lengthBad)
+          ? LogEntry.calculateVolume(diameter, length)
+          : null;
     });
   }
 
@@ -104,7 +144,13 @@ class _InlineAddLogState extends State<InlineAddLog> {
       // Keep the length for the next log; the diameter is what changes.
       setState(() {
         _addedCount++;
+        _showAdded = true;
         _diameterController.clear();
+      });
+      // Brief confirmation in the label slot, then back to "Volumen".
+      _addedTimer?.cancel();
+      _addedTimer = Timer(const Duration(milliseconds: 1500), () {
+        if (mounted) setState(() => _showAdded = false);
       });
       _diameterFocus.requestFocus();
     } catch (e) {
@@ -118,9 +164,10 @@ class _InlineAddLogState extends State<InlineAddLog> {
     }
   }
 
-  /// Big underlined number field, as on a pocket calculator: no label, the
-  /// unit sits next to it as plain text.
+  /// Big underlined number field, as on a pocket calculator: a small label
+  /// above it, the unit sits next to it as plain text.
   Widget _numberField({
+    required String label,
     required TextEditingController controller,
     required FocusNode focusNode,
     required TextInputAction action,
@@ -134,6 +181,8 @@ class _InlineAddLogState extends State<InlineAddLog> {
       style: style,
       textAlign: TextAlign.right,
       decoration: InputDecoration(
+        labelText: label,
+        floatingLabelBehavior: FloatingLabelBehavior.always,
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         enabledBorder: UnderlineInputBorder(
@@ -147,6 +196,8 @@ class _InlineAddLogState extends State<InlineAddLog> {
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       textInputAction: action,
       onFieldSubmitted: onSubmitted,
+      // Tapping anywhere else (list, header, empty space) closes the keyboard.
+      onTapOutside: (_) => focusNode.unfocus(),
       inputFormatters: [DecimalTextInputFormatter()],
       validator: (v) => v == null || v.isEmpty ? '' : null,
     );
@@ -189,6 +240,7 @@ class _InlineAddLogState extends State<InlineAddLog> {
                     Expanded(
                       flex: 5,
                       child: _numberField(
+                        label: context.l10n.logsInlineDiameterHint,
                         controller: _diameterController,
                         focusNode: _diameterFocus,
                         action: TextInputAction.next,
@@ -206,6 +258,7 @@ class _InlineAddLogState extends State<InlineAddLog> {
                     Expanded(
                       flex: 4,
                       child: _numberField(
+                        label: context.l10n.logsInlineLengthHint,
                         controller: _lengthController,
                         focusNode: _lengthFocus,
                         action: TextInputAction.done,
@@ -219,7 +272,10 @@ class _InlineAddLogState extends State<InlineAddLog> {
                     const SizedBox(width: 8),
                     Text('m', style: unitStyle),
                     const SizedBox(width: 16),
-                    SizedBox(
+                    // Counts as part of the fields so tapping + keeps the
+                    // keyboard open for the next log.
+                    TextFieldTapRegion(
+                      child: SizedBox(
                       width: 76,
                       height: 76,
                       child: FilledButton(
@@ -235,31 +291,44 @@ class _InlineAddLogState extends State<InlineAddLog> {
                           child: Icon(Icons.add, size: 44),
                         ),
                       ),
+                      ),
                     ),
                   ],
                 ),
+                if (_rangeError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      _rangeError!,
+                      style: textTheme.bodyMedium?.copyWith(color: cs.error),
+                    ),
+                  ),
                 const SizedBox(height: 6),
-                // Volumen  =  0.955 m³      (Dodano: N on the left when > 0)
+                // Volumen  =  0,96 m³   (the label briefly reads "✓ Dodano: N"
+                // after an add, in the same slot, so nothing shifts)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
-                    Text(context.l10n.logsVolumeLabel, style: unitStyle),
+                    // Not Flexible: a loose Flexible would reserve half the row
+                    // and leave a gap after "m³".
+                    Text(
+                      _showAdded
+                          ? '✓ ${context.l10n.logsInlineAdded(_addedCount)}'
+                          : context.l10n.logsVolumeLabel,
+                      style: _showAdded
+                          ? unitStyle.copyWith(color: Colors.green[400])
+                          : unitStyle,
+                      maxLines: 1,
+                    ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: Text('=', style: unitStyle),
                     ),
-                    if (_addedCount > 0)
-                      Text(
-                        context.l10n.logsInlineAdded(_addedCount),
-                        style: textTheme.titleMedium?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
                     Expanded(
                       child: Text(
                         _calculatedVolume != null
-                            ? _calculatedVolume!.toStringAsFixed(3)
+                            ? Fmt.num(_calculatedVolume!, 2)
                             : '–',
                         textAlign: TextAlign.right,
                         style: numberStyle.copyWith(

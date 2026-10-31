@@ -288,5 +288,38 @@
         "type": "String"
       }
     }
-  }
+  },
+  "mapwLegendTitle": "Legenda",
+  "mapwLegendOwnParcels": "Moje parcele",
+  "mapwLegendCadastre": "Kataster",
+  "mapwLegendSelected": "Izbrana parcela",
+  "mapwLegendPreview": "Predogled uvoza",
+  "mapwLegendSearched": "Najdena parcela",
+  "mapwLegendAuctions": "Dražbe",
+  "mapwGpsLost": "Ni GPS signala",
+  "mapwGpsNoFixYet": "čakam na položaj",
+  "mapwGpsLastFixAge": "zadnji položaj pred {seconds} s",
+  "@mapwGpsLastFixAge": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "mapwEstimatedTilesAndSize": "~{count} ploščic · približno {size}",
+  "@mapwEstimatedTilesAndSize": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "auctionsUnavailable": "Seznama dražb ni bilo mogoče naložiti. Preverite povezavo.",
+  "auctionsLoadError": "Napaka pri nalaganju dražb.",
+  "auctionsRetry": "Poskusi znova",
+  "parcelSearchShowOnMap": "Pokaži na karti",
+  "parcelSearchUseKo": "Išči v tej k.o."
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/parcel.dart';
 import '../l10n/l10n.dart';
+import '../utils/formats.dart';
 
 /// Wood tracking card showing allowance, cut amount, progress, and action buttons
 class ParcelWoodTrackingCard extends StatelessWidget {
@@ -23,7 +24,11 @@ class ParcelWoodTrackingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+    final divider = Divider(color: theme.colorScheme.outlineVariant);
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -31,7 +36,7 @@ class ParcelWoodTrackingCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.forest, color: Colors.brown),
+                const Icon(Icons.forest, color: Color(0xFFD4A574)),
                 const SizedBox(width: 8),
                 Text(
                   context.l10n.parcelWoodTitle,
@@ -58,24 +63,24 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                           Text(
                             context.l10n.parcelAllowanceTitle,
                             style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: Colors.grey[600]),
+                                ?.copyWith(color: muted),
                           ),
                           Text(
                             parcel.woodAllowance > 0
-                                ? '${parcel.woodAllowance.toStringAsFixed(2)} m³'
+                                ? Fmt.m3(parcel.woodAllowance)
                                 : context.l10n.parcelNotSet,
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.edit, color: Colors.grey),
+                    Icon(Icons.edit, color: muted),
                   ],
                 ),
               ),
             ),
 
-            const Divider(),
+            divider,
 
             // Cut amount with progress
             Row(
@@ -87,13 +92,14 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                       Text(
                         context.l10n.parcelCutLabel,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                          color: muted,
                         ),
                       ),
                       Text(
-                        '${parcel.woodCut.toStringAsFixed(2)} m³',
+                        Fmt.m3(parcel.woodCut),
+                        // Neutral at zero; colour only once something is cut.
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.orange[700],
+                          color: parcel.woodCut > 0 ? Colors.orange[700] : null,
                         ),
                       ),
                     ],
@@ -116,7 +122,7 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: parcel.woodUsedPercent / 100,
                   minHeight: 12,
-                  backgroundColor: Colors.grey[300],
+                  backgroundColor: Colors.white12,
                   valueColor: AlwaysStoppedAnimation<Color>(
                     parcel.woodUsedPercent >= 100
                         ? Colors.red
@@ -131,13 +137,13 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    context.l10n.parcelWoodUsed(parcel.woodUsedPercent.toStringAsFixed(0)),
+                    context.l10n.parcelWoodUsed(Fmt.num(parcel.woodUsedPercent, 0)),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   Text(
-                    context.l10n.parcelCutRemaining(parcel.woodRemaining.toStringAsFixed(2)),
+                    context.l10n.parcelCutRemaining(Fmt.num(parcel.woodRemaining, 2)),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.green[700],
+                      color: Colors.green[300],
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -145,7 +151,7 @@ class ParcelWoodTrackingCard extends StatelessWidget {
               ),
             ],
 
-            const Divider(),
+            divider,
 
             // Trees cut
             Row(
@@ -157,13 +163,13 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                       Text(
                         context.l10n.parcelTreesCutLabel,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                          color: muted,
                         ),
                       ),
                       Text(
                         '${parcel.treesCut}',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.green[700],
+                          color: parcel.treesCut > 0 ? Colors.green[300] : null,
                         ),
                       ),
                     ],
@@ -184,7 +190,8 @@ class ParcelWoodTrackingCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: FilledButton.icon(
+                  // Tonal, so the page has one filled primary (Navigiraj).
+                  child: FilledButton.tonalIcon(
                     onPressed: onLogWoodCut,
                     icon: const Icon(Icons.add),
                     label: Text(context.l10n.parcelLogCutButton),

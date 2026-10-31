@@ -61,6 +61,9 @@ class ParcelSearchDialog extends StatefulWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      // Keep the sheet below the status bar so its title and corners aren't
+      // tucked under the clock.
+      useSafeArea: true,
       useRootNavigator: false,
       showDragHandle: true,
       builder: (context) => ParcelSearchDialog(
@@ -94,6 +97,9 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   /// Key of the suggestion whose geometry is being fetched.
   String? _locatingKey;
   String? _error;
+
+  /// Court auctions load; replaced by Retry after a failed load.
+  late Future<void> _auctionsLoad = AuctionService.instance.ensureLoaded();
 
   @override
   void initState() {
@@ -311,13 +317,30 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   /// KO code or parcel number. Tapping one opens the parcel on the map.
   Widget _auctionList(BuildContext context) {
     return FutureBuilder<void>(
-      future: AuctionService.instance.ensureLoaded(),
+      future: _auctionsLoad,
       builder: (context, snapshot) {
         final all = AuctionService.instance.all;
+        final done = snapshot.connectionState == ConnectionState.done;
+        if (snapshot.hasError || (done && all.isEmpty)) {
+          // The service swallows network errors and leaves the list empty,
+          // so an empty list after loading means the load failed.
+          return _hint(
+            context,
+            Icons.cloud_off,
+            snapshot.hasError
+                ? context.l10n.auctionsLoadError
+                : context.l10n.auctionsUnavailable,
+            action: OutlinedButton.icon(
+              onPressed: () => setState(() {
+                _auctionsLoad = AuctionService.instance.ensureLoaded();
+              }),
+              icon: const Icon(Icons.refresh),
+              label: Text(context.l10n.auctionsRetry),
+            ),
+          );
+        }
         if (all.isEmpty) {
-          return snapshot.connectionState == ConnectionState.done
-              ? _hint(context, Icons.gavel, context.l10n.auctionsEmpty)
-              : _hint(context, Icons.gavel, context.l10n.auctionsLoading);
+          return _hint(context, Icons.gavel, context.l10n.auctionsLoading);
         }
         final words = KoLocator.fold(_controller.text.text)
             .split(RegExp(r'\s+'))
@@ -365,14 +388,16 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
       parcela: a.parcela,
     );
     final locating = _locatingKey == _key(suggestion);
-    final ko = a.koName != null ? '${a.sifko} ${a.koName}' : '${a.sifko}';
+    final ko = context.l10n.parcelFoundKo(
+      a.koName != null ? '${a.koName} (${a.sifko})' : '${a.sifko}',
+    );
     return ListTile(
       minVerticalPadding: 10,
       leading: Icon(Icons.gavel, color: cs.primary),
+      // Parcel and KO wrap to two lines rather than cutting the KO number.
       title: Text(
-        '${context.l10n.mapTabParcelShort(a.parcela)} · '
-        '${context.l10n.parcelFoundKo(ko)}',
-        maxLines: 1,
+        '${context.l10n.mapTabParcelShort(a.parcela)} · $ko',
+        maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
@@ -393,7 +418,10 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : Icon(Icons.my_location, color: cs.onSurfaceVariant),
+          : Tooltip(
+              message: context.l10n.parcelSearchShowOnMap,
+              child: Icon(Icons.my_location, color: cs.onSurfaceVariant),
+            ),
       onTap: _locatingKey != null ? null : () => _open(suggestion),
     );
   }
@@ -443,7 +471,6 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         onSubmitted: (_) => _submit(),
         decoration: InputDecoration(
           hintText: context.l10n.parcelSearchHint,
-          helperText: context.l10n.parcelSearchHelper,
           prefixIcon: const Icon(Icons.search),
           suffixIcon: _controller.hasQuery
               ? IconButton(
@@ -517,7 +544,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
       leading: Icon(icon, color: cs.primary),
       title: Text(
         s.title,
-        maxLines: 1,
+        maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
@@ -525,19 +552,31 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
       ),
       subtitle: s.subtitle == null
           ? null
-          : Text(s.subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis),
+          : Text(s.subtitle!, maxLines: 2, overflow: TextOverflow.ellipsis),
       trailing: locating
           ? const SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : Icon(trailing, color: cs.onSurfaceVariant),
+          : Tooltip(
+              // Target = open the parcel on the map; + = narrow the search to
+              // this cadastral municipality.
+              message: s.kind == ParcelSuggestionKind.ko
+                  ? context.l10n.parcelSearchUseKo
+                  : context.l10n.parcelSearchShowOnMap,
+              child: Icon(trailing, color: cs.onSurfaceVariant),
+            ),
       onTap: _locatingKey != null ? null : () => _onSuggestionTap(s),
     );
   }
 
-  Widget _hint(BuildContext context, IconData icon, String text) {
+  Widget _hint(
+    BuildContext context,
+    IconData icon,
+    String text, {
+    Widget? action,
+  }) {
     final cs = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
@@ -555,6 +594,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
                   .bodyMedium
                   ?.copyWith(color: cs.onSurfaceVariant),
             ),
+            if (action != null) ...[const SizedBox(height: 16), action],
           ],
         ),
       ),

@@ -85,7 +85,7 @@ class AppLocalizationsHr extends AppLocalizations {
   String get logsMenuDeleteAll => 'Ukloni sve';
 
   @override
-  String get logsSavedTooltip => 'Spremljeno';
+  String get logsSavedTooltip => 'Spremljeni trupci';
 
   @override
   String get logsSaved => 'Spremljeno';
@@ -423,10 +423,10 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String get logsSavedSheetTitle => 'Spremljena mjerenja';
+  String get logsSavedSheetTitle => 'Spremljeni trupci';
 
   @override
-  String get logsSavedSheetEmpty => 'Nema spremljenih mjerenja';
+  String get logsSavedSheetEmpty => 'Nema spremljenih trupaca';
 
   @override
   String get logsSavedSheetNoName => 'Bez naziva';
@@ -675,6 +675,35 @@ class AppLocalizationsHr extends AppLocalizations {
   String forestKoLabel(String code) {
     return 'KO $code';
   }
+
+  @override
+  String get logsInlineDiameterHint => 'Promjer';
+
+  @override
+  String get logsInlineLengthHint => 'Duljina';
+
+  @override
+  String logsInlineDiameterRange(String min, String max) {
+    return 'Promjer mora biti između $min i $max cm';
+  }
+
+  @override
+  String logsInlineLengthRange(String min, String max) {
+    return 'Duljina mora biti između $min i $max m';
+  }
+
+  @override
+  String logsSpeciesExists(String name) {
+    return 'Vrsta \"$name\" već postoji';
+  }
+
+  @override
+  String logsSavedToBatch(String name) {
+    return 'Spremljeno u »$name« (Spremljeni trupci)';
+  }
+
+  @override
+  String get logsOpenAction => 'Otvori';
 
   @override
   String mapTabMejnikName(int number, String parcela) {
@@ -1428,6 +1457,59 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
+  String get mapwLegendTitle => 'Legenda';
+
+  @override
+  String get mapwLegendOwnParcels => 'Moje čestice';
+
+  @override
+  String get mapwLegendCadastre => 'Katastar';
+
+  @override
+  String get mapwLegendSelected => 'Odabrana čestica';
+
+  @override
+  String get mapwLegendPreview => 'Pregled uvoza';
+
+  @override
+  String get mapwLegendSearched => 'Pronađena čestica';
+
+  @override
+  String get mapwLegendAuctions => 'Dražbe';
+
+  @override
+  String get mapwGpsLost => 'Nema GPS signala';
+
+  @override
+  String get mapwGpsNoFixYet => 'čekam položaj';
+
+  @override
+  String mapwGpsLastFixAge(int seconds) {
+    return 'zadnji položaj prije $seconds s';
+  }
+
+  @override
+  String mapwEstimatedTilesAndSize(int count, String size) {
+    return '~$count pločica · približno $size';
+  }
+
+  @override
+  String get auctionsUnavailable =>
+      'Popis dražbi nije moguće učitati. Provjerite vezu.';
+
+  @override
+  String get auctionsLoadError => 'Greška pri učitavanju dražbi.';
+
+  @override
+  String get auctionsRetry => 'Pokušaj ponovno';
+
+  @override
+  String get parcelSearchShowOnMap => 'Prikaži na karti';
+
+  @override
+  String get parcelSearchUseKo => 'Traži u ovoj k.o.';
+
+  @override
   String get parcelPointUnknown => 'Točka ?';
 
   @override
@@ -1967,6 +2049,18 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
+  String get notesDiscardTitle => 'Odbaciti promjene?';
+
+  @override
+  String get notesDiscardMessage => 'Promjene bilješki još nisu spremljene.';
+
+  @override
+  String get notesKeepEditing => 'Nastavi uređivanje';
+
+  @override
+  String get notesDiscard => 'Odbaci';
+
+  @override
   String get svcKmlExportSubject => 'Gozdar izvoz čestica';
 
   @override
@@ -2073,7 +2167,7 @@ class AppLocalizationsHr extends AppLocalizations {
   String get svcNetUnknown => 'Došlo je do pogreške. Pokušajte ponovno.';
 
   @override
-  String get aboutTitle => 'O aplikaciji';
+  String get aboutTitle => 'Postavke';
 
   @override
   String get aboutSectionMapSources => 'Izvori kartografskih podataka';
@@ -2737,4 +2831,11 @@ class AppLocalizationsHr extends AppLocalizations {
   @override
   String get introTermsBody =>
       'Aplikacija koristi javne podatke Zavoda za šume Slovenije.\n\nKorištenjem ove aplikacije slažete se s uvjetima korištenja podataka:\n\n';
+
+  @override
+  String get aboutShowIntro => 'Uvodni vodič';
+
+  @override
+  String get aboutShowIntroDesc =>
+      'Ponovno pogledajte predstavljanje aplikacije';
 }

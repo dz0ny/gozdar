@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../l10n/l10n.dart';
+import '../router/route_names.dart';
 import '../services/locale_settings.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/cache_settings.dart';
@@ -13,6 +15,7 @@ import '../services/owner_offline_settings_service.dart';
 import '../services/parcel_lookup_service.dart';
 import '../services/kataster_sharing_service.dart';
 import '../services/kataster_update_service.dart';
+import '../utils/formats.dart';
 import '../services/tile_cache_service.dart';
 import '../services/vlake_service.dart';
 import '../services/vlake_settings.dart';
@@ -104,7 +107,20 @@ class _AboutScreenState extends State<AboutScreen> {
           Card(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildLanguageRow(context, colorScheme),
+              child: Column(
+                children: [
+                  _buildLanguageRow(context, colorScheme),
+                  const Divider(),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.school_outlined, color: colorScheme.primary),
+                    title: Text(context.l10n.aboutShowIntro),
+                    subtitle: Text(context.l10n.aboutShowIntroDesc),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.go(AppRoutes.onboarding),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -478,8 +494,11 @@ class _AboutScreenState extends State<AboutScreen> {
             final sizeLabel = size != null
                 ? ' • ${(size / (1024 * 1024)).toStringAsFixed(0)} MB'
                 : '';
-            final dateLabel = service.dataDate != null
-                ? ' • ${service.dataDate}'
+            final rawDate = service.dataDate;
+            final parsedDate =
+                rawDate != null ? DateTime.tryParse(rawDate) : null;
+            final dateLabel = rawDate != null
+                ? ' • ${parsedDate != null ? Fmt.date(parsedDate) : rawDate}'
                 : '';
             final regions = service.loadedRegions;
             final regionLabel = regions.isNotEmpty

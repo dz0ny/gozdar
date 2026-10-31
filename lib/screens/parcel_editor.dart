@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
@@ -44,10 +46,14 @@ class _ParcelEditorState extends State<ParcelEditor> {
       _polygon = List.from(widget.parcel!.polygon);
       _forestType = widget.parcel!.forestType;
       _isDrawing = false;
-      // Fit to polygon bounds after map is ready
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _fitToPolygonBounds();
-      });
+      // The camera starts on the polygon via MapOptions.initialCameraFit (see
+      // _initialCameraFit). Don't fit again after the first frame: that
+      // two-step start (zoom 15, then the fit zoom) made flutter_map prune
+      // and re-create the visible tiles while they were still loading. The
+      // aborted requests resolve to a transparent tile, and the re-created
+      // tiles share that same pending image (the image cache keys tiles by
+      // URL), so the editor showed an empty grey map until a zoom change
+      // asked for new URLs.
     } else {
       _centerOnGps();
     }
@@ -86,6 +92,21 @@ class _ParcelEditorState extends State<ParcelEditor> {
     }
   }
 
+  /// Closest zoom to fit the outline to: no deeper than the base layer has
+  /// real tiles for.
+  double get _fitMaxZoom =>
+      math.min(18, _currentBaseLayer.nativeMaxZoom).toDouble();
+
+  /// Camera fit for opening an existing outline (two or more points).
+  CameraFit? get _initialCameraFit {
+    if (widget.parcel == null || _polygon.length < 2) return null;
+    return CameraFit.bounds(
+      bounds: LatLngBounds.fromPoints(_polygon),
+      padding: const EdgeInsets.all(60),
+      maxZoom: _fitMaxZoom,
+    );
+  }
+
   /// Fit map to show all polygon points
   void _fitToPolygonBounds() {
     if (_polygon.isEmpty) return;
@@ -116,7 +137,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
         CameraFit.bounds(
           bounds: bounds,
           padding: const EdgeInsets.all(60),
-          maxZoom: 18,
+          maxZoom: _fitMaxZoom,
         ),
       );
     } catch (e) {
@@ -297,6 +318,13 @@ class _ParcelEditorState extends State<ParcelEditor> {
       maxNativeZoom: layer.nativeMaxZoom,
       tileProvider: _tileCacheService.getGeneralTileProvider(),
       userAgentPackageName: 'dev.dz0ny.gozdar',
+      errorTileCallback: (tile, error, stackTrace) {
+        debugPrint(
+          'TILE ERROR [editor ${layer.type.name}] '
+          '${tile.coordinates.z}/${tile.coordinates.x}/${tile.coordinates.y}: '
+          '$error',
+        );
+      },
     );
   }
 
@@ -305,6 +333,100 @@ class _ParcelEditorState extends State<ParcelEditor> {
         .where((layer) => _activeOverlays.contains(layer.type))
         .map((layer) => _buildTileLayerForLayer(layer))
         .toList();
+  }
+
+  /// Bottom-bar buttons: tighter padding so three labelled buttons fit.
+  static final ButtonStyle _compactButton = ButtonStyle(
+    padding: WidgetStateProperty.all(
+      const EdgeInsets.symmetric(horizontal: 8),
+    ),
+  );
+
+  /// One-line label that shrinks rather than wraps on narrow phones.
+  Widget _fitLabel(String text) => FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(text, maxLines: 1, softWrap: false),
+      );
+
+  /// Numbered vertex markers when there is room for the numbers (zoomed in
+  /// and vertices at least [_minLabelSpacing] px apart); small dots
+  /// otherwise, so dense outlines don't turn into unreadable stacks.
+  static const double _minLabelSpacing = 24;
+  static const double _minLabelZoom = 17;
+
+  bool _roomForNumbers(MapCamera camera) {
+    if (camera.zoom < _minLabelZoom) return false;
+    if (_polygon.length < 2) return true;
+    final points = [
+      for (final p in _polygon) camera.latLngToScreenOffset(p),
+    ];
+    // Neighbours along the outline (closing edge included) are where the
+    // markers pile up; O(n) keeps this cheap on every camera move.
+    for (var i = 0; i < points.length; i++) {
+      final next = points[(i + 1) % points.length];
+      if ((points[i] - next).distance < _minLabelSpacing) return false;
+    }
+    return true;
+  }
+
+  Widget _buildVertexMarkers(BuildContext context) {
+    final showNumbers = _roomForNumbers(MapCamera.of(context));
+    final size = showNumbers ? 30.0 : 14.0;
+    return MarkerLayer(
+      markers: _polygon.asMap().entries.map((entry) {
+        final index = entry.key;
+        final point = entry.value;
+        final isFirst = index == 0;
+        final isLast = index == _polygon.length - 1;
+        // The last point stays a full-size tap target while drawing (tap
+        // removes it).
+        final markerSize = isLast && _isDrawing ? 30.0 : size;
+        final dotSize = isLast && _isDrawing && !showNumbers ? 18.0 : size;
+
+        return Marker(
+          point: point,
+          width: markerSize,
+          height: markerSize,
+          child: GestureDetector(
+            onTap: () {
+              if (isLast && _isDrawing) {
+                _removeLastPoint();
+              }
+            },
+            child: Center(
+              child: Container(
+                width: dotSize,
+                height: dotSize,
+                decoration: BoxDecoration(
+                  color: isFirst
+                      ? Colors.green
+                      : isLast
+                      ? Colors.orange
+                      : Colors.green.shade300,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: showNumbers ? 2 : 1.5,
+                  ),
+                ),
+                child: showNumbers
+                    ? Center(
+                        child: Text(
+                          '${index + 1}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
   }
 
   @override
@@ -423,7 +545,11 @@ class _ParcelEditorState extends State<ParcelEditor> {
                   options: MapOptions(
                     crs: const Epsg3857(),
                     initialCenter: widget.parcel?.center ?? _defaultCenter,
-                    initialZoom: _defaultZoom,
+                    initialZoom: _polygon.length == 1 ? 17.0 : _defaultZoom,
+                    initialCameraFit: _initialCameraFit,
+                    // Theme surface rather than the default light grey while
+                    // tiles load.
+                    backgroundColor: Theme.of(context).colorScheme.surface,
                     minZoom: 7.0,
                     maxZoom: MapLayer.appMaxZoom,
                     onTap: (tapPosition, point) => _addPoint(point),
@@ -457,52 +583,9 @@ class _ParcelEditorState extends State<ParcelEditor> {
                         ],
                       ),
 
-                    // Draw markers for each point
-                    MarkerLayer(
-                      markers: _polygon.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final point = entry.value;
-                        final isFirst = index == 0;
-                        final isLast = index == _polygon.length - 1;
-
-                        return Marker(
-                          point: point,
-                          width: 30,
-                          height: 30,
-                          child: GestureDetector(
-                            onTap: () {
-                              if (isLast && _isDrawing) {
-                                _removeLastPoint();
-                              }
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: isFirst
-                                    ? Colors.green
-                                    : isLast
-                                    ? Colors.orange
-                                    : Colors.green.shade300,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${index + 1}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                    // Vertex markers; the Builder reads MapCamera so they
+                    // rebuild (numbers vs dots) as the camera moves.
+                    Builder(builder: _buildVertexMarkers),
 
                     RichAttributionWidget(
                       attributions: [
@@ -553,68 +636,6 @@ class _ParcelEditorState extends State<ParcelEditor> {
                             ),
                           ),
                         ),
-                      if (_polygon.isNotEmpty) const SizedBox(height: 8),
-                      Material(
-                        elevation: 4,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Column(
-                          children: [
-                            InkWell(
-                              onTap: () {
-                                final camera = _mapController.camera;
-                                final newZoom = camera.zoom + 1;
-                                if (newZoom <= MapLayer.appMaxZoom) {
-                                  _mapController.moveAndRotate(
-                                    camera.center,
-                                    newZoom,
-                                    camera.rotation,
-                                  );
-                                }
-                              },
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(8),
-                              ),
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).cardColor,
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(8),
-                                  ),
-                                ),
-                                child: const Icon(Icons.add, size: 24),
-                              ),
-                            ),
-                            Container(height: 1, color: Colors.grey.shade300),
-                            InkWell(
-                              onTap: () {
-                                final camera = _mapController.camera;
-                                final newZoom = camera.zoom - 1;
-                                if (newZoom >= 7.0) {
-                                  _mapController.moveAndRotate(
-                                    camera.center,
-                                    newZoom,
-                                    camera.rotation,
-                                  );
-                                }
-                              },
-                              borderRadius: const BorderRadius.vertical(
-                                bottom: Radius.circular(8),
-                              ),
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).cardColor,
-                                  borderRadius: const BorderRadius.vertical(
-                                    bottom: Radius.circular(8),
-                                  ),
-                                ),
-                                child: const Icon(Icons.remove, size: 24),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -631,42 +652,42 @@ class _ParcelEditorState extends State<ParcelEditor> {
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
+                              style: _compactButton,
                               onPressed: _polygon.isEmpty
                                   ? null
                                   : _removeLastPoint,
                               icon: const Icon(Icons.undo, size: 18),
-                              label: Text(
-                                context.l10n.commonBack,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              label: _fitLabel(context.l10n.logsUndo),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: OutlinedButton.icon(
+                              style: _compactButton,
                               onPressed: _polygon.isEmpty
                                   ? null
                                   : _clearPolygon,
-                              icon: const Icon(Icons.clear),
-                              label: Text(context.l10n.parcelEditorClear),
+                              icon: const Icon(Icons.clear, size: 18),
+                              label: _fitLabel(context.l10n.parcelEditorClear),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: _isDrawing
                                 ? FilledButton.icon(
+                                    style: _compactButton,
                                     onPressed: _polygon.length >= 3
                                         ? _finishDrawing
                                         : null,
-                                    icon: const Icon(Icons.check),
-                                    label: Text(context.l10n.commonDone),
+                                    icon: const Icon(Icons.check, size: 18),
+                                    label: _fitLabel(context.l10n.commonDone),
                                   )
                                 : FilledButton.icon(
+                                    style: _compactButton,
                                     onPressed: () =>
                                         setState(() => _isDrawing = true),
-                                    icon: const Icon(Icons.edit),
-                                    label: Text(context.l10n.commonEdit),
+                                    icon: const Icon(Icons.edit, size: 18),
+                                    label: _fitLabel(context.l10n.commonEdit),
                                   ),
                           ),
                         ],

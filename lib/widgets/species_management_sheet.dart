@@ -24,6 +24,7 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
   Future<void> _loadSpecies() async {
     setState(() => _isLoading = true);
     final species = await _speciesService.getSpecies();
+    if (!mounted) return;
     setState(() {
       _species = species;
       _isLoading = false;
@@ -66,11 +67,15 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
     );
 
     if (newSpecies != null && newSpecies.isNotEmpty) {
-      await _speciesService.addSpecies(newSpecies);
+      final added = await _speciesService.addSpecies(newSpecies);
       await _loadSpecies();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.logsSpeciesAdded(newSpecies))),
+          SnackBar(
+            content: Text(added
+                ? context.l10n.logsSpeciesAdded(newSpecies)
+                : context.l10n.logsSpeciesExists(newSpecies)),
+          ),
         );
       }
     }
@@ -220,7 +225,7 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
                           child: ListTile(
                             leading: Icon(
                               Icons.forest,
-                              color: Colors.green[700],
+                              color: Colors.green[300],
                             ),
                             title: Text(species),
                             trailing: IconButton(

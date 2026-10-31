@@ -5,6 +5,7 @@ import '../models/map_location.dart';
 import '../models/log_entry.dart';
 import '../models/parcel.dart';
 import '../models/navigation_target.dart';
+import '../utils/formats.dart';
 
 /// Bottom sheet displaying saved locations and logs with navigation and edit options
 class SavedLocationsSheet extends StatelessWidget {
@@ -217,7 +218,7 @@ class _ContentWidget extends StatelessWidget {
                 if (geolocatedLogs.isNotEmpty) ...[
                   _SectionHeader(
                     icon: Icons.forest,
-                    color: Colors.brown,
+                    color: Color(0xFFD4A574),
                     title: context.l10n.mapwMenuLogs,
                     count: geolocatedLogs.length,
                   ),
@@ -423,16 +424,16 @@ class _LogListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: Colors.brown.withValues(alpha: 0.2),
-        child: const Icon(Icons.forest, color: Colors.brown),
+        backgroundColor: const Color(0xFFD4A574).withValues(alpha: 0.18),
+        child: const Icon(Icons.forest, color: Color(0xFFD4A574)),
       ),
-      title: Text('${log.volume.toStringAsFixed(2)} m³'),
+      title: Text(Fmt.m3(log.volume)),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (log.diameter != null && log.length != null)
             Text(
-              'Ø ${log.diameter!.toStringAsFixed(0)} cm × ${log.length!.toStringAsFixed(1)} m',
+              'Ø ${Fmt.num(log.diameter!, 0)} cm × ${Fmt.num(log.length!, 1)} m',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 12,
@@ -455,7 +456,7 @@ class _LogListTile extends StatelessWidget {
           onNavigate(
             NavigationTarget(
               location: LatLng(log.latitude!, log.longitude!),
-              name: '${log.volume.toStringAsFixed(2)} m³',
+              name: Fmt.m3(log.volume),
             ),
           );
         },
@@ -465,7 +466,7 @@ class _LogListTile extends StatelessWidget {
         onNavigate(
           NavigationTarget(
             location: LatLng(log.latitude!, log.longitude!),
-            name: '${log.volume.toStringAsFixed(2)} m³',
+            name: Fmt.m3(log.volume),
           ),
         );
       },

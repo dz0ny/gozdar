@@ -131,5 +131,21 @@
   "mapwCache": "Predmemorija",
   "mapwCacheStats": "{tiles} pločica ({size} MB)",
   "mapwClearCache": "Očisti predmemoriju",
-  "mapwParcelAlreadyInDb": "Čestica {municipality} - {number} već je u bazi podataka"
+  "mapwParcelAlreadyInDb": "Čestica {municipality} - {number} već je u bazi podataka",
+  "mapwLegendTitle": "Legenda",
+  "mapwLegendOwnParcels": "Moje čestice",
+  "mapwLegendCadastre": "Katastar",
+  "mapwLegendSelected": "Odabrana čestica",
+  "mapwLegendPreview": "Pregled uvoza",
+  "mapwLegendSearched": "Pronađena čestica",
+  "mapwLegendAuctions": "Dražbe",
+  "mapwGpsLost": "Nema GPS signala",
+  "mapwGpsNoFixYet": "čekam položaj",
+  "mapwGpsLastFixAge": "zadnji položaj prije {seconds} s",
+  "mapwEstimatedTilesAndSize": "~{count} pločica · približno {size}",
+  "auctionsUnavailable": "Popis dražbi nije moguće učitati. Provjerite vezu.",
+  "auctionsLoadError": "Greška pri učitavanju dražbi.",
+  "auctionsRetry": "Pokušaj ponovno",
+  "parcelSearchShowOnMap": "Prikaži na karti",
+  "parcelSearchUseKo": "Traži u ovoj k.o."
 }

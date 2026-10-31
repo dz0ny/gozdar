@@ -16,8 +16,9 @@ class SpeciesService {
     final prefs = await SharedPreferences.getInstance();
     final species = prefs.getStringList(_keySpecies);
 
-    if (species == null || species.isEmpty) {
-      // Return default species if none saved
+    // Defaults only on first run (nothing saved yet). An empty saved list
+    // means the user removed every species and must stay empty.
+    if (species == null) {
       return List.from(_defaultSpecies);
     }
 
@@ -30,15 +31,18 @@ class SpeciesService {
     await prefs.setStringList(_keySpecies, species);
   }
 
-  /// Add a new species to the list
-  Future<void> addSpecies(String species) async {
-    if (species.trim().isEmpty) return;
+  /// Add a new species to the list. Returns false when it is empty or already
+  /// exists (compared case-insensitively).
+  Future<bool> addSpecies(String species) async {
+    final name = species.trim();
+    if (name.isEmpty) return false;
 
     final currentSpecies = await getSpecies();
-    if (!currentSpecies.contains(species.trim())) {
-      currentSpecies.add(species.trim());
-      await saveSpecies(currentSpecies);
-    }
+    final lower = name.toLowerCase();
+    if (currentSpecies.any((s) => s.toLowerCase() == lower)) return false;
+    currentSpecies.add(name);
+    await saveSpecies(currentSpecies);
+    return true;
   }
 
   /// Remove a species from the list

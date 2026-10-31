@@ -44,6 +44,16 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
     }
   }
 
+  /// Skipping jumps to the terms page instead of finishing, so the terms are
+  /// always shown before onboarding completes.
+  void _skipToTerms() {
+    _pageController.animateToPage(
+      _totalPages - 1,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
   Future<void> _completeOnboarding({bool skipped = true}) async {
     await OnboardingService.instance.setOnboardingCompleted();
     if (mounted) {
@@ -58,17 +68,23 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button
+            // Skip button: jumps to the terms page; hidden there (keeps its space)
             Align(
               alignment: Alignment.topRight,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: TextButton(
-                  onPressed: _completeOnboarding,
-                  child: Text(
-                    context.l10n.introSkip,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
+                child: Visibility(
+                  visible: _currentPage < _totalPages - 1,
+                  maintainSize: true,
+                  maintainAnimation: true,
+                  maintainState: true,
+                  child: TextButton(
+                    onPressed: _skipToTerms,
+                    child: Text(
+                      context.l10n.introSkip,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -272,13 +288,13 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                 const Divider(height: 20),
                 Row(
                   children: [
-                    Icon(Icons.calculate, color: Colors.green[700]),
+                    Icon(Icons.calculate, color: Colors.green[300]),
                     const SizedBox(width: 8),
                     Text(
                       context.l10n.introLogsVolume,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.green[800],
+                        color: Colors.green[200],
                       ),
                     ),
                   ],
@@ -651,10 +667,14 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              color: Colors.indigo.withValues(alpha: 0.15),
+              color: Theme.of(context).colorScheme.secondaryContainer,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.policy, size: 52, color: Colors.indigo),
+            child: Icon(
+              Icons.policy,
+              size: 52,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
           const SizedBox(height: 32),
           Text(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
+import '../utils/formats.dart';
 
 /// Progress of one file download: what is downloading, a thick progress bar,
 /// size, speed and time left, plus a cancel button.
@@ -42,7 +43,7 @@ class _DownloadProgressViewState extends State<DownloadProgressView> {
     }
   }
 
-  static String _mb(int bytes) => (bytes / (1024 * 1024)).toStringAsFixed(0);
+  static String _mb(int bytes) => Fmt.num(bytes / (1024 * 1024), 0);
 
   /// "3.2 MB/s • ~2 min", or null until there is enough to estimate from.
   String? _rate() {
@@ -50,7 +51,7 @@ class _DownloadProgressViewState extends State<DownloadProgressView> {
     final done = widget.received - _startBytes;
     if (secs < 2 || done <= 0) return null;
     final perSec = done / secs;
-    final speed = '${(perSec / (1024 * 1024)).toStringAsFixed(1)} MB/s';
+    final speed = '${Fmt.num(perSec / (1024 * 1024), 1)} MB/s';
     final total = widget.total;
     if (total == null || total <= widget.received) return speed;
     final left = ((total - widget.received) / perSec).round();
@@ -109,7 +110,7 @@ class _DownloadProgressViewState extends State<DownloadProgressView> {
             ),
             if (pct != null)
               Text(
-                '${(pct * 100).toStringAsFixed(0)} %',
+                '${Fmt.num(pct * 100, 0)} %',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: cs.primary,

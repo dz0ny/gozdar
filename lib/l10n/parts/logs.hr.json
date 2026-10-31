@@ -4,7 +4,7 @@
   "logsMenuManageSpecies": "Upravljanje vrstama",
   "logsMenuExport": "Izvezi",
   "logsMenuDeleteAll": "Ukloni sve",
-  "logsSavedTooltip": "Spremljeno",
+  "logsSavedTooltip": "Spremljeni trupci",
   "logsSaved": "Spremljeno",
   "logsSaveError": "Pogreška pri spremanju",
   "logsEntryUpdated": "Unos ažuriran",
@@ -97,8 +97,8 @@
   "logsFormNotesHelper": "Dodajte eventualne bilješke",
   "logsSaveSheetTitle": "Spremi trupce",
   "logsSaveSheetDefaultName": "Trupci {date}",
-  "logsSavedSheetTitle": "Spremljena mjerenja",
-  "logsSavedSheetEmpty": "Nema spremljenih mjerenja",
+  "logsSavedSheetTitle": "Spremljeni trupci",
+  "logsSavedSheetEmpty": "Nema spremljenih trupaca",
   "logsSavedSheetNoName": "Bez naziva",
   "logsSavedDeleteTitle": "Izbriši spremljene trupce",
   "logsSavedDeleteConfirm": "Jeste li sigurni da želite izbrisati ovaj zapis?\n\nTrupci se vraćaju na popis Trupci.",
@@ -158,5 +158,12 @@
   "forestEmptyHint": "Pronađite česticu u katastru\nili je uvezite iz KML-a",
   "forestSearchParcel": "Traži česticu",
   "forestNoKo": "Bez KO",
-  "forestKoLabel": "KO {code}"
+  "forestKoLabel": "KO {code}",
+  "logsInlineDiameterHint": "Promjer",
+  "logsInlineLengthHint": "Duljina",
+  "logsInlineDiameterRange": "Promjer mora biti između {min} i {max} cm",
+  "logsInlineLengthRange": "Duljina mora biti između {min} i {max} m",
+  "logsSpeciesExists": "Vrsta \"{name}\" već postoji",
+  "logsSavedToBatch": "Spremljeno u »{name}« (Spremljeni trupci)",
+  "logsOpenAction": "Otvori"
 }

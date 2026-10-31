@@ -121,10 +121,11 @@ class ParcelFoundSheet extends StatelessWidget {
       wfsParcel.parcelNumber,
     );
     final ko = KoLocator.instance.bySifko(sifko);
+    // "BABNO POLJE (1651)" as in the Gozd list; "KO 1651" without a name.
     final koLabel = ko?.label ??
         (ownerInfo?.koName != null
             ? '${ownerInfo!.koName} (${wfsParcel.koNumber})'
-            : wfsParcel.koNumber);
+            : context.l10n.parcelFoundKo(wfsParcel.koNumber));
     final muted = theme.textTheme.bodyLarge?.copyWith(
       color: cs.onSurfaceVariant,
     );
@@ -174,7 +175,7 @@ class ParcelFoundSheet extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(context.l10n.parcelFoundKo(koLabel), style: muted),
+                      Text(koLabel, style: muted),
                       Text(wfsParcel.formattedArea, style: muted),
                       if (ownerInfo != null)
                         _ownerText(ownerInfo, theme)

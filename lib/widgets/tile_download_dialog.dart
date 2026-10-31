@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import '../l10n/l10n.dart';
+import '../utils/formats.dart';
 
 import '../models/map_layer.dart';
 import '../services/offline_tile_cache_service.dart';
@@ -156,6 +157,10 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       ),
     );
   }
+
+  /// Rough average size of one downloaded tile (imagery JPEGs dominate), for
+  /// the approximate download size shown next to the tile count.
+  static const _avgTileBytes = 25 * 1024;
 
   bool get _canDownload => _downloadableLayers.isNotEmpty;
 
@@ -680,17 +685,17 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
 
   String _formatNumber(int number) {
     if (number < 1000) return '$number';
-    if (number < 1000000) return '${(number / 1000).toStringAsFixed(1)}K';
-    return '${(number / 1000000).toStringAsFixed(1)}M';
+    if (number < 1000000) return '${Fmt.num(number / 1000, 1)}K';
+    return '${Fmt.num(number / 1000000, 1)}M';
   }
 
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024) return '${Fmt.num(bytes / 1024, 1)} KB';
     if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+      return '${Fmt.num(bytes / (1024 * 1024), 1)} MB';
     }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+    return '${Fmt.num(bytes / (1024 * 1024 * 1024), 1)} GB';
   }
 
   @override
@@ -824,7 +829,10 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
         leading: Icon(Icons.grid_view, color: colorScheme.primary),
         title: Text(context.l10n.mapwEstimate, style: TextStyle(color: colorScheme.onSurface)),
         subtitle: Text(
-          context.l10n.mapwEstimatedTiles(_estimatedTileCount),
+          context.l10n.mapwEstimatedTilesAndSize(
+            _estimatedTileCount,
+            _formatBytes(_estimatedTileCount * _avgTileBytes),
+          ),
           style: TextStyle(color: colorScheme.onSurfaceVariant),
         ),
       ),
@@ -858,7 +866,7 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          context.l10n.mapwDownloadingPercent(_downloadProgress.toStringAsFixed(1)),
+          context.l10n.mapwDownloadingPercent(Fmt.num(_downloadProgress, 1)),
           style: const TextStyle(fontWeight: FontWeight.w500),
           textAlign: TextAlign.center,
         ),

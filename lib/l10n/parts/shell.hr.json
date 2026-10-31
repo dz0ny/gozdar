@@ -1,5 +1,5 @@
 {
-  "aboutTitle": "O aplikaciji",
+  "aboutTitle": "Postavke",
   "aboutSectionMapSources": "Izvori kartografskih podataka",
   "aboutSectionLegal": "Pravne informacije",
   "aboutSectionOpenSource": "Biblioteke otvorenog koda",
@@ -194,5 +194,7 @@
   "introCompassStep4": "Slijedite smjer",
   "introCompassStep4Desc": "Kompas pokazuje smjer i udaljenost do točke",
   "introTermsTitle": "Uvjeti korištenja",
-  "introTermsBody": "Aplikacija koristi javne podatke Zavoda za šume Slovenije.\n\nKorištenjem ove aplikacije slažete se s uvjetima korištenja podataka:\n\n"
+  "introTermsBody": "Aplikacija koristi javne podatke Zavoda za šume Slovenije.\n\nKorištenjem ove aplikacije slažete se s uvjetima korištenja podataka:\n\n",
+  "aboutShowIntro": "Uvodni vodič",
+  "aboutShowIntroDesc": "Ponovno pogledajte predstavljanje aplikacije"
 }

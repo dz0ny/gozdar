@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/map_location.dart';
+import '../utils/formats.dart';
 import '../models/parcel.dart';
 import '../models/log_entry.dart';
 import '../widgets/location_pointer.dart';
@@ -174,7 +175,7 @@ class MapMarkerRenderer {
         height: size,
         child: GestureDetector(
           onTap: onLogTap != null
-              ? () => onLogTap!(point, '${log.volume.toStringAsFixed(2)} m³')
+              ? () => onLogTap!(point, Fmt.m3(log.volume))
               : null,
           child: Container(
             decoration: BoxDecoration(

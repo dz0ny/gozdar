@@ -6,6 +6,7 @@ import '../models/log_entry.dart';
 import '../services/location_settings.dart';
 import '../services/species_service.dart';
 import '../utils/decimal_input.dart';
+import '../utils/formats.dart';
 
 class LogEntryForm extends StatefulWidget {
   final LogEntry? logEntry;
@@ -198,16 +199,23 @@ class _LogEntryFormState extends State<LogEntryForm> {
     );
 
     if (newSpecies != null && newSpecies.isNotEmpty) {
-      await _speciesService.addSpecies(newSpecies);
+      final added = await _speciesService.addSpecies(newSpecies);
       await _loadSpecies();
+      if (!mounted) return;
+      // Select the stored spelling when it already existed ("bukev" -> "Bukev").
+      final lower = newSpecies.toLowerCase();
+      final match = _availableSpecies.firstWhere(
+        (s) => s.toLowerCase() == lower,
+        orElse: () => newSpecies,
+      );
       setState(() {
-        _selectedSpecies = newSpecies;
+        _selectedSpecies = match;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(context.l10n.logsSpeciesAdded(newSpecies))));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(added
+            ? context.l10n.logsSpeciesAdded(newSpecies)
+            : context.l10n.logsSpeciesExists(match)),
+      ));
     }
   }
 
@@ -244,6 +252,10 @@ class _LogEntryFormState extends State<LogEntryForm> {
       notes: _notesController.text.isEmpty ? null : _notesController.text,
       species: _selectedSpecies,
       createdAt: widget.logEntry?.createdAt,
+      // Keep the links of an edited log, or it would drop out of its saved
+      // batch / parcel (updateLog replaces the whole row).
+      batchId: widget.logEntry?.batchId,
+      parcelId: widget.logEntry?.parcelId,
     );
 
     widget.onSave?.call(entry);
@@ -308,7 +320,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
                           : context.l10n.logsFormModeDirect,
                       style: Theme.of(
                         context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
                     ),
                   ],
                 ),
@@ -389,7 +401,7 @@ class _LogEntryFormState extends State<LogEntryForm> {
                                   ),
                             ),
                             Text(
-                              '${_calculatedVolume!.toStringAsFixed(4)} m³',
+                              Fmt.m3(_calculatedVolume!),
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
                                     fontWeight: FontWeight.bold,

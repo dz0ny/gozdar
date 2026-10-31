@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/log_batch.dart';
 import '../models/log_entry.dart';
 import '../providers/logs_provider.dart';
+import '../providers/map_provider.dart';
+import '../router/app_router.dart';
+import '../router/route_names.dart';
 import '../services/database_service.dart';
 import '../services/export_service.dart';
 import '../services/location_settings.dart';
 import '../services/species_service.dart';
 import '../utils/decimal_input.dart';
+import '../utils/formats.dart';
 import '../widgets/conversion_settings_sheet.dart';
 import '../widgets/log_card.dart';
 
@@ -81,6 +84,41 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
         onAdd: (entry) async {
           await _databaseService.insertLog(entry);
           await _loadLogs();
+        },
+      ),
+    );
+  }
+
+  /// Correct a saved log with the same full-screen form as the Hlodi tab.
+  void _editLog(LogEntry entry) {
+    final mapProvider = context.read<MapProvider>();
+    final hadLocation = entry.hasLocation;
+    context.push(
+      AppRoutes.logEdit(entry.id),
+      extra: LogEntryFormParams(
+        logEntry: entry,
+        onSave: (result) async {
+          try {
+            // Keep it in this batch whatever the form returns.
+            await _databaseService.updateLog(
+              result.copyWith(batchId: _batch.id),
+            );
+            await _loadLogs();
+            if (hadLocation || result.hasLocation) {
+              mapProvider.loadGeolocatedLogs();
+            }
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(context.l10n.logsEntryUpdated)),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(context.l10n.logsErrorWithDetail('$e'))),
+              );
+            }
+          }
         },
       ),
     );
@@ -253,8 +291,6 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('d. M. yyyy HH:mm');
-
     return Scaffold(
       appBar: AppBar(
         title: Text(_batch.name ?? context.l10n.batchDefaultTitle),
@@ -269,10 +305,25 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
             tooltip: context.l10n.batchEditInfoTooltip,
             onPressed: _editBatchInfo,
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: context.l10n.commonDelete,
-            onPressed: _deleteBatch,
+          // Delete lives in the overflow menu, away from Edit (still confirms).
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: context.l10n.logsMoreOptionsTooltip,
+            onSelected: (value) {
+              if (value == 'delete') _deleteBatch();
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete_outline, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.commonDelete),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -293,6 +344,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
@@ -300,7 +352,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '${_totalVolume.toStringAsFixed(2)} m³',
+                                        Fmt.m3(_totalVolume),
                                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                               fontWeight: FontWeight.bold,
                                               color: Colors.green[400],
@@ -308,7 +360,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '${prmVolume.toStringAsFixed(2)} PRM  •  ${nmVolume.toStringAsFixed(2)} NM',
+                                        '${Fmt.num(prmVolume, 2)} PRM  •  ${Fmt.num(nmVolume, 2)} NM',
                                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                               color: Colors.grey[500],
                                             ),
@@ -328,12 +380,12 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
                                 const Divider(height: 16),
                                 Row(
                                   children: [
-                                    Icon(Icons.note, size: 16, color: Colors.grey[600]),
+                                    Icon(Icons.note, size: 16, color: Colors.grey[400]),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
                                         _batch.notes!,
-                                        style: TextStyle(color: Colors.grey[600]),
+                                        style: TextStyle(color: Colors.grey[400]),
                                       ),
                                     ),
                                   ],
@@ -341,21 +393,23 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
                               ],
                               const SizedBox(height: 8),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(Icons.calendar_today, size: 14, color: Colors.grey[500]),
                                   const SizedBox(width: 4),
                                   Text(
-                                    dateFormat.format(_batch.createdAt),
+                                    Fmt.dateTime(_batch.createdAt),
                                     style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                                   ),
                                   if (_batch.hasLocation) ...[
                                     const SizedBox(width: 16),
                                     Icon(Icons.location_on, size: 14, color: Colors.grey[500]),
                                     const SizedBox(width: 4),
-                                    Text(
-                                      '${_batch.latitude!.toStringAsFixed(4)}, ${_batch.longitude!.toStringAsFixed(4)}',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                                    Flexible(
+                                      child: Text(
+                                        '${_batch.latitude!.toStringAsFixed(4)}, ${_batch.longitude!.toStringAsFixed(4)}',
+                                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ],
                                 ],
@@ -373,7 +427,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.forest_outlined, size: 64, color: Colors.grey[600]),
+                                  Icon(Icons.forest_outlined, size: 64, color: Colors.grey[400]),
                                   const SizedBox(height: 16),
                                   Text(
                                     context.l10n.logsEmptyTitle,
@@ -384,7 +438,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
                                   const SizedBox(height: 8),
                                   Text(
                                     context.l10n.batchEmptyHint,
-                                    style: TextStyle(color: Colors.grey[600]),
+                                    style: TextStyle(color: Colors.grey[400]),
                                   ),
                                 ],
                               ),
@@ -395,7 +449,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
                                 final entry = _logs[index];
                                 return LogCard(
                                   logEntry: entry,
-                                  onTap: () {}, // View-only in batch
+                                  onTap: () => _editLog(entry),
                                   onDismissed: () => _deleteLog(entry),
                                 );
                               },
@@ -672,18 +726,18 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.green[50],
+                    color: Colors.green.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.calculate, color: Colors.green[700]),
+                      Icon(Icons.calculate, color: Colors.green[300]),
                       const SizedBox(width: 8),
                       Text(
-                        context.l10n.batchVolumeLine(_calculatedVolume!.toStringAsFixed(4)),
+                        context.l10n.batchVolumeLine(Fmt.num(_calculatedVolume!, 2)),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.green[800],
+                          color: Colors.green[200],
                         ),
                       ),
                     ],
@@ -696,12 +750,12 @@ class _AddLogToBatchSheetState extends State<_AddLogToBatchSheet> {
                     Expanded(
                       child: Row(
                         children: [
-                          Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                          Icon(Icons.location_on, size: 16, color: Colors.grey[400]),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
                               '${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}',
-                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                              style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -877,12 +931,12 @@ class _EditBatchInfoSheetState extends State<_EditBatchInfoSheet> {
                   Expanded(
                     child: Row(
                       children: [
-                        Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                        Icon(Icons.location_on, size: 16, color: Colors.grey[400]),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
                             '${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            style: TextStyle(fontSize: 12, color: Colors.grey[400]),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),

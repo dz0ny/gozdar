@@ -266,15 +266,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
-        // International base layers
-        _buildBaseLayerSection(context.l10n.mapwInternationalMaps, [
-          MapLayer.openStreetMap,
-          MapLayer.openTopoMap,
-          MapLayer.esriWorldImagery,
-          MapLayer.esriTopoMap,
-        ]),
-        const SizedBox(height: 16),
-        // Slovenian base layers
+        // Slovenian base layers first: the app is made for Slovenia.
         _buildBaseLayerSection(context.l10n.mapwSlovenianMaps, [
           MapLayer.ortofoto,
           MapLayer.ortofoto2023,
@@ -282,32 +274,37 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
           MapLayer.dofIr,
           MapLayer.dmr,
         ]),
+        const SizedBox(height: 16),
+        // International base layers
+        _buildBaseLayerSection(context.l10n.mapwInternationalMaps, [
+          MapLayer.openStreetMap,
+          MapLayer.openTopoMap,
+          MapLayer.esriWorldImagery,
+          MapLayer.esriTopoMap,
+        ]),
         const SizedBox(height: 24),
         // Download tiles button
         if (widget.onDownloadTiles != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                widget.onDownloadTiles!();
-              },
-              icon: const Icon(Icons.download, size: 20),
-              label: Text(context.l10n.mapwDownloadOffline),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.primary,
-                  width: 1.5,
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2,
-                ),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onDownloadTiles!();
+            },
+            icon: const Icon(Icons.download, size: 20),
+            label: Text(context.l10n.mapwDownloadOffline),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 1.5,
+              ),
+              textStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
               ),
             ),
           ),
@@ -321,7 +318,7 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -341,9 +338,11 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      elevation: isSelected ? 2 : 0,
+      elevation: 0,
+      // Selected: a light primary tint (like the sheet tiles), not the
+      // reddish-brown primaryContainer.
       color: isSelected
-          ? colorScheme.primaryContainer
+          ? colorScheme.primary.withValues(alpha: 0.16)
           : colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -390,18 +389,14 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                       layer.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: isSelected
-                            ? colorScheme.onPrimaryContainer
-                            : null,
+                        color: isSelected ? colorScheme.onSurface : null,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       layer.attribution,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: isSelected
-                            ? colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
-                            : colorScheme.onSurfaceVariant,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -417,37 +412,88 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     );
   }
 
-  Widget _buildOverlaysTab() {
-    return Column(
-      children: [
-        // Import button
-        if (widget.onImportFile != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: FilledButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                widget.onImportFile!();
-              },
-              icon: const Icon(Icons.file_upload, size: 20),
-              label: Text(context.l10n.mapwImportGeodata),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 1,
-                textStyle: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2,
-                ),
+  Widget _buildOverlaysTab() => _buildCategoryList();
+
+  /// Secondary action under the overlay list: import a KML/KMZ file. Outlined
+  /// like the offline-download button so it doesn't outshine the layers.
+  Widget _buildImportButton() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 16),
+      child: OutlinedButton.icon(
+        onPressed: () {
+          Navigator.pop(context);
+          widget.onImportFile!();
+        },
+        icon: const Icon(Icons.file_upload, size: 20),
+        label: Text(
+          context.l10n.mapwImportGeodata,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// What the parcel colours on the map mean. Colours mirror the polygon
+  /// layers in map_tab.dart.
+  Widget _buildLegend() {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final entries = <(Color, String)>[
+      (Colors.green, l10n.mapwLegendOwnParcels),
+      (const Color(0xFFD50000), l10n.mapwLegendCadastre),
+      (const Color(0xFFE91E63), l10n.mapwLegendSelected),
+      (theme.colorScheme.primary, l10n.mapwLegendPreview),
+      (Colors.blue, l10n.mapwLegendSearched),
+      (const Color(0xFFFFB300), l10n.mapwLegendAuctions),
+    ];
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.mapwLegendTitle,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-        // Category list
-        Expanded(child: _buildCategoryList()),
-      ],
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              children: [
+                for (final (color, label) in entries)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.25),
+                          border: Border.all(color: color, width: 2),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(label, style: theme.textTheme.bodySmall),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -486,13 +532,14 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       );
     }
 
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        final entry = categories[index];
-        return _buildCategoryCard(entry.key, entry.value);
-      },
+      children: [
+        for (final entry in categories)
+          _buildCategoryCard(entry.key, entry.value),
+        _buildLegend(),
+        if (widget.onImportFile != null) _buildImportButton(),
+      ],
     );
   }
 

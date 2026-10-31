@@ -148,5 +148,9 @@
   "parcelPdfMapFailed": "Kartu nije bilo moguće učitati",
   "parcelPdfFooter": "Gozdar • Ispisano: {date}",
   "parcelPdfSource": "Izvor: © GURS, © ZGS",
-  "parcelSearchKoSubtitle": "Katastarska općina {sifko}"
+  "parcelSearchKoSubtitle": "Katastarska općina {sifko}",
+  "notesDiscardTitle": "Odbaciti promjene?",
+  "notesDiscardMessage": "Promjene bilješki još nisu spremljene.",
+  "notesKeepEditing": "Nastavi uređivanje",
+  "notesDiscard": "Odbaci"
 }

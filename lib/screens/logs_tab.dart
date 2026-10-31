@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../models/log_batch.dart';
 import '../models/log_entry.dart';
 import '../providers/logs_provider.dart';
 import '../providers/map_provider.dart';
 import '../router/app_router.dart';
 import '../router/route_names.dart';
+import 'batch_detail_screen.dart';
 import '../services/species_service.dart';
+import '../utils/formats.dart';
 import '../widgets/log_card.dart';
 import '../widgets/inline_add_log.dart';
 import '../widgets/conversion_settings_sheet.dart';
@@ -18,10 +21,85 @@ import '../widgets/species_management_sheet.dart';
 class LogsTab extends StatelessWidget {
   const LogsTab({super.key});
 
-  Future<void> _showConversionDialog(BuildContext context) async {
+  /// PRM preset matching a species, so picking "Bukev" also selects the
+  /// beech/oak factor. Only presets; a custom factor is left alone.
+  static const Map<String, double> _speciesPrm = {
+    'bukev': 0.67, 'bukva': 0.67, 'hrast': 0.67,
+    'smreka': 0.57, 'jelka': 0.57, 'jela': 0.57,
+  };
+  static const List<double> _prmPresets = [0.65, 0.67, 0.57, 0.60];
+
+  /// Small picker for the species newly added logs get. Opened from the
+  /// species chip in the total card; conversion factors stay in their own
+  /// sheet (tap the rest of the card).
+  Future<void> _showSpeciesPicker(BuildContext context) async {
     final provider = context.read<LogsProvider>();
     final species = await SpeciesService().getSpecies();
     if (!context.mounted) return;
+    final current =
+        species.contains(provider.currentSpecies) ? provider.currentSpecies : null;
+
+    void select(BuildContext sheetContext, String? value) {
+      provider.setCurrentSpecies(value);
+      final prm = value == null ? null : _speciesPrm[value.toLowerCase()];
+      final factors = provider.conversionFactors;
+      if (prm != null && _prmPresets.contains(factors.prm)) {
+        provider.setConversionFactors(prm, factors.nm);
+      }
+      Navigator.pop(sheetContext);
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetContext).size.height * 0.7,
+          ),
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              ListTile(
+                title: Text(
+                  sheetContext.l10n.logsSpeciesLabel,
+                  style: Theme.of(sheetContext).textTheme.titleLarge,
+                ),
+                subtitle: Text(sheetContext.l10n.logsConvSpeciesHint),
+              ),
+              RadioGroup<String?>(
+                groupValue: current,
+                onChanged: (value) => select(sheetContext, value),
+                child: Column(
+                  children: [
+                    ...species.map(
+                      (s) => RadioListTile<String?>(
+                        value: s,
+                        title: Text(s),
+                        secondary: Icon(Icons.forest, color: Colors.green[600]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: Text(sheetContext.l10n.logsMenuManageSpecies),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showSpeciesManagement(context);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showConversionDialog(BuildContext context) async {
+    final provider = context.read<LogsProvider>();
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -42,9 +120,6 @@ class LogsTab extends StatelessWidget {
           onChanged: (prm, nm) {
             provider.setConversionFactors(prm, nm);
           },
-          availableSpecies: species,
-          selectedSpecies: provider.currentSpecies,
-          onSpeciesChanged: provider.setCurrentSpecies,
         ),
       ),
     );
@@ -190,7 +265,7 @@ class LogsTab extends StatelessWidget {
         content: Text(
           context.l10n.logsDeleteAllConfirm(
             provider.entryCount,
-            provider.totalVolume.toStringAsFixed(2),
+            Fmt.num(provider.totalVolume, 2),
           ),
         ),
         actions: [
@@ -245,8 +320,34 @@ class LogsTab extends StatelessWidget {
           final success = await provider.saveBatch(batch);
           if (context.mounted) {
             if (success) {
+              // Say where the logs went and offer to open the new batch
+              // (batches load newest first; the highest id is the new one).
+              final batches = provider.batches;
+              final LogBatch? saved = batches.isEmpty
+                  ? null
+                  : batches.reduce((a, b) => a.id >= b.id ? a : b);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(context.l10n.logsSaved)),
+                SnackBar(
+                  content: Text(context.l10n.logsSavedToBatch(
+                    batch.name ?? context.l10n.batchDefaultTitle,
+                  )),
+                  duration: const Duration(seconds: 6),
+                  action: SnackBarAction(
+                    label: context.l10n.logsOpenAction,
+                    onPressed: () {
+                      if (!context.mounted) return;
+                      if (saved == null) {
+                        SavedBatchesSheet.show(context);
+                      } else {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => BatchDetailScreen(batch: saved),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
               );
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -269,6 +370,8 @@ class LogsTab extends StatelessWidget {
       isScrollControlled: true,
       builder: (context) => const SpeciesManagementSheet(),
     );
+    // The selected species may have been removed or the list was empty.
+    if (context.mounted) await context.read<LogsProvider>().ensureValidSpecies();
   }
 
   @override
@@ -360,7 +463,7 @@ class LogsTab extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${provider.totalVolume.toStringAsFixed(2)} m³',
+                                Fmt.m3(provider.totalVolume),
                                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.green[400],
@@ -368,15 +471,16 @@ class LogsTab extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${provider.prmVolume.toStringAsFixed(2)} PRM  •  ${provider.nmVolume.toStringAsFixed(2)} NM',
+                                '${Fmt.num(provider.prmVolume, 2)} PRM  •  ${Fmt.num(provider.nmVolume, 2)} NM',
                                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                       color: Colors.grey[500],
                                     ),
                               ),
                             ],
                           ),
-                          const Spacer(),
-                          Column(
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
@@ -386,20 +490,41 @@ class LogsTab extends StatelessWidget {
                                     ),
                               ),
                               const SizedBox(height: 4),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.forest, size: 18, color: Colors.green[400]),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    provider.currentSpecies ?? context.l10n.logsSpeciesNotSelected,
-                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                          color: Colors.grey[500],
-                                        ),
+                              // Species for new logs: a chip with a caret so it
+                              // reads as a picker, not as status.
+                              Material(
+                                color: Colors.transparent,
+                                shape: StadiumBorder(
+                                  side: BorderSide(color: Theme.of(context).colorScheme.outline),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: InkWell(
+                                  onTap: () => _showSpeciesPicker(context),
+                                  child: Tooltip(
+                                    message: context.l10n.logsSpeciesLabel,
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(10, 6, 4, 6),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.forest, size: 18, color: Colors.green[400]),
+                                          const SizedBox(width: 6),
+                                          Flexible(
+                                            child: Text(
+                                              provider.currentSpecies ?? context.l10n.logsSpeciesLabel,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const Icon(Icons.arrow_drop_down, size: 20),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                ],
+                                ),
                               ),
                             ],
+                          ),
                           ),
                         ],
                       ),
@@ -491,7 +616,7 @@ class LogsTab extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    context.l10n.logsGroupSummary(count, totalVolume.toStringAsFixed(2)),
+                    context.l10n.logsGroupSummary(count, Fmt.num(totalVolume, 2)),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -526,7 +651,7 @@ class LogsTab extends StatelessWidget {
               Icon(
                 Icons.forest_outlined,
                 size: 48,
-                color: Colors.grey[600],
+                color: Colors.grey[400],
               ),
               const SizedBox(height: 12),
               Text(
@@ -539,7 +664,7 @@ class LogsTab extends StatelessWidget {
               Text(
                 context.l10n.logsEmptyHint,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
+                      color: Colors.grey[400],
                     ),
               ),
             ],

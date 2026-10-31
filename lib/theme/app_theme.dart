@@ -24,6 +24,7 @@ class AppTheme {
         surfaceContainerHighest: Color(0xFF2D3A2A), // Dark green-brown
         onSurfaceVariant: Color(0xFFCBC5BC),
         outline: Color(0xFF8B7355), // Bark brown
+        outlineVariant: Color(0xFF3B4A37), // Subtle divider on dark green
       ),
       scaffoldBackgroundColor: const Color(0xFF1A2418),
       appBarTheme: const AppBarTheme(
@@ -38,10 +39,20 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: const BorderSide(
-            color: Color(0xFF5D4037),
+            color: Color(0xFF3B4A37), // Subtle moss edge
             width: 1,
           ),
         ),
+      ),
+      dividerTheme: DividerThemeData(
+        color: const Color(0xFFE8E4DF).withValues(alpha: 0.12),
+        thickness: 1,
+      ),
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Color(0xFF3E5435),
+        contentTextStyle: TextStyle(color: Color(0xFFE8E4DF), fontSize: 14),
+        actionTextColor: Color(0xFFD4A574),
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(

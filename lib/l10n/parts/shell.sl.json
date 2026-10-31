@@ -1,5 +1,5 @@
 {
-  "aboutTitle": "O aplikaciji",
+  "aboutTitle": "Nastavitve",
   "aboutSectionMapSources": "Viri kartografskih podatkov",
   "aboutSectionLegal": "Pravne informacije",
   "aboutSectionOpenSource": "Odprtokodne knjižnice",
@@ -68,7 +68,7 @@
       }
     }
   },
-  "aboutOfflineKataster": "Offline kataster (parcele)",
+  "aboutOfflineKataster": "Kataster brez povezave (parcele)",
   "aboutKatasterNotLoaded": "Ni naložena — kataster se prikazuje prek spleta.",
   "aboutParcelsSummary": "{regions}{count} parcel{size}{date} • brez spleta",
   "@aboutParcelsSummary": {
@@ -310,7 +310,7 @@
   "introSkip": "Preskoči",
   "introStart": "Začni",
   "introWelcomeTitle": "Dobrodošli v Gozdar",
-  "introWelcomeBody": "Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji.\n\nSledite poseku, belezite hlodovino in uporabljajte GPS za delo na terenu.",
+  "introWelcomeBody": "Aplikacija za lastnike gozdov in gozdarske delavce v Sloveniji.\n\nSledite poseku, beležite hlodovino in uporabljajte GPS za delo na terenu.",
   "introNavTitle": "Navigacija",
   "introNavMapDesc": "Interaktivni zemljevid z vašimi parcelami",
   "introNavForestDesc": "Seznam parcel in iskanje v katastru",
@@ -375,5 +375,7 @@
   "introCompassStep4": "Sledite smeri",
   "introCompassStep4Desc": "Kompas kaže smer in razdaljo do točke",
   "introTermsTitle": "Pogoji uporabe",
-  "introTermsBody": "Aplikacija uporablja javne podatke Zavoda za gozdove Slovenije.\n\nZ uporabo te aplikacije se strinjate s pogoji uporabe podatkov:\n\n"
+  "introTermsBody": "Aplikacija uporablja javne podatke Zavoda za gozdove Slovenije.\n\nZ uporabo te aplikacije se strinjate s pogoji uporabe podatkov:\n\n",
+  "aboutShowIntro": "Uvodni vodič",
+  "aboutShowIntroDesc": "Ponovno si oglejte predstavitev aplikacije"
 }
