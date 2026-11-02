@@ -18,6 +18,7 @@ const ANDROID_SHA256 = [
 
 const APPLE_APP_ID = 'JND55328G8.dev.dz0ny.gozdar';
 
+const SITE = 'https://gozdar.dz0ny.dev';
 const IOS_URL = 'https://apps.apple.com/app/id6756237942';
 const ANDROID_URL = 'https://github.com/dz0ny/gozdar/releases/latest';
 
@@ -140,6 +141,7 @@ shares.get('/api/s/:id', async (c) => {
 // Landing page. Safari does not open the app from a link to its own
 // domain, so Uvozi uses the app scheme. Old /s/ links show it too.
 shares.get('/o/:id', landing);
+shares.get('/o/:id/preview.jpg', previewImage);
 shares.get('/s/:id', landing);
 
 shares.get('/.well-known/assetlinks.json', (c) =>
@@ -203,7 +205,8 @@ async function landing(c) {
   <script type="application/json" id="data">${jsonForScript(mapData)}</script>
   <script src="${LEAFLET}/leaflet.js"></script>
   <script>${MAP_SCRIPT}</script>`,
-      `<link rel="stylesheet" href="${LEAFLET}/leaflet.css">`,
+      `<link rel="stylesheet" href="${LEAFLET}/leaflet.css">
+${socialTags(id, `🪓 ${title} · ${trees(points.length)} za posek`)}`,
     ),
   );
 }
@@ -242,6 +245,69 @@ document.querySelectorAll('.trees li').forEach((row) => row.addEventListener('cl
   document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }));
 `;
+
+// Link preview for chat apps. The title is already escaped.
+function socialTags(id, title) {
+  const description = 'Lastnik ti je poslal drevesa, označena za posek. Odpri jih v Gozdarju.';
+  const image = `${SITE}/o/${escapeHtml(id)}/preview.jpg`;
+  return [
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="Gozdar">`,
+    `<meta property="og:title" content="${title}">`,
+    `<meta property="og:description" content="${description}">`,
+    `<meta property="og:url" content="${SITE}/o/${escapeHtml(id)}">`,
+    `<meta property="og:image" content="${image}">`,
+    `<meta property="og:image:width" content="1200">`,
+    `<meta property="og:image:height" content="630">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="description" content="${description}">`,
+  ].join('\n');
+}
+
+const PREVIEW_W = 1200;
+const PREVIEW_H = 630;
+
+// Satellite crop around the parcel and its trees, for the link preview.
+async function previewImage(c) {
+  const record = await c.env.SHARES.get(c.req.param('id'), 'json');
+  if (!record) return c.body(null, 404);
+  const { parcel, points } = record.payload;
+  const coords = [...(Array.isArray(parcel.polygon) ? parcel.polygon : []), ...points.map((p) => [p.lat, p.lng])]
+    .filter((p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]));
+  if (coords.length === 0) return c.body(null, 404);
+  const query = new URLSearchParams({
+    bbox: previewBox(coords).join(','),
+    bboxSR: '3857',
+    imageSR: '3857',
+    size: `${PREVIEW_W},${PREVIEW_H}`,
+    format: 'jpg',
+    f: 'image',
+  });
+  const res = await fetch(
+    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?${query}`,
+    { cf: { cacheTtl: 86400, cacheEverything: true } },
+  );
+  if (!res.ok) return c.body(null, 502);
+  return c.body(res.body, 200, {
+    'Content-Type': 'image/jpeg',
+    'Cache-Control': 'public, max-age=3600',
+  });
+}
+
+// Web Mercator box around [lat, lng] pairs with a margin, in the shape of
+// the preview image.
+function previewBox(coords) {
+  const R = 6378137;
+  const xs = coords.map(([, lng]) => (R * lng * Math.PI) / 180);
+  const ys = coords.map(([lat]) => R * Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)));
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  let w = Math.max(Math.max(...xs) - Math.min(...xs), 60) * 1.4;
+  let h = Math.max(Math.max(...ys) - Math.min(...ys), 60) * 1.4;
+  if (w / h > PREVIEW_W / PREVIEW_H) h = (w * PREVIEW_H) / PREVIEW_W;
+  else w = (h * PREVIEW_W) / PREVIEW_H;
+  return [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2].map((v) => v.toFixed(1));
+}
 
 // JSON inside a script tag. Escaping < keeps a name like </script> inert.
 function jsonForScript(value) {

@@ -220,3 +220,40 @@ test('old /s/ links show the same landing page', async () => {
   assert.equal(res.status, 200);
   assert.ok((await res.text()).includes(`gozdar://open/o/${body.id}`));
 });
+
+test('landing page carries a social preview', async () => {
+  const env = { SHARES: fakeKv() };
+  const { body } = await create(env);
+  const html = await (await call(env, 'GET', `/o/${body.id}`)).text();
+  assert.match(html, /<meta property="og:title" content="[^"]*1234\/5[^"]*1 drevo/);
+  assert.ok(html.includes('property="og:description"'));
+  assert.ok(html.includes(`content="https://gozdar.dz0ny.dev/o/${body.id}/preview.jpg"`), 'og:image');
+  assert.ok(html.includes('name="twitter:card" content="summary_large_image"'));
+});
+
+test('preview image is a satellite crop around the parcel', async () => {
+  const env = { SHARES: fakeKv() };
+  const { body } = await create(env);
+  const seen = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    seen.push(String(url));
+    return new Response(new Uint8Array([0xff, 0xd8]), { headers: { 'Content-Type': 'image/jpeg' } });
+  };
+  try {
+    const res = await call(env, 'GET', `/o/${body.id}/preview.jpg`);
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('content-type'), 'image/jpeg');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  assert.equal(seen.length, 1);
+  assert.match(seen[0], /World_Imagery\/MapServer\/export\?bbox=/);
+  assert.match(seen[0], /size=1200%2C630/);
+});
+
+test('preview image of a missing share is 404', async () => {
+  const env = { SHARES: fakeKv() };
+  const res = await call(env, 'GET', '/o/gone00/preview.jpg');
+  assert.equal(res.status, 404);
+});
