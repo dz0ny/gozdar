@@ -297,10 +297,17 @@ Worker additions, in `worker/src/shares.js`:
 `owner`, `koName`, `species`, `areaHa` are optional. Coordinates are
 WGS84, `[lat, lng]`. Server adds `expiresAt` on read.
 
-### Install page
+### Landing page
 
-Dropped for now (owner's call, 2026-11-02). In a browser `/s/:id` returns
-the worker's JSON 404; only the app handles the link.
+Changed 2026-11-02 at the owner's request. The app shares
+`https://gozdar.dz0ny.dev/o/<id>`; the app claims `/o/*` (App Link /
+Universal Link), so with Gozdar installed the link opens it directly.
+Without the app the same address shows a landing page: what the share is
+(parcel number, k.o., tree count — no owner, no coordinates), an
+**Uvozi v Gozdar** button and install links. Safari does not open an app
+from a link to the domain it is on, so Uvozi uses the app scheme
+`gozdar://open/o/<id>`. Old `/s/<id>` links show the same page and the
+app still routes them.
 
 ## Data changes (drift schema 5)
 

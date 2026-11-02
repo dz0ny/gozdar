@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 
 // Sečnja share links. The owner uploads the marked trees of one parcel.
-// The logger gets https://gozdar.dz0ny.dev/s/<id>, and the link opens Gozdar.
+// The logger gets https://gozdar.dz0ny.dev/o/<id>, and the link opens Gozdar.
+// Without the app, the same address shows a landing page with an Uvozi button.
 // KV keeps each share for 30 days after the last upload.
 
 const TTL_SECONDS = 30 * 24 * 3600;
@@ -15,6 +16,10 @@ const ANDROID_SHA256 = [
 ];
 
 const APPLE_APP_ID = 'JND55328G8.dev.dz0ny.gozdar';
+
+// TODO(owner): put the public App Store or TestFlight link here.
+const IOS_URL = 'https://testflight.apple.com/';
+const ANDROID_URL = 'https://github.com/dz0ny/gozdar/releases/latest';
 
 function randomId() {
   const bytes = crypto.getRandomValues(new Uint8Array(6));
@@ -132,6 +137,11 @@ shares.get('/api/s/:id', async (c) => {
   return c.json({ ...record.payload, expiresAt: record.expiresAt });
 });
 
+// Landing page. Safari does not open the app from a link to its own
+// domain, so Uvozi uses the app scheme. Old /s/ links show it too.
+shares.get('/o/:id', landing);
+shares.get('/s/:id', landing);
+
 shares.get('/.well-known/assetlinks.json', (c) =>
   c.json([
     {
@@ -148,7 +158,80 @@ shares.get('/.well-known/assetlinks.json', (c) =>
 shares.get('/.well-known/apple-app-site-association', (c) =>
   c.json({
     applinks: {
-      details: [{ appIDs: [APPLE_APP_ID], components: [{ '/': '/s/*' }] }],
+      details: [{ appIDs: [APPLE_APP_ID], components: [{ '/': '/o/*' }] }],
     },
   }),
 );
+
+async function landing(c) {
+  const id = c.req.param('id');
+  const record = await c.env.SHARES.get(id, 'json');
+  c.header('Cache-Control', 'no-store');
+  if (!record) {
+    return c.html(page('<p>Ta povezava je potekla ali jo je lastnik preklical.</p>'), 404);
+  }
+  const { parcel, points } = record.payload;
+  const ko = parcel.koName ?? (parcel.koNumber != null ? `k.o. ${parcel.koNumber}` : '');
+  const title = `Parcela ${escapeHtml(parcel.number)}${ko ? `, ${escapeHtml(ko)}` : ''}`;
+  return c.html(
+    page(`
+  <p class="lead">Lastnik ti je poslal drevesa, označena za posek.</p>
+  <div class="card">
+    <strong>🪓 ${title}</strong>
+    <span>${trees(points.length)} za posek</span>
+  </div>
+  <a class="primary" href="gozdar://open/o/${escapeHtml(id)}">Uvozi v Gozdar</a>
+  <p class="small">Gozdar doda parcelo in drevesa v Moj gozd. Na terenu jih najdeš
+  na karti in do njih navigiraš, tudi brez signala.</p>
+  <p class="small">Nimaš Gozdarja? Namesti ga, nato znova odpri to povezavo.</p>
+  <a class="secondary" href="${IOS_URL}">iPhone</a>
+  <a class="secondary" href="${ANDROID_URL}">Android</a>`),
+  );
+}
+
+// Slovenian plural: 1 drevo, 2 drevesi, 3 in 4 drevesa, 5 in več dreves.
+function trees(n) {
+  const mod = n % 100;
+  if (mod === 1) return `${n} drevo`;
+  if (mod === 2) return `${n} drevesi`;
+  if (mod === 3 || mod === 4) return `${n} drevesa`;
+  return `${n} dreves`;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[ch]);
+}
+
+function page(body) {
+  return `<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sečnja · Gozdar</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+         font-family: -apple-system, system-ui, sans-serif; background: #1c2a1f; color: #eee; }
+  main { max-width: 360px; padding: 24px; }
+  h1 { color: #d4a574; margin: 0 0 8px; font-size: 22px; }
+  .lead { font-size: 17px; }
+  .card { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 12px;
+          background: #2d3b2f; margin: 16px 0; }
+  .card span { color: #ff8a50; font-weight: 600; }
+  a { display: block; text-align: center; text-decoration: none; border-radius: 12px; padding: 14px;
+      margin: 10px 0; font-weight: 600; }
+  a.primary { background: #ff5722; color: #fff; font-size: 17px; }
+  a.secondary { border: 1px solid #d4a574; color: #d4a574; }
+  .small { color: #aab; font-size: 14px; line-height: 1.4; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🌲 Gozdar</h1>
+${body}
+</main>
+</body>
+</html>`;
+}

@@ -19,8 +19,8 @@ class AppRoutes {
   static const logNew = '/log/new';
   static String logEdit(int id) => '/logs/log/$id/edit';
 
-  // Sečnja share link (https://gozdar.dz0ny.dev/s/<id>)
-  static String share(String id) => '/s/$id';
+  // Sečnja share link (https://gozdar.dz0ny.dev/o/<id>)
+  static String share(String id) => '/o/$id';
 
   // Batch routes
   static String batchDetail(int id) => '/logs/batch/$id';

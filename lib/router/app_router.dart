@@ -46,14 +46,18 @@ class LogEntryFormParams {
   const LogEntryFormParams({this.logEntry, this.onSave});
 }
 
-/// Route of a sečnja share link. It downloads the share, then goes to the
-/// map. It sits outside the tab shell, so a cold and a warm start both reach it.
-GoRoute receiveShareRoute() => GoRoute(
-      path: '/s/:id',
-      builder: (context, state) => ReceiveShareScreen(
-        shareId: state.pathParameters['id']!,
-      ),
-    );
+/// Routes of a sečnja share link: `/o/<id>` from the share, `/s/<id>` from
+/// links shared before. Both download the share, then go to the map. They
+/// sit outside the tab shell, so a cold and a warm start both reach them.
+List<GoRoute> receiveShareRoutes() => [
+      for (final prefix in ['o', 's'])
+        GoRoute(
+          path: '/$prefix/:id',
+          builder: (context, state) => ReceiveShareScreen(
+            shareId: state.pathParameters['id']!,
+          ),
+        ),
+    ];
 
 /// Create the GoRouter configuration
 GoRouter createRouter({required bool showOnboarding, String? initialLocation}) {
@@ -71,7 +75,7 @@ GoRouter createRouter({required bool showOnboarding, String? initialLocation}) {
       ),
 
       // Sečnja share link, opened from outside the app.
-      receiveShareRoute(),
+      ...receiveShareRoutes(),
 
       // About screen (full screen, outside shell)
       GoRoute(

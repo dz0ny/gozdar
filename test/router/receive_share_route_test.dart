@@ -35,7 +35,7 @@ class FakeShareService extends SecnjaShareService {
 GoRouter router(String initial) => GoRouter(
       initialLocation: initial,
       routes: [
-        receiveShareRoute(),
+        ...receiveShareRoutes(),
         GoRoute(path: '/map', builder: (_, _) => const Scaffold(body: Text('MAP'))),
         GoRoute(path: '/forest', builder: (_, _) => const Scaffold(body: Text('FOREST'))),
         GoRoute(path: '/onboarding', builder: (_, _) => const Scaffold(body: Text('ONBOARDING'))),
@@ -55,25 +55,25 @@ void main() {
     await OnboardingService.initialize();
   });
 
-  testWidgets('cold start on /s/:id calls receive with the id and lands on the map',
+  testWidgets('cold start on /o/:id calls receive with the id and lands on the map',
       (tester) async {
     final fake = FakeShareService(ReceiveOutcome.imported);
     SecnjaShareService.instance = fake;
-    await tester.pumpWidget(app(router('/s/abc123')));
+    await tester.pumpWidget(app(router('/o/abc123')));
     await tester.pumpAndSettle();
     expect(fake.received, ['abc123']);
     expect(find.text('MAP'), findsOneWidget);
     expect(find.textContaining('Prejeta sečnja: parcela 1234/5'), findsOneWidget);
   });
 
-  testWidgets('warm start: go(/s/xyz) from another screen calls receive', (tester) async {
+  testWidgets('warm start: go(/o/xyz) from another screen calls receive', (tester) async {
     final fake = FakeShareService(ReceiveOutcome.imported);
     SecnjaShareService.instance = fake;
     final r = router('/forest');
     await tester.pumpWidget(app(r));
     await tester.pumpAndSettle();
     expect(find.text('FOREST'), findsOneWidget);
-    r.go('/s/xyz');
+    r.go('/o/xyz');
     await tester.pumpAndSettle();
     expect(fake.received, ['xyz']);
     expect(find.text('MAP'), findsOneWidget);
@@ -92,5 +92,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('MAP'), findsOneWidget);
     expect(find.text('Povezave ni mogoče prebrati'), findsOneWidget);
+  });
+
+  testWidgets('an old /s/ link still imports', (tester) async {
+    final fake = FakeShareService(ReceiveOutcome.imported);
+    SecnjaShareService.instance = fake;
+    await tester.pumpWidget(app(router('/s/old111')));
+    await tester.pumpAndSettle();
+    expect(fake.received, ['old111']);
   });
 }

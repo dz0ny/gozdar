@@ -58,7 +58,7 @@ class SecnjaShareService {
         _db = db ?? DatabaseService(),
         base = base ?? Uri.parse('https://gozdar.dz0ny.dev');
 
-  Uri linkFor(String shareId) => base.replace(path: '/s/$shareId');
+  Uri linkFor(String shareId) => base.replace(path: '/o/$shareId');
 
   Uri _api([String? id]) => base.replace(path: id == null ? '/api/s' : '/api/s/$id');
 

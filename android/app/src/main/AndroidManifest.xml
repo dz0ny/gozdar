@@ -32,7 +32,14 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="gozdar.dz0ny.dev" android:pathPrefix="/s/" />
+                <data android:scheme="https" android:host="gozdar.dz0ny.dev" android:pathPrefix="/o/" />
+            </intent-filter>
+            <!-- Uvozi button on the share landing page: gozdar://open/o/<id> -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="gozdar" android:host="open" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

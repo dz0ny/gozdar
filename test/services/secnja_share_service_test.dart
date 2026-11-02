@@ -55,9 +55,9 @@ void main() {
     return (await dbService.getParcel(id))!;
   }
 
-  test('linkFor builds the /s/ link', () {
+  test('linkFor builds the /o/ link', () {
     expect(serviceWith((_) async => http.Response('', 500)).linkFor('abc123').toString(),
-        'https://gozdar.test/s/abc123');
+        'https://gozdar.test/o/abc123');
   });
 
   test('first share POSTs and stores id, token, hash', () async {
@@ -71,7 +71,7 @@ void main() {
     expect(requests.single.method, 'POST');
     expect(requests.single.url.path, '/api/s');
     expect(jsonDecode(requests.single.body)['points'][0]['name'], 'Smreka 1');
-    expect(result.link.toString(), 'https://gozdar.test/s/abc123');
+    expect(result.link.toString(), 'https://gozdar.test/o/abc123');
     expect(result.expiresAt, DateTime.utc(2026, 12, 2, 10));
     final saved = (await dbService.getAllParcels()).single;
     expect(saved.shareId, 'abc123');
@@ -91,7 +91,7 @@ void main() {
     expect(requests.single.method, 'PUT');
     expect(requests.single.url.path, '/api/s/abc123');
     expect(requests.single.headers['Authorization'], 'Bearer tok');
-    expect(result.link.path, '/s/abc123');
+    expect(result.link.path, '/o/abc123');
     expect((await dbService.getParcel(parcel.id))!.shareHash, payload(name: 'Bukev 1').contentHash);
   });
 
@@ -107,7 +107,7 @@ void main() {
     final result = await service.share((await dbService.getParcel(parcel.id))!, payload());
 
     expect(requests.map((r) => r.method), ['PUT', 'POST']);
-    expect(result.link.path, '/s/new111');
+    expect(result.link.path, '/o/new111');
     expect((await dbService.getParcel(parcel.id))!.shareEditToken, 'tok2');
   });
 

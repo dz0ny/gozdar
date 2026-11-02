@@ -139,7 +139,7 @@ test('aasa lists the app id and path', async () => {
   assert.match(res.headers.get('content-type'), /application\/json/);
   const body = await res.json();
   assert.ok(body.applinks.details[0].appIDs.includes('JND55328G8.dev.dz0ny.gozdar'));
-  assert.equal(body.applinks.details[0].components[0]['/'], '/s/*');
+  assert.equal(body.applinks.details[0].components[0]['/'], '/o/*');
 });
 
 test('rejects null or array parcel', async () => {
@@ -162,4 +162,33 @@ test('rejects points without name or coordinates', async () => {
     const res = await call(env, 'POST', '/api/s', payload([point]));
     assert.equal(res.status, 400);
   }
+});
+
+test('landing page explains the share and offers Uvozi', async () => {
+  const env = { SHARES: fakeKv() };
+  const { body } = await create(env);
+  const res = await call(env, 'GET', `/o/${body.id}`);
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /text\/html/);
+  const html = await res.text();
+  assert.ok(html.includes('1234/5'), 'names the parcel');
+  assert.ok(html.includes('1 drevo'), 'counts the trees');
+  assert.ok(html.includes(`gozdar://open/o/${body.id}`), 'Uvozi opens the app');
+  assert.ok(html.includes('Uvozi'));
+  assert.ok(!html.includes('46.05'), 'no coordinates');
+});
+
+test('landing page for a missing share says it expired', async () => {
+  const env = { SHARES: fakeKv() };
+  const res = await call(env, 'GET', '/o/gone00');
+  assert.equal(res.status, 404);
+  assert.ok((await res.text()).includes('potekla'));
+});
+
+test('old /s/ links show the same landing page', async () => {
+  const env = { SHARES: fakeKv() };
+  const { body } = await create(env);
+  const res = await call(env, 'GET', `/s/${body.id}`);
+  assert.equal(res.status, 200);
+  assert.ok((await res.text()).includes(`gozdar://open/o/${body.id}`));
 });
