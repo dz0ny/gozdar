@@ -270,8 +270,6 @@ Worker additions, in `worker/src/shares.js`:
 - `DELETE /api/s/:id` same auth → 204.
 - `GET /api/s/:id` → payload without `editToken`, plus `expiresAt`. 404
   when missing. `Cache-Control: no-store`.
-- `GET /s/:id` → the install page (below), regardless of whether the id
-  exists. No data from the share is rendered.
 - `GET /.well-known/assetlinks.json` and
   `/.well-known/apple-app-site-association` → static JSON.
 - Payload size limit 256 KB → 413. No other validation beyond "is JSON
@@ -306,17 +304,8 @@ WGS84, `[lat, lng]`. Server adds `expiresAt` on read.
 
 ### Install page
 
-`GET /s/:id` returns a one-screen HTML page: Gozdar icon, the sentence
-`Za ogled sečnje potrebuješ aplikacijo Gozdar.`, an iOS button, an
-Android button, and below them `Po namestitvi znova odpri povezavo.`
-Nothing else. The app is distributed on iOS only through Apple today and
-on Android as a direct APK, so: the iOS button goes to the App Store /
-TestFlight link, the Android button to the latest GitHub release APK
-(`https://github.com/<owner>/<repo>/releases/latest`, the same source
-`UpdateService` already checks). Both URLs are constants at the top of
-`shares.js`; the builder fills the iOS one from the release workflow's
-app id and swaps the Android one for a Play link when the app ships
-there.
+Dropped for now (owner's call, 2026-11-02). In a browser `/s/:id` returns
+the worker's JSON 404; only the app handles the link.
 
 ## Data changes (drift schema 5)
 

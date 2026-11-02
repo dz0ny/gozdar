@@ -2,16 +2,11 @@ import { Hono } from 'hono';
 
 // Sečnja share links. The owner uploads the marked trees of one parcel.
 // The logger gets https://gozdar.dz0ny.dev/s/<id>, and the link opens Gozdar.
-// In a browser, the link shows only an install page.
 // KV keeps each share for 30 days after the last upload.
 
 const TTL_SECONDS = 30 * 24 * 3600;
 const MAX_BYTES = 262144;
 const ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
-// TODO(owner): put the public App Store or TestFlight link here.
-const IOS_URL = 'https://testflight.apple.com/';
-const ANDROID_URL = 'https://github.com/dz0ny/gozdar/releases/latest';
 
 // Fingerprints of the keys that sign the Android app.
 // Only the debug key is here now. Add the release key later.
@@ -119,8 +114,6 @@ shares.get('/api/s/:id', async (c) => {
   return c.json({ ...record.payload, expiresAt: record.expiresAt });
 });
 
-shares.get('/s/:id', (c) => c.html(installPage()));
-
 shares.get('/.well-known/assetlinks.json', (c) =>
   c.json([
     {
@@ -141,32 +134,3 @@ shares.get('/.well-known/apple-app-site-association', (c) =>
     },
   }),
 );
-
-function installPage() {
-  return `<!doctype html>
-<html lang="sl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gozdar</title>
-<style>
-  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-         font-family: -apple-system, system-ui, sans-serif; background: #f4f4f2; color: #222; }
-  main { max-width: 340px; padding: 24px; text-align: center; }
-  h1 { color: #2e5e3e; margin: 0 0 12px; }
-  a { display: block; margin: 10px 0; padding: 14px; border-radius: 10px; background: #2e5e3e;
-      color: #fff; text-decoration: none; font-weight: 600; }
-  p.small { color: #666; font-size: 14px; }
-</style>
-</head>
-<body>
-<main>
-  <h1>🌲 Gozdar</h1>
-  <p>Za ogled sečnje potrebuješ aplikacijo Gozdar.</p>
-  <a href="${IOS_URL}">iPhone</a>
-  <a href="${ANDROID_URL}">Android</a>
-  <p class="small">Po namestitvi znova odpri povezavo.</p>
-</main>
-</body>
-</html>`;
-}

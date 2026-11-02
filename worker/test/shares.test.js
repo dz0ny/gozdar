@@ -127,17 +127,6 @@ test('rejects body over 256 KB', async () => {
   assert.equal(res.status, 413);
 });
 
-test('install page does not leak share data', async () => {
-  const env = { SHARES: fakeKv() };
-  const { body } = await create(env);
-  const res = await call(env, 'GET', `/s/${body.id}`);
-  assert.equal(res.status, 200);
-  assert.match(res.headers.get('content-type'), /text\/html/);
-  const html = await res.text();
-  assert.ok(html.includes('Gozdar'));
-  assert.ok(!html.includes('1234/5'));
-});
-
 test('assetlinks lists the package', async () => {
   const res = await call({}, 'GET', '/.well-known/assetlinks.json');
   const body = await res.json();
