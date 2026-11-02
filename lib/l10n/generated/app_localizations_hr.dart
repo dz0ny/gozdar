@@ -3008,4 +3008,34 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get secnjaLinkInvalid => 'Poveznicu nije moguće pročitati';
+
+  @override
+  String get introSecnjaTitle => 'Sječa za sjekača';
+
+  @override
+  String get introSecnjaYours => 'Tvoje oznake';
+
+  @override
+  String get introSecnjaReceived => 'Primljene';
+
+  @override
+  String get introSecnjaMarkTitle => 'Označi stabla';
+
+  @override
+  String get introSecnjaMarkDesc =>
+      'Dugo pritisni kartu → Dodaj → Sječa. Usmjeri križić na stablo i dodirni Označi. Vrstu biraš jednom.';
+
+  @override
+  String get introSecnjaShareTitle => 'Podijeli sjekaču';
+
+  @override
+  String get introSecnjaShareDesc =>
+      'U čestici dodirni Podijeli sjekaču i pošalji poveznicu. Vrijedi 30 dana; nakon novih oznaka je ažuriraš.';
+
+  @override
+  String get introSecnjaLoggerTitle => 'Sjekač vidi stabla';
+
+  @override
+  String get introSecnjaLoggerDesc =>
+      'Poveznica se otvara u Gozdaru. Stabla su numerirana na karti, uključuješ ih u Slojevi → Primljeno, rade i bez signala.';
 }

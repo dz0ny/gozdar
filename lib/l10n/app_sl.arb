@@ -2132,5 +2132,14 @@
   },
   "receivedDeleteConfirm": "Odstranim prejeto sečnjo?",
   "receivedLoading": "Nalagam sečnjo…",
-  "secnjaLinkInvalid": "Povezave ni mogoče prebrati"
+  "secnjaLinkInvalid": "Povezave ni mogoče prebrati",
+  "introSecnjaTitle": "Sečnja za sekača",
+  "introSecnjaYours": "Tvoje oznake",
+  "introSecnjaReceived": "Prejete",
+  "introSecnjaMarkTitle": "Označi drevesa",
+  "introSecnjaMarkDesc": "Dolgo pritisni karto → Dodaj → Sečnja. Nameri križec na drevo in tapni Označi. Vrsto izbereš enkrat.",
+  "introSecnjaShareTitle": "Deli sekaču",
+  "introSecnjaShareDesc": "V parceli tapni Deli sekaču in pošlji povezavo. Velja 30 dni; ob novih oznakah jo posodobiš.",
+  "introSecnjaLoggerTitle": "Sekač vidi drevesa",
+  "introSecnjaLoggerDesc": "Povezava se odpre v Gozdarju. Drevesa so oštevilčena na karti, vklopiš jih v Sloji → Prejeto, delujejo tudi brez signala."
 }

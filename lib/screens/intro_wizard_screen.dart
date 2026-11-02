@@ -6,6 +6,33 @@ import '../l10n/l10n.dart';
 import '../router/route_names.dart';
 import '../services/onboarding_service.dart';
 
+/// Pages of the intro wizard, in order. [since] is the onboarding version
+/// that added the page.
+enum WizardPage {
+  welcome(1),
+  navigation(1),
+  logs(1),
+  longPress(1),
+  markers(1),
+  secnja(4),
+  layers(1),
+  offline(1),
+  compass(1),
+  terms(1);
+
+  const WizardPage(this.since);
+
+  final int since;
+}
+
+/// Pages to show to a user who completed onboarding version [completed].
+/// A new install (0) sees everything. Others see only what is new to them,
+/// without the terms they already accepted.
+List<WizardPage> wizardPagesFor(int completed) {
+  if (completed == 0) return WizardPage.values;
+  return WizardPage.values.where((p) => p.since > completed).toList();
+}
+
 class IntroWizardScreen extends StatefulWidget {
   const IntroWizardScreen({super.key});
 
@@ -16,7 +43,13 @@ class IntroWizardScreen extends StatefulWidget {
 class _IntroWizardScreenState extends State<IntroWizardScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  final int _totalPages = 9;
+  late final List<WizardPage> _pages = () {
+    final pages = wizardPagesFor(OnboardingService.instance.completedVersion);
+    // Reached after finishing every version, e.g. from About: show it all.
+    return pages.isEmpty ? WizardPage.values : pages;
+  }();
+  int get _totalPages => _pages.length;
+  bool get _hasTerms => _pages.contains(WizardPage.terms);
 
   @override
   void dispose() {
@@ -68,13 +101,14 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button: jumps to the terms page; hidden there (keeps its space)
+            // Skip button: jumps to the terms page; hidden there (keeps its space).
+            // A what's-new run has no terms page and no skip button.
             Align(
               alignment: Alignment.topRight,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Visibility(
-                  visible: _currentPage < _totalPages - 1,
+                  visible: _hasTerms && _currentPage < _totalPages - 1,
                   maintainSize: true,
                   maintainAnimation: true,
                   maintainState: true,
@@ -100,17 +134,7 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                     _currentPage = index;
                   });
                 },
-                children: [
-                  _buildWelcomePage(),
-                  _buildNavigationPage(),
-                  _buildLogsPage(),
-                  _buildLongPressPage(),
-                  _buildMarkersPage(),
-                  _buildLayersPage(),
-                  _buildOfflinePage(),
-                  _buildCompassPage(),
-                  _buildTermsPage(),
-                ],
+                children: [for (final page in _pages) _buildPage(page)],
               ),
             ),
 
@@ -154,6 +178,55 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPage(WizardPage page) => switch (page) {
+        WizardPage.welcome => _buildWelcomePage(),
+        WizardPage.navigation => _buildNavigationPage(),
+        WizardPage.logs => _buildLogsPage(),
+        WizardPage.longPress => _buildLongPressPage(),
+        WizardPage.markers => _buildMarkersPage(),
+        WizardPage.secnja => _buildSecnjaPage(),
+        WizardPage.layers => _buildLayersPage(),
+        WizardPage.offline => _buildOfflinePage(),
+        WizardPage.compass => _buildCompassPage(),
+        WizardPage.terms => _buildTermsPage(),
+      };
+
+  Widget _buildSecnjaPage() {
+    final l10n = context.l10n;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Column(
+        children: [
+          const SizedBox(height: 16),
+          Text(
+            l10n.introSecnjaTitle,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildMarkerExample(Icons.carpenter, Colors.deepOrange, l10n.introSecnjaYours),
+              _buildMarkerExample(Icons.looks_one, Colors.blue, l10n.introSecnjaReceived),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildInfoCard([
+            _buildInfoRow(Icons.add_circle_outline, l10n.introSecnjaMarkTitle, l10n.introSecnjaMarkDesc,
+                iconColor: Colors.deepOrange),
+            _buildInfoRow(Icons.ios_share, l10n.introSecnjaShareTitle, l10n.introSecnjaShareDesc,
+                iconColor: Colors.deepOrange),
+            _buildInfoRow(Icons.layers, l10n.introSecnjaLoggerTitle, l10n.introSecnjaLoggerDesc,
+                iconColor: Colors.blue),
+          ]),
+        ],
       ),
     );
   }

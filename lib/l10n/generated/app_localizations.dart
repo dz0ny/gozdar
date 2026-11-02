@@ -5075,6 +5075,60 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Povezave ni mogoče prebrati'**
   String get secnjaLinkInvalid;
+
+  /// No description provided for @introSecnjaTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Sečnja za sekača'**
+  String get introSecnjaTitle;
+
+  /// No description provided for @introSecnjaYours.
+  ///
+  /// In sl, this message translates to:
+  /// **'Tvoje oznake'**
+  String get introSecnjaYours;
+
+  /// No description provided for @introSecnjaReceived.
+  ///
+  /// In sl, this message translates to:
+  /// **'Prejete'**
+  String get introSecnjaReceived;
+
+  /// No description provided for @introSecnjaMarkTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Označi drevesa'**
+  String get introSecnjaMarkTitle;
+
+  /// No description provided for @introSecnjaMarkDesc.
+  ///
+  /// In sl, this message translates to:
+  /// **'Dolgo pritisni karto → Dodaj → Sečnja. Nameri križec na drevo in tapni Označi. Vrsto izbereš enkrat.'**
+  String get introSecnjaMarkDesc;
+
+  /// No description provided for @introSecnjaShareTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Deli sekaču'**
+  String get introSecnjaShareTitle;
+
+  /// No description provided for @introSecnjaShareDesc.
+  ///
+  /// In sl, this message translates to:
+  /// **'V parceli tapni Deli sekaču in pošlji povezavo. Velja 30 dni; ob novih oznakah jo posodobiš.'**
+  String get introSecnjaShareDesc;
+
+  /// No description provided for @introSecnjaLoggerTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Sekač vidi drevesa'**
+  String get introSecnjaLoggerTitle;
+
+  /// No description provided for @introSecnjaLoggerDesc.
+  ///
+  /// In sl, this message translates to:
+  /// **'Povezava se odpre v Gozdarju. Drevesa so oštevilčena na karti, vklopiš jih v Sloji → Prejeto, delujejo tudi brez signala.'**
+  String get introSecnjaLoggerDesc;
 }
 
 class _AppLocalizationsDelegate

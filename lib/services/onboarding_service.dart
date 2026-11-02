@@ -4,8 +4,9 @@ class OnboardingService {
   static const String _keyOnboardingVersion = 'onboarding_version';
 
   /// Current onboarding version. Increment this when onboarding content changes.
-  /// Users who completed an older version will see the wizard again.
-  static const int currentVersion = 3;
+  /// Users who completed an older version see only the pages added since
+  /// (see `wizardPagesFor`).
+  static const int currentVersion = 4;
 
   static OnboardingService? _instance;
   late SharedPreferences _prefs;

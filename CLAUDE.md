@@ -65,7 +65,7 @@ keytool -genkey -v -keystore ~/android-keystores/gozdar-release-key.jks \
 ### Navigation
 - **3 tabs:** Karta (Map), Gozd (Forest), Hlodi (Logs) | Default: Gozd (index 1)
 - **Easter egg:** 5-tap any tab to reset onboarding wizard
-- **First run:** 9-page `IntroWizardScreen` (welcome, navigation, log tracking, long-press menu, map markers, layers, offline mode, compass, terms)
+- **First run:** 10-page `IntroWizardScreen` (welcome, navigation, log tracking, long-press menu, map markers, sečnja sharing, layers, offline mode, compass, terms). Pages carry the onboarding version that added them; existing installs see only newer pages (`wizardPagesFor`)
 
 ### Hlodi (Logs) Tab
 **Volume conversions:**

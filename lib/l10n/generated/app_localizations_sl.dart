@@ -3013,4 +3013,34 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get secnjaLinkInvalid => 'Povezave ni mogoče prebrati';
+
+  @override
+  String get introSecnjaTitle => 'Sečnja za sekača';
+
+  @override
+  String get introSecnjaYours => 'Tvoje oznake';
+
+  @override
+  String get introSecnjaReceived => 'Prejete';
+
+  @override
+  String get introSecnjaMarkTitle => 'Označi drevesa';
+
+  @override
+  String get introSecnjaMarkDesc =>
+      'Dolgo pritisni karto → Dodaj → Sečnja. Nameri križec na drevo in tapni Označi. Vrsto izbereš enkrat.';
+
+  @override
+  String get introSecnjaShareTitle => 'Deli sekaču';
+
+  @override
+  String get introSecnjaShareDesc =>
+      'V parceli tapni Deli sekaču in pošlji povezavo. Velja 30 dni; ob novih oznakah jo posodobiš.';
+
+  @override
+  String get introSecnjaLoggerTitle => 'Sekač vidi drevesa';
+
+  @override
+  String get introSecnjaLoggerDesc =>
+      'Povezava se odpre v Gozdarju. Drevesa so oštevilčena na karti, vklopiš jih v Sloji → Prejeto, delujejo tudi brez signala.';
 }

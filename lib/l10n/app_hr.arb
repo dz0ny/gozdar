@@ -827,5 +827,14 @@
   "secnjaReceivedRow": "{days, plural, one{Sječa {parcel} · {who} · još {days} dan} few{Sječa {parcel} · {who} · još {days} dana} other{Sječa {parcel} · {who} · još {days} dana}}",
   "receivedDeleteConfirm": "Ukloniti primljenu sječu?",
   "receivedLoading": "Učitavam sječu…",
-  "secnjaLinkInvalid": "Poveznicu nije moguće pročitati"
+  "secnjaLinkInvalid": "Poveznicu nije moguće pročitati",
+  "introSecnjaTitle": "Sječa za sjekača",
+  "introSecnjaYours": "Tvoje oznake",
+  "introSecnjaReceived": "Primljene",
+  "introSecnjaMarkTitle": "Označi stabla",
+  "introSecnjaMarkDesc": "Dugo pritisni kartu → Dodaj → Sječa. Usmjeri križić na stablo i dodirni Označi. Vrstu biraš jednom.",
+  "introSecnjaShareTitle": "Podijeli sjekaču",
+  "introSecnjaShareDesc": "U čestici dodirni Podijeli sjekaču i pošalji poveznicu. Vrijedi 30 dana; nakon novih oznaka je ažuriraš.",
+  "introSecnjaLoggerTitle": "Sjekač vidi stabla",
+  "introSecnjaLoggerDesc": "Poveznica se otvara u Gozdaru. Stabla su numerirana na karti, uključuješ ih u Slojevi → Primljeno, rade i bez signala."
 }
