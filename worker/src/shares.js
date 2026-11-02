@@ -290,7 +290,7 @@ async function previewImage(c) {
   if (!res.ok) return c.body(null, 502);
   return c.body(res.body, 200, {
     'Content-Type': 'image/jpeg',
-    'Cache-Control': 'public, max-age=3600',
+    'Cache-Control': 'no-store',
   });
 }
 
