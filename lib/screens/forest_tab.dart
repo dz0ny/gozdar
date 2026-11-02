@@ -4,9 +4,12 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../models/parcel.dart';
 import '../providers/map_provider.dart';
 import '../router/navigation_notifier.dart';
@@ -16,6 +19,7 @@ import '../services/database_service.dart';
 import '../services/ko_locator.dart';
 import '../services/kml_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../services/secnja_share_flow.dart';
 import '../utils/formats.dart';
 import '../utils/parcel_labels.dart';
 import '../widgets/owner_list.dart';
@@ -95,6 +99,16 @@ class ForestTabState extends State<ForestTab> {
     _loadData();
   }
 
+  /// Pull to refresh also picks up the owner's changes to imported lists.
+  Future<void> _pullToRefresh() async {
+    try {
+      await refreshImportedSecnja(context);
+    } catch (e) {
+      debugPrint('Imported share check failed: $e');
+    }
+    await _loadData();
+  }
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
 
@@ -110,13 +124,12 @@ class ForestTabState extends State<ForestTab> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(context.l10n.forestLoadError('$e'))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.forestLoadError('$e'))),
+        );
       }
     }
   }
-
 
   /// Public method to open a specific parcel detail (can be called from outside)
   Future<void> openParcelDetail(Parcel parcel) async {
@@ -126,10 +139,7 @@ class ForestTabState extends State<ForestTab> {
   Future<void> _openParcelDetail(Parcel parcel) async {
     // push() completes when the detail screen pops — only then reload, so a
     // parcel deleted or edited there disappears/updates without a pull-down.
-    await context.push(
-      AppRoutes.parcelDetail(parcel.id),
-      extra: parcel,
-    );
+    await context.push(AppRoutes.parcelDetail(parcel.id), extra: parcel);
     if (!mounted) return;
     await _loadData();
   }
@@ -187,9 +197,9 @@ class ForestTabState extends State<ForestTab> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(context.l10n.forestDeleteError('$e'))));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.forestDeleteError('$e'))),
+          );
         }
       }
     }
@@ -197,9 +207,9 @@ class ForestTabState extends State<ForestTab> {
 
   Future<void> _exportKml() async {
     if (_parcels.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(context.l10n.forestNoParcelsToExport)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.forestNoParcelsToExport)),
+      );
       return;
     }
 
@@ -212,9 +222,9 @@ class ForestTabState extends State<ForestTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(context.l10n.forestExportError('$e'))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.forestExportError('$e'))),
+        );
       }
     }
   }
@@ -376,9 +386,8 @@ class ForestTabState extends State<ForestTab> {
     final owners = _uniqueOwners;
 
     if (owners.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.forestNoOwners)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(context.l10n.forestNoOwners)));
       return;
     }
 
@@ -440,7 +449,9 @@ class ForestTabState extends State<ForestTab> {
                           : null,
                     ),
                     title: Text(owner),
-                    subtitle: Text(context.l10n.forestCountParcels(parcelCount)),
+                    subtitle: Text(
+                      context.l10n.forestCountParcels(parcelCount),
+                    ),
                     selected: isSelected,
                     onTap: () {
                       setState(() => _selectedOwnerFilter = owner);
@@ -533,7 +544,7 @@ class ForestTabState extends State<ForestTab> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _loadData,
+              onRefresh: _pullToRefresh,
               child: Column(
                 children: [
                   // Summary card - compact
@@ -574,101 +585,144 @@ class ForestTabState extends State<ForestTab> {
                   // start below the fade so the first item isn't dimmed.
                   Expanded(
                     child: ShaderMask(
-                        shaderCallback: (rect) => LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black],
-                          stops: [0, _listFade / rect.height],
-                        ).createShader(rect),
-                        blendMode: BlendMode.dstIn,
-                        child: displayParcels.isEmpty
-                        ? LayoutBuilder(
-                            builder: (context, constraints) => SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight: constraints.maxHeight,
-                                ),
-                                child: Center(
-                                  child: _selectedOwnerFilter != null
-                                // Filter active but no matching parcels
-                                ? Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.person_off,
-                                        size: 64,
-                                        color: Colors.grey[400],
+                      shaderCallback: (rect) => LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black],
+                        stops: [0, _listFade / rect.height],
+                      ).createShader(rect),
+                      blendMode: BlendMode.dstIn,
+                      child: displayParcels.isEmpty
+                          ? LayoutBuilder(
+                              builder: (context, constraints) =>
+                                  SingleChildScrollView(
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        minHeight: constraints.maxHeight,
                                       ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        context.l10n.forestNoParcelsForOwner(_selectedOwnerFilter!),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleLarge
-                                            ?.copyWith(color: Colors.grey[500]),
-                                        textAlign: TextAlign.center,
+                                      child: Center(
+                                        child: _selectedOwnerFilter != null
+                                            // Filter active but no matching parcels
+                                            ? Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.person_off,
+                                                    size: 64,
+                                                    color: Colors.grey[400],
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  Text(
+                                                    context.l10n
+                                                        .forestNoParcelsForOwner(
+                                                          _selectedOwnerFilter!,
+                                                        ),
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .titleLarge
+                                                        ?.copyWith(
+                                                          color:
+                                                              Colors.grey[500],
+                                                        ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  const SizedBox(height: 24),
+                                                  OutlinedButton.icon(
+                                                    onPressed: () {
+                                                      setState(
+                                                        () =>
+                                                            _selectedOwnerFilter =
+                                                                null,
+                                                      );
+                                                    },
+                                                    icon: const Icon(
+                                                      Icons.clear_all,
+                                                    ),
+                                                    label: Text(
+                                                      context
+                                                          .l10n
+                                                          .forestShowAll,
+                                                    ),
+                                                  ),
+                                                ],
+                                              )
+                                            // No parcels at all
+                                            : Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.park_outlined,
+                                                    size: 64,
+                                                    color: Colors.grey[400],
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  Text(
+                                                    context
+                                                        .l10n
+                                                        .forestEmptyTitle,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .titleLarge
+                                                        ?.copyWith(
+                                                          color:
+                                                              Colors.grey[500],
+                                                        ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    context
+                                                        .l10n
+                                                        .forestEmptyHint,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodyMedium
+                                                        ?.copyWith(
+                                                          color:
+                                                              Colors.grey[400],
+                                                        ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  const SizedBox(height: 24),
+                                                  Tooltip(
+                                                    message: context
+                                                        .l10n
+                                                        .forestSearchParcel,
+                                                    child: FilledButton.icon(
+                                                      onPressed:
+                                                          _openParcelSearch,
+                                                      icon: const Icon(
+                                                        Icons.search,
+                                                      ),
+                                                      label: Text(
+                                                        context
+                                                            .l10n
+                                                            .forestSearchParcel,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  TextButton.icon(
+                                                    onPressed: _importKml,
+                                                    icon: const Icon(
+                                                      Icons.file_upload,
+                                                    ),
+                                                    label: Text(
+                                                      context
+                                                          .l10n
+                                                          .forestImportKml,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                       ),
-                                      const SizedBox(height: 24),
-                                      OutlinedButton.icon(
-                                        onPressed: () {
-                                          setState(
-                                            () => _selectedOwnerFilter = null,
-                                          );
-                                        },
-                                        icon: const Icon(Icons.clear_all),
-                                        label: Text(context.l10n.forestShowAll),
-                                      ),
-                                    ],
-                                  )
-                                // No parcels at all
-                                : Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.park_outlined,
-                                        size: 64,
-                                        color: Colors.grey[400],
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        context.l10n.forestEmptyTitle,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleLarge
-                                            ?.copyWith(color: Colors.grey[500]),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        context.l10n.forestEmptyHint,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(color: Colors.grey[400]),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                      const SizedBox(height: 24),
-                                      Tooltip(
-                                        message: context.l10n.forestSearchParcel,
-                                        child: FilledButton.icon(
-                                          onPressed: _openParcelSearch,
-                                          icon: const Icon(Icons.search),
-                                          label: Text(context.l10n.forestSearchParcel),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      TextButton.icon(
-                                        onPressed: _importKml,
-                                        icon: const Icon(Icons.file_upload),
-                                        label: Text(context.l10n.forestImportKml),
-                                      ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ),
-                          )
-                        : _buildGroupedParcelsList(context, displayParcels),
+                            )
+                          : _buildGroupedParcelsList(context, displayParcels),
                     ),
                   ),
                 ],
@@ -724,7 +778,8 @@ class ForestTabState extends State<ForestTab> {
         // "STARI TRG (1650)" instead of "KO 1650", from the owners DB or the
         // bundled KO index.
         final sifko = groupParcels.first.cadastralMunicipality;
-        final koName = OwnerLookupService.instance.koName(sifko) ??
+        final koName =
+            OwnerLookupService.instance.koName(sifko) ??
             KoLocator.instance.bySifko(sifko)?.name;
         final koLabel = koName != null ? '$koName ($sifko)' : ko;
         final count = groupParcels.length;
@@ -776,9 +831,9 @@ class ForestTabState extends State<ForestTab> {
                           '${context.l10n.forestCountParcels(count)} • $areaFormatted',
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                               ),
                         ),
                       ],
@@ -856,9 +911,8 @@ class ForestTabState extends State<ForestTab> {
               ? ParcelSilhouette(
                   polygon: parcel.polygon,
                   size: 48,
-                  fillColor: getForestTypeIcon(
-                    parcel.forestType,
-                  ).$2.withValues(alpha: 0.3),
+                  fillColor: getForestTypeIcon(parcel.forestType).$2
+                      .withValues(alpha: 0.3),
                   strokeColor: getForestTypeIcon(parcel.forestType).$2,
                 )
               : Icon(
@@ -973,15 +1027,13 @@ class _SummaryItem extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
         Text(
           label,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: Colors.grey[500]),
         ),
       ],
     );

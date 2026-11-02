@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../l10n/l10n.dart';
 import '../models/parcel.dart';
 import '../models/secnja_share.dart';
+import '../providers/map_provider.dart';
 import 'database_service.dart';
 import 'ko_locator.dart';
 import 'owner_lookup_service.dart';
@@ -16,12 +18,45 @@ enum SecnjaShareState { notShared, sharedUnchanged, sharedChanged }
 /// A link past its expiry counts as not shared, so the next share makes a new one.
 SecnjaShareState secnjaShareState(Parcel parcel, String currentHash) {
   final expires = parcel.shareExpiresAt;
-  if (!parcel.isShared || (expires != null && !expires.isAfter(DateTime.now()))) {
+  if (!parcel.isShared ||
+      (expires != null && !expires.isAfter(DateTime.now()))) {
     return SecnjaShareState.notShared;
   }
   return parcel.shareHash == currentHash
       ? SecnjaShareState.sharedUnchanged
       : SecnjaShareState.sharedChanged;
+}
+
+/// Checks the imported sečnja links, reloads the map marks after a change
+/// and tells the user what changed. [only] limits the check to some links.
+/// [messenger] shows the messages when [context] has no ScaffoldMessenger
+/// above it. Returns true when any trees changed.
+Future<bool> refreshImportedSecnja(
+  BuildContext context, {
+  Set<String>? only,
+  ScaffoldMessengerState? messenger,
+}) async {
+  final results = await SecnjaShareService.instance.refreshImported(only: only);
+  if (results.isEmpty || !context.mounted) return false;
+  final l10n = context.l10n;
+  final show = messenger ?? ScaffoldMessenger.of(context);
+  final changed = results.any((r) => r.outcome == RefreshOutcome.updated);
+  if (changed) await context.read<MapProvider>().loadLocations();
+  for (final r in results) {
+    show.showSnackBar(
+      SnackBar(
+        content: Text(switch (r.outcome) {
+          RefreshOutcome.updated => l10n.secnjaImportUpdated(
+            r.parcelLabel,
+            r.added,
+            r.removed,
+          ),
+          RefreshOutcome.withdrawn => l10n.secnjaImportWithdrawn(r.parcelLabel),
+        }),
+      ),
+    );
+  }
+  return changed;
 }
 
 /// Builds the share payload of [parcel] from the marks in the database.
@@ -30,7 +65,8 @@ Future<SecnjaSharePayload> buildSecnjaPayload(Parcel parcel) async {
   final ko = parcel.cadastralMunicipality;
   final koName = ko == null
       ? null
-      : OwnerLookupService.instance.koName(ko) ?? KoLocator.instance.bySifko(ko)?.name;
+      : OwnerLookupService.instance.koName(ko) ??
+            KoLocator.instance.bySifko(ko)?.name;
   return SecnjaSharePayload.fromParcel(
     parcel,
     marks,
@@ -64,8 +100,9 @@ Future<bool> runSecnjaShare(BuildContext context, Parcel parcel) async {
         uri: link,
         title: title,
         subject: title,
-        sharePositionOrigin:
-            box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+        sharePositionOrigin: box == null
+            ? null
+            : box.localToGlobal(Offset.zero) & box.size,
       ),
     );
     return true;

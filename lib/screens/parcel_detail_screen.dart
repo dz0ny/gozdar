@@ -8,6 +8,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../models/parcel.dart';
 import '../models/map_location.dart';
 import '../models/log_entry.dart';
@@ -53,7 +54,11 @@ class ParcelDetailScreen extends StatefulWidget {
   /// Scroll to the Sečnja card once it is loaded, e.g. right after marking.
   final bool showSecnja;
 
-  const ParcelDetailScreen({super.key, required this.parcel, this.showSecnja = false});
+  const ParcelDetailScreen({
+    super.key,
+    required this.parcel,
+    this.showSecnja = false,
+  });
 
   @override
   State<ParcelDetailScreen> createState() => _ParcelDetailScreenState();
@@ -66,6 +71,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   List<MapLocation> _locationsInParcel = []; // Regular POIs
   List<MapLocation> _secnjaInParcel = []; // Trees marked for cutting
   SecnjaShareState _secnjaShareState = SecnjaShareState.notShared;
+
+  /// True when the owner withdrew the list these trees came from.
+  bool _secnjaImportWithdrawn = false;
   final _secnjaCardKey = GlobalKey();
   bool _scrolledToSecnja = false;
   bool _secnjaBusy = false;
@@ -81,7 +89,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   void initState() {
     super.initState();
     _parcel = widget.parcel;
-    _loadLocationsInParcel();
+    _loadLocationsInParcel().then((_) => _refreshImportedTrees());
     _loadLogsInParcel();
     _lookUpOwner();
     _lookUpValuation();
@@ -147,6 +155,18 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     return deleted;
   }
 
+  /// Picks up the owner's changes to the lists these trees came from.
+  Future<void> _refreshImportedTrees() async {
+    final ids = {for (final m in _secnjaInParcel) ?m.sourceShareId};
+    if (ids.isEmpty || !mounted) return;
+    try {
+      await refreshImportedSecnja(context, only: ids);
+    } catch (e) {
+      debugPrint('Imported share check failed: $e');
+    }
+    if (mounted) await _loadLocationsInParcel();
+  }
+
   Future<void> _loadLocationsInParcel() async {
     try {
       final allLocations = await _databaseService.getAllLocations();
@@ -161,7 +181,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       final secnja = _parcel.id == 0
           ? <MapLocation>[]
           : await _databaseService.getSecnjaByParcel(_parcel.id);
-      final stored = _parcel.id == 0 ? null : await _databaseService.getParcel(_parcel.id);
+      final stored = _parcel.id == 0
+          ? null
+          : await _databaseService.getParcel(_parcel.id);
       if (stored != null) {
         _parcel
           ..shareId = stored.shareId
@@ -170,14 +192,24 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
           ..sharedAt = stored.sharedAt
           ..shareExpiresAt = stored.shareExpiresAt;
       }
+      final shareIds = {for (final m in secnja) ?m.sourceShareId};
+      var withdrawn = false;
+      for (final id in shareIds) {
+        withdrawn =
+            withdrawn || await SecnjaShareService.instance.isWithdrawn(id);
+      }
       final state = _parcel.isShared
-          ? secnjaShareState(_parcel, (await buildSecnjaPayload(_parcel)).contentHash)
+          ? secnjaShareState(
+              _parcel,
+              (await buildSecnjaPayload(_parcel)).contentHash,
+            )
           : SecnjaShareState.notShared;
       if (!mounted) return;
       setState(() {
         _locationsInParcel = points;
         _secnjaInParcel = secnja;
         _secnjaShareState = state;
+        _secnjaImportWithdrawn = withdrawn;
       });
       if (widget.showSecnja && !_scrolledToSecnja) {
         _scrolledToSecnja = true;
@@ -238,9 +270,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(context.l10n.parcelDetailUpdateError('$e'))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.parcelDetailUpdateError('$e'))),
+        );
       }
     }
   }
@@ -282,10 +314,11 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         workerUrl:
             mapProvider.workerUrl ?? MapPreferencesService.defaultWorkerUrl,
       );
-      final safeName = (cadastral.parcelNumber.isNotEmpty
-              ? cadastral.parcelNumber
-              : _parcel.name)
-          .replaceAll(RegExp(r'[^0-9A-Za-z]+'), '-');
+      final safeName =
+          (cadastral.parcelNumber.isNotEmpty
+                  ? cadastral.parcelNumber
+                  : _parcel.name)
+              .replaceAll(RegExp(r'[^0-9A-Za-z]+'), '-');
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/parcela-$safeName.pdf');
       await file.writeAsBytes(bytes, flush: true);
@@ -293,7 +326,11 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       final result = await OpenFilex.open(file.path);
       if (result.type != ResultType.done && mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text(L10n.current.parcelDetailPdfOpenError(result.message))),
+          SnackBar(
+            content: Text(
+              L10n.current.parcelDetailPdfOpenError(result.message),
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -352,9 +389,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
 
   Future<Directory> _mosaicDirectory() async {
     final base = await getApplicationSupportDirectory();
-    return _mosaicDir ??= Directory(
-      '${base.path}/drone_mosaics/${_parcel.id}',
-    );
+    return _mosaicDir ??= Directory('${base.path}/drone_mosaics/${_parcel.id}');
   }
 
   Future<void> _loadMosaic() async {
@@ -561,10 +596,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
           mapProvider.workerUrl ?? MapPreferencesService.defaultWorkerUrl;
       // Prefer the national orthophoto; fall back to the current base layer
       // where it has no Web Mercator tile URL (e.g. outside Slovenia).
-      final orthoLayer =
-          MapLayer.ortofoto.resolveUrlTemplate(workerUrl) != null
-              ? MapLayer.ortofoto
-              : mapProvider.currentBaseLayer;
+      final orthoLayer = MapLayer.ortofoto.resolveUrlTemplate(workerUrl) != null
+          ? MapLayer.ortofoto
+          : mapProvider.currentBaseLayer;
       final ortho = await ParcelPdfService.instance.renderReferenceImage(
         polygon: _parcel.polygon,
         baseLayer: orthoLayer,
@@ -736,8 +770,10 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     final result = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      builder: (context) =>
-          NotesEditorSheet(initialNotes: _parcel.notes, title: context.l10n.parcelNotesTitle),
+      builder: (context) => NotesEditorSheet(
+        initialNotes: _parcel.notes,
+        title: context.l10n.parcelNotesTitle,
+      ),
     );
 
     if (result != null) {
@@ -829,10 +865,11 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
             if (_parcel.woodAllowance > 0) ...[
               const SizedBox(height: 4),
               Text(
-                context.l10n.parcelCutRemaining(Fmt.num(_parcel.woodRemaining, 2)),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: Colors.green),
+                context.l10n.parcelCutRemaining(
+                  Fmt.num(_parcel.woodRemaining, 2),
+                ),
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: Colors.green),
               ),
             ],
             const SizedBox(height: 16),
@@ -905,9 +942,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
               result.trees,
             )
           : context.l10n.parcelCutAdded(Fmt.num(volume, 2));
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -1062,16 +1098,15 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
               ? l10n.parcelDeletedWithExtras(extras.join(', '))
               : l10n.parcelDeleted;
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message)),
-          );
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(message)));
           context.pop();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(context.l10n.parcelDeleteError('$e'))));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.parcelDeleteError('$e'))),
+          );
         }
       }
     }
@@ -1253,8 +1288,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                             baseLayer: mapProvider.currentBaseLayer,
                             activeOverlays: mapProvider.activeOverlays,
                             workerUrl: mapProvider.workerUrl,
-                            outlineColor:
-                                getForestTypeIcon(_parcel.forestType).$2,
+                            outlineColor: getForestTypeIcon(_parcel.forestType)
+                                .$2,
                             mosaic: _mosaic,
                             fill: true,
                           );
@@ -1353,17 +1388,24 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                         onNavigateToPoint: _navigateToPoint,
                         shareState: _secnjaShareState,
                         expiresAt: _parcel.shareExpiresAt,
+                        importWithdrawn: _secnjaImportWithdrawn,
                         busy: _secnjaBusy,
-                        onShare: () => _runSecnja(() => runSecnjaShare(context, _parcel)),
-                        onRevoke: () => _runSecnja(() => runSecnjaRevoke(context, _parcel)),
+                        onShare: () =>
+                            _runSecnja(() => runSecnjaShare(context, _parcel)),
+                        onRevoke: () =>
+                            _runSecnja(() => runSecnjaRevoke(context, _parcel)),
                         onDelete: _deleteSecnjaMark,
-                        onStartNavigation: (point, name) => NavigateToSheet.show(
-                          context,
-                          destination: point,
-                          name: name,
-                          onInAppNavigation: () =>
-                              _navigateToPoint(point, name, startNavigation: true),
-                        ),
+                        onStartNavigation: (point, name) =>
+                            NavigateToSheet.show(
+                              context,
+                              destination: point,
+                              name: name,
+                              onInAppNavigation: () => _navigateToPoint(
+                                point,
+                                name,
+                                startNavigation: true,
+                              ),
+                            ),
                       ),
                     ),
                   ],

@@ -2947,6 +2947,20 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String secnjaImportUpdated(String parcel, int added, int removed) {
+    return 'Seznam dreves za parc. $parcel je posodobljen (+$added / −$removed)';
+  }
+
+  @override
+  String secnjaImportWithdrawn(String parcel) {
+    return 'Seznam dreves za parc. $parcel ni več deljen. Drevesa ostanejo.';
+  }
+
+  @override
+  String get secnjaImportWithdrawnNote =>
+      'Lastnik je seznam umaknil ali je potekel. Drevesa ostanejo.';
+
+  @override
   String get secnjaRevoke => 'Prekliči';
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../models/log_entry.dart';
 import '../models/map_location.dart';
 import '../l10n/l10n.dart';
@@ -42,9 +43,8 @@ class ParcelLogsCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     context.l10n.parcelLogsCardTitle(logs.length),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                 ),
                 Text(
@@ -189,9 +189,8 @@ class ParcelLocationsCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   context.l10n.parcelSavedPointsTitle(locations.length),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -253,6 +252,9 @@ class ParcelSecnjaCard extends StatefulWidget {
   final Function(LatLng point, String name) onNavigateToPoint;
   final SecnjaShareState shareState;
   final DateTime? expiresAt;
+
+  /// The list these trees came from is withdrawn or expired.
+  final bool importWithdrawn;
   final VoidCallback onShare;
   final VoidCallback onRevoke;
 
@@ -273,6 +275,7 @@ class ParcelSecnjaCard extends StatefulWidget {
     required this.onNavigateToPoint,
     this.shareState = SecnjaShareState.notShared,
     this.expiresAt,
+    this.importWithdrawn = false,
     required this.onShare,
     required this.onRevoke,
     this.busy = false,
@@ -324,7 +327,9 @@ class _ParcelSecnjaCardState extends State<ParcelSecnjaCard> {
 
   @override
   Widget build(BuildContext context) {
-    final secnja = widget.secnja.where((m) => !_removed.contains(m.id)).toList();
+    final secnja = widget.secnja
+        .where((m) => !_removed.contains(m.id))
+        .toList();
     final shared = shareState != SecnjaShareState.notShared;
     // A shared parcel keeps its card without marks, so the link can be revoked.
     if (secnja.isEmpty && !shared) return const SizedBox.shrink();
@@ -346,9 +351,8 @@ class _ParcelSecnjaCardState extends State<ParcelSecnjaCard> {
                 const SizedBox(width: 8),
                 Text(
                   context.l10n.parcelSecnjaTitle(secnja.length),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -361,41 +365,45 @@ class _ParcelSecnjaCardState extends State<ParcelSecnjaCard> {
             separatorBuilder: (context, index) => divider,
             itemBuilder: (context, index) {
               final location = secnja[index];
-              return _swipeable(location, ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.deepOrange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+              return _swipeable(
+                location,
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.deepOrange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.carpenter,
+                      color: Colors.deepOrange,
+                      size: 20,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.carpenter,
-                    color: Colors.deepOrange,
-                    size: 20,
+                  title: Text(location.name),
+                  subtitle: Text(
+                    '${location.latitude.toStringAsFixed(5)}, ${location.longitude.toStringAsFixed(5)}',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      color: Colors.grey[400],
+                    ),
                   ),
-                ),
-                title: Text(location.name),
-                subtitle: Text(
-                  '${location.latitude.toStringAsFixed(5)}, ${location.longitude.toStringAsFixed(5)}',
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    color: Colors.grey[400],
+                  trailing: IconButton(
+                    icon: const Icon(Icons.navigation, color: Colors.blue),
+                    tooltip: context.l10n.parcelNavigate,
+                    onPressed: () =>
+                        (widget.onStartNavigation ?? onNavigateToPoint)(
+                          LatLng(location.latitude, location.longitude),
+                          location.name,
+                        ),
                   ),
-                ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.navigation, color: Colors.blue),
-                  tooltip: context.l10n.parcelNavigate,
-                  onPressed: () => (widget.onStartNavigation ?? onNavigateToPoint)(
+                  onTap: () => onNavigateToPoint(
                     LatLng(location.latitude, location.longitude),
                     location.name,
                   ),
                 ),
-                onTap: () => onNavigateToPoint(
-                  LatLng(location.latitude, location.longitude),
-                  location.name,
-                ),
-              ));
+              );
             },
           ),
           divider,
@@ -418,6 +426,14 @@ class _ParcelSecnjaCardState extends State<ParcelSecnjaCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (widget.importWithdrawn)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                l10n.secnjaImportWithdrawnNote,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
           if (secnja.isNotEmpty)
             FilledButton.icon(
               onPressed: widget.busy ? null : widget.onShare,
@@ -432,7 +448,9 @@ class _ParcelSecnjaCardState extends State<ParcelSecnjaCard> {
                   child: Text(
                     widget.expiresAt == null
                         ? ''
-                        : l10n.secnjaSharedUntil(Fmt.date(widget.expiresAt!.toLocal())),
+                        : l10n.secnjaSharedUntil(
+                            Fmt.date(widget.expiresAt!.toLocal()),
+                          ),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),

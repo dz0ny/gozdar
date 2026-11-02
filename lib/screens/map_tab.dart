@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
 import '../models/map_location.dart';
@@ -583,7 +585,9 @@ class MapTabState extends State<MapTab> {
       if (!serviceEnabled) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(L10n.current.mapTabLocationServicesDisabled)),
+            SnackBar(
+              content: Text(L10n.current.mapTabLocationServicesDisabled),
+            ),
           );
         }
         return;
@@ -596,7 +600,9 @@ class MapTabState extends State<MapTab> {
         if (permission == LocationPermission.denied) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(L10n.current.mapTabLocationPermissionDenied)),
+              SnackBar(
+                content: Text(L10n.current.mapTabLocationPermissionDenied),
+              ),
             );
           }
           return;
@@ -637,7 +643,10 @@ class MapTabState extends State<MapTab> {
     final points = mapProvider.locations.where((l) => !l.isSecnja).length;
     final parcel = mapProvider.parcels
         .where((p) => p.containsPoint(position))
-        .fold<Parcel?>(null, (best, p) => best == null || p.areaM2 < best.areaM2 ? p : best);
+        .fold<Parcel?>(
+          null,
+          (best, p) => best == null || p.areaM2 < best.areaM2 ? p : best,
+        );
     final result = await MapDialogs.showAddLocationDialog(
       context: context,
       position: position,
@@ -662,12 +671,16 @@ class MapTabState extends State<MapTab> {
 
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(L10n.current.mapTabLocationAdded(name))));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(L10n.current.mapTabLocationAdded(name))),
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(L10n.current.mapTabErrorWithMessage(mapProvider.error ?? ''))),
+            SnackBar(
+              content: Text(
+                L10n.current.mapTabErrorWithMessage(mapProvider.error ?? ''),
+              ),
+            ),
           );
         }
       }
@@ -851,17 +864,18 @@ class MapTabState extends State<MapTab> {
   /// Snackbar action that opens [parcelId] at its Sečnja card, where the
   /// owner sees the marks and shares them.
   SnackBarAction _secnjaShareSnackAction(int parcelId) => SnackBarAction(
-        label: L10n.current.secnjaShareAction,
-        onPressed: () async {
-          final parcel = await DatabaseService().getParcel(parcelId);
-          if (parcel == null || !mounted) return;
-          await Navigator.of(context).push<bool>(
-            MaterialPageRoute(
-              builder: (context) => ParcelDetailScreen(parcel: parcel, showSecnja: true),
-            ),
-          );
-        },
+    label: L10n.current.secnjaShareAction,
+    onPressed: () async {
+      final parcel = await DatabaseService().getParcel(parcelId);
+      if (parcel == null || !mounted) return;
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (context) =>
+              ParcelDetailScreen(parcel: parcel, showSecnja: true),
+        ),
       );
+    },
+  );
 
   Widget _buildSecnjaPanel() {
     return Positioned(
@@ -888,7 +902,10 @@ class MapTabState extends State<MapTab> {
     final mapProvider = context.read<MapProvider>();
     final parcel = mapProvider.parcels
         .where((p) => p.containsPoint(position))
-        .fold<Parcel?>(null, (best, p) => best == null || p.areaM2 < best.areaM2 ? p : best);
+        .fold<Parcel?>(
+          null,
+          (best, p) => best == null || p.areaM2 < best.areaM2 ? p : best,
+        );
     final prefs = LogInputPrefsService();
     final lastLength = await prefs.getLastLength();
     final species = await prefs.getCurrentSpecies();
@@ -911,7 +928,9 @@ class MapTabState extends State<MapTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(L10n.current.mapTabLogAdded(Fmt.num(entry.volume, 3))),
+            content: Text(
+              L10n.current.mapTabLogAdded(Fmt.num(entry.volume, 3)),
+            ),
           ),
         );
       }
@@ -955,11 +974,19 @@ class MapTabState extends State<MapTab> {
         if (mounted) {
           if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(L10n.current.mapTabLocationDeleted(location.name))),
+              SnackBar(
+                content: Text(
+                  L10n.current.mapTabLocationDeleted(location.name),
+                ),
+              ),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(L10n.current.mapTabErrorWithMessage(mapProvider.error ?? ''))),
+              SnackBar(
+                content: Text(
+                  L10n.current.mapTabErrorWithMessage(mapProvider.error ?? ''),
+                ),
+              ),
             );
           }
         }
@@ -1272,7 +1299,11 @@ class MapTabState extends State<MapTab> {
         _invalidateOfflineQueryCache();
         _refreshOfflineParcels();
         messenger.showSnackBar(
-          SnackBar(content: Text(L10n.current.mapTabRegionDownloaded(name, result.rows))),
+          SnackBar(
+            content: Text(
+              L10n.current.mapTabRegionDownloaded(name, result.rows),
+            ),
+          ),
         );
       }
     } on ParcelDownloadCancelled {
@@ -1300,42 +1331,37 @@ class MapTabState extends State<MapTab> {
   }
 
   /// Query cadastral parcel at the given location and show import dialog
-  Future<void> _queryParcelAtLocation(LatLng location) async {
+  /// Imports the cadastral parcel at [location] straight from the quick
+  /// menu, without the confirm panel. A parcel already saved opens instead.
+  Future<void> _importParcelAt(LatLng location) async {
     final mapProvider = context.read<MapProvider>();
     if (mapProvider.isQueryingParcel) return;
-
     try {
       final parcel = await mapProvider.queryParcelAtLocation(location);
-
       if (!mounted) return;
-
       if (parcel == null) {
-        // Online lookup found nothing — try the offline owner fallback before
-        // giving up (e.g. no connectivity, or the WMS returned no feature).
         if (_showOfflineOwnerFallback(location)) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(L10n.current.mapTabNoParcelAtLocation)),
         );
         return;
       }
-
-      // Preview the parcel geometry (tan, dashed) without importing it. The camera
-      // is left where the user is; no automatic zoom/recenter.
-      setState(() => _previewParcel = parcel);
-
-      // Show the import flow. For a not-yet-imported parcel this opens a
-      // non-modal panel over the map (the map stays pannable); the panel's own
-      // actions clear the preview when done.
-      await _showImportParcelDialog(parcel);
+      final existing = await DatabaseService().findParcelByKoAndNumber(
+        parcel.cadastralMunicipality,
+        parcel.parcelNumber,
+      );
+      if (!mounted) return;
+      if (existing != null) {
+        await _navigateToParcelDetail(existing);
+        return;
+      }
+      await _importCadastralParcel(parcel);
     } catch (e) {
       if (!mounted) return;
-      // Drop any preview drawn before the failure.
-      if (_previewParcel != null) setState(() => _previewParcel = null);
-      // Online lookup failed (timeout/connectivity) — try the offline fallback.
       if (_showOfflineOwnerFallback(location)) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(L10n.current.mapTabParcelSearchError(e))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(L10n.current.mapTabParcelSearchError(e))),
+      );
     }
   }
 
@@ -1354,7 +1380,9 @@ class MapTabState extends State<MapTab> {
 
     // Show the first (smallest bounding box) candidate.
     final hit = hits.first;
-    final owner = hit.owner.isNotEmpty ? hit.owner : L10n.current.mapTabUnknownOwner;
+    final owner = hit.owner.isNotEmpty
+        ? hit.owner
+        : L10n.current.mapTabUnknownOwner;
     final details = [
       L10n.current.mapTabParcelKo(hit.parcela, hit.koLabel),
       if (hit.address != null) hit.address!,
@@ -1462,65 +1490,6 @@ class MapTabState extends State<MapTab> {
     return true;
   }
 
-  /// Show dialog to import a cadastral parcel or view it if already imported
-  Future<void> _showImportParcelDialog(CadastralParcel cadastralParcel) async {
-    // Check if parcel already exists using database service
-    final dbService = DatabaseService();
-    final existingParcel = await dbService.findParcelByKoAndNumber(
-      cadastralParcel.cadastralMunicipality,
-      cadastralParcel.parcelNumber,
-    );
-
-    if (!mounted) return;
-
-    if (existingParcel != null) {
-      // No panel for this branch — drop the preview.
-      setState(() => _previewParcel = null);
-      // Parcel already exists - show option to view it
-      final viewParcel = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(L10n.current.mapTabParcelExistsTitle),
-          content: Text(
-            L10n.current.mapTabParcelExistsBody(
-              cadastralParcel.cadastralMunicipality,
-              cadastralParcel.parcelNumber,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(L10n.current.commonClose),
-            ),
-            FilledButton.icon(
-              onPressed: () => Navigator.of(context).pop(true),
-              icon: const Icon(Icons.visibility),
-              label: Text(L10n.current.mapTabShowInMyParcels),
-            ),
-          ],
-        ),
-      );
-
-      if (viewParcel == true && mounted) {
-        context.read<NavigationNotifier>().navigateToForestWithParcel(
-          existingParcel,
-        );
-        context.go(
-          AppRoutes.parcelDetail(existingParcel.id),
-          extra: existingParcel,
-        );
-      }
-      return;
-    }
-
-    // Parcel doesn't exist - show the non-modal import panel over the map so
-    // the map stays pannable while the user reviews the parcel.
-    setState(() {
-      _pendingImportParcel = cadastralParcel;
-      _printingParcel = false;
-    });
-  }
-
   /// Dismiss the import panel without importing, clearing the preview.
   void _dismissImportPanel() {
     setState(() {
@@ -1617,8 +1586,7 @@ class MapTabState extends State<MapTab> {
                         icon: Icons.download,
                         color: Colors.blue,
                         title: L10n.current.mapTabImportParcelTitle,
-                        onBack:
-                            _printingParcel ? () {} : _backFromImportPanel,
+                        onBack: _printingParcel ? () {} : _backFromImportPanel,
                       ),
                       const SizedBox(height: 8),
                       MapDialogs.importParcelDetails(
@@ -1681,7 +1649,9 @@ class MapTabState extends State<MapTab> {
       final result = await OpenFilex.open(file.path);
       if (result.type != ResultType.done) {
         messenger.showSnackBar(
-          SnackBar(content: Text(L10n.current.mapTabPdfOpenFailed(result.message))),
+          SnackBar(
+            content: Text(L10n.current.mapTabPdfOpenFailed(result.message)),
+          ),
         );
       }
     } catch (e) {
@@ -1713,15 +1683,19 @@ class MapTabState extends State<MapTab> {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(L10n.current.mapTabErrorWithMessage(mapProvider.error ?? ''))),
+            SnackBar(
+              content: Text(
+                L10n.current.mapTabErrorWithMessage(mapProvider.error ?? ''),
+              ),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(L10n.current.mapTabParcelImportError(e))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(L10n.current.mapTabParcelImportError(e))),
+        );
       }
     }
   }
@@ -1739,16 +1713,14 @@ class MapTabState extends State<MapTab> {
       // TODO: Handle KML/KMZ import
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(L10n.current.mapTabKmlUnsupported),
-          ),
+          SnackBar(content: Text(L10n.current.mapTabKmlUnsupported)),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(L10n.current.mapTabImportError(e))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(L10n.current.mapTabImportError(e))),
+        );
       }
     }
   }
@@ -1903,7 +1875,8 @@ class MapTabState extends State<MapTab> {
       final ownerSvc = OwnerLookupService.instance;
       await KoLocator.instance.ensureLoaded();
       if (!mounted) return;
-      final koName = ownerSvc.koName(p.cadastralMunicipality) ??
+      final koName =
+          ownerSvc.koName(p.cadastralMunicipality) ??
           KoLocator.instance.bySifko(p.cadastralMunicipality)?.name;
       final ownerInfo = ownerSvc.lookup(
         p.cadastralMunicipality,
@@ -1940,7 +1913,8 @@ class MapTabState extends State<MapTab> {
 
     final secnjaCount = parcelAtPosition == null || parcelAtPosition.id == 0
         ? 0
-        : (await DatabaseService().getSecnjaByParcel(parcelAtPosition.id)).length;
+        : (await DatabaseService().getSecnjaByParcel(parcelAtPosition.id))
+              .length;
     if (!mounted) return;
 
     await MapLongPressMenu.show(
@@ -1951,11 +1925,7 @@ class MapTabState extends State<MapTab> {
       onAddLocation: () => _showAddLocationDialog(position),
       onAddLog: () => _showAddLogDialog(position),
       onAddSecnja: () => _startSecnjaMarking(position),
-      onImportParcel: () {
-        // Back on the import panel returns to this menu.
-        _importBackTo = position;
-        _queryParcelAtLocation(position);
-      },
+      onImportParcel: () => _importParcelAt(position),
       onViewParcel: parcelAtPosition != null
           ? () => _navigateToParcelDetail(parcelAtPosition!)
           : null,
@@ -1976,7 +1946,8 @@ class MapTabState extends State<MapTab> {
       onNavigate: () {
         // Navigate straight to the pressed point; name it after the parcel
         // under the press when there is one.
-        final name = parcelAtPosition?.name ??
+        final name =
+            parcelAtPosition?.name ??
             (offlineParcelAtPosition != null
                 ? L10n.current.mapTabParcelShort(
                     offlineParcelAtPosition.parcelNumber,
@@ -2005,9 +1976,7 @@ class MapTabState extends State<MapTab> {
           ScaffoldMessenger.of(context)
             ..clearSnackBars()
             ..showSnackBar(
-              SnackBar(
-                content: Text(L10n.current.mapTabMejnikiHint),
-              ),
+              SnackBar(content: Text(L10n.current.mapTabMejnikiHint)),
             );
           return;
         }
@@ -2327,8 +2296,8 @@ class MapTabState extends State<MapTab> {
                   icon: Icons.check,
                   label: L10n.current.mapTabFinish,
                   color: Colors.green.shade300,
-                  onTap: (_measurement.hasEnoughPoints &&
-                          !_measurement.isFinished)
+                  onTap:
+                      (_measurement.hasEnoughPoints && !_measurement.isFinished)
                       ? _finishMeasurement
                       : null,
                 ),
@@ -2642,7 +2611,9 @@ class MapTabState extends State<MapTab> {
                         color: Colors.blue.withValues(alpha: 0.3),
                         borderColor: Colors.blue,
                         borderStrokeWidth: 3.0,
-                        label: L10n.current.mapTabParcelLabel(_searchedParcel!.label),
+                        label: L10n.current.mapTabParcelLabel(
+                          _searchedParcel!.label,
+                        ),
                         labelStyle: const TextStyle(
                           color: Colors.blue,
                           fontWeight: FontWeight.bold,
@@ -2869,7 +2840,8 @@ class MapTabState extends State<MapTab> {
             : null,
         // The found-parcel sheet (open while _searchedParcel is set) would
         // sit under the GPS button.
-        hideBottomControls: _measurement.isActive ||
+        hideBottomControls:
+            _measurement.isActive ||
             _secnjaMarking ||
             _pendingImportParcel != null ||
             _searchedParcel != null,
@@ -2887,7 +2859,8 @@ class MapTabState extends State<MapTab> {
           if (downloadState.isDownloading)
             _buildTileDownloadCard(context, downloadState),
           if (mapProvider.isQueryingParcel) _buildParcelQueryPill(context),
-          if (mapProvider.isLoadingLocations) _buildLocationsLoadingPill(context),
+          if (mapProvider.isLoadingLocations)
+            _buildLocationsLoadingPill(context),
         ];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2907,20 +2880,12 @@ class MapTabState extends State<MapTab> {
     TileDownloadVisualState downloadState,
   ) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Theme.of(
-          context,
-        ).colorScheme.surface.withValues(alpha: 0.92),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 8,
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8),
         ],
       ),
       child: Column(
@@ -2933,9 +2898,8 @@ class MapTabState extends State<MapTab> {
                   L10n.current.mapTabTilesDownloadPercent(
                     Fmt.num(downloadState.percent * 100, 1),
                   ),
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(context).textTheme.labelLarge
+                      ?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
               TextButton(
@@ -2945,9 +2909,7 @@ class MapTabState extends State<MapTab> {
             ],
           ),
           LinearProgressIndicator(
-            value: downloadState.total == 0
-                ? null
-                : downloadState.percent,
+            value: downloadState.total == 0 ? null : downloadState.percent,
           ),
           const SizedBox(height: 6),
           Text(
@@ -2970,10 +2932,7 @@ class MapTabState extends State<MapTab> {
       borderRadius: const BorderRadius.all(Radius.circular(8)),
       color: Theme.of(context).colorScheme.surface,
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -3194,10 +3153,7 @@ class MapTabState extends State<MapTab> {
 
       // Croatian holders are only fetched live, so keep them with the parcel.
       final hrOwner = HrOwnerService.isCroatianKo(koInt)
-          ? await HrOwnerService.instance.lookup(
-              koInt!,
-              wfsParcel.parcelNumber,
-            )
+          ? await HrOwnerService.instance.lookup(koInt!, wfsParcel.parcelNumber)
           : null;
 
       // Convert WfsParcel to Parcel model
@@ -3233,9 +3189,9 @@ class MapTabState extends State<MapTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(L10n.current.mapTabImportError(e))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(L10n.current.mapTabImportError(e))),
+        );
       }
     }
   }
@@ -3280,13 +3236,14 @@ class MapTabState extends State<MapTab> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: [
                     // Croatian users see their own source first.
-                    if (L10n.current.localeName == 'hr') _buildUsageRightsSection(
-                      context,
-                      L10n.current.mapTabUsageDguName,
-                      'DGU',
-                      L10n.current.mapTabUsageDguDesc,
-                      'https://oss.uredjenazemlja.hr/',
-                    ),
+                    if (L10n.current.localeName == 'hr')
+                      _buildUsageRightsSection(
+                        context,
+                        L10n.current.mapTabUsageDguName,
+                        'DGU',
+                        L10n.current.mapTabUsageDguDesc,
+                        'https://oss.uredjenazemlja.hr/',
+                      ),
                     _buildUsageRightsSection(
                       context,
                       L10n.current.mapTabUsageGuName,
@@ -3301,13 +3258,14 @@ class MapTabState extends State<MapTab> {
                       L10n.current.mapTabUsageZgsDesc,
                       'https://www.zgs.si/',
                     ),
-                    if (L10n.current.localeName != 'hr') _buildUsageRightsSection(
-                      context,
-                      L10n.current.mapTabUsageDguName,
-                      'DGU',
-                      L10n.current.mapTabUsageDguDesc,
-                      'https://oss.uredjenazemlja.hr/',
-                    ),
+                    if (L10n.current.localeName != 'hr')
+                      _buildUsageRightsSection(
+                        context,
+                        L10n.current.mapTabUsageDguName,
+                        'DGU',
+                        L10n.current.mapTabUsageDguDesc,
+                        'https://oss.uredjenazemlja.hr/',
+                      ),
                     _buildUsageRightsSection(
                       context,
                       'OpenStreetMap',
@@ -3326,9 +3284,8 @@ class MapTabState extends State<MapTab> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                        color: Theme.of(context).colorScheme.secondaryContainer
+                            .withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -3343,9 +3300,9 @@ class MapTabState extends State<MapTab> {
                               L10n.current.mapTabUsageDisclaimer,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                               ),
                             ),
                           ),

@@ -7,7 +7,10 @@ import 'package:latlong2/latlong.dart';
 typedef PointResult = ({String name, double latitude, double longitude});
 
 void main() {
-  Future<Future<PointResult?>> open(WidgetTester tester, {String? parcelLabel}) async {
+  Future<Future<PointResult?>> open(
+    WidgetTester tester, {
+    String? parcelLabel,
+  }) async {
     late Future<PointResult?> result;
     await tester.pumpWidget(
       MaterialApp(
@@ -45,7 +48,6 @@ void main() {
     expect((await result)!.name, 'Točka 7');
   });
 
-
   testWidgets('typed text is the name', (tester) async {
     final result = await open(tester);
     await tester.enterText(find.byType(TextField), 'Stara bukev');
@@ -65,7 +67,6 @@ void main() {
     expect(field.autofocus, isFalse);
     expect(field.focusNode?.hasFocus ?? false, isFalse);
   });
-
 
   testWidgets('subtitle names the parcel', (tester) async {
     await open(tester, parcelLabel: 'Parcela 1234/5');

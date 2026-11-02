@@ -4986,6 +4986,24 @@ abstract class AppLocalizations {
   /// **'Deljeno · velja do {date}'**
   String secnjaSharedUntil(String date);
 
+  /// No description provided for @secnjaImportUpdated.
+  ///
+  /// In sl, this message translates to:
+  /// **'Seznam dreves za parc. {parcel} je posodobljen (+{added} / −{removed})'**
+  String secnjaImportUpdated(String parcel, int added, int removed);
+
+  /// No description provided for @secnjaImportWithdrawn.
+  ///
+  /// In sl, this message translates to:
+  /// **'Seznam dreves za parc. {parcel} ni več deljen. Drevesa ostanejo.'**
+  String secnjaImportWithdrawn(String parcel);
+
+  /// No description provided for @secnjaImportWithdrawnNote.
+  ///
+  /// In sl, this message translates to:
+  /// **'Lastnik je seznam umaknil ali je potekel. Drevesa ostanejo.'**
+  String get secnjaImportWithdrawnNote;
+
   /// No description provided for @secnjaRevoke.
   ///
   /// In sl, this message translates to:

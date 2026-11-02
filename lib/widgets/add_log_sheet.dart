@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../l10n/l10n.dart';
 import '../models/log_entry.dart';
 import '../utils/decimal_input.dart';
@@ -97,26 +98,36 @@ class _AddLogSheetState extends State<AddLogSheet> {
   }
 
   bool _diameterBad(double? d) =>
-      d != null && d > 0 && (d < AddLogSheet.minDiameter || d > AddLogSheet.maxDiameter);
+      d != null &&
+      d > 0 &&
+      (d < AddLogSheet.minDiameter || d > AddLogSheet.maxDiameter);
 
   bool _lengthBad(double? l) =>
-      l != null && l > 0 && (l < AddLogSheet.minLength || l > AddLogSheet.maxLength);
+      l != null &&
+      l > 0 &&
+      (l < AddLogSheet.minLength || l > AddLogSheet.maxLength);
 
   void _save(double diameter, double length, double volume) {
-    Navigator.of(context).pop(LogEntry(
-      diameter: diameter,
-      length: length,
-      volume: volume,
-      latitude: widget.position.latitude,
-      longitude: widget.position.longitude,
-      species: widget.species,
-    ));
+    Navigator.of(context).pop(
+      LogEntry(
+        diameter: diameter,
+        length: length,
+        volume: volume,
+        latitude: widget.position.latitude,
+        longitude: widget.position.longitude,
+        species: widget.species,
+      ),
+    );
   }
 
-  Widget _field(String label, String unit, TextEditingController controller,
-      {bool autofocus = false,
-      TextInputAction action = TextInputAction.next,
-      VoidCallback? onSubmitted}) {
+  Widget _field(
+    String label,
+    String unit,
+    TextEditingController controller, {
+    bool autofocus = false,
+    TextInputAction action = TextInputAction.next,
+    VoidCallback? onSubmitted,
+  }) {
     return TextField(
       controller: controller,
       autofocus: autofocus,
@@ -144,23 +155,32 @@ class _AddLogSheetState extends State<AddLogSheet> {
     final length = parseDecimal(_length.text);
     final error = _diameterBad(diameter)
         ? l10n.logsInlineDiameterRange(
-            Fmt.num(AddLogSheet.minDiameter, 0), Fmt.num(AddLogSheet.maxDiameter, 0))
+            Fmt.num(AddLogSheet.minDiameter, 0),
+            Fmt.num(AddLogSheet.maxDiameter, 0),
+          )
         : _lengthBad(length)
-            ? l10n.logsInlineLengthRange(
-                Fmt.num(AddLogSheet.minLength, 1), Fmt.num(AddLogSheet.maxLength, 0))
-            : null;
-    final volume = error == null &&
+        ? l10n.logsInlineLengthRange(
+            Fmt.num(AddLogSheet.minLength, 1),
+            Fmt.num(AddLogSheet.maxLength, 0),
+          )
+        : null;
+    final volume =
+        error == null &&
             diameter != null &&
             length != null &&
             diameter > 0 &&
             length > 0
         ? LogEntry.calculateVolume(diameter, length)
         : null;
-    final onSave = volume == null ? null : () => _save(diameter!, length!, volume);
+    final onSave = volume == null
+        ? null
+        : () => _save(diameter!, length!, volume);
 
     return Padding(
       // Stay above the keyboard.
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 16, 16),
@@ -182,19 +202,31 @@ class _AddLogSheetState extends State<AddLogSheet> {
               Row(
                 children: [
                   Expanded(
-                    child: _field(l10n.logsInlineDiameterHint, 'cm', _diameter,
-                        autofocus: true),
+                    child: _field(
+                      l10n.logsInlineDiameterHint,
+                      'cm',
+                      _diameter,
+                      autofocus: true,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _field(l10n.logsInlineLengthHint, 'm', _length,
-                        action: TextInputAction.done, onSubmitted: onSave),
+                    child: _field(
+                      l10n.logsInlineLengthHint,
+                      'm',
+                      _length,
+                      action: TextInputAction.done,
+                      onSubmitted: onSave,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               if (error != null)
-                Text(error, style: textTheme.bodyMedium?.copyWith(color: cs.error))
+                Text(
+                  error,
+                  style: textTheme.bodyMedium?.copyWith(color: cs.error),
+                )
               else
                 Text(
                   volume == null ? '– m³' : '${Fmt.num(volume, 2)} m³',

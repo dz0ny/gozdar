@@ -42,7 +42,9 @@ void main() {
 
   Finder field(String label) => find.widgetWithText(TextField, label);
 
-  testWidgets('diameter and length save a located log with its volume', (tester) async {
+  testWidgets('diameter and length save a located log with its volume', (
+    tester,
+  ) async {
     final result = await open(tester, species: 'Bukev');
     await tester.enterText(field('Premer'), '30');
     await tester.enterText(field('Dolžina'), '4');
@@ -59,7 +61,9 @@ void main() {
     expect(log.species, 'Bukev');
   });
 
-  testWidgets('the last length is prefilled and the diameter has focus', (tester) async {
+  testWidgets('the last length is prefilled and the diameter has focus', (
+    tester,
+  ) async {
     await open(tester, lastLength: 4.5);
     expect(tester.widget<TextField>(field('Dolžina')).controller!.text, '4.5');
     expect(tester.widget<TextField>(field('Premer')).autofocus, isTrue);
@@ -68,7 +72,11 @@ void main() {
   testWidgets('save is disabled until both values are valid', (tester) async {
     await open(tester);
     FilledButton save() => tester.widget<FilledButton>(
-        find.ancestor(of: find.text('Shrani'), matching: find.byWidgetPredicate((w) => w is FilledButton)));
+      find.ancestor(
+        of: find.text('Shrani'),
+        matching: find.byWidgetPredicate((w) => w is FilledButton),
+      ),
+    );
     expect(save().onPressed, isNull);
     await tester.enterText(field('Premer'), '354');
     await tester.enterText(field('Dolžina'), '4');

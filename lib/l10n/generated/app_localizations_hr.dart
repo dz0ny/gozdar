@@ -2944,6 +2944,20 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
+  String secnjaImportUpdated(String parcel, int added, int removed) {
+    return 'Popis stabala za čest. $parcel je ažuriran (+$added / −$removed)';
+  }
+
+  @override
+  String secnjaImportWithdrawn(String parcel) {
+    return 'Popis stabala za čest. $parcel više nije podijeljen. Stabla ostaju.';
+  }
+
+  @override
+  String get secnjaImportWithdrawnNote =>
+      'Vlasnik je povukao popis ili je istekao. Stabla ostaju.';
+
+  @override
   String get secnjaRevoke => 'Opozovi';
 
   @override

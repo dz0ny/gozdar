@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../l10n/l10n.dart';
 import '../models/map_location.dart';
 import '../services/cadastral_service.dart';
@@ -22,7 +23,7 @@ class MapDialogs {
   /// through [onBack]. Returns the name and coordinates, or null when the
   /// user backs out or closes the sheet.
   static Future<({String name, double latitude, double longitude})?>
-      showAddLocationDialog({
+  showAddLocationDialog({
     required BuildContext context,
     required LatLng position,
     required int nextNumber,
@@ -137,9 +138,8 @@ class MapDialogs {
 
   /// Show dialog to add a location by entering coordinates manually
   /// Returns a record with (name, latitude, longitude) if confirmed, null if cancelled
-  static Future<({String name, double latitude, double longitude})?> showAddLocationByCoordinatesDialog({
-    required BuildContext context,
-  }) async {
+  static Future<({String name, double latitude, double longitude})?>
+  showAddLocationByCoordinatesDialog({required BuildContext context}) async {
     final nameController = TextEditingController();
     final latController = TextEditingController();
     final lngController = TextEditingController();
@@ -150,7 +150,10 @@ class MapDialogs {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.edit_location_alt, color: Theme.of(context).colorScheme.primary),
+            Icon(
+              Icons.edit_location_alt,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             const SizedBox(width: 8),
             Expanded(child: Text(context.l10n.mapwAddLocationByCoordsTitle)),
           ],
@@ -175,12 +178,17 @@ class MapDialogs {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.north),
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                    signed: true,
+                  ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return context.l10n.mapwEnterLat;
                     }
-                    final lat = double.tryParse(value.trim().replaceAll(',', '.'));
+                    final lat = double.tryParse(
+                      value.trim().replaceAll(',', '.'),
+                    );
                     if (lat == null) {
                       return context.l10n.mapwInvalidNumber;
                     }
@@ -203,12 +211,17 @@ class MapDialogs {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.east),
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                    signed: true,
+                  ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return context.l10n.mapwEnterLng;
                     }
-                    final lng = double.tryParse(value.trim().replaceAll(',', '.'));
+                    final lng = double.tryParse(
+                      value.trim().replaceAll(',', '.'),
+                    );
                     if (lng == null) {
                       return context.l10n.mapwInvalidNumber;
                     }
@@ -336,10 +349,10 @@ class MapDialogs {
             ownerSummary(owner.owners),
             onTap: manyOwners
                 ? () => OwnersSheet.show(
-                      context,
-                      owners: owner.owners,
-                      info: owner,
-                    )
+                    context,
+                    owners: owner.owners,
+                    info: owner,
+                  )
                 : null,
           ),
         if (SiValuationService.covers(ko))
@@ -360,10 +373,7 @@ class MapDialogs {
             },
           ),
         if (SiValuationService.covers(ko))
-          ParcelAuctionLine(
-            sifko: ko,
-            parcela: cadastralParcel.parcelNumber,
-          ),
+          ParcelAuctionLine(sifko: ko, parcela: cadastralParcel.parcelNumber),
       ],
     );
   }
@@ -393,9 +403,8 @@ class MapDialogs {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: bold
-                    ? Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        )
+                    ? Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700)
                     : Theme.of(context).textTheme.bodyLarge,
               ),
             ),
@@ -406,5 +415,4 @@ class MapDialogs {
       ),
     );
   }
-
 }

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../db/app_database.dart';
 import '../models/log_batch.dart';
 import '../models/log_entry.dart';
@@ -13,123 +14,124 @@ import '../models/imported_overlay.dart';
 // ---------------------------------------------------------------------------
 
 Parcel _parcelFromDb(DbParcel r) => Parcel(
-      id: r.id,
-      name: r.name,
-      polygonJson: r.polygonJson,
-      createdAt: r.createdAt,
-      cadastralMunicipality: r.cadastralMunicipality,
-      parcelNumber: r.parcelNumber,
-      owner: r.owner,
-      notes: r.notes,
-      forestType: ForestType.values[r.forestTypeIndex],
-      woodAllowance: r.woodAllowance,
-      woodCut: r.woodCut,
-      treesCut: r.treesCut,
-      shareId: r.shareId,
-      shareEditToken: r.shareEditToken,
-      shareHash: r.shareHash,
-      sharedAt: r.sharedAt,
-      shareExpiresAt: r.shareExpiresAt,
-    );
+  id: r.id,
+  name: r.name,
+  polygonJson: r.polygonJson,
+  createdAt: r.createdAt,
+  cadastralMunicipality: r.cadastralMunicipality,
+  parcelNumber: r.parcelNumber,
+  owner: r.owner,
+  notes: r.notes,
+  forestType: ForestType.values[r.forestTypeIndex],
+  woodAllowance: r.woodAllowance,
+  woodCut: r.woodCut,
+  treesCut: r.treesCut,
+  shareId: r.shareId,
+  shareEditToken: r.shareEditToken,
+  shareHash: r.shareHash,
+  sharedAt: r.sharedAt,
+  shareExpiresAt: r.shareExpiresAt,
+);
 
 LogEntry _logFromDb(DbLogEntry r) => LogEntry(
-      id: r.id,
-      diameter: r.diameter,
-      length: r.length,
-      volume: r.volume,
-      latitude: r.latitude,
-      longitude: r.longitude,
-      notes: r.notes,
-      species: r.species,
-      createdAt: r.createdAt,
-      batchId: r.batchId,
-      parcelId: r.parcelId,
-    );
+  id: r.id,
+  diameter: r.diameter,
+  length: r.length,
+  volume: r.volume,
+  latitude: r.latitude,
+  longitude: r.longitude,
+  notes: r.notes,
+  species: r.species,
+  createdAt: r.createdAt,
+  batchId: r.batchId,
+  parcelId: r.parcelId,
+);
 
 LogBatch _batchFromDb(DbLogBatch r) => LogBatch(
-      id: r.id,
-      name: r.owner,
-      notes: r.notes,
-      latitude: r.latitude,
-      longitude: r.longitude,
-      totalVolume: r.totalVolume,
-      logCount: r.logCount,
-      createdAt: r.createdAt,
-    );
+  id: r.id,
+  name: r.owner,
+  notes: r.notes,
+  latitude: r.latitude,
+  longitude: r.longitude,
+  totalVolume: r.totalVolume,
+  logCount: r.logCount,
+  createdAt: r.createdAt,
+);
 
 MapLocation _locationFromDb(DbMapLocation r) => MapLocation(
-      id: r.id,
-      name: r.name,
-      latitude: r.latitude,
-      longitude: r.longitude,
-      type: LocationType.values[r.typeIndex],
-      createdAt: r.createdAt,
-      parcelId: r.parcelId,
-      sourceShareId: r.sourceShareId,
-    );
+  id: r.id,
+  name: r.name,
+  latitude: r.latitude,
+  longitude: r.longitude,
+  type: LocationType.values[r.typeIndex],
+  createdAt: r.createdAt,
+  parcelId: r.parcelId,
+  sourceShareId: r.sourceShareId,
+);
 
 ImportedOverlay _overlayFromDb(DbImportedOverlay r) => ImportedOverlay(
-      id: r.id,
-      name: r.name,
-      layerName: r.layerName,
-      geometryType: r.geometryType,
-      geometryJson: r.geometryJson,
-      properties: r.properties,
-      colorValue: r.colorValue,
-      visible: r.visible,
-      createdAt: r.createdAt,
-    );
+  id: r.id,
+  name: r.name,
+  layerName: r.layerName,
+  geometryType: r.geometryType,
+  geometryJson: r.geometryJson,
+  properties: r.properties,
+  colorValue: r.colorValue,
+  visible: r.visible,
+  createdAt: r.createdAt,
+);
 
 // ---------------------------------------------------------------------------
 // Conversion helpers: app model → drift companion
 // ---------------------------------------------------------------------------
 
 ParcelsCompanion _parcelToCompanion(Parcel p) => ParcelsCompanion(
-      id: p.id == 0 ? const Value.absent() : Value(p.id),
-      name: Value(p.name),
-      polygonJson: Value(p.polygonJson),
-      createdAt: Value(p.createdAt),
-      cadastralMunicipality: Value(p.cadastralMunicipality),
-      parcelNumber: Value(p.parcelNumber),
-      owner: Value(p.owner),
-      notes: Value(p.notes),
-      forestTypeIndex: Value(p.forestTypeIndex),
-      woodAllowance: Value(p.woodAllowance),
-      woodCut: Value(p.woodCut),
-      treesCut: Value(p.treesCut),
-      shareId: Value(p.shareId),
-      shareEditToken: Value(p.shareEditToken),
-      shareHash: Value(p.shareHash),
-      sharedAt: Value(p.sharedAt),
-      shareExpiresAt: Value(p.shareExpiresAt),
-    );
+  id: p.id == 0 ? const Value.absent() : Value(p.id),
+  name: Value(p.name),
+  polygonJson: Value(p.polygonJson),
+  createdAt: Value(p.createdAt),
+  cadastralMunicipality: Value(p.cadastralMunicipality),
+  parcelNumber: Value(p.parcelNumber),
+  owner: Value(p.owner),
+  notes: Value(p.notes),
+  forestTypeIndex: Value(p.forestTypeIndex),
+  woodAllowance: Value(p.woodAllowance),
+  woodCut: Value(p.woodCut),
+  treesCut: Value(p.treesCut),
+  shareId: Value(p.shareId),
+  shareEditToken: Value(p.shareEditToken),
+  shareHash: Value(p.shareHash),
+  sharedAt: Value(p.sharedAt),
+  shareExpiresAt: Value(p.shareExpiresAt),
+);
 
 LogEntriesCompanion _logToCompanion(LogEntry e) => LogEntriesCompanion(
-      id: e.id == 0 ? const Value.absent() : Value(e.id),
-      diameter: Value(e.diameter),
-      length: Value(e.length),
-      volume: Value(e.volume),
-      latitude: Value(e.latitude),
-      longitude: Value(e.longitude),
-      notes: Value(e.notes),
-      species: Value(e.species),
-      createdAt: Value(e.createdAt),
-      batchId: Value(e.batchId),
-      parcelId: Value(e.parcelId),
-    );
+  id: e.id == 0 ? const Value.absent() : Value(e.id),
+  diameter: Value(e.diameter),
+  length: Value(e.length),
+  volume: Value(e.volume),
+  latitude: Value(e.latitude),
+  longitude: Value(e.longitude),
+  notes: Value(e.notes),
+  species: Value(e.species),
+  createdAt: Value(e.createdAt),
+  batchId: Value(e.batchId),
+  parcelId: Value(e.parcelId),
+);
 
 LogBatchesCompanion _batchToCompanion(LogBatch b) => LogBatchesCompanion(
-      id: b.id == 0 ? const Value.absent() : Value(b.id),
-      owner: Value(b.name),
-      notes: Value(b.notes),
-      latitude: Value(b.latitude),
-      longitude: Value(b.longitude),
-      totalVolume: Value(b.totalVolume),
-      logCount: Value(b.logCount),
-      createdAt: Value(b.createdAt),
-    );
+  id: b.id == 0 ? const Value.absent() : Value(b.id),
+  owner: Value(b.name),
+  notes: Value(b.notes),
+  latitude: Value(b.latitude),
+  longitude: Value(b.longitude),
+  totalVolume: Value(b.totalVolume),
+  logCount: Value(b.logCount),
+  createdAt: Value(b.createdAt),
+);
 
-MapLocationsCompanion _locationToCompanion(MapLocation l) => MapLocationsCompanion(
+MapLocationsCompanion _locationToCompanion(MapLocation l) =>
+    MapLocationsCompanion(
       id: l.id == 0 ? const Value.absent() : Value(l.id),
       name: Value(l.name),
       latitude: Value(l.latitude),
@@ -140,7 +142,8 @@ MapLocationsCompanion _locationToCompanion(MapLocation l) => MapLocationsCompani
       sourceShareId: Value(l.sourceShareId),
     );
 
-ImportedOverlaysCompanion _overlayToCompanion(ImportedOverlay o) => ImportedOverlaysCompanion(
+ImportedOverlaysCompanion _overlayToCompanion(ImportedOverlay o) =>
+    ImportedOverlaysCompanion(
       id: o.id == 0 ? const Value.absent() : Value(o.id),
       name: Value(o.name),
       layerName: Value(o.layerName),
@@ -164,7 +167,11 @@ class DatabaseService {
   DatabaseService._internal();
 
   AppDatabase get db {
-    if (_db == null) throw StateError('DatabaseService not initialized. Call initialize() first.');
+    if (_db == null) {
+      throw StateError(
+        'DatabaseService not initialized. Call initialize() first.',
+      );
+    }
     return _db!;
   }
 
@@ -208,82 +215,120 @@ class DatabaseService {
   }
 
   Future<List<LogEntry>> getAllLogs() async {
-    final rows = await (db.select(db.logEntries)
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
-        .get();
+    final rows =
+        await (db.select(db.logEntries)..orderBy([
+              (t) => OrderingTerm(
+                expression: t.createdAt,
+                mode: OrderingMode.desc,
+              ),
+            ]))
+            .get();
     return rows.map(_logFromDb).toList();
   }
 
   Future<double> getTotalVolume() async {
-    final rows = await (db.select(db.logEntries)..where((t) => t.batchId.isNull())).get();
+    final rows = await (db.select(
+      db.logEntries,
+    )..where((t) => t.batchId.isNull())).get();
     return rows.fold<double>(0.0, (sum, r) => sum + r.volume);
   }
 
   Future<List<LogEntry>> getUnassignedLogs() async {
-    final rows = await (db.select(db.logEntries)
-          ..where((t) => t.batchId.isNull())
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
-        .get();
+    final rows =
+        await (db.select(db.logEntries)
+              ..where((t) => t.batchId.isNull())
+              ..orderBy([
+                (t) => OrderingTerm(
+                  expression: t.createdAt,
+                  mode: OrderingMode.desc,
+                ),
+              ]))
+            .get();
     return rows.map(_logFromDb).toList();
   }
 
   Future<List<LogEntry>> getLogsByBatch(int batchId) async {
-    final rows = await (db.select(db.logEntries)
-          ..where((t) => t.batchId.equals(batchId))
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
-        .get();
+    final rows =
+        await (db.select(db.logEntries)
+              ..where((t) => t.batchId.equals(batchId))
+              ..orderBy([
+                (t) => OrderingTerm(
+                  expression: t.createdAt,
+                  mode: OrderingMode.desc,
+                ),
+              ]))
+            .get();
     return rows.map(_logFromDb).toList();
   }
 
   Future<void> assignLogToBatch(int logId, int batchId) async {
-    await (db.update(db.logEntries)..where((t) => t.id.equals(logId)))
-        .write(LogEntriesCompanion(batchId: Value(batchId)));
+    await (db.update(db.logEntries)..where((t) => t.id.equals(logId))).write(
+      LogEntriesCompanion(batchId: Value(batchId)),
+    );
   }
 
   Future<void> unassignLogFromBatch(int logId) async {
-    await (db.update(db.logEntries)..where((t) => t.id.equals(logId)))
-        .write(const LogEntriesCompanion(batchId: Value(null)));
+    await (db.update(db.logEntries)..where((t) => t.id.equals(logId))).write(
+      const LogEntriesCompanion(batchId: Value(null)),
+    );
   }
 
   Future<double> getBatchTotalVolume(int batchId) async {
-    final rows =
-        await (db.select(db.logEntries)..where((t) => t.batchId.equals(batchId))).get();
+    final rows = await (db.select(
+      db.logEntries,
+    )..where((t) => t.batchId.equals(batchId))).get();
     return rows.fold<double>(0.0, (sum, r) => sum + r.volume);
   }
 
   Future<int> getBatchLogCount(int batchId) async {
-    return db.logEntries.count(where: (t) => t.batchId.equals(batchId)).getSingle();
+    return db.logEntries
+        .count(where: (t) => t.batchId.equals(batchId))
+        .getSingle();
   }
 
   Future<List<LogEntry>> getLogsByParcel(int parcelId) async {
-    final rows = await (db.select(db.logEntries)
-          ..where((t) => t.parcelId.equals(parcelId))
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
-        .get();
+    final rows =
+        await (db.select(db.logEntries)
+              ..where((t) => t.parcelId.equals(parcelId))
+              ..orderBy([
+                (t) => OrderingTerm(
+                  expression: t.createdAt,
+                  mode: OrderingMode.desc,
+                ),
+              ]))
+            .get();
     return rows.map(_logFromDb).toList();
   }
 
   Future<double> getParcelTotalVolume(int parcelId) async {
-    final rows =
-        await (db.select(db.logEntries)..where((t) => t.parcelId.equals(parcelId))).get();
+    final rows = await (db.select(
+      db.logEntries,
+    )..where((t) => t.parcelId.equals(parcelId))).get();
     return rows.fold<double>(0.0, (sum, r) => sum + r.volume);
   }
 
   Future<int> getParcelLogCount(int parcelId) async {
-    return db.logEntries.count(where: (t) => t.parcelId.equals(parcelId)).getSingle();
+    return db.logEntries
+        .count(where: (t) => t.parcelId.equals(parcelId))
+        .getSingle();
   }
 
   Future<void> assignLogToParcel(int logId, int parcelId) async {
-    await (db.update(db.logEntries)..where((t) => t.id.equals(logId)))
-        .write(LogEntriesCompanion(parcelId: Value(parcelId)));
+    await (db.update(db.logEntries)..where((t) => t.id.equals(logId))).write(
+      LogEntriesCompanion(parcelId: Value(parcelId)),
+    );
   }
 
   Future<void> unassignLogFromParcel(int logId) async {
-    await (db.update(db.logEntries)..where((t) => t.id.equals(logId)))
-        .write(const LogEntriesCompanion(parcelId: Value(null)));
+    await (db.update(db.logEntries)..where((t) => t.id.equals(logId))).write(
+      const LogEntriesCompanion(parcelId: Value(null)),
+    );
   }
 
-  Future<Parcel?> findContainingParcel(double latitude, double longitude) async {
+  Future<Parcel?> findContainingParcel(
+    double latitude,
+    double longitude,
+  ) async {
     final parcels = await getAllParcels();
     final point = LatLng(latitude, longitude);
     for (final parcel in parcels) {
@@ -312,9 +357,14 @@ class DatabaseService {
   }
 
   Future<List<LogBatch>> getAllLogBatches() async {
-    final rows = await (db.select(db.logBatches)
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
-        .get();
+    final rows =
+        await (db.select(db.logBatches)..orderBy([
+              (t) => OrderingTerm(
+                expression: t.createdAt,
+                mode: OrderingMode.desc,
+              ),
+            ]))
+            .get();
     return rows.map(_batchFromDb).toList();
   }
 
@@ -324,8 +374,9 @@ class DatabaseService {
   /// under it.
   Future<int> insertLocation(MapLocation location) async {
     if (location.isSecnja && location.parcelId == null) {
-      location.parcelId =
-          await parcelIdAt(LatLng(location.latitude, location.longitude));
+      location.parcelId = await parcelIdAt(
+        LatLng(location.latitude, location.longitude),
+      );
     }
     return db.into(db.mapLocations).insert(_locationToCompanion(location));
   }
@@ -337,24 +388,30 @@ class DatabaseService {
 
   /// Sečnja marks of one parcel, oldest first.
   Future<List<MapLocation>> getSecnjaByParcel(int parcelId) async {
-    final rows = await (db.select(db.mapLocations)
-          ..where((t) =>
-              t.parcelId.equals(parcelId) &
-              t.typeIndex.equals(LocationType.secnja.index))
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
-        .get();
+    final rows =
+        await (db.select(db.mapLocations)
+              ..where(
+                (t) =>
+                    t.parcelId.equals(parcelId) &
+                    t.typeIndex.equals(LocationType.secnja.index),
+              )
+              ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
+            .get();
     return rows.map(_locationFromDb).toList();
   }
 
   /// Number of sečnja marks per parcel id. Parcels without marks are absent.
   Future<Map<int, int>> getSecnjaCountsByParcel() async {
     final count = db.mapLocations.id.count();
-    final rows = await (db.selectOnly(db.mapLocations)
-          ..addColumns([db.mapLocations.parcelId, count])
-          ..where(db.mapLocations.parcelId.isNotNull() &
-              db.mapLocations.typeIndex.equals(LocationType.secnja.index))
-          ..groupBy([db.mapLocations.parcelId]))
-        .get();
+    final rows =
+        await (db.selectOnly(db.mapLocations)
+              ..addColumns([db.mapLocations.parcelId, count])
+              ..where(
+                db.mapLocations.parcelId.isNotNull() &
+                    db.mapLocations.typeIndex.equals(LocationType.secnja.index),
+              )
+              ..groupBy([db.mapLocations.parcelId]))
+            .get();
     return {
       for (final r in rows) r.read(db.mapLocations.parcelId)!: r.read(count)!,
     };
@@ -362,11 +419,14 @@ class DatabaseService {
 
   Future<int> countSecnjaWithoutParcel() async {
     final count = db.mapLocations.id.count();
-    final row = await (db.selectOnly(db.mapLocations)
-          ..addColumns([count])
-          ..where(db.mapLocations.parcelId.isNull() &
-              db.mapLocations.typeIndex.equals(LocationType.secnja.index)))
-        .getSingle();
+    final row =
+        await (db.selectOnly(db.mapLocations)
+              ..addColumns([count])
+              ..where(
+                db.mapLocations.parcelId.isNull() &
+                    db.mapLocations.typeIndex.equals(LocationType.secnja.index),
+              ))
+            .getSingle();
     return row.read(count)!;
   }
 
@@ -379,42 +439,77 @@ class DatabaseService {
   }
 
   Future<void> updateLocationName(int id, String name) async {
-    await (db.update(db.mapLocations)..where((t) => t.id.equals(id)))
-        .write(MapLocationsCompanion(name: Value(name)));
+    await (db.update(db.mapLocations)..where((t) => t.id.equals(id))).write(
+      MapLocationsCompanion(name: Value(name)),
+    );
   }
 
   Future<List<MapLocation>> getAllLocations() async {
-    final rows = await (db.select(db.mapLocations)
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
-        .get();
+    final rows =
+        await (db.select(db.mapLocations)..orderBy([
+              (t) => OrderingTerm(
+                expression: t.createdAt,
+                mode: OrderingMode.desc,
+              ),
+            ]))
+            .get();
     return rows.map(_locationFromDb).toList();
   }
 
   // ==================== RECEIVED SHARES ====================
 
   /// Deletes the sečnja marks that came from the share link [shareId].
+  /// Share links that brought marks to this phone.
+  Future<List<String>> importedShareIds() async {
+    final query = db.selectOnly(db.mapLocations, distinct: true)
+      ..addColumns([db.mapLocations.sourceShareId])
+      ..where(db.mapLocations.sourceShareId.isNotNull());
+    return [
+      for (final row in await query.get())
+        row.read(db.mapLocations.sourceShareId)!,
+    ];
+  }
+
+  /// Marks that the share link [shareId] brought.
+  Future<List<MapLocation>> getSecnjaFromShare(String shareId) async {
+    final rows = await (db.select(
+      db.mapLocations,
+    )..where((t) => t.sourceShareId.equals(shareId))).get();
+    return rows.map(_locationFromDb).toList();
+  }
+
   Future<int> deleteSecnjaFromShare(String shareId) {
-    return (db.delete(db.mapLocations)..where((t) => t.sourceShareId.equals(shareId)))
-        .go();
+    return (db.delete(
+      db.mapLocations,
+    )..where((t) => t.sourceShareId.equals(shareId))).go();
   }
 
   /// A saved parcel without a k.o. whose name is [name].
   Future<Parcel?> findParcelByName(String name) async {
-    final row = await (db.select(db.parcels)
-          ..where((t) => t.name.equals(name) & t.cadastralMunicipality.isNull())
-          ..limit(1))
-        .getSingleOrNull();
+    final row =
+        await (db.select(db.parcels)
+              ..where(
+                (t) => t.name.equals(name) & t.cadastralMunicipality.isNull(),
+              )
+              ..limit(1))
+            .getSingleOrNull();
     return row == null ? null : _parcelFromDb(row);
   }
 
   // ==================== PARCEL OPERATIONS ====================
 
-  Future<Parcel?> findParcelByKoAndNumber(int? koNumber, String? parcelNumber) async {
+  Future<Parcel?> findParcelByKoAndNumber(
+    int? koNumber,
+    String? parcelNumber,
+  ) async {
     if (koNumber == null || parcelNumber == null) return null;
-    final row = await (db.select(db.parcels)
-          ..where((t) =>
-              t.cadastralMunicipality.equals(koNumber) & t.parcelNumber.equals(parcelNumber)))
-        .getSingleOrNull();
+    final row =
+        await (db.select(db.parcels)..where(
+              (t) =>
+                  t.cadastralMunicipality.equals(koNumber) &
+                  t.parcelNumber.equals(parcelNumber),
+            ))
+            .getSingleOrNull();
     return row == null ? null : _parcelFromDb(row);
   }
 
@@ -433,8 +528,9 @@ class DatabaseService {
   }
 
   Future<Parcel?> getParcel(int id) async {
-    final row = await (db.select(db.parcels)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row = await (db.select(
+      db.parcels,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     return row == null ? null : _parcelFromDb(row);
   }
 
@@ -474,19 +570,24 @@ class DatabaseService {
   }
 
   Future<Map<String, int>> deleteParcelWithContents(int id) async {
-    final row = await (db.select(db.parcels)..where((t) => t.id.equals(id))).getSingleOrNull();
+    final row = await (db.select(
+      db.parcels,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     if (row == null) return {'logs': 0, 'locations': 0};
     final parcel = _parcelFromDb(row);
 
-    final logsDeleted =
-        await (db.delete(db.logEntries)..where((t) => t.parcelId.equals(id))).go();
+    final logsDeleted = await (db.delete(
+      db.logEntries,
+    )..where((t) => t.parcelId.equals(id))).go();
 
     final allLocations = await getAllLocations();
     int locationsDeleted = 0;
     for (final loc in allLocations) {
       if (loc.parcelId == id ||
           parcel.containsPoint(LatLng(loc.latitude, loc.longitude))) {
-        await (db.delete(db.mapLocations)..where((t) => t.id.equals(loc.id))).go();
+        await (db.delete(
+          db.mapLocations,
+        )..where((t) => t.id.equals(loc.id))).go();
         locationsDeleted++;
       }
     }
@@ -496,9 +597,14 @@ class DatabaseService {
   }
 
   Future<List<Parcel>> getAllParcels() async {
-    final rows = await (db.select(db.parcels)
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
-        .get();
+    final rows =
+        await (db.select(db.parcels)..orderBy([
+              (t) => OrderingTerm(
+                expression: t.createdAt,
+                mode: OrderingMode.desc,
+              ),
+            ]))
+            .get();
     return rows.map(_parcelFromDb).toList();
   }
 
@@ -507,22 +613,31 @@ class DatabaseService {
     return parcels.fold<double>(0.0, (sum, p) => sum + p.areaM2);
   }
 
-  Future<bool> cadastralParcelExists(int cadastralMunicipality, String parcelNumber) async {
+  Future<bool> cadastralParcelExists(
+    int cadastralMunicipality,
+    String parcelNumber,
+  ) async {
     final count = await db.parcels
         .count(
-            where: (t) =>
-                t.cadastralMunicipality.equals(cadastralMunicipality) &
-                t.parcelNumber.equals(parcelNumber))
+          where: (t) =>
+              t.cadastralMunicipality.equals(cadastralMunicipality) &
+              t.parcelNumber.equals(parcelNumber),
+        )
         .getSingle();
     return count > 0;
   }
 
-  Future<Parcel?> getCadastralParcel(int cadastralMunicipality, String parcelNumber) async {
-    final row = await (db.select(db.parcels)
-          ..where((t) =>
-              t.cadastralMunicipality.equals(cadastralMunicipality) &
-              t.parcelNumber.equals(parcelNumber)))
-        .getSingleOrNull();
+  Future<Parcel?> getCadastralParcel(
+    int cadastralMunicipality,
+    String parcelNumber,
+  ) async {
+    final row =
+        await (db.select(db.parcels)..where(
+              (t) =>
+                  t.cadastralMunicipality.equals(cadastralMunicipality) &
+                  t.parcelNumber.equals(parcelNumber),
+            ))
+            .getSingleOrNull();
     return row == null ? null : _parcelFromDb(row);
   }
 
@@ -541,26 +656,39 @@ class DatabaseService {
   }
 
   Future<List<ImportedOverlay>> getAllOverlays() async {
-    final rows = await (db.select(db.importedOverlays)
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
-        .get();
+    final rows =
+        await (db.select(db.importedOverlays)..orderBy([
+              (t) => OrderingTerm(
+                expression: t.createdAt,
+                mode: OrderingMode.desc,
+              ),
+            ]))
+            .get();
     return rows.map(_overlayFromDb).toList();
   }
 
   Future<List<ImportedOverlay>> getVisibleOverlays() async {
-    final rows = await (db.select(db.importedOverlays)
-          ..where((t) => t.visible.equals(true))
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
-        .get();
+    final rows =
+        await (db.select(db.importedOverlays)
+              ..where((t) => t.visible.equals(true))
+              ..orderBy([
+                (t) => OrderingTerm(
+                  expression: t.createdAt,
+                  mode: OrderingMode.desc,
+                ),
+              ]))
+            .get();
     return rows.map(_overlayFromDb).toList();
   }
 
   Future<void> toggleOverlayVisibility(int id) async {
-    final row = await (db.select(db.importedOverlays)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row = await (db.select(
+      db.importedOverlays,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     if (row == null) return;
-    await (db.update(db.importedOverlays)..where((t) => t.id.equals(id)))
-        .write(ImportedOverlaysCompanion(visible: Value(!row.visible)));
+    await (db.update(db.importedOverlays)..where((t) => t.id.equals(id))).write(
+      ImportedOverlaysCompanion(visible: Value(!row.visible)),
+    );
   }
 
   Future<void> deleteAllOverlays() async {

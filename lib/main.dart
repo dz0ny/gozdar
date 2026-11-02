@@ -1,9 +1,11 @@
 import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import 'config/distribution.dart';
 import 'router/app_router.dart';
 import 'router/navigation_notifier.dart';
@@ -24,6 +26,7 @@ import 'services/locale_settings.dart';
 import 'l10n/l10n.dart';
 import 'providers/logs_provider.dart';
 import 'providers/map_provider.dart';
+import 'services/secnja_share_flow.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -61,7 +64,11 @@ class GozdarApp extends StatefulWidget {
   State<GozdarApp> createState() => _GozdarAppState();
 }
 
-class _GozdarAppState extends State<GozdarApp> {
+class _GozdarAppState extends State<GozdarApp> with WidgetsBindingObserver {
+  /// Messages from work outside a screen, e.g. imported sečnja updates.
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
+  DateTime? _sharesCheckedAt;
+
   static const _initialRouteDefine = String.fromEnvironment(
     'GOZDAR_INITIAL_ROUTE',
   );
@@ -80,6 +87,9 @@ class _GozdarAppState extends State<GozdarApp> {
       initialLocation: initialRoute,
     );
 
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkImportedShares());
+
     // Check for updates on startup (Android only)
     if (Platform.isAndroid && !isPlayDistribution) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -89,7 +99,31 @@ class _GozdarAppState extends State<GozdarApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _checkImportedShares();
+  }
+
+  /// Picks up the owner's changes to imported sečnja lists, at most every
+  /// five minutes.
+  Future<void> _checkImportedShares() async {
+    final now = DateTime.now();
+    final last = _sharesCheckedAt;
+    if (last != null && now.difference(last) < const Duration(minutes: 5)) {
+      return;
+    }
+    _sharesCheckedAt = now;
+    final messenger = _messengerKey.currentState;
+    if (messenger == null) return;
+    try {
+      await refreshImportedSecnja(messenger.context, messenger: messenger);
+    } catch (e) {
+      debugPrint('Imported share check failed: $e');
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _router.dispose();
     super.dispose();
   }
@@ -117,6 +151,7 @@ class _GozdarAppState extends State<GozdarApp> {
         builder: (context, localeSettings, _) => MaterialApp.router(
           title: 'Gozdar',
           debugShowCheckedModeBanner: false,
+          scaffoldMessengerKey: _messengerKey,
           theme: AppTheme.greenTheme,
           routerConfig: _router,
           locale: localeSettings.override,
@@ -127,8 +162,7 @@ class _GozdarAppState extends State<GozdarApp> {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          localeResolutionCallback: (locale, supported) =>
-              L10n.resolve(locale),
+          localeResolutionCallback: (locale, supported) => L10n.resolve(locale),
         ),
       ),
     );
