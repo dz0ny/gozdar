@@ -2988,4 +2988,43 @@ class AppLocalizationsHr extends AppLocalizations {
   String secnjaForCutCount(int count) {
     return '$count za sječu';
   }
+
+  @override
+  String secnjaReceived(String parcel, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Primljena sječa: čestica $parcel · $count stabala',
+      few: 'Primljena sječa: čestica $parcel · $count stabla',
+      one: 'Primljena sječa: čestica $parcel · $count stablo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get secnjaLinkExpired => 'Poveznica je istekla ili je opozvana';
+
+  @override
+  String get secnjaNoConnection => 'Nema veze — pokušaj ponovno';
+
+  @override
+  String get receivedSectionTitle => 'PRIMLJENO';
+
+  @override
+  String secnjaReceivedRow(String parcel, String who, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Sječa $parcel · $who · još $days dana',
+      few: 'Sječa $parcel · $who · još $days dana',
+      one: 'Sječa $parcel · $who · još $days dan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get receivedDeleteConfirm => 'Ukloniti primljenu sječu?';
+
+  @override
+  String get receivedLoading => 'Učitavam sječu…';
 }

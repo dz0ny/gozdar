@@ -822,5 +822,12 @@
   "secnjaRevoke": "Opozovi",
   "secnjaRevokeConfirm": "Opozvati poveznicu? Sjekač je više neće moći otvoriti.",
   "secnjaShareFailed": "Dijeljenje nije uspjelo — provjeri vezu",
-  "secnjaForCutCount": "{count} za sječu"
+  "secnjaForCutCount": "{count} za sječu",
+  "secnjaReceived": "{count, plural, one{Primljena sječa: čestica {parcel} · {count} stablo} few{Primljena sječa: čestica {parcel} · {count} stabla} other{Primljena sječa: čestica {parcel} · {count} stabala}}",
+  "secnjaLinkExpired": "Poveznica je istekla ili je opozvana",
+  "secnjaNoConnection": "Nema veze — pokušaj ponovno",
+  "receivedSectionTitle": "PRIMLJENO",
+  "secnjaReceivedRow": "{days, plural, one{Sječa {parcel} · {who} · još {days} dan} few{Sječa {parcel} · {who} · još {days} dana} other{Sječa {parcel} · {who} · još {days} dana}}",
+  "receivedDeleteConfirm": "Ukloniti primljenu sječu?",
+  "receivedLoading": "Učitavam sječu…"
 }

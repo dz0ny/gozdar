@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/received_share.dart';
 import '../l10n/l10n.dart';
 import '../models/map_layer.dart';
 import '../services/public_parcel_settings.dart';
@@ -30,6 +31,11 @@ class MapLayerSelector extends StatefulWidget {
   final bool auctionsVisible;
   final ValueChanged<bool>? onAuctionsToggled;
 
+  /// Sečnja from other owners, under PREJETO. Hidden when the callbacks are null.
+  final List<ReceivedShare> receivedShares;
+  final void Function(String shareId, bool visible)? onReceivedShareToggled;
+  final void Function(String shareId)? onReceivedShareDeleted;
+
   const MapLayerSelector({
     super.key,
     required this.currentBaseLayer,
@@ -46,6 +52,9 @@ class MapLayerSelector extends StatefulWidget {
     this.onPublicParcelsChanged,
     this.auctionsVisible = false,
     this.onAuctionsToggled,
+    this.receivedShares = const [],
+    this.onReceivedShareToggled,
+    this.onReceivedShareDeleted,
   });
 
   /// Show the layer selector as a modal bottom sheet
@@ -65,6 +74,9 @@ class MapLayerSelector extends StatefulWidget {
     VoidCallback? onPublicParcelsChanged,
     bool auctionsVisible = false,
     ValueChanged<bool>? onAuctionsToggled,
+    List<ReceivedShare> receivedShares = const [],
+    void Function(String shareId, bool visible)? onReceivedShareToggled,
+    void Function(String shareId)? onReceivedShareDeleted,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -94,6 +106,9 @@ class MapLayerSelector extends StatefulWidget {
             onPublicParcelsChanged: onPublicParcelsChanged,
             auctionsVisible: auctionsVisible,
             onAuctionsToggled: onAuctionsToggled,
+            receivedShares: receivedShares,
+            onReceivedShareToggled: onReceivedShareToggled,
+            onReceivedShareDeleted: onReceivedShareDeleted,
           ),
         ),
       ),
@@ -544,6 +559,13 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
+        if (widget.onReceivedShareToggled != null &&
+            widget.onReceivedShareDeleted != null)
+          ReceivedSharesSection(
+            shares: widget.receivedShares,
+            onToggle: widget.onReceivedShareToggled!,
+            onDelete: widget.onReceivedShareDeleted!,
+          ),
         for (final entry in categories)
           _buildCategoryCard(entry.key, entry.value),
         _buildLegend(),
@@ -973,5 +995,109 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       case OverlayCategory.hrvatska:
         return Icons.flag_outlined;
     }
+  }
+}
+
+/// PREJETO: one switch per sečnja share received from another owner.
+/// Keeps its own copy of the list, so the open sheet updates at once.
+class ReceivedSharesSection extends StatefulWidget {
+  final List<ReceivedShare> shares;
+  final void Function(String shareId, bool visible) onToggle;
+  final void Function(String shareId) onDelete;
+
+  const ReceivedSharesSection({
+    super.key,
+    required this.shares,
+    required this.onToggle,
+    required this.onDelete,
+  });
+
+  @override
+  State<ReceivedSharesSection> createState() => _ReceivedSharesSectionState();
+}
+
+class _ReceivedSharesSectionState extends State<ReceivedSharesSection> {
+  late List<ReceivedShare> _shares = [...widget.shares];
+
+  @override
+  void didUpdateWidget(ReceivedSharesSection old) {
+    super.didUpdateWidget(old);
+    if (old.shares != widget.shares) _shares = [...widget.shares];
+  }
+
+  Future<void> _confirmDelete(ReceivedShare share) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: Text(context.l10n.receivedDeleteConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(context.l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: Text(context.l10n.commonDelete),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _shares.removeWhere((s) => s.shareId == share.shareId));
+    widget.onDelete(share.shareId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_shares.isEmpty) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              l10n.receivedSectionTitle,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    letterSpacing: 1,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ),
+          for (final share in _shares)
+            Builder(builder: (context) {
+              final p = share.payload;
+              final who = p.owner ?? p.koName ?? p.koNumber?.toString() ?? '';
+              return ListTile(
+                contentPadding: const EdgeInsets.only(left: 16, right: 4),
+                leading: const Icon(Icons.carpenter, color: Colors.blue),
+                title: Text(
+                  '🪓 ${l10n.secnjaReceivedRow(p.parcelNumber, who, share.daysLeft)}',
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Switch(
+                      value: share.visible,
+                      onChanged: (v) {
+                        setState(() => share.visible = v);
+                        widget.onToggle(share.shareId, v);
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      tooltip: l10n.commonDelete,
+                      onPressed: () => _confirmDelete(share),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
   }
 }

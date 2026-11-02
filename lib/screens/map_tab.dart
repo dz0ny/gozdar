@@ -362,6 +362,9 @@ class MapTabState extends State<MapTab> {
   bool _printingParcel = false;
   _MeasurementState _measurement = const _MeasurementState();
 
+  // True once FlutterMap reports onMapReady; the controller works from then.
+  bool _mapReady = false;
+
   // Sečnja marking mode: crosshair at the map centre, one tap per tree.
   bool _secnjaMarking = false;
   final _secnjaPrefs = SecnjaMarkingPrefs();
@@ -676,6 +679,18 @@ class MapTabState extends State<MapTab> {
         );
       }
     }
+  }
+
+  /// Moves the camera to show [bounds], e.g. a received share.
+  void _fitTo(LatLngBounds bounds) {
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: bounds,
+        padding: const EdgeInsets.all(64),
+        maxZoom: 17,
+      ),
+    );
+    _saveMapState();
   }
 
   /// Enters the sečnja marking mode with the crosshair on [position].
@@ -1787,6 +1802,9 @@ class MapTabState extends State<MapTab> {
         // The tint follows through _onAuctionsChanged once the list loads.
         if (visible) unawaited(AuctionService.instance.ensureLoaded());
       },
+      receivedShares: mapProvider.receivedShares,
+      onReceivedShareToggled: mapProvider.setReceivedShareVisible,
+      onReceivedShareDeleted: mapProvider.deleteReceivedShare,
       publicParcelsAvailable: ParcelLookupService.instance.isAvailable,
       onPublicParcelsChanged: () {
         // A category toggle changes which parcels are tinted. When the
@@ -2285,6 +2303,12 @@ class MapTabState extends State<MapTab> {
   Widget build(BuildContext context) {
     // Watch provider for changes (including worker URL, parcels, locations)
     final mapProvider = context.watch<MapProvider>();
+    if (_mapReady) {
+      final focus = mapProvider.takePendingFocus();
+      if (focus != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _fitTo(focus));
+      }
+    }
     final vlakeEnabled = context.watch<VlakeSettings>().showOnMap;
     // Lazily load the embedded Vlake data the first time the overlay is on.
     if (vlakeEnabled && !VlakeService.instance.isLoaded) {
@@ -2313,6 +2337,7 @@ class MapTabState extends State<MapTab> {
         zoomIn: false,
       ),
       onLocationLongPress: _dialogManager.showDeleteLocationDialog,
+      receivedShares: mapProvider.receivedShares,
       onLogTap: (point, name) => setNavigationTarget(
         NavigationTarget(location: point, name: name),
         zoomIn: false,
@@ -2386,11 +2411,15 @@ class MapTabState extends State<MapTab> {
                 maxZoom: MapLayer.appMaxZoom,
                 // Move to saved position when map is ready
                 onMapReady: () {
+                  _mapReady = true;
                   _mapController.moveAndRotate(
                     mapProvider.center,
                     mapProvider.zoom,
                     mapProvider.rotation,
                   );
+                  // A share link opened before the map existed.
+                  final focus = mapProvider.takePendingFocus();
+                  if (focus != null) _fitTo(focus);
                   if (mounted) {
                     setState(() {
                       _visibleBounds = _mapController.camera.visibleBounds;
@@ -2622,6 +2651,20 @@ class MapTabState extends State<MapTab> {
                       );
                     },
                   ),
+                // Parcels of received sečnja shares
+                if (mapProvider.receivedShares.any((s) => s.visible))
+                  PolygonLayer(
+                    polygons: [
+                      for (final share in mapProvider.receivedShares)
+                        if (share.visible && share.payload.polygon.length >= 3)
+                          Polygon(
+                            points: share.payload.polygon,
+                            color: Colors.blue.withValues(alpha: 0.08),
+                            borderColor: Colors.blue,
+                            borderStrokeWidth: 2,
+                          ),
+                    ],
+                  ),
                 // All markers using the unified renderer
                 MarkerLayer(markers: markerRenderer.getAllMarkers()),
                 if (_measurement.points.isNotEmpty)
@@ -2788,11 +2831,13 @@ class MapTabState extends State<MapTab> {
       floatingActionButton: MapControls(
         mapController: _mapController,
         currentBaseLayer: mapProvider.currentBaseLayer,
-        locationsCount: mapProvider.locations.length,
+        locationsCount:
+            mapProvider.locations.length + mapProvider.receivedPointCount,
         onLayerSelectorPressed: _showLayerSelector,
         onSearchPressed: showParcelSearchDialog,
         onGpsPressed: _centerOnGpsLocation,
-        onLocationsPressed: mapProvider.locations.isNotEmpty
+        onLocationsPressed: mapProvider.locations.isNotEmpty ||
+                mapProvider.receivedPointCount > 0
             ? _showLocationsSheet
             : null,
         // The found-parcel sheet (open while _searchedParcel is set) would
@@ -2969,6 +3014,7 @@ class MapTabState extends State<MapTab> {
       locations: mapProvider.locations,
       logs: mapProvider.geolocatedLogs,
       parcels: mapProvider.parcels,
+      receivedShares: mapProvider.receivedShares,
       onNavigate: (target) {
         setNavigationTarget(target, zoomIn: true);
       },

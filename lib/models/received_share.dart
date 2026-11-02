@@ -27,6 +27,6 @@ class ReceivedShare {
   /// Whole days until the link expires, never below zero.
   int get daysLeft {
     final left = expiresAt.difference(DateTime.now());
-    return left.isNegative ? 0 : (left.inHours / 24).ceil();
+    return left.isNegative ? 0 : (left.inSeconds / 86400).ceil();
   }
 }

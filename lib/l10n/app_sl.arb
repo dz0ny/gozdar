@@ -2125,5 +2125,35 @@
         "type": "int"
       }
     }
-  }
+  },
+  "secnjaReceived": "{count, plural, one{Prejeta sečnja: parcela {parcel} · {count} drevo} two{Prejeta sečnja: parcela {parcel} · {count} drevesi} few{Prejeta sečnja: parcela {parcel} · {count} drevesa} other{Prejeta sečnja: parcela {parcel} · {count} dreves}}",
+  "@secnjaReceived": {
+    "placeholders": {
+      "parcel": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "secnjaLinkExpired": "Povezava je potekla ali bila preklicana",
+  "secnjaNoConnection": "Ni povezave — poskusi znova",
+  "receivedSectionTitle": "PREJETO",
+  "secnjaReceivedRow": "{days, plural, one{Sečnja {parcel} · {who} · še {days} dan} two{Sečnja {parcel} · {who} · še {days} dneva} few{Sečnja {parcel} · {who} · še {days} dni} other{Sečnja {parcel} · {who} · še {days} dni}}",
+  "@secnjaReceivedRow": {
+    "placeholders": {
+      "parcel": {
+        "type": "String"
+      },
+      "who": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "receivedDeleteConfirm": "Odstranim prejeto sečnjo?",
+  "receivedLoading": "Nalagam sečnjo…"
 }

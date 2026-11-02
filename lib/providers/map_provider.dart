@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_map/flutter_map.dart' show LatLngBounds;
 import 'package:latlong2/latlong.dart';
 import '../l10n/l10n.dart';
 import '../models/map_location.dart';
@@ -6,6 +7,8 @@ import '../models/map_layer.dart';
 import '../models/parcel.dart';
 import '../models/log_entry.dart';
 import '../models/navigation_target.dart';
+import '../models/received_share.dart';
+import '../models/secnja_share.dart';
 import '../services/database_service.dart';
 import '../services/map_preferences_service.dart';
 import '../services/cadastral_service.dart';
@@ -46,6 +49,12 @@ class MapProvider extends ChangeNotifier {
   bool _isLoadingParcels = false;
   bool _isLoadingLogs = false;
   bool _isQueryingParcel = false;
+
+  // Sečnja that other owners shared with this phone.
+  List<ReceivedShare> _receivedShares = [];
+
+  // Area the map should show next, e.g. a share that just arrived.
+  LatLngBounds? _pendingFocus;
 
   // Navigation state
   NavigationTarget? _navigationTarget;
@@ -181,6 +190,50 @@ class MapProvider extends ChangeNotifier {
   }
 
   // Location operations
+
+  List<ReceivedShare> get receivedShares => List.unmodifiable(_receivedShares);
+
+  /// Number of trees in the visible received shares.
+  int get receivedPointCount => _receivedShares
+      .where((s) => s.visible)
+      .fold(0, (sum, s) => sum + s.payload.points.length);
+
+  Future<void> loadReceivedShares() async {
+    try {
+      _receivedShares = await _databaseService.getReceivedShares();
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> setReceivedShareVisible(String shareId, bool visible) async {
+    await _databaseService.setReceivedShareVisible(shareId, visible);
+    await loadReceivedShares();
+  }
+
+  Future<void> deleteReceivedShare(String shareId) async {
+    await _databaseService.deleteReceivedShare(shareId);
+    await loadReceivedShares();
+  }
+
+  /// Asks the map to show [payload]: its parcel, or its trees without one.
+  void focusOn(SecnjaSharePayload payload) {
+    final points = payload.polygon.isNotEmpty
+        ? payload.polygon
+        : [for (final p in payload.points) p.position];
+    if (points.isEmpty) return;
+    _pendingFocus = LatLngBounds.fromPoints(points);
+    notifyListeners();
+  }
+
+  /// Returns the area to show and clears it, so the map moves only once.
+  LatLngBounds? takePendingFocus() {
+    final focus = _pendingFocus;
+    _pendingFocus = null;
+    return focus;
+  }
 
   /// Load all saved locations from database
   Future<void> loadLocations() async {

@@ -11,6 +11,7 @@ import '../screens/logs_tab.dart';
 import '../screens/map_tab.dart';
 import '../screens/parcel_detail_screen.dart';
 import '../screens/parcel_editor.dart';
+import '../screens/receive_share_screen.dart';
 import '../widgets/log_entry_form.dart';
 import '../widgets/main_scaffold.dart';
 import 'route_names.dart';
@@ -45,6 +46,15 @@ class LogEntryFormParams {
   const LogEntryFormParams({this.logEntry, this.onSave});
 }
 
+/// Route of a sečnja share link. It downloads the share, then goes to the
+/// map. It sits outside the tab shell, so a cold and a warm start both reach it.
+GoRoute receiveShareRoute() => GoRoute(
+      path: '/s/:id',
+      builder: (context, state) => ReceiveShareScreen(
+        shareId: state.pathParameters['id']!,
+      ),
+    );
+
 /// Create the GoRouter configuration
 GoRouter createRouter({required bool showOnboarding, String? initialLocation}) {
   return GoRouter(
@@ -59,6 +69,9 @@ GoRouter createRouter({required bool showOnboarding, String? initialLocation}) {
         path: AppRoutes.onboarding,
         builder: (context, state) => const IntroWizardScreen(),
       ),
+
+      // Sečnja share link, opened from outside the app.
+      receiveShareRoute(),
 
       // About screen (full screen, outside shell)
       GoRoute(

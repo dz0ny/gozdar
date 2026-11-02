@@ -24,6 +24,7 @@ import 'services/locale_settings.dart';
 import 'l10n/l10n.dart';
 import 'providers/logs_provider.dart';
 import 'providers/map_provider.dart';
+import 'services/secnja_share_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -100,11 +101,20 @@ class _GozdarAppState extends State<GozdarApp> {
       providers: [
         ChangeNotifierProvider(create: (_) => LogsProvider()..loadLogEntries()),
         ChangeNotifierProvider(
-          create: (_) => MapProvider()
-            ..loadPreferences()
-            ..loadLocations()
-            ..loadParcels()
-            ..loadGeolocatedLogs(),
+          create: (_) {
+            final provider = MapProvider()
+              ..loadPreferences()
+              ..loadLocations()
+              ..loadParcels()
+              ..loadGeolocatedLogs()
+              ..loadReceivedShares();
+            // Drop expired sečnja shares, then fetch fresh copies of the others.
+            SecnjaShareService.instance
+                .refreshReceived()
+                .whenComplete(provider.loadReceivedShares)
+                .ignore();
+            return provider;
+          },
         ),
         ChangeNotifierProvider.value(value: _navigationNotifier),
         ChangeNotifierProvider.value(value: VlakeSettings.instance),

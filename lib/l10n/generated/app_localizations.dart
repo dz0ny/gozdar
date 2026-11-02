@@ -5045,6 +5045,48 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'{count} za posek'**
   String secnjaForCutCount(int count);
+
+  /// No description provided for @secnjaReceived.
+  ///
+  /// In sl, this message translates to:
+  /// **'{count, plural, one{Prejeta sečnja: parcela {parcel} · {count} drevo} two{Prejeta sečnja: parcela {parcel} · {count} drevesi} few{Prejeta sečnja: parcela {parcel} · {count} drevesa} other{Prejeta sečnja: parcela {parcel} · {count} dreves}}'**
+  String secnjaReceived(String parcel, int count);
+
+  /// No description provided for @secnjaLinkExpired.
+  ///
+  /// In sl, this message translates to:
+  /// **'Povezava je potekla ali bila preklicana'**
+  String get secnjaLinkExpired;
+
+  /// No description provided for @secnjaNoConnection.
+  ///
+  /// In sl, this message translates to:
+  /// **'Ni povezave — poskusi znova'**
+  String get secnjaNoConnection;
+
+  /// No description provided for @receivedSectionTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'PREJETO'**
+  String get receivedSectionTitle;
+
+  /// No description provided for @secnjaReceivedRow.
+  ///
+  /// In sl, this message translates to:
+  /// **'{days, plural, one{Sečnja {parcel} · {who} · še {days} dan} two{Sečnja {parcel} · {who} · še {days} dneva} few{Sečnja {parcel} · {who} · še {days} dni} other{Sečnja {parcel} · {who} · še {days} dni}}'**
+  String secnjaReceivedRow(String parcel, String who, int days);
+
+  /// No description provided for @receivedDeleteConfirm.
+  ///
+  /// In sl, this message translates to:
+  /// **'Odstranim prejeto sečnjo?'**
+  String get receivedDeleteConfirm;
+
+  /// No description provided for @receivedLoading.
+  ///
+  /// In sl, this message translates to:
+  /// **'Nalagam sečnjo…'**
+  String get receivedLoading;
 }
 
 class _AppLocalizationsDelegate

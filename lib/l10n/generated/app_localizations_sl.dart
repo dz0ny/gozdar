@@ -2992,4 +2992,45 @@ class AppLocalizationsSl extends AppLocalizations {
   String secnjaForCutCount(int count) {
     return '$count za posek';
   }
+
+  @override
+  String secnjaReceived(String parcel, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Prejeta sečnja: parcela $parcel · $count dreves',
+      few: 'Prejeta sečnja: parcela $parcel · $count drevesa',
+      two: 'Prejeta sečnja: parcela $parcel · $count drevesi',
+      one: 'Prejeta sečnja: parcela $parcel · $count drevo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get secnjaLinkExpired => 'Povezava je potekla ali bila preklicana';
+
+  @override
+  String get secnjaNoConnection => 'Ni povezave — poskusi znova';
+
+  @override
+  String get receivedSectionTitle => 'PREJETO';
+
+  @override
+  String secnjaReceivedRow(String parcel, String who, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Sečnja $parcel · $who · še $days dni',
+      few: 'Sečnja $parcel · $who · še $days dni',
+      two: 'Sečnja $parcel · $who · še $days dneva',
+      one: 'Sečnja $parcel · $who · še $days dan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get receivedDeleteConfirm => 'Odstranim prejeto sečnjo?';
+
+  @override
+  String get receivedLoading => 'Nalagam sečnjo…';
 }
