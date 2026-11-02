@@ -150,6 +150,15 @@ class _SwipeableContentState extends State<_SwipeableContent> {
   }
 }
 
+/// Saved items on one parcel, or outside every parcel when [parcel] is null.
+class _ParcelGroup {
+  final Parcel? parcel;
+  final locations = <MapLocation>[];
+  final logs = <LogEntry>[];
+
+  _ParcelGroup(this.parcel);
+}
+
 class _ContentWidget extends StatelessWidget {
   final ScrollController scrollController;
   final List<MapLocation> locations;
@@ -197,14 +206,40 @@ class _ContentWidget extends StatelessWidget {
     );
   }
 
-  /// Find containing parcel for a point
-  String? _findParcelName(double lat, double lng) {
-    for (final parcel in parcels) {
-      if (parcel.containsPoint(LatLng(lat, lng))) {
-        return parcel.name;
+  /// Parcel of a sečnja mark by its link, of anything else by its position.
+  /// The smallest parcel wins when parcels overlap.
+  Parcel? _parcelFor(int? parcelId, double lat, double lng) {
+    if (parcelId != null) {
+      for (final p in parcels) {
+        if (p.id == parcelId) return p;
       }
     }
-    return null;
+    Parcel? best;
+    for (final p in parcels) {
+      if (!p.containsPoint(LatLng(lat, lng))) continue;
+      if (best == null || p.areaM2 < best.areaM2) best = p;
+    }
+    return best;
+  }
+
+  /// Groups locations and logs by parcel: parcels by name, then the items
+  /// outside every parcel. Inside a group: points, sečnja, then logs.
+  List<_ParcelGroup> _groups(List<LogEntry> geolocatedLogs) {
+    final byParcel = <Parcel?, _ParcelGroup>{};
+    _ParcelGroup groupOf(Parcel? p) => byParcel.putIfAbsent(p, () => _ParcelGroup(p));
+    final sorted = [
+      ...locations.where((l) => !l.isSecnja),
+      ...locations.where((l) => l.isSecnja),
+    ];
+    for (final l in sorted) {
+      groupOf(_parcelFor(l.parcelId, l.latitude, l.longitude)).locations.add(l);
+    }
+    for (final log in geolocatedLogs) {
+      groupOf(_parcelFor(log.parcelId, log.latitude!, log.longitude!)).logs.add(log);
+    }
+    final named = byParcel.values.where((g) => g.parcel != null).toList()
+      ..sort((a, b) => a.parcel!.name.toLowerCase().compareTo(b.parcel!.name.toLowerCase()));
+    return [...named, ?byParcel[null]];
   }
 
   @override
@@ -264,75 +299,27 @@ class _ContentWidget extends StatelessWidget {
                 : ListView(
               controller: scrollController,
               children: [
-                // Locations section (non-sečnja)
-                if (locations.where((l) => !l.isSecnja).isNotEmpty) ...[
+                for (final group in _groups(geolocatedLogs)) ...[
                   _SectionHeader(
-                    icon: Icons.location_on,
-                    color: Colors.orange,
-                    title: context.l10n.mapwSectionPoints,
-                    count: locations.where((l) => !l.isSecnja).length,
+                    icon: group.parcel == null ? Icons.not_listed_location : Icons.forest,
+                    color: group.parcel == null
+                        ? Theme.of(context).colorScheme.onSurfaceVariant
+                        : Theme.of(context).colorScheme.primary,
+                    title: group.parcel?.name ?? context.l10n.secnjaOutsideParcel,
+                    count: group.locations.length + group.logs.length,
                   ),
-                  ...locations.where((l) => !l.isSecnja).map((location) {
-                    final parcelName = _findParcelName(
-                      location.latitude,
-                      location.longitude,
-                    );
-                    return _swipeable(
+                  for (final location in group.locations)
+                    _swipeable(
                       location,
                       _LocationListTile(
                         location: location,
-                        parcelName: parcelName,
                         onNavigate: onNavigate,
                         onEdit: onEdit,
                         onDelete: onDelete,
                       ),
-                    );
-                  }),
-                ],
-                // Sečnja section
-                if (locations.any((l) => l.isSecnja)) ...[
-                  _SectionHeader(
-                    icon: Icons.carpenter,
-                    color: Colors.deepOrange,
-                    title: context.l10n.mapwMenuFelling,
-                    count: locations.where((l) => l.isSecnja).length,
-                  ),
-                  ...locations.where((l) => l.isSecnja).map((location) {
-                    final parcelName = _findParcelName(
-                      location.latitude,
-                      location.longitude,
-                    );
-                    return _swipeable(
-                      location,
-                      _LocationListTile(
-                        location: location,
-                        parcelName: parcelName,
-                        onNavigate: onNavigate,
-                        onEdit: onEdit,
-                        onDelete: onDelete,
-                      ),
-                    );
-                  }),
-                ],
-                // Logs section
-                if (geolocatedLogs.isNotEmpty) ...[
-                  _SectionHeader(
-                    icon: Icons.forest,
-                    color: Color(0xFFD4A574),
-                    title: context.l10n.mapwMenuLogs,
-                    count: geolocatedLogs.length,
-                  ),
-                  ...geolocatedLogs.map((log) {
-                    final parcelName = _findParcelName(
-                      log.latitude!,
-                      log.longitude!,
-                    );
-                    return _LogListTile(
-                      log: log,
-                      parcelName: parcelName,
-                      onNavigate: onNavigate,
-                    );
-                  }),
+                    ),
+                  for (final log in group.logs)
+                    _LogListTile(log: log, onNavigate: onNavigate),
                 ],
               ],
             ),
@@ -408,14 +395,12 @@ class _SectionHeader extends StatelessWidget {
 
 class _LocationListTile extends StatelessWidget {
   final MapLocation location;
-  final String? parcelName;
   final void Function(NavigationTarget target) onNavigate;
   final void Function(MapLocation location) onEdit;
   final void Function(MapLocation location) onDelete;
 
   const _LocationListTile({
     required this.location,
-    this.parcelName,
     required this.onNavigate,
     required this.onEdit,
     required this.onDelete,
@@ -438,15 +423,6 @@ class _LocationListTile extends StatelessWidget {
         child: Icon(icon, color: color),
       ),
       title: Text(location.name),
-      subtitle: parcelName != null
-          ? Text(
-              parcelName!,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.secondary,
-                fontSize: 12,
-              ),
-            )
-          : null,
       trailing: PopupMenuButton<String>(
         onSelected: (value) {
           Navigator.pop(context); // Close sheet first
@@ -511,12 +487,10 @@ class _LocationListTile extends StatelessWidget {
 
 class _LogListTile extends StatelessWidget {
   final LogEntry log;
-  final String? parcelName;
   final void Function(NavigationTarget target) onNavigate;
 
   const _LogListTile({
     required this.log,
-    this.parcelName,
     required this.onNavigate,
   });
 
@@ -536,14 +510,6 @@ class _LogListTile extends StatelessWidget {
               'Ø ${Fmt.num(log.diameter!, 0)} cm × ${Fmt.num(log.length!, 1)} m',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 12,
-              ),
-            ),
-          if (parcelName != null)
-            Text(
-              parcelName!,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.secondary,
                 fontSize: 12,
               ),
             ),
