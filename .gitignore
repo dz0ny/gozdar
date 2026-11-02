@@ -72,3 +72,4 @@ ios/vendor/bundle/
 ios/.bundle/
 ios/fastlane/report.xml
 test/screenshots/out/
+.superpowers/
