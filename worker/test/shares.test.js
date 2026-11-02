@@ -171,7 +171,7 @@ test('landing page explains the share and offers Uvozi', async () => {
   assert.equal(res.status, 200);
   assert.match(res.headers.get('content-type'), /text\/html/);
   const html = await res.text();
-  assert.ok(html.includes('1234/5'), 'names the parcel');
+  assert.ok(html.includes('Parcela 1234/5, k.o. 1234'), 'names the parcel and k.o.');
   assert.ok(html.includes('1 drevo'), 'counts the trees');
   assert.ok(html.includes(`gozdar://open/o/${body.id}`), 'Uvozi opens the app');
   assert.ok(html.includes('Uvozi'));
@@ -256,4 +256,11 @@ test('preview image of a missing share is 404', async () => {
   const env = { SHARES: fakeKv() };
   const res = await call(env, 'GET', '/o/gone00/preview.jpg');
   assert.equal(res.status, 404);
+});
+
+test('landing page shows the k.o. number and name', async () => {
+  const env = { SHARES: fakeKv() };
+  const { body } = await create(env, { ...payload(), parcel: { ...payload().parcel, koName: 'PREZID' } });
+  const html = await (await call(env, 'GET', `/o/${body.id}`)).text();
+  assert.ok(html.includes('Parcela 1234/5, k.o. 1234 PREZID'));
 });

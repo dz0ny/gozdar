@@ -173,7 +173,10 @@ async function landing(c) {
     return c.html(page('<p>Ta povezava je potekla ali jo je lastnik preklical.</p>'), 404);
   }
   const { parcel, points } = record.payload;
-  const ko = parcel.koName ?? (parcel.koNumber != null ? `k.o. ${parcel.koNumber}` : '');
+  // Number and name of the k.o., e.g. "k.o. 1717 PREZID".
+  const ko = [parcel.koNumber != null ? `k.o. ${parcel.koNumber}` : '', parcel.koName ?? '']
+    .filter(Boolean)
+    .join(' ');
   const title = `Parcela ${escapeHtml(parcel.number)}${ko ? `, ${escapeHtml(ko)}` : ''}`;
   // The map gets the outline and the trees only. The owner stays out of the page.
   const mapData = {
