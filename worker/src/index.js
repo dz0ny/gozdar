@@ -7,6 +7,7 @@ import { handleTileRequest } from './tiles.js';
 import { cache } from './middleware/cache.js';
 import { getParcelByPoint, getParcelById, getParcelsByBbox, getCadastralZoning, getParcelByKoAndNumber } from './wfs.js';
 import { debugOffer, getOffers, refreshOffers } from './offers.js';
+import { shares } from './shares.js';
 
 // Create Hono app
 const app = new Hono();
@@ -15,7 +16,8 @@ const app = new Hono();
 app.use('*', logger());
 app.use('*', cors({
   origin: '*',
-  allowMethods: ['GET', 'HEAD', 'OPTIONS'],
+  allowMethods: ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'DELETE'],
+  allowHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Apply cache middleware to tile routes
@@ -68,6 +70,9 @@ app.get('/api/offers/debug/:id', (c) => {
   if (host !== 'localhost' && host !== '127.0.0.1') return c.notFound();
   return debugOffer(c);
 });
+
+// Sečnja share links and app-link files.
+app.route('/', shares);
 
 // 404 handler
 app.notFound((c) => {

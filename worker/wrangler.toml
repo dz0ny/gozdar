@@ -2,6 +2,9 @@ name = "gozdar-proxy"
 main = "src/index.js"
 compatibility_date = "2025-11-17"
 
+# Sečnja share links are served from this host.
+routes = [{ pattern = "gozdar.dz0ny.dev", custom_domain = true }]
+
 [placement]
 mode = "smart"
 
@@ -19,3 +22,8 @@ crons = ["17 3 * * *"]
 # Decoding scanned PDFs needs more CPU time than tile proxying.
 [limits]
 cpu_ms = 120000
+
+# Sečnja shares. Each value expires 30 days after the last upload.
+[[kv_namespaces]]
+binding = "SHARES"
+id = "0a01653de1cc4fc7954663e41a211222"
