@@ -4312,36 +4312,34 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   ];
 }
 
-typedef $$ParcelsTableCreateCompanionBuilder =
-    ParcelsCompanion Function({
-      Value<int> id,
-      required String name,
-      required String polygonJson,
-      required DateTime createdAt,
-      Value<int?> cadastralMunicipality,
-      Value<String?> parcelNumber,
-      Value<String?> owner,
-      Value<String?> notes,
-      Value<int> forestTypeIndex,
-      Value<double> woodAllowance,
-      Value<double> woodCut,
-      Value<int> treesCut,
-    });
-typedef $$ParcelsTableUpdateCompanionBuilder =
-    ParcelsCompanion Function({
-      Value<int> id,
-      Value<String> name,
-      Value<String> polygonJson,
-      Value<DateTime> createdAt,
-      Value<int?> cadastralMunicipality,
-      Value<String?> parcelNumber,
-      Value<String?> owner,
-      Value<String?> notes,
-      Value<int> forestTypeIndex,
-      Value<double> woodAllowance,
-      Value<double> woodCut,
-      Value<int> treesCut,
-    });
+typedef $$ParcelsTableCreateCompanionBuilder = ParcelsCompanion Function({
+  Value<int> id,
+  required String name,
+  required String polygonJson,
+  required DateTime createdAt,
+  Value<int?> cadastralMunicipality,
+  Value<String?> parcelNumber,
+  Value<String?> owner,
+  Value<String?> notes,
+  Value<int> forestTypeIndex,
+  Value<double> woodAllowance,
+  Value<double> woodCut,
+  Value<int> treesCut,
+});
+typedef $$ParcelsTableUpdateCompanionBuilder = ParcelsCompanion Function({
+  Value<int> id,
+  Value<String> name,
+  Value<String> polygonJson,
+  Value<DateTime> createdAt,
+  Value<int?> cadastralMunicipality,
+  Value<String?> parcelNumber,
+  Value<String?> owner,
+  Value<String?> notes,
+  Value<int> forestTypeIndex,
+  Value<double> woodAllowance,
+  Value<double> woodCut,
+  Value<int> treesCut,
+});
 
 final class $$ParcelsTableReferences
     extends BaseReferences<_$AppDatabase, $ParcelsTable, DbParcel> {
@@ -4350,7 +4348,7 @@ final class $$ParcelsTableReferences
   static MultiTypedResultKey<$LogEntriesTable, List<DbLogEntry>>
   _logEntriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.logEntries,
-    aliasName: $_aliasNameGenerator(db.parcels.id, db.logEntries.parcelId),
+    aliasName: 'parcels__id__log_entries__parcel_id',
   );
 
   $$LogEntriesTableProcessedTableManager get logEntriesRefs {
@@ -4697,7 +4695,7 @@ class $$ParcelsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$ParcelsTable, DbParcel>(table),
                   $$ParcelsTableReferences(db, table, e),
                 ),
               )
@@ -4710,10 +4708,11 @@ class $$ParcelsTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (logEntriesRefs)
-                    await $_getPrefetchedData<
+                    await $_getPrefetchedDataByColumns<
                       DbParcel,
                       $ParcelsTable,
-                      DbLogEntry
+                      DbLogEntry,
+                      $LogEntriesTable
                     >(
                       currentTable: table,
                       referencedTable: $$ParcelsTableReferences
@@ -4723,8 +4722,8 @@ class $$ParcelsTableTableManager
                         table,
                         p0,
                       ).logEntriesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.parcelId == item.id),
+                      currentColumn: 'id',
+                      referencedColumn: 'parcel_id',
                       typedResults: items,
                     ),
                 ];
@@ -4749,28 +4748,26 @@ typedef $$ParcelsTableProcessedTableManager =
       DbParcel,
       PrefetchHooks Function({bool logEntriesRefs})
     >;
-typedef $$LogBatchesTableCreateCompanionBuilder =
-    LogBatchesCompanion Function({
-      Value<int> id,
-      Value<String?> owner,
-      Value<String?> notes,
-      Value<double?> latitude,
-      Value<double?> longitude,
-      required double totalVolume,
-      required int logCount,
-      required DateTime createdAt,
-    });
-typedef $$LogBatchesTableUpdateCompanionBuilder =
-    LogBatchesCompanion Function({
-      Value<int> id,
-      Value<String?> owner,
-      Value<String?> notes,
-      Value<double?> latitude,
-      Value<double?> longitude,
-      Value<double> totalVolume,
-      Value<int> logCount,
-      Value<DateTime> createdAt,
-    });
+typedef $$LogBatchesTableCreateCompanionBuilder = LogBatchesCompanion Function({
+  Value<int> id,
+  Value<String?> owner,
+  Value<String?> notes,
+  Value<double?> latitude,
+  Value<double?> longitude,
+  required double totalVolume,
+  required int logCount,
+  required DateTime createdAt,
+});
+typedef $$LogBatchesTableUpdateCompanionBuilder = LogBatchesCompanion Function({
+  Value<int> id,
+  Value<String?> owner,
+  Value<String?> notes,
+  Value<double?> latitude,
+  Value<double?> longitude,
+  Value<double> totalVolume,
+  Value<int> logCount,
+  Value<DateTime> createdAt,
+});
 
 final class $$LogBatchesTableReferences
     extends BaseReferences<_$AppDatabase, $LogBatchesTable, DbLogBatch> {
@@ -4779,7 +4776,7 @@ final class $$LogBatchesTableReferences
   static MultiTypedResultKey<$LogEntriesTable, List<DbLogEntry>>
   _logEntriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.logEntries,
-    aliasName: $_aliasNameGenerator(db.logBatches.id, db.logEntries.batchId),
+    aliasName: 'log_batches__id__log_entries__batch_id',
   );
 
   $$LogEntriesTableProcessedTableManager get logEntriesRefs {
@@ -5050,7 +5047,7 @@ class $$LogBatchesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$LogBatchesTable, DbLogBatch>(table),
                   $$LogBatchesTableReferences(db, table, e),
                 ),
               )
@@ -5063,10 +5060,11 @@ class $$LogBatchesTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (logEntriesRefs)
-                    await $_getPrefetchedData<
+                    await $_getPrefetchedDataByColumns<
                       DbLogBatch,
                       $LogBatchesTable,
-                      DbLogEntry
+                      DbLogEntry,
+                      $LogEntriesTable
                     >(
                       currentTable: table,
                       referencedTable: $$LogBatchesTableReferences
@@ -5077,8 +5075,8 @@ class $$LogBatchesTableTableManager
                             table,
                             p0,
                           ).logEntriesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.batchId == item.id),
+                      currentColumn: 'id',
+                      referencedColumn: 'batch_id',
                       typedResults: items,
                     ),
                 ];
@@ -5103,43 +5101,39 @@ typedef $$LogBatchesTableProcessedTableManager =
       DbLogBatch,
       PrefetchHooks Function({bool logEntriesRefs})
     >;
-typedef $$LogEntriesTableCreateCompanionBuilder =
-    LogEntriesCompanion Function({
-      Value<int> id,
-      Value<double?> diameter,
-      Value<double?> length,
-      required double volume,
-      Value<double?> latitude,
-      Value<double?> longitude,
-      Value<String?> notes,
-      Value<String?> species,
-      required DateTime createdAt,
-      Value<int?> batchId,
-      Value<int?> parcelId,
-    });
-typedef $$LogEntriesTableUpdateCompanionBuilder =
-    LogEntriesCompanion Function({
-      Value<int> id,
-      Value<double?> diameter,
-      Value<double?> length,
-      Value<double> volume,
-      Value<double?> latitude,
-      Value<double?> longitude,
-      Value<String?> notes,
-      Value<String?> species,
-      Value<DateTime> createdAt,
-      Value<int?> batchId,
-      Value<int?> parcelId,
-    });
+typedef $$LogEntriesTableCreateCompanionBuilder = LogEntriesCompanion Function({
+  Value<int> id,
+  Value<double?> diameter,
+  Value<double?> length,
+  required double volume,
+  Value<double?> latitude,
+  Value<double?> longitude,
+  Value<String?> notes,
+  Value<String?> species,
+  required DateTime createdAt,
+  Value<int?> batchId,
+  Value<int?> parcelId,
+});
+typedef $$LogEntriesTableUpdateCompanionBuilder = LogEntriesCompanion Function({
+  Value<int> id,
+  Value<double?> diameter,
+  Value<double?> length,
+  Value<double> volume,
+  Value<double?> latitude,
+  Value<double?> longitude,
+  Value<String?> notes,
+  Value<String?> species,
+  Value<DateTime> createdAt,
+  Value<int?> batchId,
+  Value<int?> parcelId,
+});
 
 final class $$LogEntriesTableReferences
     extends BaseReferences<_$AppDatabase, $LogEntriesTable, DbLogEntry> {
   $$LogEntriesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $LogBatchesTable _batchIdTable(_$AppDatabase db) =>
-      db.logBatches.createAlias(
-        $_aliasNameGenerator(db.logEntries.batchId, db.logBatches.id),
-      );
+      db.logBatches.createAlias('log_entries__batch_id__log_batches__id');
 
   $$LogBatchesTableProcessedTableManager? get batchId {
     final $_column = $_itemColumn<int>('batch_id');
@@ -5155,8 +5149,8 @@ final class $$LogEntriesTableReferences
     );
   }
 
-  static $ParcelsTable _parcelIdTable(_$AppDatabase db) => db.parcels
-      .createAlias($_aliasNameGenerator(db.logEntries.parcelId, db.parcels.id));
+  static $ParcelsTable _parcelIdTable(_$AppDatabase db) =>
+      db.parcels.createAlias('log_entries__parcel_id__parcels__id');
 
   $$ParcelsTableProcessedTableManager? get parcelId {
     final $_column = $_itemColumn<int>('parcel_id');
@@ -5539,7 +5533,7 @@ class $$LogEntriesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$LogEntriesTable, DbLogEntry>(table),
                   $$LogEntriesTableReferences(db, table, e),
                 ),
               )
@@ -5565,30 +5559,26 @@ class $$LogEntriesTableTableManager
                     >
                   >(state) {
                     if (batchId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.batchId,
-                                referencedTable: $$LogEntriesTableReferences
-                                    ._batchIdTable(db),
-                                referencedColumn: $$LogEntriesTableReferences
-                                    ._batchIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.batchId,
+                        referencedTable: $$LogEntriesTableReferences
+                            ._batchIdTable(db),
+                        referencedColumn: $$LogEntriesTableReferences
+                            ._batchIdTable(db)
+                            .id,
+                      ) as T;
                     }
                     if (parcelId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.parcelId,
-                                referencedTable: $$LogEntriesTableReferences
-                                    ._parcelIdTable(db),
-                                referencedColumn: $$LogEntriesTableReferences
-                                    ._parcelIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.parcelId,
+                        referencedTable: $$LogEntriesTableReferences
+                            ._parcelIdTable(db),
+                        referencedColumn: $$LogEntriesTableReferences
+                            ._parcelIdTable(db)
+                            .id,
+                      ) as T;
                     }
 
                     return state;
@@ -5805,7 +5795,16 @@ class $$MapLocationsTableTableManager
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$MapLocationsTable, DbMapLocation>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $MapLocationsTable,
+                    DbMapLocation
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -6089,7 +6088,16 @@ class $$ImportedOverlaysTableTableManager
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$ImportedOverlaysTable, DbImportedOverlay>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $ImportedOverlaysTable,
+                    DbImportedOverlay
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -6117,24 +6125,22 @@ typedef $$ImportedOverlaysTableProcessedTableManager =
       DbImportedOverlay,
       PrefetchHooks Function()
     >;
-typedef $$HttpCacheTableCreateCompanionBuilder =
-    HttpCacheCompanion Function({
-      Value<int> id,
-      required String urlHash,
-      required String url,
-      required String responseBody,
-      required int statusCode,
-      required DateTime cachedAt,
-    });
-typedef $$HttpCacheTableUpdateCompanionBuilder =
-    HttpCacheCompanion Function({
-      Value<int> id,
-      Value<String> urlHash,
-      Value<String> url,
-      Value<String> responseBody,
-      Value<int> statusCode,
-      Value<DateTime> cachedAt,
-    });
+typedef $$HttpCacheTableCreateCompanionBuilder = HttpCacheCompanion Function({
+  Value<int> id,
+  required String urlHash,
+  required String url,
+  required String responseBody,
+  required int statusCode,
+  required DateTime cachedAt,
+});
+typedef $$HttpCacheTableUpdateCompanionBuilder = HttpCacheCompanion Function({
+  Value<int> id,
+  Value<String> urlHash,
+  Value<String> url,
+  Value<String> responseBody,
+  Value<int> statusCode,
+  Value<DateTime> cachedAt,
+});
 
 class $$HttpCacheTableFilterComposer
     extends Composer<_$AppDatabase, $HttpCacheTable> {
@@ -6310,7 +6316,16 @@ class $$HttpCacheTableTableManager
                 cachedAt: cachedAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$HttpCacheTable, DbHttpCacheEntry>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $HttpCacheTable,
+                    DbHttpCacheEntry
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -6374,10 +6389,8 @@ final class $$OfflineTileStylesTableReferences
   _offlineTileEntriesRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.offlineTileEntries,
-        aliasName: $_aliasNameGenerator(
-          db.offlineTileStyles.styleHash,
-          db.offlineTileEntries.styleHash,
-        ),
+        aliasName:
+            'offline_tile_styles__style_hash__offline_tile_entries__style_hash',
       );
 
   $$OfflineTileEntriesTableProcessedTableManager get offlineTileEntriesRefs {
@@ -6652,7 +6665,9 @@ class $$OfflineTileStylesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$OfflineTileStylesTable, DbOfflineTileStyle>(
+                    table,
+                  ),
                   $$OfflineTileStylesTableReferences(db, table, e),
                 ),
               )
@@ -6667,10 +6682,11 @@ class $$OfflineTileStylesTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (offlineTileEntriesRefs)
-                    await $_getPrefetchedData<
+                    await $_getPrefetchedDataByColumns<
                       DbOfflineTileStyle,
                       $OfflineTileStylesTable,
-                      DbOfflineTileEntry
+                      DbOfflineTileEntry,
+                      $OfflineTileEntriesTable
                     >(
                       currentTable: table,
                       referencedTable: $$OfflineTileStylesTableReferences
@@ -6681,10 +6697,8 @@ class $$OfflineTileStylesTableTableManager
                             table,
                             p0,
                           ).offlineTileEntriesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where(
-                            (e) => e.styleHash == item.styleHash,
-                          ),
+                      currentColumn: 'style_hash',
+                      referencedColumn: 'style_hash',
                       typedResults: items,
                     ),
                 ];
@@ -6749,10 +6763,7 @@ final class $$OfflineTileEntriesTableReferences
 
   static $OfflineTileStylesTable _styleHashTable(_$AppDatabase db) =>
       db.offlineTileStyles.createAlias(
-        $_aliasNameGenerator(
-          db.offlineTileEntries.styleHash,
-          db.offlineTileStyles.styleHash,
-        ),
+        'offline_tile_entries__style_hash__offline_tile_styles__style_hash',
       );
 
   $$OfflineTileStylesTableProcessedTableManager get styleHash {
@@ -7056,7 +7067,9 @@ class $$OfflineTileEntriesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$OfflineTileEntriesTable, DbOfflineTileEntry>(
+                    table,
+                  ),
                   $$OfflineTileEntriesTableReferences(db, table, e),
                 ),
               )
@@ -7082,19 +7095,15 @@ class $$OfflineTileEntriesTableTableManager
                     >
                   >(state) {
                     if (styleHash) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.styleHash,
-                                referencedTable:
-                                    $$OfflineTileEntriesTableReferences
-                                        ._styleHashTable(db),
-                                referencedColumn:
-                                    $$OfflineTileEntriesTableReferences
-                                        ._styleHashTable(db)
-                                        .styleHash,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.styleHash,
+                        referencedTable: $$OfflineTileEntriesTableReferences
+                            ._styleHashTable(db),
+                        referencedColumn: $$OfflineTileEntriesTableReferences
+                            ._styleHashTable(db)
+                            .styleHash,
+                      ) as T;
                     }
 
                     return state;
