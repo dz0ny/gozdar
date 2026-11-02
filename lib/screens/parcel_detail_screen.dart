@@ -17,6 +17,7 @@ import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
 import '../services/hr_owner_service.dart';
 import '../services/cadastral_service.dart';
+import '../services/secnja_share_service.dart';
 import '../services/database_service.dart';
 import '../models/map_layer.dart';
 import '../services/drone_bundle_service.dart';
@@ -1010,6 +1011,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
 
     if (confirmed == true && _parcel.id != 0) {
       try {
+        // A shared link would stay readable for 30 days; delete it too.
+        await SecnjaShareService.instance.revokeQuietly(_parcel);
         final deleted = await _databaseService.deleteParcelWithContents(
           _parcel.id,
         );

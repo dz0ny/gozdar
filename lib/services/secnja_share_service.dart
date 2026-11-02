@@ -124,6 +124,17 @@ class SecnjaShareService {
     await _db.clearParcelShare(parcel.id);
   }
 
+  /// Deletes the link of a parcel that the owner deletes. The parcel goes
+  /// away anyway, so a failure only leaves the link to expire by itself.
+  Future<void> revokeQuietly(Parcel parcel) async {
+    if (!parcel.isShared) return;
+    try {
+      await revoke(parcel);
+    } catch (e) {
+      debugPrint('Revoking share of parcel ${parcel.id} failed: $e');
+    }
+  }
+
   /// Downloads the share [shareId] and stores it on this phone.
   Future<ReceiveResult> receive(String shareId) async {
     final http.Response res;

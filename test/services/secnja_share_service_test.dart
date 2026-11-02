@@ -219,4 +219,21 @@ void main() {
     final good = (await dbService.getReceivedShares()).firstWhere((s) => s.shareId == 'good');
     expect(good.payload.points.single.name, 'Fresh 1');
   });
+
+  test('revokeQuietly DELETEs a shared parcel and never throws', () async {
+    final parcel = await savedParcel();
+    await dbService.saveParcelShare(parcel.id,
+        shareId: 'abc123', editToken: 'tok', hash: 'h', sharedAt: DateTime(2026), expiresAt: DateTime(2026, 2));
+    final shared = (await dbService.getParcel(parcel.id))!;
+
+    await serviceWith((_) async => http.Response('', 204)).revokeQuietly(shared);
+    expect(requests.single.method, 'DELETE');
+
+    await serviceWith((_) async => throw const SocketException('offline')).revokeQuietly(shared);
+  });
+
+  test('revokeQuietly does nothing for a parcel that is not shared', () async {
+    await serviceWith((_) async => http.Response('', 204)).revokeQuietly(await savedParcel());
+    expect(requests, isEmpty);
+  });
 }

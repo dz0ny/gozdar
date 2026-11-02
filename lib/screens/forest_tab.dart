@@ -11,6 +11,7 @@ import '../models/parcel.dart';
 import '../providers/map_provider.dart';
 import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
+import '../services/secnja_share_service.dart';
 import '../services/database_service.dart';
 import '../services/ko_locator.dart';
 import '../services/kml_service.dart';
@@ -154,6 +155,8 @@ class ForestTabState extends State<ForestTab> {
 
     if (confirmed == true) {
       try {
+        // A shared link would stay readable for 30 days; delete it too.
+        await SecnjaShareService.instance.revokeQuietly(parcel);
         final deleted = await _databaseService.deleteParcelWithContents(
           parcel.id,
         );
