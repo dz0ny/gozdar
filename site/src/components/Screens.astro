@@ -1,0 +1,53 @@
+---
+import { Picture } from "astro:assets";
+import forest from "@/assets/screens/01-forest.webp";
+import logs from "@/assets/screens/02-logs.webp";
+import map from "@/assets/screens/03-map.webp";
+import parcel from "@/assets/screens/04-parcel.webp";
+
+const shots = [
+	{ src: map, title: "Karta", body: "Ortofoto, kataster in sloji ZGS. Merjenje, iskanje, lokacija.", alt: "Zavihek Karta z ortofoto posnetkom" },
+	{ src: forest, title: "Moj gozd", body: "Vse parcele s površino, številom dreves in posekanim lesom.", alt: "Zavihek Gozd: povzetek 9 ha, 1 parcela, 18 dreves, 13,5 m³ posekano" },
+	{ src: parcel, title: "Parcela", body: "K.o., številka, lastnik, opombe in koliko poseka je še na voljo.", alt: "Podrobnosti parcele Kočevski revir z dovoljenim posekom 42 m³" },
+	{ src: logs, title: "Hlodi", body: "Evidenca hlodovine po vrstah, s skupno prostornino.", alt: "Zavihek Hlodi z razvrstitvijo po vrstah" },
+];
+---
+
+<section id="zasloni" class="py-section scroll-mt-16" aria-labelledby="zasloni-naslov">
+  <div class="container-page">
+    <h2 id="zasloni-naslov" class="max-w-2xl font-display text-4xl font-semibold leading-tight sm:text-5xl" data-reveal>
+      Trije zavihki: Karta, Gozd, Hlodi.
+    </h2>
+    <p class="mt-4 max-w-xl text-lg text-muted-foreground" data-reveal>
+      Večino dela na terenu opravite z dolgim pritiskom na karto: dodaj točko, dodaj hlodovino, označi sečnjo, uvozi parcelo.
+    </p>
+  </div>
+
+  <div class="mt-12 overflow-x-auto pb-4 [scrollbar-width:thin]" tabindex="0" aria-label="Zasloni aplikacije, drsite vodoravno">
+    <ul class="container-page flex snap-x snap-mandatory gap-5 md:grid md:grid-cols-4 md:gap-6">
+      {shots.map(({ src, title, body, alt }, i) => (
+        <li class:list={["w-[68vw] max-w-[17rem] shrink-0 snap-start md:w-auto md:max-w-none", i % 2 === 1 && "md:mt-12"]} data-reveal>
+          <figure>
+            <div class="overflow-hidden rounded-[1.8rem] border-[5px] border-muted bg-muted shadow-xl shadow-black/40">
+              <Picture
+                src={src}
+                formats={["webp"]}
+                fallbackFormat="webp"
+                width={272}
+                widths={[272, 544]}
+                sizes="(min-width: 768px) 25vw, 68vw"
+                alt={alt}
+                loading="lazy"
+                class="block h-auto w-full"
+              />
+            </div>
+            <figcaption class="mt-4">
+              <span class="font-semibold text-foreground">{title}</span>
+              <span class="mt-1 block text-[0.95rem] text-muted-foreground">{body}</span>
+            </figcaption>
+          </figure>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

@@ -1,0 +1,36 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Hero from "@/components/Hero.astro";
+import Features from "@/components/Features.astro";
+import SecnjaBand from "@/components/SecnjaBand.astro";
+import LogsBand from "@/components/LogsBand.astro";
+import Screens from "@/components/Screens.astro";
+import OfflineBand from "@/components/OfflineBand.astro";
+import DownloadSection from "@/components/DownloadSection.astro";
+import DataNote from "@/components/DataNote.astro";
+import { identitySchema } from "@/lib/schema";
+import { SITE_DESCRIPTION, LATEST_RELEASE_URL } from "@/lib/site";
+import type { MobileApplication, WithContext } from "schema-dts";
+
+const app: WithContext<MobileApplication> = {
+	"@context": "https://schema.org",
+	"@type": "MobileApplication",
+	name: "Gozdar",
+	description: SITE_DESCRIPTION,
+	applicationCategory: "UtilitiesApplication",
+	operatingSystem: "Android, iOS, macOS, Windows, Linux",
+	inLanguage: "sl",
+	downloadUrl: LATEST_RELEASE_URL,
+};
+---
+
+<Layout schema={[...identitySchema(Astro.site), app]}>
+  <Hero />
+  <Features />
+  <SecnjaBand />
+  <LogsBand />
+  <Screens />
+  <OfflineBand />
+  <DownloadSection />
+  <DataNote />
+</Layout>

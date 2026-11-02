@@ -1,0 +1,103 @@
+---
+import { Layers, Search, Ruler, Compass, CloudOff, Share2, FileSpreadsheet } from "lucide-react";
+
+const minor = [
+	{ title: "Merjenje", body: "Razdalja in površina kar na karti." },
+	{ title: "Vrednost parcele", body: "Posplošena tržna vrednost po GURS, z boniteto in odprtostjo gozda." },
+	{ title: "Sodne dražbe", body: "Sloj s parcelami, ki so trenutno na sodni dražbi." },
+	{ title: "Gozdne vlake", body: "Sloj z vlakami, ko ga vklopite v nastavitvah." },
+	{ title: "Točke in skladišča", body: "Shranjene točke se same razvrstijo po parcelah." },
+	{ title: "Uvoz in izvoz KML", body: "Parcele prenesete v druge GIS programe in nazaj." },
+];
+---
+
+<section id="funkcije" class="py-section scroll-mt-16">
+  <div class="container-page">
+    <div class="grid gap-6 lg:grid-cols-12 lg:items-end" data-reveal>
+      <h2 class="font-display text-4xl font-semibold leading-tight sm:text-5xl lg:col-span-7">
+        Narejeno za teren, ne za pisarno.
+      </h2>
+      <p class="text-lg text-muted-foreground lg:col-span-5">
+        Hiter dostop do karte, podatkov o parcelah in evidence lesa, medtem ko delate. Brez prepisovanja v zvezek, brez iskanja po treh portalih.
+      </p>
+    </div>
+
+    <div class="mt-12 grid gap-4 md:grid-cols-6">
+      <!-- Kataster: the lead cell -->
+      <article class="relative overflow-hidden rounded-xl border border-border bg-card p-7 md:col-span-4 md:row-span-2 md:p-9" data-reveal>
+        <div class="bg-contours pointer-events-none absolute inset-0 opacity-70" aria-hidden="true"></div>
+        <div class="relative">
+          <Layers className="size-7 text-brand-bright" aria-hidden="true" />
+          <h3 class="mt-5 text-3xl font-semibold leading-tight sm:text-4xl">Parcele in kataster na karti</h3>
+          <p class="mt-4 max-w-lg text-muted-foreground">
+            Ortofoto, meje parcel z nazivi, gozdni sestoji, topografske karte in več kot 40 slojev Zavoda za gozdove in GURS.
+            Z dolgim pritiskom na karto parcelo uvozite iz katastra na trenutni lokaciji.
+          </p>
+          <ul class="mt-6 grid max-w-lg gap-x-6 gap-y-2 text-[0.95rem] text-foreground sm:grid-cols-2">
+            <li class="border-t border-border pt-2">Dovoljen posek in posekano</li>
+            <li class="border-t border-border pt-2">Lastnik, k.o. in številka parcele</li>
+            <li class="border-t border-border pt-2">Opombe za vsako parcelo</li>
+            <li class="border-t border-border pt-2">Shranjene točke in skladišča</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="rounded-xl border border-border bg-card p-7 md:col-span-2" data-reveal>
+        <Search className="size-6 text-brand-bright" aria-hidden="true" />
+        <h3 class="mt-4 text-xl font-semibold">Iskanje parcel in lastnikov</h3>
+        <p class="mt-2 text-[0.97rem] text-muted-foreground">
+          Vpišite številko parcele, ime lastnika, naslov ali katastrsko občino. Javni bazi za Slovenijo in Hrvaško naložite enkrat, nato iščete tudi brez povezave.
+        </p>
+      </article>
+
+      <article class="rounded-xl border border-border bg-card p-7 md:col-span-2" data-reveal>
+        <Compass className="size-6 text-brand-bright" aria-hidden="true" />
+        <h3 class="mt-4 text-xl font-semibold">Do mejnika s kompasom</h3>
+        <p class="mt-2 text-[0.97rem] text-muted-foreground">
+          Odprite parcelo, tapnite mejno točko in sledite puščici. Kompas kaže smer in razdaljo do točke.
+        </p>
+      </article>
+
+      <article class="rounded-xl border border-border bg-card p-7 md:col-span-3" data-reveal>
+        <CloudOff className="size-6 text-brand-bright" aria-hidden="true" />
+        <h3 class="mt-4 text-xl font-semibold">Karte brez signala</h3>
+        <p class="mt-2 text-[0.97rem] text-muted-foreground">
+          Ogledane karte se shranijo same. Ko poiščete parcelo, se prenesejo karte za njeno okolico. Večje območje prenesete ročno, preden greste v gozd.
+        </p>
+      </article>
+
+      <article class="rounded-xl border border-border bg-card p-7 md:col-span-3" data-reveal>
+        <Share2 className="size-6 text-brand-bright" aria-hidden="true" />
+        <h3 class="mt-4 text-xl font-semibold">Deljenje z bližnjimi telefoni</h3>
+        <p class="mt-2 text-[0.97rem] text-muted-foreground">
+          Prenesene karte, kataster in bazo lastnikov kopirate na telefon sodelavca v istem omrežju Wi-Fi. Prekinjen prenos se nadaljuje, kjer se je ustavil.
+        </p>
+      </article>
+
+      <article class="rounded-xl border border-border bg-card p-7 md:col-span-6 md:flex md:items-center md:gap-10" data-reveal>
+        <div class="flex items-center gap-3 md:w-1/3">
+          <FileSpreadsheet className="size-6 shrink-0 text-brand-bright" aria-hidden="true" />
+          <h3 class="text-xl font-semibold">Izvoz za papirje</h3>
+        </div>
+        <p class="mt-2 text-[0.97rem] text-muted-foreground md:mt-0 md:w-2/3">
+          Hlode izvozite v Excel (.xlsx), parcelo s karto v PDF, parcele v KML. Datoteko pošljete po e-pošti ali shranite, kamor želite.
+        </p>
+      </article>
+    </div>
+
+    <div class="mt-16 grid gap-8 lg:grid-cols-12" data-reveal>
+      <div class="flex items-start gap-3 lg:col-span-3">
+        <Ruler className="mt-1 size-5 shrink-0 text-primary" aria-hidden="true" />
+        <h3 class="text-2xl font-semibold">In še to</h3>
+      </div>
+      <dl class="grid gap-x-10 gap-y-6 sm:grid-cols-2 lg:col-span-9 lg:grid-cols-3">
+        {minor.map(({ title, body }) => (
+          <div class="border-t border-border pt-4">
+            <dt class="font-semibold text-foreground">{title}</dt>
+            <dd class="mt-1 text-[0.95rem] text-muted-foreground">{body}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </div>
+</section>

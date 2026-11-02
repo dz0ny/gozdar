@@ -5,7 +5,8 @@ Gozdar is a Flutter forestry management app for Slovenia. Users can map forest p
 ## Project Structure
 
 - `lib/`: Flutter application code
-- `worker/`: Cloudflare Worker tile proxy
+- `worker/`: Cloudflare Worker tile proxy; also serves the website at https://gozdar.dz0ny.dev
+- `site/`: Astro website (landing page, `/zasebnost/` privacy policy, `/podpora/` support), see `site/README.md`
 
 ## Cloudflare Tile Proxy
 
@@ -28,7 +29,12 @@ The `worker/` directory contains a Cloudflare Worker that proxies and caches til
    npm install
    ```
 
-3. Deploy to your Cloudflare account:
+3. Build the website, which the Worker serves as static assets from `../site/dist/client`:
+   ```bash
+   (cd ../site && bun install && bun run build)
+   ```
+
+4. Deploy to your Cloudflare account:
    ```bash
    npx wrangler deploy
    ```

@@ -26,4 +26,6 @@ Users can delete app data by removing records in the app or uninstalling the app
 
 ## Contact
 
-Contact URL or support email: `TODO`
+Support: https://gozdar.dz0ny.dev/podpora/ · hey@dz0ny.dev
+
+The published, up-to-date policy is https://gozdar.dz0ny.dev/zasebnost/ (source: `site/src/pages/zasebnost.astro`).

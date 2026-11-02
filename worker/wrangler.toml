@@ -10,6 +10,15 @@ workers_dev = true
 # Sečnja share links come from this host.
 routes = [{ pattern = "gozdar.dz0ny.dev", custom_domain = true }]
 
+# The marketing site (../site, Astro) is served as static assets by this same
+# Worker. Cloudflare serves a request from the assets when a file matches its
+# path; everything else (/tiles/*, /api/*, /layers) falls through to src/index.js.
+# Build the site before deploying: (cd ../site && bun install && bun run build)
+[assets]
+directory = "../site/dist/client"
+binding = "ASSETS"
+html_handling = "force-trailing-slash"
+
 [placement]
 mode = "smart"
 

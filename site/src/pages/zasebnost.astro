@@ -1,0 +1,185 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import type { WebPage, WithContext } from "schema-dts";
+import { CONTACT_EMAIL, ISSUES_URL } from "@/lib/site";
+
+const updated = "2. november 2026";
+const description =
+	"Politika zasebnosti aplikacije Gozdar: kateri podatki ostanejo na napravi, katere strežnike aplikacija kliče in zakaj. Brez računov, oglasov in analitike.";
+
+const schema: WithContext<WebPage> = {
+	"@context": "https://schema.org",
+	"@type": "WebPage",
+	name: "Politika zasebnosti",
+	description,
+	inLanguage: "sl",
+	dateModified: "2026-11-02",
+};
+
+const services = [
+	{
+		host: "gozdar-proxy.dz0ny.workers.dev",
+		who: "Naš posredniški strežnik (Cloudflare Workers)",
+		what: "Ploščice kart in katastrski podatki ZGS/GURS, preračunani za karto v aplikaciji in shranjeni v predpomnilnik. Pri iskanju parcele na točki dobi koordinate te točke, pri iskanju po številki pa k.o. in številko parcele.",
+	},
+	{
+		host: "gozdar-kataster.dz0ny.dev",
+		who: "Naša shramba datotek (Cloudflare R2)",
+		what: "Prenos podatkov za delo brez povezave: katastrske regije, javni bazi lastnikov (Slovenija, Hrvaška) in sloj gozdnih vlak. Samo ob prenosu ali posodobitvi.",
+	},
+	{
+		host: "prostor.zgs.gov.si",
+		who: "Zavod za gozdove Slovenije",
+		what: "Gozdarski sloji, ortofoto in kataster (WMS). Zahteva vsebuje območje karte, ki si ga ogledujete.",
+	},
+	{
+		host: "tile.openstreetmap.org, server.arcgisonline.com, mapserver.mapy.cz",
+		who: "OpenStreetMap, Esri, Mapy.cz",
+		what: "Osnovne karte, ko izberete ustrezen sloj. Zahteva vsebuje območje karte.",
+	},
+	{
+		host: "vrednotenje.gov.si",
+		who: "Geodetska uprava RS (GURS)",
+		what: "Posplošena tržna vrednost parcele, ko odprete vrednost. Pošlje se oznaka parcele.",
+	},
+	{
+		host: "api.sodnedrazbe.si",
+		who: "Portal sodnih dražb",
+		what: "Seznam parcel na sodni dražbi, ko odprete dražbe ali vklopite ta sloj.",
+	},
+	{
+		host: "oss.uredjenazemlja.hr",
+		who: "Državna geodetska uprava RH (DGU)",
+		what: "Imetniki hrvaške parcele, ko jih poiščete. Odgovor se shrani na napravo.",
+	},
+	{
+		host: "api.github.com, github.com",
+		who: "GitHub",
+		what: "Samo različica, nameščena z GitHuba (ne iz Google Play): preverjanje nove izdaje in prenos posodobitve.",
+	},
+];
+---
+
+<Layout title="Politika zasebnosti" description={description} schema={schema}>
+  <article class="container-page py-section">
+    <header class="max-w-3xl">
+      <h1 class="font-display text-5xl font-semibold leading-tight sm:text-6xl">Politika zasebnosti</h1>
+      <p class="mt-4 text-faint">Velja od {updated}</p>
+      <p class="mt-6 text-xl text-muted-foreground">
+        Na kratko: vaše parcele, hlodi in točke so shranjeni samo na vaši napravi. Gozdar nima uporabniških računov, oglasov,
+        analitike ali poročanja o napakah in nobenih podatkov ne prodaja. Spodaj je natančno opisano, kaj aplikacija pošlje na splet in zakaj.
+      </p>
+    </header>
+
+    <div class="prose-gozd mt-12">
+      <h2>Kdo odgovarja za aplikacijo</h2>
+      <p>
+        Aplikacijo Gozdar razvija in vzdržuje Janez Troha. Za vprašanja o zasebnosti pišite na
+        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+      </p>
+
+      <h2>Podatki, ki ostanejo na napravi</h2>
+      <p>Vse, kar vnesete, aplikacija shrani v lokalno podatkovno bazo (SQLite) na vašem telefonu ali računalniku:</p>
+      <ul>
+        <li>parcele (meje, ime, katastrska občina, številka, lastnik, opombe, dovoljen in opravljen posek),</li>
+        <li>hlodi in skupine hlodov (premer, dolžina, prostornina, drevesna vrsta, opombe, GPS lokacija),</li>
+        <li>shranjene točke in drevesa, označena za sečnjo,</li>
+        <li>nastavitve, seznam drevesnih vrst in izbrani sloji karte,</li>
+        <li>prenesene karte, katastrske regije in baze lastnikov za delo brez povezave ter predpomnjeni odgovori javnih strežnikov.</li>
+      </ul>
+      <p>
+        Teh podatkov ne pošiljamo na noben strežnik. Ne moremo jih videti, obnoviti ali izbrisati namesto vas. Zato tudi ni varnostne kopije v oblaku:
+        če želite kopijo, uporabite izvoz.
+      </p>
+
+      <h2>Lokacija</h2>
+      <p>
+        Aplikacija vpraša za natančno lokacijo, da pokaže, kje ste na karti, vas s kompasom vodi do izbrane točke in hlodu ali točki doda GPS koordinate,
+        ko jih shranite. Lokacijo uporablja <strong>samo, ko je aplikacija odprta</strong>; v ozadju je ne spremlja in je ne pošilja nam.
+      </p>
+      <p>
+        Posredno pa se območje lahko razkrije strežnikom kart: ko karta naloži ploščice za okolico, strežnik vidi, katero območje se prikazuje.
+        Ko z dolgim pritiskom uvozite parcelo na trenutni lokaciji, se koordinate te točke pošljejo našemu posredniškemu strežniku, da ta poišče parcelo v katastru.
+      </p>
+      <p>Za smer kompasa aplikacija bere senzorje gibanja in magnetometer naprave. Ti podatki ne zapustijo naprave.</p>
+
+      <h2>Kaj aplikacija pošlje na splet</h2>
+      <p>
+        Za karte in javne evidence aplikacija kliče spodnje strežnike. Vsaka zahteva, kot vedno na spletu, razkrije vaš IP naslov in osnovne podatke
+        o odjemalcu. Imen, e-pošte ali vaših zapisov ne pošilja nikamor.
+      </p>
+      <ul class="services">
+        {services.map(({ host, who, what }) => (
+          <li class="border-t border-border py-4">
+            <p class="font-semibold text-foreground">{who}</p>
+            <p class="mt-0.5 text-sm"><code>{host}</code></p>
+            <p class="mt-2">{what}</p>
+          </li>
+        ))}
+      </ul>
+      <p>
+        Naša strežnika tečeta pri Cloudflare, ki kot ponudnik infrastrukture obdeluje IP naslove za dostavo in zaščito pred zlorabami.
+        Mi ne vodimo dnevnikov, ki bi zahteve povezovali z uporabniki, in ne gradimo profilov. Za strežnike javnih ustanov in ponudnikov kart veljajo njihove politike zasebnosti.
+      </p>
+      <p>
+        Če tapnete »odpri v zemljevidih« ali povezavo do javne objave (npr. GURS, sodnedrazbe.si), se odpre druga aplikacija ali brskalnik, za katerega veljajo njegova pravila.
+      </p>
+
+      <h2>Javni podatki o lastnikih parcel</h2>
+      <p>
+        Gozdar lahko prikaže lastnike in imetnike parcel iz javnih evidenc: za Slovenijo iz javne baze, izdelane iz podatkov GURS, ki jo naložite na napravo,
+        za Hrvaško iz javnega katastra DGU. Gre za podatke, ki so javno dostopni že pri izvornih ustanovah. Aplikacija jih le prikaže in hrani na vaši napravi.
+      </p>
+      <p>
+        Uporabljajte jih v skladu z namenom javnih evidenc in s predpisi o varstvu osebnih podatkov. Popravke podatkov uredite pri izvorni ustanovi (GURS ali DGU);
+        mi teh evidenc ne vodimo.
+      </p>
+
+      <h2>Deljenje z bližnjimi telefoni</h2>
+      <p>
+        Prenesene karte, katastrske regije, baze lastnikov in sloj vlak lahko kopirate na drug telefon v istem lokalnem omrežju. Aplikacija za to uporablja
+        odkrivanje naprav v lokalnem omrežju (mDNS/NSD, storitvi <code>_gozdar-kataster._tcp</code> in <code>_sartiles._tcp</code>), zato na iPhonu vpraša za dovoljenje za lokalno omrežje.
+      </p>
+      <p>
+        Datoteke se prenašajo neposredno med napravama, brez našega strežnika. Deljenje vklopite sami. Dokler je vklopljeno, lahko deljene datoteke prenese katerakoli
+        naprava z aplikacijo Gozdar v istem omrežju, zato ga uporabljajte v omrežjih, ki jim zaupate. Vaših parcel, hlodov in točk aplikacija na ta način ne deli.
+      </p>
+
+      <h2>Izvoz in deljenje datotek</h2>
+      <p>
+        Ko izvozite hlode (Excel, JSON), parcele (KML) ali parcelo s karto (PDF), aplikacija ustvari datoteko na napravi in odpre sistemsko okno za deljenje.
+        Kam datoteko pošljete ali shranite, izberete vi; od takrat zanjo veljajo pravila prejemnika ali izbrane aplikacije.
+      </p>
+
+      <h2>Česa Gozdar ne počne</h2>
+      <ul>
+        <li>ne zahteva registracije ali prijave,</li>
+        <li>ne prikazuje oglasov in ne vsebuje oglaševalskih knjižnic,</li>
+        <li>ne vsebuje analitike, sledilnikov ali poročanja o zrušitvah,</li>
+        <li>podatkov ne prodaja in jih ne deli s tretjimi osebami za trženje,</li>
+        <li>ne spremlja lokacije v ozadju.</li>
+      </ul>
+
+      <h2>Hramba in brisanje</h2>
+      <p>
+        Zapise izbrišete v aplikaciji. Prenesene baze in karte odstranite v nastavitvah aplikacije. Ko aplikacijo odstranite, sistem izbriše vse njene podatke.
+        Datoteke, ki ste jih izvozili, ostanejo tam, kamor ste jih shranili.
+      </p>
+
+      <h2>Otroci</h2>
+      <p>Aplikacija je namenjena odraslim, ki delajo v gozdu, in ni namenjena otrokom.</p>
+
+      <h2>Vaše pravice</h2>
+      <p>
+        Ker o vas na naših strežnikih ne hranimo osebnih podatkov, vam jih ne moremo posredovati ali izbrisati. Če menite, da kljub temu obdelujemo vaše podatke,
+        nam pišite na <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. Pritožbo lahko vložite tudi pri Informacijskem pooblaščencu RS.
+      </p>
+
+      <h2>Spremembe</h2>
+      <p>
+        Ob spremembah aplikacije, ki vplivajo na podatke, posodobimo to stran in datum na vrhu. Zgodovina sprememb je javna v
+        <a href={ISSUES_URL.replace("/issues", "")}>repozitoriju na GitHubu</a>.
+      </p>
+    </div>
+  </article>
+</Layout>

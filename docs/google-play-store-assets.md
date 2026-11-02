@@ -2,10 +2,10 @@
 
 ## URLs
 
-- Support URL: `TODO`
-- Privacy policy URL: `TODO`
+- Support URL: https://gozdar.dz0ny.dev/podpora/
+- Privacy policy URL: https://gozdar.dz0ny.dev/zasebnost/
 
-The privacy policy content draft is in `docs/privacy-policy.md`. Publish it at a stable HTTPS URL before production submission.
+The published privacy policy is `site/src/pages/zasebnost.astro` (served by the `worker/` Worker as static assets). `docs/privacy-policy.md` is the older draft; keep the site page as the source of truth.
 
 ## Required Console Declarations
 

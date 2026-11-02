@@ -1,0 +1,31 @@
+---
+import { ShieldCheck } from "lucide-react";
+import { CONTACT_EMAIL } from "@/lib/site";
+---
+
+<section class="pb-section" aria-labelledby="podatki-naslov">
+  <div class="container-page">
+    <div class="grid gap-8 rounded-xl border border-border bg-card p-8 md:grid-cols-12 md:p-12" data-reveal>
+      <div class="md:col-span-5">
+        <ShieldCheck className="size-7 text-brand-bright" aria-hidden="true" />
+        <h2 id="podatki-naslov" class="mt-4 font-display text-3xl font-semibold leading-tight sm:text-4xl">
+          Vaš gozd je vaša stvar.
+        </h2>
+      </div>
+      <div class="space-y-4 text-muted-foreground md:col-span-7">
+        <p>
+          Parcele, hlodi in točke se shranijo samo na vaš telefon. Gozdar nima računov, oglasov ali analitike in ničesar ne prodaja.
+          Lokacijo uporablja le, ko je aplikacija odprta.
+        </p>
+        <p>
+          Podatki o parcelah, lastnikih in vrednosti so povzeti iz javnih virov (ZGS, GURS, DGU) in so informativni. Za uradne podatke se obrnite na pristojne organe.
+        </p>
+        <p class="flex flex-wrap gap-x-6 gap-y-2 pt-2">
+          <a href="/zasebnost/" class="text-primary underline underline-offset-4 hover:text-primary-hover">Politika zasebnosti</a>
+          <a href="/podpora/" class="text-primary underline underline-offset-4 hover:text-primary-hover">Podpora</a>
+          <a href={`mailto:${CONTACT_EMAIL}`} class="text-primary underline underline-offset-4 hover:text-primary-hover">{CONTACT_EMAIL}</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

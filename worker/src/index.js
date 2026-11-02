@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { BASE_LAYERS, OVERLAY_LAYERS } from './layers.js';
-import { getMapHtml } from './map.js';
 import { handleTileRequest } from './tiles.js';
 import { cache } from './middleware/cache.js';
 import { getParcelByPoint, getParcelById, getParcelsByBbox, getCadastralZoning, getParcelByKoAndNumber } from './wfs.js';
@@ -28,16 +27,9 @@ app.use('/tiles/*', cache());
 // Tile proxy endpoint - matches /tiles/:layer/:z/:x/:y with optional .png/.jpg/.jpeg extension
 app.get('/tiles/:layer/:z/:x/:filename', handleTileRequest);
 
-// Map viewer
-app.get('/', (c) => {
-  const url = new URL(c.req.url);
-  return c.html(getMapHtml(url.origin));
-});
-
-app.get('/map', (c) => {
-  const url = new URL(c.req.url);
-  return c.html(getMapHtml(url.origin));
-});
+// The root and every other page path are the marketing site in ../site,
+// served by Workers Static Assets (see [assets] in wrangler.toml). A request
+// reaches this app only when no static file matches its path.
 
 // API: List layers
 app.get('/layers', (c) => {
@@ -74,8 +66,18 @@ app.get('/api/offers/debug/:id', (c) => {
 // Sečnja share links and app-link files.
 app.route('/', shares);
 
-// 404 handler
-app.notFound((c) => {
+// 404 handler: API clients keep the JSON body; a browser gets the site's 404 page.
+app.notFound(async (c) => {
+  const wantsHtml = (c.req.header('accept') || '').includes('text/html');
+  if (wantsHtml && c.env?.ASSETS) {
+    const page = await c.env.ASSETS.fetch(new URL('/404/', c.req.url));
+    if (page.ok) {
+      return new Response(page.body, {
+        status: 404,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      });
+    }
+  }
   return c.json({ error: 'Not Found' }, 404);
 });
 

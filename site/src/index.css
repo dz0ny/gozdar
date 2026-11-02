@@ -1,0 +1,250 @@
+@import 'tailwindcss';
+
+@plugin 'tailwindcss-animate';
+
+/*
+  Gozdar — "Gozdna tla" (forest floor).
+  One dark theme, warm forest-green neutrals derived from the launcher green
+  #2E7D32 (OKLCH hue 144), one tan highlight taken from the app's own UI.
+  Palette math and contrast checks: see site-specification.md.
+*/
+
+@theme {
+  /* Neutrals: hue 144 at very low chroma */
+  --color-background: #0f160f;      /* 60% — page */
+  --color-card: #182118;            /* surface 1 */
+  --color-card-foreground: #f2f0e7;
+  --color-popover: #182118;
+  --color-popover-foreground: #f2f0e7;
+  --color-muted: #242f23;           /* surface 2 */
+  --color-muted-foreground: #b0bbb0;/* 8.3:1 on card — body-safe */
+  --color-faint: #919c91;           /* 5.8:1 on card — small meta text ok */
+  --color-border: #354135;
+  --color-input: #354135;
+  --color-ring: #d6a776;
+  --color-foreground: #f2f0e7;      /* warm off-white, never pure white */
+
+  /* 30% — brand green */
+  --color-brand: #2e7d32;           /* fills/decor only: 3.6:1 on bg, large text at most */
+  --color-brand-bright: #63bc65;    /* 7.0:1 on card — green text */
+
+  /* 10% — tan highlight (CTAs, key numbers) */
+  --color-primary: #d6a776;         /* 7.6:1 on card */
+  --color-primary-foreground: #24180b; /* 8.0:1 on tan */
+  --color-primary-hover: #e4b789;
+
+  --color-secondary: #242f23;
+  --color-secondary-foreground: #f2f0e7;
+  --color-accent: #242f23;
+  --color-accent-foreground: #f2f0e7;
+  --color-destructive: #c2553f;
+  --color-destructive-foreground: #f2f0e7;
+
+  /* Type */
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+
+  /* One radius system: soft, like the app's cards */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+
+  /* DENSITY 4 */
+  --spacing-section: 6rem;
+  --spacing-section-sm: 4rem;
+
+  --animate-rise: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+  }
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
+  }
+}
+
+@utility container-page {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 76rem;
+  padding-inline: 1.25rem;
+  @media (width >= 48rem) {
+    padding-inline: 2rem;
+  }
+}
+
+@utility py-section {
+  padding-block: var(--spacing-section-sm);
+  @media (width >= 48rem) {
+    padding-block: var(--spacing-section);
+  }
+}
+
+/* Contour lines — the topographic map motif used behind the hero and bands. */
+@utility bg-contours {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640' viewBox='0 0 640 640' fill='none' stroke='%2363bc65' stroke-opacity='0.11' stroke-width='1.2'%3E%3Cpath d='M-40 120c90-60 170-40 250 0s170 70 260 20 170-40 210 0'/%3E%3Cpath d='M-40 170c90-55 175-30 255 8s165 62 255 16 165-34 210 4'/%3E%3Cpath d='M-40 225c95-50 180-20 260 15s160 55 250 12 160-28 210 8'/%3E%3Cpath d='M-40 285c100-45 185-10 265 22s155 48 245 8 155-22 210 12'/%3E%3Cellipse cx='420' cy='470' rx='150' ry='80'/%3E%3Cellipse cx='420' cy='470' rx='110' ry='56'/%3E%3Cellipse cx='420' cy='470' rx='70' ry='34'/%3E%3Cellipse cx='420' cy='470' rx='32' ry='14'/%3E%3Cpath d='M-40 400c70-20 120 10 170 60s90 110 40 180'/%3E%3Cpath d='M-40 450c55-15 100 15 140 60s70 100 30 150'/%3E%3C/svg%3E");
+  background-size: 640px 640px;
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-variation-settings: "SOFT" 50, "WONK" 0;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+}
+
+/* Long-form legal/support pages */
+@layer components {
+  .prose-gozd {
+    max-width: 44rem;
+    color: var(--color-muted-foreground);
+  }
+  .prose-gozd h2 {
+    margin-top: 2.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.6rem;
+    line-height: 1.25;
+    font-weight: 600;
+    color: var(--color-foreground);
+  }
+  .prose-gozd h3 {
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--color-foreground);
+  }
+  .prose-gozd p,
+  .prose-gozd ul,
+  .prose-gozd table {
+    margin-bottom: 1rem;
+  }
+  .prose-gozd ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+  .prose-gozd li {
+    margin-bottom: 0.4rem;
+  }
+  .prose-gozd ul.services {
+    list-style: none;
+    padding-left: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .prose-gozd .services li {
+    margin-bottom: 0;
+  }
+  .prose-gozd li::marker {
+    color: var(--color-brand-bright);
+  }
+  .prose-gozd strong {
+    color: var(--color-foreground);
+    font-weight: 600;
+  }
+  .prose-gozd a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .prose-gozd a:hover {
+    color: var(--color-primary-hover);
+  }
+  .prose-gozd code {
+    font-size: 0.9em;
+    color: var(--color-foreground);
+    background: var(--color-muted);
+    padding: 0.1em 0.35em;
+    border-radius: 0.3rem;
+    overflow-wrap: anywhere;
+  }
+  .prose-gozd table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  .prose-gozd th,
+  .prose-gozd td {
+    text-align: left;
+    vertical-align: top;
+    padding: 0.6rem 0.75rem 0.6rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .prose-gozd th {
+    color: var(--color-foreground);
+    font-weight: 600;
+  }
+}
+
+/* MOTION 5: one orchestrated hero entrance + scroll reveals; nothing else moves. */
+@media (prefers-reduced-motion: no-preference) {
+  .entrance {
+    animation: var(--animate-rise);
+  }
+  .entrance-1 { animation-delay: 60ms; }
+  .entrance-2 { animation-delay: 160ms; }
+  .entrance-3 { animation-delay: 260ms; }
+  .entrance-4 { animation-delay: 380ms; }
+
+  .js [data-reveal] {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .js [data-reveal].in {
+    opacity: 1;
+    transform: none;
+  }
+}

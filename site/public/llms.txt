@@ -1,0 +1,29 @@
+# Gozdar
+
+> Gozdar is a field app for forest owners, contractors and forestry workers in Slovenia: forest parcels with cadastral (kataster) layers on a map, wood log records with volume, compass navigation to boundary points, and maps that work without signal. The site is in Slovenian.
+
+## Overview
+
+Gozdar runs on Android (APK from GitHub releases; Google Play coming), iOS and iPadOS (App Store: https://apps.apple.com/app/id6756237942), macOS, Windows and Linux. It shows ZGS and GURS map layers (orthophoto, cadastral parcels, forest stands, 40+ layers), searches parcels by number, owner name, address or cadastral municipality, records logs (diameter, length, volume V = π × (d/200)² × L, species, GPS) with m³/PRM/NM totals, exports to Excel, PDF and KML, and copies downloaded maps and cadastral data to nearby phones on the same Wi-Fi. Data stays on the device; no accounts, ads or analytics.
+
+## When to use this
+
+- Use this when: someone in Slovenia wants an app to see their forest parcel boundaries on a map in the field, including offline.
+- Use this when: someone needs to record felled logs and get the volume in m³, PRM or NM, grouped by tree species.
+- Use this when: a Play Store reviewer or user needs Gozdar's privacy policy or support contact.
+- Not a fit for: official ownership or boundary data (go to GURS / e-prostor), forest management plans (ZGS), or timber sales.
+
+How to get an answer: features and downloads on the home page, data handling on /zasebnost/, contact and FAQ on /podpora/.
+
+## Key Pages
+
+- [Domov](https://gozdar.dz0ny.dev/) — what the app does, screenshots, downloads
+- [Zasebnost](https://gozdar.dz0ny.dev/zasebnost/) — privacy policy: on-device data, every server the app calls
+- [Podpora](https://gozdar.dz0ny.dev/podpora/) — support email, GitHub issues, FAQ
+- [Releases](https://github.com/dz0ny/gozdar/releases) — APK and desktop downloads
+
+## Contact
+
+- Website: https://gozdar.dz0ny.dev
+- Email: hey@dz0ny.dev
+- Issues: https://github.com/dz0ny/gozdar/issues

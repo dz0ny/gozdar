@@ -1,0 +1,102 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { Mail, Bug, Download } from "lucide-react";
+import type { FAQPage, WithContext } from "schema-dts";
+import { CONTACT_EMAIL, ISSUES_URL, NEW_ISSUE_URL, RELEASES_URL } from "@/lib/site";
+
+const description =
+	"Podpora za aplikacijo Gozdar: e-pošta, prijava napak na GitHubu in odgovori na pogosta vprašanja o namestitvi, kartah brez povezave in podatkih.";
+
+const faq = [
+	{
+		q: "Kako namestim APK na Android?",
+		a: "Na telefonu odprite zadnjo izdajo na GitHubu in prenesite datoteko, ki se konča na -android.apk. Odprite jo iz obvestila ali mape Prenosi. Ob prvi namestitvi Android vpraša, ali dovolite namestitev iz brskalnika ali upravitelja datotek.",
+	},
+	{
+		q: "Karta je prazna ali se ne naloži.",
+		a: "Preverite povezavo in izbrani sloj. Slovenski sloji (kataster, sestoji) se prikažejo le, kadar je izbrana slovenska podlaga, na primer Ortofoto. Če ste brez signala, se prikažejo samo karte, ki ste si jih že ogledali ali jih prenesli.",
+	},
+	{
+		q: "Kako pripravim karte za teren brez signala?",
+		a: "Še doma poiščite parcelo, karte za njeno okolico se prenesejo same. Za večje območje uporabite gumb za sloje na karti in prenesite izbrano območje. V nastavitvah lahko naložite še kataster in bazo lastnikov za iskanje brez povezave.",
+	},
+	{
+		q: "Ali so podatki o lastnikih in mejah uradni?",
+		a: "Ne. Podatki so povzeti iz javnih virov ZGS, GURS in DGU in so lahko zastareli. Za uradne podatke o lastništvu in mejah se obrnite na GURS ali ZGS (na Hrvaškem DGU).",
+	},
+	{
+		q: "Kje so moji podatki in kako jih prenesem na nov telefon?",
+		a: "Parcele, hlodi in točke so shranjeni samo na napravi. Pred menjavo telefona parcele izvozite v KML in jih uvozite na novem telefonu, hlode pa shranite kot Excel ali JSON. Prenesene karte in kataster pa lahko skopirate s telefona na telefon prek skupnega omrežja Wi-Fi.",
+	},
+	{
+		q: "Kako se izračuna prostornina hloda?",
+		a: "Po formuli V = π × (d / 200)² × L, kjer je d premer v centimetrih in L dolžina v metrih. Faktorje za pretvorbo v prostorninske (PRM) in nasute metre (NM) nastavite v aplikaciji.",
+	},
+];
+
+const schema: WithContext<FAQPage> = {
+	"@context": "https://schema.org",
+	"@type": "FAQPage",
+	mainEntity: faq.map(({ q, a }) => ({
+		"@type": "Question",
+		name: q,
+		acceptedAnswer: { "@type": "Answer", text: a },
+	})),
+};
+---
+
+<Layout title="Podpora" description={description} schema={schema}>
+  <section class="container-page py-section">
+    <div class="max-w-3xl">
+      <h1 class="font-display text-5xl font-semibold leading-tight sm:text-6xl">Podpora</h1>
+      <p class="mt-5 text-xl text-muted-foreground">
+        Nekaj ne deluje, imate predlog ali vprašanje? Pišite ali odprite prijavo. Odgovarja razvijalec aplikacije.
+      </p>
+    </div>
+
+    <div class="mt-12 grid gap-4 md:grid-cols-12">
+      <a
+        href={`mailto:${CONTACT_EMAIL}?subject=Gozdar`}
+        class="group rounded-xl border border-primary/40 bg-card p-8 transition-colors hover:border-primary md:col-span-7"
+      >
+        <Mail className="size-7 text-primary" aria-hidden="true" />
+        <h2 class="mt-5 font-display text-3xl font-semibold">Pišite nam</h2>
+        <p class="mt-2 text-muted-foreground">Za vprašanja, predloge in vse, česar ne želite objaviti javno.</p>
+        <p class="mt-5 break-all text-lg font-semibold text-primary group-hover:text-primary-hover">{CONTACT_EMAIL}</p>
+      </a>
+      <div class="rounded-xl border border-border bg-card p-8 md:col-span-5">
+        <Bug className="size-7 text-brand-bright" aria-hidden="true" />
+        <h2 class="mt-5 font-display text-3xl font-semibold">Prijavite napako</h2>
+        <p class="mt-2 text-muted-foreground">
+          Na GitHubu, da jo vidijo tudi drugi. Napišite različico aplikacije (Nastavitve → Informacije o aplikaciji), telefon in kaj ste naredili, preden je šlo narobe.
+        </p>
+        <div class="mt-5 flex flex-wrap gap-x-6 gap-y-2">
+          <a href={NEW_ISSUE_URL} class="font-semibold text-primary underline underline-offset-4 hover:text-primary-hover">Nova prijava</a>
+          <a href={ISSUES_URL} class="text-muted-foreground underline underline-offset-4 hover:text-foreground">Odprte prijave</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-20 grid gap-10 lg:grid-cols-12">
+      <h2 class="font-display text-3xl font-semibold leading-tight sm:text-4xl lg:col-span-4">Pogosta vprašanja</h2>
+      <div class="divide-y divide-border border-y border-border lg:col-span-8">
+        {faq.map(({ q, a }) => (
+          <details class="group py-5">
+            <summary class="flex cursor-pointer list-none items-start justify-between gap-6 text-lg font-semibold [&::-webkit-details-marker]:hidden">
+              {q}
+              <span class="mt-1 text-primary transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+            </summary>
+            <p class="mt-3 max-w-2xl text-muted-foreground">{a}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+
+    <div class="mt-16 flex flex-col gap-4 rounded-xl border border-border bg-card p-7 sm:flex-row sm:items-center sm:justify-between">
+      <p class="text-muted-foreground">Nova različica morda že odpravlja vašo težavo.</p>
+      <a href={RELEASES_URL} class="inline-flex items-center gap-2 font-semibold text-primary hover:text-primary-hover">
+        <Download className="size-5" aria-hidden="true" /> Preverite zadnjo izdajo
+      </a>
+    </div>
+  </section>
+</Layout>
