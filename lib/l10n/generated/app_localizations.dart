@@ -4275,7 +4275,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutPrivacyBody.
   ///
   /// In sl, this message translates to:
-  /// **'Aplikacija zbira anonimne podatke o uporabi za izboljšanje delovanja (Firebase Analytics). Lokacijski podatki se ne pošiljajo na strežnik - vsi podatki o parcelah in hlodih se hranijo lokalno na napravi.'**
+  /// **'Aplikacija ne zbira podatkov o uporabi. Vsi podatki o parcelah, drevesih in hlodih se hranijo lokalno na napravi. Na strežnik se pošlje le seznam dreves, ki ga sami delite.'**
   String get aboutPrivacyBody;
 
   /// No description provided for @aboutShowLicenses.

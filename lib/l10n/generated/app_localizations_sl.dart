@@ -2543,7 +2543,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get aboutPrivacyBody =>
-      'Aplikacija zbira anonimne podatke o uporabi za izboljšanje delovanja (Firebase Analytics). Lokacijski podatki se ne pošiljajo na strežnik - vsi podatki o parcelah in hlodih se hranijo lokalno na napravi.';
+      'Aplikacija ne zbira podatkov o uporabi. Vsi podatki o parcelah, drevesih in hlodih se hranijo lokalno na napravi. Na strežnik se pošlje le seznam dreves, ki ga sami delite.';
 
   @override
   String get aboutShowLicenses => 'Prikaži licence';

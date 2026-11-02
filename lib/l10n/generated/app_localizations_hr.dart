@@ -2537,7 +2537,7 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get aboutPrivacyBody =>
-      'Aplikacija prikuplja anonimne podatke o korištenju radi poboljšanja rada (Firebase Analytics). Podaci o lokaciji ne šalju se na poslužitelj - svi podaci o česticama i trupcima pohranjuju se lokalno na uređaju.';
+      'Aplikacija ne prikuplja podatke o korištenju. Svi podaci o česticama, stablima i trupcima pohranjuju se lokalno na uređaju. Na poslužitelj se šalje samo popis stabala koji sami podijelite.';
 
   @override
   String get aboutShowLicenses => 'Prikaži licence';

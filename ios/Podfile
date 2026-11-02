@@ -1,4 +1,3 @@
-# Minimum iOS version for Firebase
 platform :ios, '16.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.

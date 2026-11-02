@@ -96,7 +96,7 @@
   "aboutTermsBody": "Aplikacija Gozdar namijenjena je isključivo informativnim svrhama. Podaci o česticama, šumskim sastojinama i drugim kartografskim slojevima preuzeti su iz javno dostupnih izvora i možda nisu ažurni ili posve točni.",
   "aboutDisclaimerBody": "Razvojni programer ne preuzima odgovornost za moguću štetu nastalu korištenjem aplikacije ili podataka u njoj. Za službene podatke o vlasništvu i granicama čestica obratite se nadležnim tijelima (u Hrvatskoj DGU, u Sloveniji GURS i ZGS).",
   "aboutCopyrightBody": "Katastarski podaci i podaci o posjednicima DGU-a vlasništvo su Republike Hrvatske i namijenjeni su isključivo osobnoj uporabi. Kartografski podaci ZGS-a i GURS-a vlasništvo su Republike Slovenije. Podaci OpenStreetMapa dostupni su pod licencijom ODbL. ESRI podaci vlasništvo su tvrtke Esri Inc.",
-  "aboutPrivacyBody": "Aplikacija prikuplja anonimne podatke o korištenju radi poboljšanja rada (Firebase Analytics). Podaci o lokaciji ne šalju se na poslužitelj - svi podaci o česticama i trupcima pohranjuju se lokalno na uređaju.",
+  "aboutPrivacyBody": "Aplikacija ne prikuplja podatke o korištenju. Svi podaci o česticama, stablima i trupcima pohranjuju se lokalno na uređaju. Na poslužitelj se šalje samo popis stabala koji sami podijelite.",
   "aboutShowLicenses": "Prikaži licence",
   "aboutLicensesDesc": "Flutter i biblioteke otvorenog koda",
   "aboutReportBug": "Prijavi grešku",
