@@ -121,6 +121,7 @@ class OwnerLookupService {
   String? _source; // 'imported' | 'downloaded'
 
   Database? _publicDb;
+  String? _publicPath;
 
   /// Croatian public owners (state property register), a separate file with the
   /// same schema. Parcel codes never clash with the Slovenian ones.
@@ -128,9 +129,17 @@ class OwnerLookupService {
   static String get _publicHrUrl =>
       '${ParcelLookupService.r2BaseUrl}/$_publicHrFileName';
   Database? _publicHrDb;
+  String? _publicHrPath;
 
   Iterable<Database> get _publicDbs =>
       [?_publicDb, ?_publicHrDb];
+
+  /// Files of the open public-owners databases, for searches that open their
+  /// own connection on a background isolate.
+  List<String> get _publicPaths => [
+        if (_publicDb != null) ?_publicPath,
+        if (_publicHrDb != null) ?_publicHrPath,
+      ];
 
   int _publicRowCount = 0;
   String? _publicBuilt;
@@ -187,6 +196,9 @@ class OwnerLookupService {
   /// Opens [path] as the public-owners database, for tests.
   @visibleForTesting
   void openPublicForTesting(String path) => _openPublic(path);
+
+  @visibleForTesting
+  void closePublicForTesting() => _closePublic();
 
   /// Builds the search index for the database opened with [openForTesting].
   @visibleForTesting
@@ -260,6 +272,7 @@ class OwnerLookupService {
     }
     _publicHrDb?.close();
     _publicHrDb = db;
+    _publicHrPath = path;
   }
 
   Future<void> _downloadPublic() async {
@@ -334,6 +347,7 @@ class OwnerLookupService {
     }
     _publicDb?.close();
     _publicDb = db;
+    _publicPath = path;
   }
 
   void _open(String path) {
@@ -965,33 +979,61 @@ class OwnerLookupService {
   /// [OwnerSearchTerm.sifkos]) the KO, in any order and as a substring,
   /// ignoring case and diacritics ("skofja" finds ŠKOFJA LOKA). Words under
   /// [minQueryLength] characters are ignored. [onlySifko] restricts to one KO.
-  /// Runs on a background isolate.
+  /// Searches the imported database and the public-owners databases (names
+  /// only, they carry no address) together. Runs on a background isolate.
   Future<OwnerSearchResult> searchAnyAsync(
     List<OwnerSearchTerm> words, {
     int? onlySifko,
     int limit = 300,
   }) async {
-    final path = _path;
-    if (_db == null || path == null) return OwnerSearchResult.empty;
+    final path = _db == null ? null : _path;
+    final publicPaths = _publicPaths;
+    if (path == null && publicPaths.isEmpty) return OwnerSearchResult.empty;
     final folded = _foldTerms(words);
     if (folded.isEmpty) {
       return words.isEmpty ? OwnerSearchResult.empty : OwnerSearchResult.short;
     }
     final indexed = _hasSearchIndex;
     return Isolate.run(() {
-      final db = sqlite3.open(path);
-      try {
-        db.execute('PRAGMA busy_timeout = 5000');
-        return _searchAny(
-          db,
-          indexed: indexed,
-          terms: folded,
-          onlySifko: onlySifko,
-          limit: limit,
-        );
-      } finally {
-        db.close();
+      // A parcel has one row per co-owner, so fetch extra rows to fill
+      // [limit] parcels after grouping.
+      final rowLimit = limit * 4;
+      final rows = <Row>[];
+      var full = false;
+      for (final (p, public) in [
+        if (path != null) (path, false),
+        for (final p in publicPaths) (p, true),
+      ]) {
+        final db = sqlite3.open(p);
+        try {
+          db.execute('PRAGMA busy_timeout = 5000');
+          final found = public
+              ? _searchPublicAny(
+                  db,
+                  terms: folded,
+                  onlySifko: onlySifko,
+                  rowLimit: rowLimit,
+                )
+              : _searchAny(
+                  db,
+                  indexed: indexed,
+                  terms: folded,
+                  onlySifko: onlySifko,
+                  rowLimit: rowLimit,
+                );
+          rows.addAll(found);
+          if (found.length >= rowLimit) full = true;
+        } catch (e) {
+          debugPrint('OwnerLookupService.searchAny failed: $e');
+        } finally {
+          db.close();
+        }
       }
+      final hits = _groupByParcel(rows);
+      return OwnerSearchResult(
+        hits: hits.length > limit ? hits.sublist(0, limit) : hits,
+        truncated: hits.length > limit || full,
+      );
     });
   }
 
@@ -1001,12 +1043,12 @@ class OwnerLookupService {
             OwnerSearchTerm(foldForSearch(w.text.trim()), w.sifkos),
       ];
 
-  static OwnerSearchResult _searchAny(
+  static List<Row> _searchAny(
     Database db, {
     required bool indexed,
     required List<OwnerSearchTerm> terms,
     int? onlySifko,
-    required int limit,
+    required int rowLimit,
   }) {
     final where = <String>[];
     final args = <Object?>[];
@@ -1034,24 +1076,48 @@ class OwnerLookupService {
       where.add('sifko = ?');
       args.add(onlySifko);
     }
-    final rowLimit = limit * 4;
     args.add(rowLimit);
-    try {
-      final rows = db.select(
-        'SELECT DISTINCT sifko, parcela, lastnik, naslov, imeko, obcina '
-        'FROM owners WHERE ${where.join(' AND ')} '
-        'ORDER BY lastnik, sifko, parcela LIMIT ?',
-        args,
+    return db.select(
+      'SELECT DISTINCT sifko, parcela, lastnik, naslov, imeko, obcina '
+      'FROM owners WHERE ${where.join(' AND ')} '
+      'ORDER BY lastnik, sifko, parcela LIMIT ?',
+      args,
+    );
+  }
+
+  /// [_searchAny] over a public-owners database: owner and manager names live
+  /// in the small `names` table, so each word is matched there (a scan of a
+  /// few ten thousand names) and the parcels are fetched by name id.
+  static List<Row> _searchPublicAny(
+    Database db, {
+    required List<OwnerSearchTerm> terms,
+    int? onlySifko,
+    required int rowLimit,
+  }) {
+    final where = <String>[];
+    final args = <Object?>[];
+    for (final t in terms) {
+      final ko = t.sifkos.isEmpty
+          ? ''
+          : ' OR o.sifko IN (${t.sifkos.map((k) => k.toString()).join(',')})';
+      where.add(
+        '(o.name_id IN (SELECT id FROM names '
+        "WHERE ${_foldSql('naziv')} LIKE ? ESCAPE '\\')$ko)",
       );
-      final hits = _groupByParcel(rows);
-      return OwnerSearchResult(
-        hits: hits.length > limit ? hits.sublist(0, limit) : hits,
-        truncated: hits.length > limit || rows.length >= rowLimit,
-      );
-    } catch (e) {
-      debugPrint('OwnerLookupService.searchAny failed: $e');
-      return OwnerSearchResult.empty;
+      args.add('%${_likeEscape(t.text)}%');
     }
+    if (onlySifko != null) {
+      where.add('o.sifko = ?');
+      args.add(onlySifko);
+    }
+    args.add(rowLimit);
+    return db.select(
+      'SELECT o.sifko AS sifko, o.parcela AS parcela, n.naziv AS lastnik, '
+      'NULL AS naslov, NULL AS imeko, NULL AS obcina '
+      'FROM owners o JOIN names n ON n.id = o.name_id '
+      'WHERE ${where.join(' AND ')} LIMIT ?',
+      args,
+    );
   }
 
   /// Folded, uppercased terms, or null when both are blank. `tooShort` when

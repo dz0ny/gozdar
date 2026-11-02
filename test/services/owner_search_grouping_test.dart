@@ -171,6 +171,57 @@ void main() {
         expect(owners('j_5'), ['MAJ_50%']);
       });
 
+      group('with the public-owners database', () {
+        setUpAll(() {
+          final path = '${dir.path}/public_owners.sqlite';
+          sqlite3.open(path)
+            ..execute('CREATE TABLE names(id INTEGER PRIMARY KEY, naziv TEXT)')
+            ..execute(
+              'CREATE TABLE owners(sifko INT, parcela TEXT, name_id INT, '
+              'vloga TEXT)',
+            )
+            ..execute(
+              "INSERT INTO names VALUES (1,'OBČINA GROSUPLJE'),"
+              "(2,'Slovenski državni gozdovi d.o.o.')",
+            )
+            ..execute(
+              "INSERT INTO owners VALUES (1789,'2053/4',1,'L'),"
+              "(1789,'2053/4',2,'U'),(1651,'88',2,'U'),(2597,'1',1,'L')",
+            )
+            ..close();
+          service.openPublicForTesting(path);
+        });
+
+        tearDownAll(service.closePublicForTesting);
+
+        Future<List<String>> any(List<String> words, {int? onlySifko}) async {
+          final r = await service.searchAnyAsync(
+            [for (final w in words) OwnerSearchTerm(w, const [])],
+            onlySifko: onlySifko,
+          );
+          return r.hits.map((h) => '${h.sifko}/${h.parcela}').toList();
+        }
+
+        test('public owner names are searchable', () async {
+          expect(await any(['obcina', 'grosuplje']), ['1789/2053/4', '2597/1']);
+          expect(await any(['GOZDOVI']), ['1789/2053/4', '1651/88']);
+          expect(await any(['drzavni'], onlySifko: 1651), ['1651/88']);
+        });
+
+        test('only the matching owner is listed', () async {
+          final r = await service.searchAnyAsync(
+            [const OwnerSearchTerm('grosuplje', [])],
+          );
+          expect(r.hits.first.owners, ['OBČINA GROSUPLJE']);
+        });
+
+        test('private and public hits are merged', () async {
+          expect(await any(['novak']), ['1651/1234/2', '1651/88']);
+          final r = await service.searchAnyAsync([const OwnerSearchTerm('zzzz')]);
+          expect(r.hits, isEmpty);
+        });
+      });
+
       test('searchOwnersAsync gives the same result off the UI isolate',
           () async {
         final result = await service.searchOwnersAsync(name: 'sustar');
