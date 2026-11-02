@@ -21,6 +21,15 @@ class Parcel {
   double woodCut;
   int treesCut;
 
+  // Sečnja share link, set while the owner shares this parcel's marks.
+  String? shareId;
+  String? shareEditToken;
+  String? shareHash;
+  DateTime? sharedAt;
+  DateTime? shareExpiresAt;
+
+  bool get isShared => shareId != null;
+
   // Populated externally when needed
   List<LogEntry> logs = [];
 
@@ -59,6 +68,11 @@ class Parcel {
     this.woodCut = 0.0,
     this.treesCut = 0,
     this.polygonJson = '[]',
+    this.shareId,
+    this.shareEditToken,
+    this.shareHash,
+    this.sharedAt,
+    this.shareExpiresAt,
   })  : forestTypeIndex = forestType.index,
         createdAt = createdAt ?? DateTime.now() {
     if (polygon != null) {
@@ -185,6 +199,11 @@ class Parcel {
       woodAllowance: woodAllowance ?? this.woodAllowance,
       woodCut: woodCut ?? this.woodCut,
       treesCut: treesCut ?? this.treesCut,
+      shareId: shareId,
+      shareEditToken: shareEditToken,
+      shareHash: shareHash,
+      sharedAt: sharedAt,
+      shareExpiresAt: shareExpiresAt,
     );
   }
 

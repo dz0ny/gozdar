@@ -7,6 +7,7 @@ import '../models/log_entry.dart';
 import '../models/map_location.dart';
 import '../models/parcel.dart';
 import '../models/imported_overlay.dart';
+import '../models/received_share.dart';
 
 // ---------------------------------------------------------------------------
 // Conversion helpers: drift row → app model
@@ -25,6 +26,11 @@ Parcel _parcelFromDb(DbParcel r) => Parcel(
       woodAllowance: r.woodAllowance,
       woodCut: r.woodCut,
       treesCut: r.treesCut,
+      shareId: r.shareId,
+      shareEditToken: r.shareEditToken,
+      shareHash: r.shareHash,
+      sharedAt: r.sharedAt,
+      shareExpiresAt: r.shareExpiresAt,
     );
 
 LogEntry _logFromDb(DbLogEntry r) => LogEntry(
@@ -59,6 +65,16 @@ MapLocation _locationFromDb(DbMapLocation r) => MapLocation(
       longitude: r.longitude,
       type: LocationType.values[r.typeIndex],
       createdAt: r.createdAt,
+      parcelId: r.parcelId,
+    );
+
+ReceivedShare _receivedFromDb(DbReceivedShare r) => ReceivedShare(
+      id: r.id,
+      shareId: r.shareId,
+      payloadJson: r.payloadJson,
+      fetchedAt: r.fetchedAt,
+      expiresAt: r.expiresAt,
+      visible: r.visible,
     );
 
 ImportedOverlay _overlayFromDb(DbImportedOverlay r) => ImportedOverlay(
@@ -90,6 +106,11 @@ ParcelsCompanion _parcelToCompanion(Parcel p) => ParcelsCompanion(
       woodAllowance: Value(p.woodAllowance),
       woodCut: Value(p.woodCut),
       treesCut: Value(p.treesCut),
+      shareId: Value(p.shareId),
+      shareEditToken: Value(p.shareEditToken),
+      shareHash: Value(p.shareHash),
+      sharedAt: Value(p.sharedAt),
+      shareExpiresAt: Value(p.shareExpiresAt),
     );
 
 LogEntriesCompanion _logToCompanion(LogEntry e) => LogEntriesCompanion(
@@ -124,6 +145,7 @@ MapLocationsCompanion _locationToCompanion(MapLocation l) => MapLocationsCompani
       longitude: Value(l.longitude),
       typeIndex: Value(l.typeIndex),
       createdAt: Value(l.createdAt),
+      parcelId: Value(l.parcelId),
     );
 
 ImportedOverlaysCompanion _overlayToCompanion(ImportedOverlay o) => ImportedOverlaysCompanion(
@@ -306,8 +328,54 @@ class DatabaseService {
 
   // ==================== LOCATION OPERATIONS ====================
 
+  /// Saves [location]. A sečnja mark without a parcel gets the saved parcel
+  /// under it.
   Future<int> insertLocation(MapLocation location) async {
+    if (location.isSecnja && location.parcelId == null) {
+      location.parcelId =
+          await parcelIdAt(LatLng(location.latitude, location.longitude));
+    }
     return db.into(db.mapLocations).insert(_locationToCompanion(location));
+  }
+
+  /// Id of the saved parcel that contains [point]. The smallest parcel wins
+  /// when parcels overlap.
+  Future<int?> parcelIdAt(LatLng point) async =>
+      smallestParcelAt(await getAllParcels(), point);
+
+  /// Sečnja marks of one parcel, oldest first.
+  Future<List<MapLocation>> getSecnjaByParcel(int parcelId) async {
+    final rows = await (db.select(db.mapLocations)
+          ..where((t) =>
+              t.parcelId.equals(parcelId) &
+              t.typeIndex.equals(LocationType.secnja.index))
+          ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
+        .get();
+    return rows.map(_locationFromDb).toList();
+  }
+
+  /// Number of sečnja marks per parcel id. Parcels without marks are absent.
+  Future<Map<int, int>> getSecnjaCountsByParcel() async {
+    final count = db.mapLocations.id.count();
+    final rows = await (db.selectOnly(db.mapLocations)
+          ..addColumns([db.mapLocations.parcelId, count])
+          ..where(db.mapLocations.parcelId.isNotNull() &
+              db.mapLocations.typeIndex.equals(LocationType.secnja.index))
+          ..groupBy([db.mapLocations.parcelId]))
+        .get();
+    return {
+      for (final r in rows) r.read(db.mapLocations.parcelId)!: r.read(count)!,
+    };
+  }
+
+  Future<int> countSecnjaWithoutParcel() async {
+    final count = db.mapLocations.id.count();
+    final row = await (db.selectOnly(db.mapLocations)
+          ..addColumns([count])
+          ..where(db.mapLocations.parcelId.isNull() &
+              db.mapLocations.typeIndex.equals(LocationType.secnja.index)))
+        .getSingle();
+    return row.read(count)!;
   }
 
   Future<void> updateLocation(MapLocation location) async {
@@ -330,6 +398,63 @@ class DatabaseService {
     return rows.map(_locationFromDb).toList();
   }
 
+  // ==================== RECEIVED SHARES ====================
+
+  /// Saves a received share. Replaces the payload of a share with the same
+  /// id and keeps its visibility.
+  Future<void> upsertReceivedShare(ReceivedShare share) async {
+    final existing = await (db.select(db.receivedShares)
+          ..where((t) => t.shareId.equals(share.shareId)))
+        .getSingleOrNull();
+    if (existing == null) {
+      await db.into(db.receivedShares).insert(
+            ReceivedSharesCompanion.insert(
+              shareId: share.shareId,
+              payloadJson: share.payloadJson,
+              fetchedAt: share.fetchedAt,
+              expiresAt: share.expiresAt,
+              visible: Value(share.visible),
+            ),
+          );
+      return;
+    }
+    await (db.update(db.receivedShares)..where((t) => t.id.equals(existing.id)))
+        .write(
+      ReceivedSharesCompanion(
+        payloadJson: Value(share.payloadJson),
+        fetchedAt: Value(share.fetchedAt),
+        expiresAt: Value(share.expiresAt),
+      ),
+    );
+  }
+
+  /// Received shares that have not expired yet, newest first.
+  Future<List<ReceivedShare>> getReceivedShares() async {
+    final rows = await (db.select(db.receivedShares)
+          ..where((t) => t.expiresAt.isBiggerThanValue(DateTime.now()))
+          ..orderBy([
+            (t) => OrderingTerm(expression: t.fetchedAt, mode: OrderingMode.desc),
+          ]))
+        .get();
+    return rows.map(_receivedFromDb).toList();
+  }
+
+  Future<int> purgeExpiredReceivedShares() {
+    return (db.delete(db.receivedShares)
+          ..where((t) => t.expiresAt.isSmallerOrEqualValue(DateTime.now())))
+        .go();
+  }
+
+  Future<void> setReceivedShareVisible(String shareId, bool visible) async {
+    await (db.update(db.receivedShares)..where((t) => t.shareId.equals(shareId)))
+        .write(ReceivedSharesCompanion(visible: Value(visible)));
+  }
+
+  Future<void> deleteReceivedShare(String shareId) async {
+    await (db.delete(db.receivedShares)..where((t) => t.shareId.equals(shareId)))
+        .go();
+  }
+
   // ==================== PARCEL OPERATIONS ====================
 
   Future<Parcel?> findParcelByKoAndNumber(int? koNumber, String? parcelNumber) async {
@@ -349,6 +474,43 @@ class DatabaseService {
     await db.update(db.parcels).replace(_parcelToCompanion(parcel));
   }
 
+  Future<Parcel?> getParcel(int id) async {
+    final row = await (db.select(db.parcels)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+    return row == null ? null : _parcelFromDb(row);
+  }
+
+  Future<void> saveParcelShare(
+    int parcelId, {
+    required String shareId,
+    required String editToken,
+    required String hash,
+    required DateTime sharedAt,
+    required DateTime expiresAt,
+  }) async {
+    await (db.update(db.parcels)..where((t) => t.id.equals(parcelId))).write(
+      ParcelsCompanion(
+        shareId: Value(shareId),
+        shareEditToken: Value(editToken),
+        shareHash: Value(hash),
+        sharedAt: Value(sharedAt),
+        shareExpiresAt: Value(expiresAt),
+      ),
+    );
+  }
+
+  Future<void> clearParcelShare(int parcelId) async {
+    await (db.update(db.parcels)..where((t) => t.id.equals(parcelId))).write(
+      const ParcelsCompanion(
+        shareId: Value(null),
+        shareEditToken: Value(null),
+        shareHash: Value(null),
+        sharedAt: Value(null),
+        shareExpiresAt: Value(null),
+      ),
+    );
+  }
+
   Future<void> deleteParcel(int id) async {
     await (db.delete(db.parcels)..where((t) => t.id.equals(id))).go();
   }
@@ -364,7 +526,8 @@ class DatabaseService {
     final allLocations = await getAllLocations();
     int locationsDeleted = 0;
     for (final loc in allLocations) {
-      if (parcel.containsPoint(LatLng(loc.latitude, loc.longitude))) {
+      if (loc.parcelId == id ||
+          parcel.containsPoint(LatLng(loc.latitude, loc.longitude))) {
         await (db.delete(db.mapLocations)..where((t) => t.id.equals(loc.id))).go();
         locationsDeleted++;
       }

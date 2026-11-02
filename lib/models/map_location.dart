@@ -8,6 +8,10 @@ class MapLocation {
   int typeIndex;
   DateTime createdAt;
 
+  /// Parcel a sečnja mark belongs to. Null for plain points and for marks
+  /// outside every saved parcel.
+  int? parcelId;
+
   LocationType get type => LocationType.values[typeIndex];
   set type(LocationType value) => typeIndex = value.index;
 
@@ -18,6 +22,7 @@ class MapLocation {
     required this.longitude,
     LocationType type = LocationType.point,
     DateTime? createdAt,
+    this.parcelId,
   })  : typeIndex = type.index,
         createdAt = createdAt ?? DateTime.now();
 
@@ -30,6 +35,7 @@ class MapLocation {
     double? longitude,
     LocationType? type,
     DateTime? createdAt,
+    int? parcelId,
   }) =>
       MapLocation(
         id: id ?? this.id,
@@ -38,6 +44,7 @@ class MapLocation {
         longitude: longitude ?? this.longitude,
         type: type ?? this.type,
         createdAt: createdAt ?? this.createdAt,
+        parcelId: parcelId ?? this.parcelId,
       );
 
   Map<String, dynamic> toMap() => {
@@ -47,6 +54,7 @@ class MapLocation {
         'longitude': longitude,
         'type_index': typeIndex,
         'created_at': createdAt.millisecondsSinceEpoch,
+        'parcel_id': parcelId,
       };
 
   factory MapLocation.fromMap(Map<String, dynamic> map) => MapLocation(
@@ -56,5 +64,6 @@ class MapLocation {
         longitude: (map['longitude'] as num).toDouble(),
         type: LocationType.values[map['type_index'] as int],
         createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
+        parcelId: map['parcel_id'] as int?,
       );
 }

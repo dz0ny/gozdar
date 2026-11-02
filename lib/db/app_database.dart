@@ -1,8 +1,22 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../models/map_location.dart';
+import '../models/parcel.dart';
+
 part 'app_database.g.dart';
+
+/// Id of the smallest parcel in [parcels] that contains [point], or null.
+int? smallestParcelAt(Iterable<Parcel> parcels, LatLng point) {
+  Parcel? best;
+  for (final p in parcels) {
+    if (!p.containsPoint(point)) continue;
+    if (best == null || p.areaM2 < best.areaM2) best = p;
+  }
+  return best?.id;
+}
 
 // ---------------------------------------------------------------------------
 // Tables
@@ -22,6 +36,12 @@ class Parcels extends Table {
   RealColumn get woodAllowance => real().withDefault(const Constant(0.0))();
   RealColumn get woodCut => real().withDefault(const Constant(0.0))();
   IntColumn get treesCut => integer().withDefault(const Constant(0))();
+  // Sečnja share link, set while the owner shares this parcel's marks.
+  TextColumn get shareId => text().nullable()();
+  TextColumn get shareEditToken => text().nullable()();
+  TextColumn get shareHash => text().nullable()();
+  DateTimeColumn get sharedAt => dateTime().nullable()();
+  DateTimeColumn get shareExpiresAt => dateTime().nullable()();
 }
 
 @DataClassName('DbLogBatch')
@@ -59,6 +79,19 @@ class MapLocations extends Table {
   RealColumn get longitude => real()();
   IntColumn get typeIndex => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
+  // Parcel that a sečnja mark belongs to.
+  IntColumn get parcelId => integer().nullable().references(Parcels, #id)();
+}
+
+/// Sečnja that another owner shared with this phone.
+@DataClassName('DbReceivedShare')
+class ReceivedShares extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get shareId => text().unique()();
+  TextColumn get payloadJson => text()();
+  DateTimeColumn get fetchedAt => dateTime()();
+  DateTimeColumn get expiresAt => dateTime()();
+  BoolColumn get visible => boolean().withDefault(const Constant(true))();
 }
 
 @DataClassName('DbImportedOverlay')
@@ -130,13 +163,14 @@ class OfflineTileEntries extends Table {
     HttpCache,
     OfflineTileStyles,
     OfflineTileEntries,
+    ReceivedShares,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -157,8 +191,55 @@ class AppDatabase extends _$AppDatabase {
         // batch, hiding them everywhere. Return them to the working list.
         await repairOrphanedLogs();
       }
+      if (from < 5) {
+        await _addColumnIfMissing(m, mapLocations, mapLocations.parcelId);
+        await _addColumnIfMissing(m, parcels, parcels.shareId);
+        await _addColumnIfMissing(m, parcels, parcels.shareEditToken);
+        await _addColumnIfMissing(m, parcels, parcels.shareHash);
+        await _addColumnIfMissing(m, parcels, parcels.sharedAt);
+        await _addColumnIfMissing(m, parcels, parcels.shareExpiresAt);
+        final hasShares = await customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' "
+          "AND name = 'received_shares'",
+        ).get();
+        if (hasShares.isEmpty) await m.createTable(receivedShares);
+        await backfillSecnjaParcels();
+      }
     },
   );
+
+  /// Adds [column] unless the table has it already. A database that a
+  /// failed upgrade left half done can then upgrade again.
+  Future<void> _addColumnIfMissing(
+    Migrator m,
+    TableInfo table,
+    GeneratedColumn column,
+  ) async {
+    final info = await customSelect(
+      'PRAGMA table_info("${table.actualTableName}")',
+    ).get();
+    if (info.any((r) => r.read<String>('name') == column.name)) return;
+    await m.addColumn(table, column);
+  }
+
+  /// Links sečnja marks without a parcel to the saved parcel under them.
+  /// When parcels overlap, the smallest parcel gets the mark.
+  Future<void> backfillSecnjaParcels() async {
+    final rows = await (select(mapLocations)
+          ..where((t) =>
+              t.parcelId.isNull() & t.typeIndex.equals(LocationType.secnja.index)))
+        .get();
+    if (rows.isEmpty) return;
+    final saved = (await select(parcels).get())
+        .map((r) => Parcel(id: r.id, name: r.name, polygonJson: r.polygonJson))
+        .toList();
+    for (final row in rows) {
+      final id = smallestParcelAt(saved, LatLng(row.latitude, row.longitude));
+      if (id == null) continue;
+      await (update(mapLocations)..where((t) => t.id.equals(row.id)))
+          .write(MapLocationsCompanion(parcelId: Value(id)));
+    }
+  }
 
   /// Returns logs whose project no longer exists to the working list.
   Future<int> repairOrphanedLogs() {
