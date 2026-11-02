@@ -175,6 +175,7 @@ test('landing page explains the share and offers Uvozi', async () => {
   assert.ok(html.includes('1 drevo'), 'counts the trees');
   assert.ok(html.includes(`gozdar://open/o/${body.id}`), 'Uvozi opens the app');
   assert.ok(html.includes('Uvozi'));
+  assert.ok(html.includes('https://apps.apple.com/app/id6756237942'), 'App Store link');
   assert.ok(!html.includes('46.05'), 'no coordinates');
 });
 

@@ -17,8 +17,7 @@ const ANDROID_SHA256 = [
 
 const APPLE_APP_ID = 'JND55328G8.dev.dz0ny.gozdar';
 
-// TODO(owner): put the public App Store or TestFlight link here.
-const IOS_URL = 'https://testflight.apple.com/';
+const IOS_URL = 'https://apps.apple.com/app/id6756237942';
 const ANDROID_URL = 'https://github.com/dz0ny/gozdar/releases/latest';
 
 function randomId() {
