@@ -66,6 +66,10 @@ class MapLongPressMenu extends StatefulWidget {
   /// parcela), shown as a coloured badge. Null for private parcels.
   final PublicOwnerCategory? parcelPublicCategory;
 
+  /// Sečnja marks on the saved parcel. Shown when above zero; tapping the
+  /// line opens the parcel, where the owner can share them.
+  final int parcelSecnjaCount;
+
   /// Navigate (compass) straight to the long-pressed point.
   final VoidCallback onNavigate;
 
@@ -100,6 +104,7 @@ class MapLongPressMenu extends StatefulWidget {
     this.parcelValuationLookup,
     this.parcelRef,
     this.parcelPublicCategory,
+    this.parcelSecnjaCount = 0,
     required this.onNavigate,
     required this.onMeasureDistance,
     required this.onMeasureArea,
@@ -139,6 +144,7 @@ class MapLongPressMenu extends StatefulWidget {
     Future<ParcelValuation?>? parcelValuationLookup,
     (int, String)? parcelRef,
     PublicOwnerCategory? parcelPublicCategory,
+    int parcelSecnjaCount = 0,
     required VoidCallback onNavigate,
     required VoidCallback onMeasureDistance,
     required VoidCallback onMeasureArea,
@@ -175,6 +181,7 @@ class MapLongPressMenu extends StatefulWidget {
           parcelValuationLookup: parcelValuationLookup,
           parcelRef: parcelRef,
           parcelPublicCategory: parcelPublicCategory,
+          parcelSecnjaCount: parcelSecnjaCount,
           onNavigate: onNavigate,
           onMeasureDistance: onMeasureDistance,
           onMeasureArea: onMeasureArea,
@@ -372,6 +379,31 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
           if (widget.parcelSubtitle != null &&
               widget.parcelSubtitle!.isNotEmpty)
             _headerLine(Icons.straighten, widget.parcelSubtitle!),
+          if (widget.parcelSecnjaCount > 0)
+            InkWell(
+              onTap: widget.onViewParcel,
+              borderRadius: BorderRadius.circular(6),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.carpenter, size: 20, color: Colors.deepOrange),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '🪓 ${context.l10n.secnjaForCutCount(widget.parcelSecnjaCount)}',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: Colors.deepOrange,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                    if (widget.onViewParcel != null)
+                      const Icon(Icons.chevron_right, size: 20, color: Colors.deepOrange),
+                  ],
+                ),
+              ),
+            ),
           if (hasOwner)
             InkWell(
               onTap: manyOwners

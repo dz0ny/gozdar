@@ -1894,10 +1894,16 @@ class MapTabState extends State<MapTab> {
       parcelSubtitle = p.area > 0 ? _formatArea(p.area) : null;
     }
 
+    final secnjaCount = parcelAtPosition == null || parcelAtPosition.id == 0
+        ? 0
+        : (await DatabaseService().getSecnjaByParcel(parcelAtPosition.id)).length;
+    if (!mounted) return;
+
     await MapLongPressMenu.show(
       context,
       mapPosition: position,
       existingParcel: parcelAtPosition,
+      parcelSecnjaCount: secnjaCount,
       onAddLocation: () => _showAddLocationDialog(position),
       onAddLog: () => _showAddLogDialog(position),
       onAddSecnja: () => _startSecnjaMarking(position),
