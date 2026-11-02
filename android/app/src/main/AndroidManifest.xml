@@ -26,14 +26,9 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
-            <!-- Sečnja share links open in the app (go_router gets the path). -->
+            <!-- Sečnja share links open the landing page in the browser first.
+                 Its Uvozi button opens the app (go_router gets the path). -->
             <meta-data android:name="flutter_deeplinking_enabled" android:value="true" />
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="gozdar.dz0ny.dev" android:pathPrefix="/o/" />
-            </intent-filter>
             <!-- Uvozi button on the share landing page: gozdar://open/o/<id> -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
