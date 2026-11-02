@@ -2032,5 +2032,40 @@
   "introTermsLinkLabel": "prostor.zgs.gov.si/pregledovalnik",
   "introTermsUrl": "https://prostor.zgs.gov.si/pregledovalnik/",
   "aboutShowIntro": "Uvodni vodič",
-  "aboutShowIntroDesc": "Ponovno si oglejte predstavitev aplikacije"
+  "aboutShowIntroDesc": "Ponovno si oglejte predstavitev aplikacije",
+  "secnjaShareHeadline": "🪓 Sečnja — parcela {parcel}, k.o. {ko}",
+  "@secnjaShareHeadline": {
+    "placeholders": {
+      "parcel": {
+        "type": "String"
+      },
+      "ko": {
+        "type": "String"
+      }
+    }
+  },
+  "secnjaShareCount": "{count, plural, one{{count} drevo za posek} two{{count} drevesi za posek} few{{count} drevesa za posek} other{{count} dreves za posek}}",
+  "@secnjaShareCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "secnjaShareOwner": "Lastnik: {owner}",
+  "@secnjaShareOwner": {
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "secnjaShareValidUntil": "Povezava velja do {date}",
+  "@secnjaShareValidUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  }
 }

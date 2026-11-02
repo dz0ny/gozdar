@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'secnja_share.dart';
+
 /// Sečnja that another owner shared with this phone through a link.
 class ReceivedShare {
   int id;
@@ -15,6 +19,10 @@ class ReceivedShare {
     required this.expiresAt,
     this.visible = true,
   });
+
+  SecnjaSharePayload get payload => SecnjaSharePayload.fromJson(
+        jsonDecode(payloadJson) as Map<String, dynamic>,
+      );
 
   /// Whole days until the link expires, never below zero.
   int get daysLeft {

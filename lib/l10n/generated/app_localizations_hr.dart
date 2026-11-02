@@ -2886,4 +2886,31 @@ class AppLocalizationsHr extends AppLocalizations {
   @override
   String get aboutShowIntroDesc =>
       'Ponovno pogledajte predstavljanje aplikacije';
+
+  @override
+  String secnjaShareHeadline(String parcel, String ko) {
+    return '🪓 Sječa — čestica $parcel, k.o. $ko';
+  }
+
+  @override
+  String secnjaShareCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count stabala za sječu',
+      few: '$count stabla za sječu',
+      one: '$count stablo za sječu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String secnjaShareOwner(String owner) {
+    return 'Vlasnik: $owner';
+  }
+
+  @override
+  String secnjaShareValidUntil(String date) {
+    return 'Poveznica vrijedi do $date';
+  }
 }
