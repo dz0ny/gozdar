@@ -2,7 +2,10 @@ name = "gozdar-proxy"
 main = "src/index.js"
 compatibility_date = "2025-11-17"
 
-# Sečnja share links are served from this host.
+# The app calls gozdar-proxy.dz0ny.workers.dev. Keep it on.
+workers_dev = true
+
+# Sečnja share links come from this host.
 routes = [{ pattern = "gozdar.dz0ny.dev", custom_domain = true }]
 
 [placement]
