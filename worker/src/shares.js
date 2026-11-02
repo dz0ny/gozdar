@@ -9,9 +9,10 @@ const TTL_SECONDS = 30 * 24 * 3600;
 const MAX_BYTES = 262144;
 const ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-// Fingerprints of the keys that sign the Android app.
-// Only the debug key is here now. Add the release key later.
+// Fingerprints of the keys that sign the Android app: the key of the
+// GitHub release APKs (read from v2026.1031.2) and the local debug key.
 const ANDROID_SHA256 = [
+  '1D:6A:FE:1B:3A:FA:68:86:E4:58:59:02:BD:95:4E:F8:F0:51:FF:A9:6F:99:A6:6A:E9:7E:3D:94:AC:C4:98:75',
   '85:69:C5:31:8C:05:13:3D:2B:11:D5:07:E4:6C:BE:DB:06:B4:08:EE:DC:ED:44:77:E5:0B:C5:1E:EA:AA:E0:AF',
 ];
 

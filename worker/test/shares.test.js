@@ -131,7 +131,7 @@ test('assetlinks lists the package', async () => {
   const res = await call({}, 'GET', '/.well-known/assetlinks.json');
   const body = await res.json();
   assert.equal(body[0].target.package_name, 'dev.dz0ny.gozdar');
-  assert.ok(body[0].target.sha256_cert_fingerprints.length >= 1);
+  assert.ok(body[0].target.sha256_cert_fingerprints.some((f) => f.startsWith('1D:6A:FE')), 'release key');
 });
 
 test('aasa lists the app id and path', async () => {
