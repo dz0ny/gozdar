@@ -14,6 +14,7 @@ List<MapLocation> marks(int n) => [
 
 void main() {
   setUpAll(() => initializeDateFormatting());
+  group('swipe', swipeTests);
 
   group('secnjaShareState', () {
     test('not shared', () {
@@ -97,5 +98,69 @@ void main() {
   testWidgets('not shared with zero marks renders nothing', (tester) async {
     await pumpCard(tester, count: 0, state: SecnjaShareState.notShared);
     expect(find.byType(Card), findsNothing);
+  });
+}
+
+void swipeTests() {
+  Future<List<String>> pump(WidgetTester tester, {bool deleteSucceeds = true}) async {
+    final deleted = <String>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('sl'),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ParcelSecnjaCard(
+              secnja: [
+                MapLocation(id: 1, name: 'Smreka 1', latitude: 46, longitude: 14, type: LocationType.secnja),
+                MapLocation(id: 2, name: 'Smreka 2', latitude: 46, longitude: 14, type: LocationType.secnja),
+              ],
+              onNavigateToPoint: (_, _) {},
+              onShare: () {},
+              onRevoke: () {},
+              onDelete: (mark) async {
+                deleted.add(mark.name);
+                return deleteSucceeds;
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    return deleted;
+  }
+
+  Future<void> swipeLeft(WidgetTester tester, String name) async {
+    await tester.drag(find.text(name), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('swipe left and confirm removes the tree', (tester) async {
+    final deleted = await pump(tester);
+    await swipeLeft(tester, 'Smreka 1');
+    await tester.tap(find.text('Izbriši'));
+    await tester.pumpAndSettle();
+    expect(deleted, ['Smreka 1']);
+    expect(find.text('Smreka 1'), findsNothing);
+    expect(find.text('Smreka 2'), findsOneWidget);
+  });
+
+  testWidgets('swipe left and cancel keeps the tree', (tester) async {
+    final deleted = await pump(tester);
+    await swipeLeft(tester, 'Smreka 1');
+    await tester.tap(find.text('Prekliči'));
+    await tester.pumpAndSettle();
+    expect(deleted, isEmpty);
+    expect(find.text('Smreka 1'), findsOneWidget);
+  });
+
+  testWidgets('a failed delete keeps the tree', (tester) async {
+    final deleted = await pump(tester, deleteSucceeds: false);
+    await swipeLeft(tester, 'Smreka 1');
+    await tester.tap(find.text('Izbriši'));
+    await tester.pumpAndSettle();
+    expect(deleted, ['Smreka 1']);
+    expect(find.text('Smreka 1'), findsOneWidget);
   });
 }

@@ -2,6 +2,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../l10n/l10n.dart';
 import '../models/map_location.dart';
+import 'cadastral_service.dart';
 import '../widgets/secnja_marking_panel.dart';
 import 'database_service.dart';
 
@@ -27,4 +28,22 @@ Future<MapLocation> markSecnjaAt(
   );
   mark.id = await database.insertLocation(mark);
   return mark;
+}
+
+/// Imports the cadastral parcel under [point] when no saved parcel holds it,
+/// so the marks there get a parcel and can be shared. Saving the parcel links
+/// the marks inside it. Returns the parcel id, or null when none is found.
+Future<int?> importSecnjaParcelAt(
+  LatLng point, {
+  required Future<CadastralParcel?> Function(LatLng point) query,
+  required Future<bool> Function(CadastralParcel parcel) import,
+  DatabaseService? db,
+}) async {
+  final database = db ?? DatabaseService();
+  final existing = await database.parcelIdAt(point);
+  if (existing != null) return existing;
+  final cadastral = await query(point);
+  if (cadastral == null) return null;
+  await import(cadastral);
+  return database.parcelIdAt(point);
 }

@@ -139,6 +139,14 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
     _loadLogsInParcel();
   }
 
+  /// Deletes one tree after a swipe, then refreshes the card and the map.
+  Future<bool> _deleteSecnjaMark(MapLocation mark) async {
+    final mapProvider = context.read<MapProvider>();
+    final deleted = await mapProvider.deleteLocation(mark.id);
+    if (deleted) await _loadLocationsInParcel();
+    return deleted;
+  }
+
   Future<void> _loadLocationsInParcel() async {
     try {
       final allLocations = await _databaseService.getAllLocations();
@@ -1350,6 +1358,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                         busy: _secnjaBusy,
                         onShare: () => _runSecnja(() => runSecnjaShare(context, _parcel)),
                         onRevoke: () => _runSecnja(() => runSecnjaRevoke(context, _parcel)),
+                        onDelete: _deleteSecnjaMark,
                       ),
                     ),
                   ],

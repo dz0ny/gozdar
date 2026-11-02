@@ -748,6 +748,55 @@ class MapTabState extends State<MapTab> {
     if (!mounted) return;
     unawaited(context.read<MapProvider>().loadLocations());
     await _refreshSecnjaHeader();
+    if (mark.parcelId == null) unawaited(_importSecnjaParcel(mark));
+  }
+
+  /// True while the parcel under a new mark is being imported.
+  bool _importingSecnjaParcel = false;
+
+  /// A mark outside every saved parcel imports the cadastral parcel under it,
+  /// so the trees can be shared. Marking does not wait for it.
+  Future<void> _importSecnjaParcel(MapLocation mark) async {
+    if (_importingSecnjaParcel) return;
+    _importingSecnjaParcel = true;
+    final mapProvider = context.read<MapProvider>();
+    try {
+      CadastralParcel? imported;
+      final parcelId = await importSecnjaParcelAt(
+        LatLng(mark.latitude, mark.longitude),
+        query: mapProvider.queryParcelAtLocation,
+        import: (parcel) async {
+          imported = parcel;
+          return mapProvider.importCadastralParcel(parcel);
+        },
+      );
+      final parcel = imported;
+      if (parcelId == null || parcel == null || !mounted) return;
+      _downloadTilesForParcel(parcel.polygon);
+      // Končaj opens the parcel of these marks for Deli sekaču.
+      for (final m in _secnjaSession) {
+        m.parcelId ??= await DatabaseService().parcelIdAt(
+          LatLng(m.latitude, m.longitude),
+        );
+      }
+      if (!mounted) return;
+      unawaited(mapProvider.loadLocations());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            L10n.current.mapTabParcelImported(
+              parcel.cadastralMunicipality,
+              parcel.parcelNumber,
+            ),
+          ),
+        ),
+      );
+      await _refreshSecnjaHeader();
+    } catch (_) {
+      // The mark stays without a parcel. The owner can import it by hand.
+    } finally {
+      _importingSecnjaParcel = false;
+    }
   }
 
   /// Removes the last mark of this session.

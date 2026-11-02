@@ -5,6 +5,7 @@ import '../models/map_location.dart';
 import '../l10n/l10n.dart';
 import '../services/secnja_share_flow.dart';
 import '../utils/formats.dart';
+import 'map_dialogs.dart';
 
 /// Card displaying logs within a parcel
 class ParcelLogsCard extends StatelessWidget {
@@ -247,7 +248,7 @@ class ParcelLocationsCard extends StatelessWidget {
 }
 
 /// Card displaying trees marked for cutting within a parcel
-class ParcelSecnjaCard extends StatelessWidget {
+class ParcelSecnjaCard extends StatefulWidget {
   final List<MapLocation> secnja;
   final Function(LatLng point, String name) onNavigateToPoint;
   final SecnjaShareState shareState;
@@ -258,6 +259,10 @@ class ParcelSecnjaCard extends StatelessWidget {
   /// True while a share or revoke runs. Disables the buttons.
   final bool busy;
 
+  /// Deletes a tree after a swipe to the left and a confirm. Returns true
+  /// when it is gone. Null turns swiping off.
+  final Future<bool> Function(MapLocation mark)? onDelete;
+
   const ParcelSecnjaCard({
     super.key,
     required this.secnja,
@@ -267,10 +272,54 @@ class ParcelSecnjaCard extends StatelessWidget {
     required this.onShare,
     required this.onRevoke,
     this.busy = false,
+    this.onDelete,
   });
 
   @override
+  State<ParcelSecnjaCard> createState() => _ParcelSecnjaCardState();
+}
+
+class _ParcelSecnjaCardState extends State<ParcelSecnjaCard> {
+  // A swiped row must leave the list at once, or Dismissible fails.
+  final _removed = <int>{};
+
+  SecnjaShareState get shareState => widget.shareState;
+  void Function(LatLng point, String name) get onNavigateToPoint =>
+      widget.onNavigateToPoint;
+
+  @override
+  void didUpdateWidget(ParcelSecnjaCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.secnja != widget.secnja) _removed.clear();
+  }
+
+  Widget _swipeable(MapLocation mark, Widget child) {
+    final delete = widget.onDelete;
+    if (delete == null) return child;
+    return Dismissible(
+      key: ValueKey('secnja_${mark.id}'),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) async {
+        final confirmed = await MapDialogs.showDeleteLocationDialog(
+          context: context,
+          location: mark,
+        );
+        return confirmed && await delete(mark);
+      },
+      onDismissed: (_) => setState(() => _removed.add(mark.id)),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        color: Colors.red,
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      child: child,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final secnja = widget.secnja.where((m) => !_removed.contains(m.id)).toList();
     final shared = shareState != SecnjaShareState.notShared;
     // A shared parcel keeps its card without marks, so the link can be revoked.
     if (secnja.isEmpty && !shared) return const SizedBox.shrink();
@@ -307,7 +356,7 @@ class ParcelSecnjaCard extends StatelessWidget {
             separatorBuilder: (context, index) => divider,
             itemBuilder: (context, index) {
               final location = secnja[index];
-              return ListTile(
+              return _swipeable(location, ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -341,17 +390,17 @@ class ParcelSecnjaCard extends StatelessWidget {
                   LatLng(location.latitude, location.longitude),
                   location.name,
                 ),
-              );
+              ));
             },
           ),
           divider,
-          _shareFooter(context),
+          _shareFooter(context, secnja),
         ],
       ),
     );
   }
 
-  Widget _shareFooter(BuildContext context) {
+  Widget _shareFooter(BuildContext context, List<MapLocation> secnja) {
     final l10n = context.l10n;
     final shared = shareState != SecnjaShareState.notShared;
     final label = switch (shareState) {
@@ -366,7 +415,7 @@ class ParcelSecnjaCard extends StatelessWidget {
         children: [
           if (secnja.isNotEmpty)
             FilledButton.icon(
-              onPressed: busy ? null : onShare,
+              onPressed: widget.busy ? null : widget.onShare,
               style: FilledButton.styleFrom(backgroundColor: Colors.deepOrange),
               icon: const Icon(Icons.ios_share),
               label: Text(label),
@@ -376,14 +425,14 @@ class ParcelSecnjaCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    expiresAt == null
+                    widget.expiresAt == null
                         ? ''
-                        : l10n.secnjaSharedUntil(Fmt.date(expiresAt!.toLocal())),
+                        : l10n.secnjaSharedUntil(Fmt.date(widget.expiresAt!.toLocal())),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
                 TextButton(
-                  onPressed: busy ? null : onRevoke,
+                  onPressed: widget.busy ? null : widget.onRevoke,
                   child: Text(l10n.secnjaRevoke),
                 ),
               ],
