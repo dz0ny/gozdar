@@ -141,15 +141,16 @@ void main() {
     var name = 'Smreka 1';
     final service = serviceWith((_) async => http.Response.bytes(utf8.encode(serverJson(name: name)), 200));
 
-    expect(await service.receive('abc123'), ReceiveOutcome.imported);
+    expect((await service.receive('abc123')).outcome, ReceiveOutcome.imported);
     name = 'Bukev 9';
-    expect(await service.receive('abc123'), ReceiveOutcome.imported);
+    final second = await service.receive('abc123');
+    expect(second.outcome, ReceiveOutcome.imported);
+    expect(second.payload?.points.single.name, 'Bukev 9');
 
     final all = await dbService.getReceivedShares();
     expect(all, hasLength(1));
     expect(all.single.payload.points.single.name, 'Bukev 9');
     expect(all.single.expiresAt.toUtc(), DateTime.utc(2026, 12, 2, 10));
-    expect(service.lastReceived?.parcelNumber, '1234/5');
   });
 
   test('receive 404 deletes the local row and returns expired', () async {
@@ -160,13 +161,13 @@ void main() {
       expiresAt: DateTime.now().add(const Duration(days: 3)),
     ));
     final service = serviceWith((_) async => http.Response('', 404));
-    expect(await service.receive('abc123'), ReceiveOutcome.expired);
+    expect((await service.receive('abc123')).outcome, ReceiveOutcome.expired);
     expect(await dbService.getReceivedShares(), isEmpty);
   });
 
   test('receive on SocketException returns offline and stores nothing', () async {
     final service = serviceWith((_) async => throw const SocketException('offline'));
-    expect(await service.receive('abc123'), ReceiveOutcome.offline);
+    expect((await service.receive('abc123')).outcome, ReceiveOutcome.offline);
     expect(await dbService.getReceivedShares(), isEmpty);
   });
 
@@ -189,5 +190,33 @@ void main() {
 
     expect(requests.map((r) => r.url.path), ['/api/s/live']);
     expect(await db.select(db.receivedShares).get(), hasLength(1));
+  });
+
+  test('receive of an unreadable share returns invalid and stores nothing', () async {
+    for (final body in ['<html>wifi login</html>', '{"parcel":null,"points":[]}', '{"v":2}']) {
+      final service = serviceWith((_) async => http.Response(body, 200));
+      expect((await service.receive('bad')).outcome, ReceiveOutcome.invalid);
+    }
+    expect(await dbService.getReceivedShares(), isEmpty);
+  });
+
+  test('refreshReceived keeps going after an unreadable share', () async {
+    for (final id in ['bad', 'good']) {
+      await dbService.upsertReceivedShare(ReceivedShare(
+        shareId: id,
+        payloadJson: serverJson(),
+        fetchedAt: DateTime(2026),
+        expiresAt: DateTime.now().add(const Duration(days: 3)),
+      ));
+    }
+    final service = serviceWith((r) async => r.url.path.endsWith('/bad')
+        ? http.Response('<html>', 200)
+        : http.Response.bytes(utf8.encode(serverJson(name: 'Fresh 1')), 200));
+
+    await service.refreshReceived();
+
+    expect(requests.map((r) => r.url.path).toSet(), {'/api/s/bad', '/api/s/good'});
+    final good = (await dbService.getReceivedShares()).firstWhere((s) => s.shareId == 'good');
+    expect(good.payload.points.single.name, 'Fresh 1');
   });
 }

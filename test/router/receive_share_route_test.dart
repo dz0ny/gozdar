@@ -15,16 +15,19 @@ class FakeShareService extends SecnjaShareService {
   final received = <String>[];
 
   @override
-  Future<ReceiveOutcome> receive(String shareId) async {
+  Future<ReceiveResult> receive(String shareId) async {
     received.add(shareId);
-    if (outcome == ReceiveOutcome.imported) {
-      lastReceived = SecnjaSharePayload(
-        parcelNumber: '1234/5',
-        points: [SecnjaPoint(name: 'Drevo 1', lat: 46, lng: 14)],
-        createdAt: DateTime.utc(2026, 11, 2),
-      );
-    }
-    return outcome;
+    if (outcome == ReceiveOutcome.invalid) throw StateError('boom');
+    return (
+      outcome: outcome,
+      payload: outcome == ReceiveOutcome.imported
+          ? SecnjaSharePayload(
+              parcelNumber: '1234/5',
+              points: [SecnjaPoint(name: 'Drevo 1', lat: 46, lng: 14)],
+              createdAt: DateTime.utc(2026, 11, 2),
+            )
+          : null,
+    );
   }
 }
 
@@ -80,5 +83,13 @@ void main() {
     await tester.pumpWidget(app(router('/s/old')));
     await tester.pumpAndSettle();
     expect(find.text('Povezava je potekla ali bila preklicana'), findsOneWidget);
+  });
+
+  testWidgets('an error while receiving still leaves the loading screen', (tester) async {
+    SecnjaShareService.instance = FakeShareService(ReceiveOutcome.invalid);
+    await tester.pumpWidget(app(router('/s/broken')));
+    await tester.pumpAndSettle();
+    expect(find.text('MAP'), findsOneWidget);
+    expect(find.text('Povezave ni mogoče prebrati'), findsOneWidget);
   });
 }

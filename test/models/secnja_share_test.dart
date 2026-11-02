@@ -113,30 +113,12 @@ void main() {
     expect(build(m: marks().sublist(0, 1)).contentHash, isNot(base));
   });
 
-  test('shareMessage has the five spec lines', () {
-    final p = build()..expiresAt = DateTime(2026, 12, 2);
-    final msg = shareMessage(p, Uri.parse('https://gozdar.dz0ny.dev/s/k7Qm2x'), l10n);
-    final lines = msg.split('\n');
-    expect(lines, hasLength(5));
-    expect(lines[0], '🪓 Sečnja — parcela 1234/5, k.o. Dolenja vas');
-    expect(lines[1], startsWith('2 drevesi za posek · '));
-    expect(lines[1], endsWith(' ha'));
-    expect(lines[2], 'Lastnik: Janez Novak');
-    expect(lines[3], 'https://gozdar.dz0ny.dev/s/k7Qm2x');
-    expect(lines[4], 'Povezava velja do 2. 12. 2026');
+  test('shareTitle names the parcel and k.o.', () {
+    expect(shareTitle(build(), l10n), '🪓 Sečnja — parcela 1234/5, k.o. Dolenja vas');
   });
 
-  test('shareMessage without owner has four lines', () {
-    final p = build(owner: null)..expiresAt = DateTime(2026, 12, 2);
-    expect(shareMessage(p, Uri.parse('https://x/s/a'), l10n).split('\n'), hasLength(4));
-  });
-
-  test('shareMessage with koName null uses the k.o. number', () {
-    final p = SecnjaSharePayload.fromParcel(parcel(), marks(), species: const [])
-      ..expiresAt = DateTime(2026, 12, 2);
-    expect(
-      shareMessage(p, Uri.parse('https://x/s/a'), l10n).split('\n').first,
-      '🪓 Sečnja — parcela 1234/5, k.o. 1234',
-    );
+  test('shareTitle with koName null uses the k.o. number', () {
+    final p = SecnjaSharePayload.fromParcel(parcel(), marks(), species: const []);
+    expect(shareTitle(p, l10n), '🪓 Sečnja — parcela 1234/5, k.o. 1234');
   });
 }

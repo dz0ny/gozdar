@@ -4,7 +4,6 @@ import 'package:crypto/crypto.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../l10n/l10n.dart';
-import '../utils/formats.dart';
 import 'map_location.dart';
 import 'parcel.dart';
 
@@ -121,7 +120,9 @@ class SecnjaSharePayload {
         'createdAt': createdAt.toUtc().toIso8601String(),
       };
 
+  /// Throws [FormatException] for a payload this app version cannot read.
   factory SecnjaSharePayload.fromJson(Map<String, dynamic> json) {
+    if (json['v'] != 1) throw FormatException('Unknown share version ${json['v']}');
     final parcel = json['parcel'] as Map<String, dynamic>;
     final expires = json['expiresAt'] as String?;
     return SecnjaSharePayload(
@@ -163,21 +164,8 @@ class SecnjaSharePayload {
   }
 }
 
-/// The text that the owner sends to the logger with the share [link].
-String shareMessage(
-  SecnjaSharePayload payload,
-  Uri link,
-  AppLocalizations l10n,
-) {
+/// Title of the shared link, e.g. "🪓 Sečnja — parcela 1234/5, k.o. Dolenja vas".
+String shareTitle(SecnjaSharePayload payload, AppLocalizations l10n) {
   final ko = payload.koName ?? payload.koNumber?.toString() ?? '';
-  final count = l10n.secnjaShareCount(payload.points.length);
-  final area = payload.areaHa;
-  return [
-    l10n.secnjaShareHeadline(payload.parcelNumber, ko),
-    area == null ? count : '$count · ${Fmt.num(area, 2)} ha',
-    if (payload.owner != null) l10n.secnjaShareOwner(payload.owner!),
-    link.toString(),
-    if (payload.expiresAt != null)
-      l10n.secnjaShareValidUntil(Fmt.date(payload.expiresAt!.toLocal())),
-  ].join('\n');
+  return l10n.secnjaShareHeadline(payload.parcelNumber, ko);
 }

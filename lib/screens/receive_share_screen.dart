@@ -23,29 +23,35 @@ class _ReceiveShareScreenState extends State<ReceiveShareScreen> {
   @override
   void initState() {
     super.initState();
-    _receive();
+    // Inherited widgets are not ready in initState; start after the frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _receive());
   }
 
   Future<void> _receive() async {
-    final service = SecnjaShareService.instance;
-    final outcome = await service.receive(widget.shareId);
-    if (!mounted) return;
-
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
     final mapProvider = Provider.of<MapProvider?>(context, listen: false);
-    final payload = service.lastReceived;
-    final String message;
-    switch (outcome) {
-      case ReceiveOutcome.imported:
-        message = l10n.secnjaReceived(payload!.parcelNumber, payload.points.length);
-        await mapProvider?.loadReceivedShares();
-        mapProvider?.focusOn(payload);
-      case ReceiveOutcome.expired:
-        message = l10n.secnjaLinkExpired;
-        await mapProvider?.loadReceivedShares();
-      case ReceiveOutcome.offline:
-        message = l10n.secnjaNoConnection;
+    String message;
+    try {
+      final result = await SecnjaShareService.instance.receive(widget.shareId);
+      final payload = result.payload;
+      switch (result.outcome) {
+        case ReceiveOutcome.imported:
+          message = l10n.secnjaReceived(payload!.parcelNumber, payload.points.length);
+          await mapProvider?.loadReceivedShares();
+          mapProvider?.focusOn(payload);
+        case ReceiveOutcome.expired:
+          message = l10n.secnjaLinkExpired;
+          await mapProvider?.loadReceivedShares();
+        case ReceiveOutcome.offline:
+          message = l10n.secnjaNoConnection;
+        case ReceiveOutcome.invalid:
+          message = l10n.secnjaLinkInvalid;
+      }
+    } catch (e) {
+      // Never leave the user on this screen: it has no way back.
+      debugPrint('Receiving share ${widget.shareId} failed: $e');
+      message = l10n.secnjaLinkInvalid;
     }
     if (!mounted) return;
     // A first start still shows the intro after the share is stored.

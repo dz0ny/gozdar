@@ -4896,24 +4896,6 @@ abstract class AppLocalizations {
   /// **'🪓 Sečnja — parcela {parcel}, k.o. {ko}'**
   String secnjaShareHeadline(String parcel, String ko);
 
-  /// No description provided for @secnjaShareCount.
-  ///
-  /// In sl, this message translates to:
-  /// **'{count, plural, one{{count} drevo za posek} two{{count} drevesi za posek} few{{count} drevesa za posek} other{{count} dreves za posek}}'**
-  String secnjaShareCount(int count);
-
-  /// No description provided for @secnjaShareOwner.
-  ///
-  /// In sl, this message translates to:
-  /// **'Lastnik: {owner}'**
-  String secnjaShareOwner(String owner);
-
-  /// No description provided for @secnjaShareValidUntil.
-  ///
-  /// In sl, this message translates to:
-  /// **'Povezava velja do {date}'**
-  String secnjaShareValidUntil(String date);
-
   /// No description provided for @secnjaOutsideParcel.
   ///
   /// In sl, this message translates to:
@@ -5087,6 +5069,12 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Nalagam sečnjo…'**
   String get receivedLoading;
+
+  /// No description provided for @secnjaLinkInvalid.
+  ///
+  /// In sl, this message translates to:
+  /// **'Povezave ni mogoče prebrati'**
+  String get secnjaLinkInvalid;
 }
 
 class _AppLocalizationsDelegate

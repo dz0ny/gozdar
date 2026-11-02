@@ -23,6 +23,15 @@ void main() {
       final p = Parcel(name: 'A', shareId: 'abc', shareHash: 'h');
       expect(secnjaShareState(p, 'h'), SecnjaShareState.sharedUnchanged);
     });
+    test('expired link counts as not shared', () {
+      final p = Parcel(
+        name: 'A',
+        shareId: 'abc',
+        shareHash: 'h',
+        shareExpiresAt: DateTime.now().subtract(const Duration(minutes: 1)),
+      );
+      expect(secnjaShareState(p, 'h'), SecnjaShareState.notShared);
+    });
     test('different hash is changed', () {
       final p = Parcel(name: 'A', shareId: 'abc', shareHash: 'h');
       expect(secnjaShareState(p, 'other'), SecnjaShareState.sharedChanged);

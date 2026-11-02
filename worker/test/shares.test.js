@@ -141,3 +141,25 @@ test('aasa lists the app id and path', async () => {
   assert.ok(body.applinks.details[0].appIDs.includes('JND55328G8.dev.dz0ny.gozdar'));
   assert.equal(body.applinks.details[0].components[0]['/'], '/s/*');
 });
+
+test('rejects null or array parcel', async () => {
+  const env = { SHARES: fakeKv() };
+  for (const parcel of [null, []]) {
+    const res = await call(env, 'POST', '/api/s', { v: 1, parcel, points: [] });
+    assert.equal(res.status, 400);
+  }
+});
+
+test('rejects parcel without a number', async () => {
+  const env = { SHARES: fakeKv() };
+  const res = await call(env, 'POST', '/api/s', { v: 1, parcel: { polygon: [] }, points: [] });
+  assert.equal(res.status, 400);
+});
+
+test('rejects points without name or coordinates', async () => {
+  const env = { SHARES: fakeKv() };
+  for (const point of [{ lat: 1, lng: 1 }, { name: 'x', lat: '1', lng: 1 }, null]) {
+    const res = await call(env, 'POST', '/api/s', payload([point]));
+    assert.equal(res.status, 400);
+  }
+});

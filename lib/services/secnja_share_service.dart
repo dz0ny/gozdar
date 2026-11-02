@@ -27,7 +27,10 @@ class ShareException implements Exception {
   String toString() => 'ShareException: $message';
 }
 
-enum ReceiveOutcome { imported, expired, offline }
+enum ReceiveOutcome { imported, expired, offline, invalid }
+
+/// What [SecnjaShareService.receive] did, with the payload when it imported.
+typedef ReceiveResult = ({ReceiveOutcome outcome, SecnjaSharePayload? payload});
 
 /// Uploads sečnja shares to the worker and downloads shares from others.
 class SecnjaShareService {
@@ -42,9 +45,6 @@ class SecnjaShareService {
   final http.Client _client;
   final DatabaseService _db;
   final Uri base;
-
-  /// Payload of the last share that [receive] imported.
-  SecnjaSharePayload? lastReceived;
 
   SecnjaShareService({http.Client? client, DatabaseService? db, Uri? base})
       : _client = client ?? http.Client(),
@@ -125,29 +125,35 @@ class SecnjaShareService {
   }
 
   /// Downloads the share [shareId] and stores it on this phone.
-  Future<ReceiveOutcome> receive(String shareId) async {
+  Future<ReceiveResult> receive(String shareId) async {
     final http.Response res;
     try {
       res = await _send(_client.get(_api(shareId)));
     } on ShareException {
-      return ReceiveOutcome.offline;
+      return (outcome: ReceiveOutcome.offline, payload: null);
     }
     if (res.statusCode == 404 || res.statusCode == 410) {
       await _db.deleteReceivedShare(shareId);
-      return ReceiveOutcome.expired;
+      return (outcome: ReceiveOutcome.expired, payload: null);
     }
-    if (res.statusCode != 200) return ReceiveOutcome.offline;
+    if (res.statusCode != 200) return (outcome: ReceiveOutcome.offline, payload: null);
 
-    final text = utf8.decode(res.bodyBytes);
-    final payload = SecnjaSharePayload.fromJson(jsonDecode(text) as Map<String, dynamic>);
+    final String text;
+    final SecnjaSharePayload payload;
+    try {
+      text = utf8.decode(res.bodyBytes);
+      payload = SecnjaSharePayload.fromJson(jsonDecode(text) as Map<String, dynamic>);
+    } catch (_) {
+      // A login page of a public Wi-Fi, or a share from a newer app.
+      return (outcome: ReceiveOutcome.invalid, payload: null);
+    }
     await _db.upsertReceivedShare(ReceivedShare(
       shareId: shareId,
       payloadJson: text,
       fetchedAt: DateTime.now(),
       expiresAt: payload.expiresAt ?? DateTime.now().add(const Duration(days: 30)),
     ));
-    lastReceived = payload;
-    return ReceiveOutcome.imported;
+    return (outcome: ReceiveOutcome.imported, payload: payload);
   }
 
   /// Removes expired shares, then downloads the others again.
@@ -155,7 +161,11 @@ class SecnjaShareService {
   Future<void> refreshReceived() async {
     await _db.purgeExpiredReceivedShares();
     for (final share in await _db.getReceivedShares()) {
-      await receive(share.shareId);
+      try {
+        await receive(share.shareId);
+      } catch (e) {
+        debugPrint('Refreshing share ${share.shareId} failed: $e');
+      }
     }
   }
 }

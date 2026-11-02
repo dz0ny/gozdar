@@ -43,6 +43,24 @@ function bearer(c) {
   return header.startsWith('Bearer ') ? header.slice(7) : null;
 }
 
+function isObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+// The app must be able to read every share. Check the fields it needs.
+function validPayload(payload) {
+  if (!isObject(payload) || !isObject(payload.parcel)) return false;
+  if (typeof payload.parcel.number !== 'string') return false;
+  if (!Array.isArray(payload.points)) return false;
+  return payload.points.every(
+    (p) =>
+      isObject(p) &&
+      typeof p.name === 'string' &&
+      Number.isFinite(p.lat) &&
+      Number.isFinite(p.lng),
+  );
+}
+
 // Reads and checks the request body. Returns [payload] or [null, response].
 async function readPayload(c) {
   const text = await c.req.text();
@@ -55,7 +73,7 @@ async function readPayload(c) {
   } catch {
     return [null, c.json({ error: 'Invalid JSON' }, 400)];
   }
-  if (!payload || typeof payload.parcel !== 'object' || !Array.isArray(payload.points)) {
+  if (!validPayload(payload)) {
     return [null, c.json({ error: 'Missing parcel or points' }, 400)];
   }
   return [payload];

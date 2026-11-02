@@ -2031,30 +2031,6 @@
       }
     }
   },
-  "secnjaShareCount": "{count, plural, one{{count} drevo za posek} two{{count} drevesi za posek} few{{count} drevesa za posek} other{{count} dreves za posek}}",
-  "@secnjaShareCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "secnjaShareOwner": "Lastnik: {owner}",
-  "@secnjaShareOwner": {
-    "placeholders": {
-      "owner": {
-        "type": "String"
-      }
-    }
-  },
-  "secnjaShareValidUntil": "Povezava velja do {date}",
-  "@secnjaShareValidUntil": {
-    "placeholders": {
-      "date": {
-        "type": "String"
-      }
-    }
-  },
   "secnjaOutsideParcel": "Izven parcele",
   "secnjaDefaultName": "Drevo {n}",
   "@secnjaDefaultName": {
@@ -2155,5 +2131,6 @@
     }
   },
   "receivedDeleteConfirm": "Odstranim prejeto sečnjo?",
-  "receivedLoading": "Nalagam sečnjo…"
+  "receivedLoading": "Nalagam sečnjo…",
+  "secnjaLinkInvalid": "Povezave ni mogoče prebrati"
 }

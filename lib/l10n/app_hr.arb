@@ -798,9 +798,6 @@
   "aboutShowIntro": "Uvodni vodič",
   "aboutShowIntroDesc": "Ponovno pogledajte predstavljanje aplikacije",
   "secnjaShareHeadline": "🪓 Sječa — čestica {parcel}, k.o. {ko}",
-  "secnjaShareCount": "{count, plural, one{{count} stablo za sječu} few{{count} stabla za sječu} other{{count} stabala za sječu}}",
-  "secnjaShareOwner": "Vlasnik: {owner}",
-  "secnjaShareValidUntil": "Poveznica vrijedi do {date}",
   "secnjaOutsideParcel": "Izvan čestice",
   "secnjaDefaultName": "Stablo {n}",
   "secnjaMarkAction": "Označi",
@@ -829,5 +826,6 @@
   "receivedSectionTitle": "PRIMLJENO",
   "secnjaReceivedRow": "{days, plural, one{Sječa {parcel} · {who} · još {days} dan} few{Sječa {parcel} · {who} · još {days} dana} other{Sječa {parcel} · {who} · još {days} dana}}",
   "receivedDeleteConfirm": "Ukloniti primljenu sječu?",
-  "receivedLoading": "Učitavam sječu…"
+  "receivedLoading": "Učitavam sječu…",
+  "secnjaLinkInvalid": "Poveznicu nije moguće pročitati"
 }

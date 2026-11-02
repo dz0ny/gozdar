@@ -2873,28 +2873,6 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String secnjaShareCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count stabala za sječu',
-      few: '$count stabla za sječu',
-      one: '$count stablo za sječu',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String secnjaShareOwner(String owner) {
-    return 'Vlasnik: $owner';
-  }
-
-  @override
-  String secnjaShareValidUntil(String date) {
-    return 'Poveznica vrijedi do $date';
-  }
-
-  @override
   String get secnjaOutsideParcel => 'Izvan čestice';
 
   @override
@@ -3027,4 +3005,7 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get receivedLoading => 'Učitavam sječu…';
+
+  @override
+  String get secnjaLinkInvalid => 'Poveznicu nije moguće pročitati';
 }

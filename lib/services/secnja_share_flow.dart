@@ -13,8 +13,12 @@ import 'species_service.dart';
 enum SecnjaShareState { notShared, sharedUnchanged, sharedChanged }
 
 /// Share state of [parcel], given the hash of its marks as they are now.
+/// A link past its expiry counts as not shared, so the next share makes a new one.
 SecnjaShareState secnjaShareState(Parcel parcel, String currentHash) {
-  if (!parcel.isShared) return SecnjaShareState.notShared;
+  final expires = parcel.shareExpiresAt;
+  if (!parcel.isShared || (expires != null && !expires.isAfter(DateTime.now()))) {
+    return SecnjaShareState.notShared;
+  }
   return parcel.shareHash == currentHash
       ? SecnjaShareState.sharedUnchanged
       : SecnjaShareState.sharedChanged;
@@ -36,7 +40,7 @@ Future<SecnjaSharePayload> buildSecnjaPayload(Parcel parcel) async {
 }
 
 /// Uploads the marks of [parcel] when they changed, then opens the system
-/// share sheet with the message for the logger.
+/// share sheet with the link for the logger.
 /// Returns false when the upload failed.
 Future<bool> runSecnjaShare(BuildContext context, Parcel parcel) async {
   final messenger = ScaffoldMessenger.of(context);
@@ -54,9 +58,12 @@ Future<bool> runSecnjaShare(BuildContext context, Parcel parcel) async {
       link = result.link;
       payload.expiresAt = result.expiresAt;
     }
+    final title = shareTitle(payload, L10n.current);
     await SharePlus.instance.share(
       ShareParams(
-        text: shareMessage(payload, link, L10n.current),
+        uri: link,
+        title: title,
+        subject: title,
         sharePositionOrigin:
             box == null ? null : box.localToGlobal(Offset.zero) & box.size,
       ),
