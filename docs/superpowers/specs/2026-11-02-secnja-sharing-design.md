@@ -30,7 +30,7 @@ them over.
 
 ## Non-goals
 
-- No web viewer. A browser opening the link sees only an install page.
+- No web viewer. A browser opening the link gets a 404.
 - Nothing flows back from logger to owner (no "done" ticks, no messages).
 - No accounts, no login. Ownership of a link is proven by a token on the
   owner's phone.
@@ -336,8 +336,6 @@ delete confirmation, Točka chip labels, `Svoje ime (neobvezno)`.
   pieces (`SheetTileRow`, `SheetTile`, crosshair painter) where they fit.
 - Pin numbering style for received trees.
 - How refresh-on-start is scheduled (e.g. from `MapProvider` init).
-- Whether the install page is inline HTML in `shares.js` or a template
-  file next to `map.js`.
 - Random id/token generation details on the worker (`crypto.getRandomValues`).
 - Test coverage; at minimum: migration backfill, "changed since" logic,
   payload build, and worker handlers via `wrangler dev` + curl.
@@ -350,11 +348,10 @@ delete confirmation, Točka chip labels, `Svoje ime (neobvezno)`.
   map with the layer visible.
 - iOS: same via TestFlight build; the AASA validator confirms the file.
 - Worker: `curl` POST/GET/PUT/DELETE round trip against `wrangler dev`;
-  GET after DELETE is 404; a browser on `/s/<id>` shows the install page.
+  GET after DELETE is 404.
 
 ## Distribution facts (as of 2026-11-02)
 
 - iOS is the only store channel (Apple, via the release workflow's
   TestFlight upload). Android is not on Google Play; APKs come from
-  GitHub releases. Both affect only `assetlinks.json` entries and the
-  install page buttons, as described above.
+  GitHub releases. This affects only the `assetlinks.json` entries.
