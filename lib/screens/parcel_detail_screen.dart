@@ -50,7 +50,10 @@ import '../l10n/l10n.dart';
 class ParcelDetailScreen extends StatefulWidget {
   final Parcel parcel;
 
-  const ParcelDetailScreen({super.key, required this.parcel});
+  /// Scroll to the Sečnja card once it is loaded, e.g. right after marking.
+  final bool showSecnja;
+
+  const ParcelDetailScreen({super.key, required this.parcel, this.showSecnja = false});
 
   @override
   State<ParcelDetailScreen> createState() => _ParcelDetailScreenState();
@@ -63,6 +66,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   List<MapLocation> _locationsInParcel = []; // Regular POIs
   List<MapLocation> _secnjaInParcel = []; // Trees marked for cutting
   SecnjaShareState _secnjaShareState = SecnjaShareState.notShared;
+  final _secnjaCardKey = GlobalKey();
+  bool _scrolledToSecnja = false;
   bool _secnjaBusy = false;
   List<LogEntry> _logsInParcel = [];
   double _logsVolume = 0.0;
@@ -166,6 +171,19 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         _secnjaInParcel = secnja;
         _secnjaShareState = state;
       });
+      if (widget.showSecnja && !_scrolledToSecnja) {
+        _scrolledToSecnja = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final cardContext = _secnjaCardKey.currentContext;
+          if (cardContext != null) {
+            Scrollable.ensureVisible(
+              cardContext,
+              duration: const Duration(milliseconds: 400),
+              alignment: 0.1,
+            );
+          }
+        });
+      }
     } catch (e) {
       debugPrint('Error loading locations in parcel: $e');
     }
@@ -1323,6 +1341,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                   if (_secnjaInParcel.isNotEmpty || _parcel.isShared) ...[
                     const SizedBox(height: 16),
                     Builder(
+                      key: _secnjaCardKey,
                       builder: (context) => ParcelSecnjaCard(
                         secnja: _secnjaInParcel,
                         onNavigateToPoint: _navigateToPoint,

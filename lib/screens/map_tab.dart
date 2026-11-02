@@ -46,7 +46,6 @@ import '../widgets/secnja_marking_panel.dart';
 import '../widgets/species_management_sheet.dart';
 import '../services/secnja_marking.dart';
 import '../services/secnja_marking_prefs.dart';
-import '../services/secnja_share_flow.dart';
 import '../services/species_service.dart';
 import '../widgets/navigate_to_sheet.dart';
 import '../widgets/map_controls.dart';
@@ -800,13 +799,18 @@ class MapTabState extends State<MapTab> {
     );
   }
 
-  /// Snackbar action that shares [parcelId] with a logger.
+  /// Snackbar action that opens [parcelId] at its Sečnja card, where the
+  /// owner sees the marks and shares them.
   SnackBarAction _secnjaShareSnackAction(int parcelId) => SnackBarAction(
         label: L10n.current.secnjaShareAction,
         onPressed: () async {
           final parcel = await DatabaseService().getParcel(parcelId);
           if (parcel == null || !mounted) return;
-          await runSecnjaShare(context, parcel);
+          await Navigator.of(context).push<bool>(
+            MaterialPageRoute(
+              builder: (context) => ParcelDetailScreen(parcel: parcel, showSecnja: true),
+            ),
+          );
         },
       );
 
