@@ -99,6 +99,22 @@ void main() {
     expect((await stored(rowId)).parcelId, a);
   });
 
+  test('saving a parcel links marks made before it existed', () async {
+    final id = await service.insertLocation(mark(46.005, 14.005));
+    expect((await stored(id)).parcelId, isNull);
+    final a = await service.insertParcel(square('A', 46, 14, 0.01));
+    expect((await stored(id)).parcelId, a);
+  });
+
+  test('editing a polygon links marks that now fall inside', () async {
+    final a = await service.insertParcel(square('A', 46, 14, 0.01));
+    final id = await service.insertLocation(mark(46.015, 14.005));
+    expect((await stored(id)).parcelId, isNull);
+    final p = (await service.getParcel(a))!;
+    await service.updateParcel(p.copyWith(polygon: square('A', 46, 14, 0.02).polygon));
+    expect((await stored(id)).parcelId, a);
+  });
+
   test('deleteParcelWithContents removes marks linked by parcelId even outside the polygon',
       () async {
     final a = await service.insertParcel(square('A', 46, 14, 0.01));

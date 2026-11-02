@@ -466,12 +466,18 @@ class DatabaseService {
     return row == null ? null : _parcelFromDb(row);
   }
 
+  /// Saves [parcel] and links the sečnja marks without a parcel under it.
   Future<int> insertParcel(Parcel parcel) async {
-    return db.into(db.parcels).insert(_parcelToCompanion(parcel));
+    final id = await db.into(db.parcels).insert(_parcelToCompanion(parcel));
+    await db.backfillSecnjaParcels();
+    return id;
   }
 
+  /// Saves [parcel]. A larger polygon can cover marks without a parcel, so
+  /// these get linked too.
   Future<void> updateParcel(Parcel parcel) async {
     await db.update(db.parcels).replace(_parcelToCompanion(parcel));
+    await db.backfillSecnjaParcels();
   }
 
   Future<Parcel?> getParcel(int id) async {
