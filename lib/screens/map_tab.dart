@@ -3007,6 +3007,7 @@ class MapTabState extends State<MapTab> {
       onDelete: _dialogManager.showDeleteLocationDialog,
       // The sheet asks to confirm; this only deletes.
       onSwipeDelete: (location) => mapProvider.deleteLocation(location.id),
+      onOpenParcel: _navigateToParcelDetail,
       onAddByCoordinates: _showAddLocationByCoordinatesDialog,
     );
   }

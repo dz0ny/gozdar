@@ -17,6 +17,7 @@ import '../services/ko_locator.dart';
 import '../services/kml_service.dart';
 import '../services/owner_lookup_service.dart';
 import '../utils/formats.dart';
+import '../utils/parcel_labels.dart';
 import '../widgets/owner_list.dart';
 import '../widgets/parcel_silhouette.dart';
 import '../widgets/sheet_parts.dart';
@@ -816,22 +817,8 @@ class ForestTabState extends State<ForestTab> {
   /// auto-generated "`KO - number`" name shows as just the number; custom
   /// names stay as they are.
   String _cardTitle(Parcel parcel, {required bool inKoGroup, String? koName}) {
-    final number = parcel.parcelNumber;
-    if (!inKoGroup || number == null || number.isEmpty) return parcel.name;
-    final sifko = parcel.cadastralMunicipality;
-    final prefixes = {
-      ?koName,
-      OwnerLookupService.instance.koName(sifko),
-      KoLocator.instance.bySifko(sifko)?.name,
-      '$sifko',
-    }.whereType<String>();
-    final name = parcel.name.trim().toLowerCase();
-    for (final ko in prefixes) {
-      if (name == '${ko.toLowerCase()} - ${number.toLowerCase()}') {
-        return number;
-      }
-    }
-    return parcel.name;
+    if (!inKoGroup) return parcel.name;
+    return parcelTitle(parcel, koName: koName);
   }
 
   /// [inKoGroup] when the card sits under a KO group header.

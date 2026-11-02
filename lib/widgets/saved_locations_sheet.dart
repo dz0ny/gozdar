@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'map_dialogs.dart';
 import 'package:latlong2/latlong.dart';
 import '../l10n/l10n.dart';
+import '../utils/parcel_labels.dart';
 import '../models/map_location.dart';
 import '../models/log_entry.dart';
 import '../models/parcel.dart';
@@ -22,6 +23,9 @@ class SavedLocationsSheet extends StatelessWidget {
   /// gone. Null turns swiping off.
   final Future<bool> Function(MapLocation location)? onSwipeDelete;
 
+  /// Opens a parcel from its group header. Null makes headers plain text.
+  final void Function(Parcel parcel)? onOpenParcel;
+
   const SavedLocationsSheet({
     super.key,
     required this.locations,
@@ -32,6 +36,7 @@ class SavedLocationsSheet extends StatelessWidget {
     required this.onDelete,
     this.onAddByCoordinates,
     this.onSwipeDelete,
+    this.onOpenParcel,
   });
 
   /// Show the saved locations sheet as a modal bottom sheet
@@ -45,6 +50,7 @@ class SavedLocationsSheet extends StatelessWidget {
     required void Function(MapLocation location) onDelete,
     void Function()? onAddByCoordinates,
     Future<bool> Function(MapLocation location)? onSwipeDelete,
+    void Function(Parcel parcel)? onOpenParcel,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -69,6 +75,7 @@ class SavedLocationsSheet extends StatelessWidget {
             onDelete: onDelete,
             onAddByCoordinates: onAddByCoordinates,
             onSwipeDelete: onSwipeDelete,
+            onOpenParcel: onOpenParcel,
           ),
         ),
       ),
@@ -87,6 +94,7 @@ class SavedLocationsSheet extends StatelessWidget {
       onDelete: onDelete,
       onAddByCoordinates: onAddByCoordinates,
       onSwipeDelete: onSwipeDelete,
+      onOpenParcel: onOpenParcel,
     );
   }
 }
@@ -104,6 +112,9 @@ class _SwipeableContent extends StatefulWidget {
   final void Function()? onAddByCoordinates;
   final Future<bool> Function(MapLocation location)? onSwipeDelete;
 
+  /// Opens a parcel from its group header. Null makes headers plain text.
+  final void Function(Parcel parcel)? onOpenParcel;
+
   const _SwipeableContent({
     required this.scrollController,
     required this.locations,
@@ -114,6 +125,7 @@ class _SwipeableContent extends StatefulWidget {
     required this.onDelete,
     this.onAddByCoordinates,
     this.onSwipeDelete,
+    this.onOpenParcel,
   });
 
   @override
@@ -146,6 +158,7 @@ class _SwipeableContentState extends State<_SwipeableContent> {
               return swipe(location);
             },
       onSwiped: (location) => setState(() => _removed.add(location.id)),
+      onOpenParcel: widget.onOpenParcel,
     );
   }
 }
@@ -172,6 +185,9 @@ class _ContentWidget extends StatelessWidget {
   /// Deletes a location after a swipe to the left. Returns true when it is
   /// gone. Null turns swiping off.
   final Future<bool> Function(MapLocation location)? onSwipeDelete;
+
+  /// Opens a parcel from its group header. Null makes headers plain text.
+  final void Function(Parcel parcel)? onOpenParcel;
   final void Function(MapLocation location)? onSwiped;
 
   const _ContentWidget({
@@ -184,6 +200,7 @@ class _ContentWidget extends StatelessWidget {
     required this.onDelete,
     this.onAddByCoordinates,
     this.onSwipeDelete,
+    this.onOpenParcel,
     this.onSwiped,
   });
 
@@ -300,14 +317,24 @@ class _ContentWidget extends StatelessWidget {
               controller: scrollController,
               children: [
                 for (final group in _groups(geolocatedLogs)) ...[
-                  _SectionHeader(
-                    icon: group.parcel == null ? Icons.not_listed_location : Icons.forest,
-                    color: group.parcel == null
-                        ? Theme.of(context).colorScheme.onSurfaceVariant
-                        : Theme.of(context).colorScheme.primary,
-                    title: group.parcel?.name ?? context.l10n.secnjaOutsideParcel,
-                    count: group.locations.length + group.logs.length,
-                  ),
+                  if (group.parcel case final parcel?)
+                    _ParcelHeader(
+                      parcel: parcel,
+                      count: group.locations.length + group.logs.length,
+                      onTap: onOpenParcel == null
+                          ? null
+                          : () {
+                              Navigator.pop(context);
+                              onOpenParcel!(parcel);
+                            },
+                    )
+                  else
+                    _SectionHeader(
+                      icon: Icons.not_listed_location,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      title: context.l10n.secnjaOutsideParcel,
+                      count: group.locations.length + group.logs.length,
+                    ),
                   for (final location in group.locations)
                     _swipeable(
                       location,
@@ -347,6 +374,79 @@ class _ContentWidget extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Group header of one parcel: its number or name, the k.o. and the owner,
+/// as in Moj gozd. Tapping it opens the parcel.
+class _ParcelHeader extends StatelessWidget {
+  final Parcel parcel;
+  final int count;
+  final VoidCallback? onTap;
+
+  const _ParcelHeader({required this.parcel, required this.count, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final sifko = parcel.cadastralMunicipality;
+    final owner = parcel.owner?.trim();
+    final details = [
+      if (sifko != null) koLabel(sifko),
+      if (owner != null && owner.isNotEmpty) owner,
+    ].join(' · ');
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+        child: Row(
+          children: [
+            Icon(Icons.forest, size: 20, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          parcelTitle(parcel),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '($count)',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (details.isNotEmpty)
+                    Text(
+                      details,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (onTap != null)
+              Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
+          ],
+        ),
       ),
     );
   }

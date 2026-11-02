@@ -69,4 +69,50 @@ void main() {
     expect(y('Smreka 1'), inExclusiveRange(y('Bukovje'), y('Izven parcele')));
     expect(y('Daleč'), greaterThan(y('Izven parcele')));
   });
+
+  testWidgets('a cadastral parcel header shows the number, k.o. and owner; tap opens it',
+      (tester) async {
+    tester.view.physicalSize = const Size(2400, 6000);
+    addTearDown(tester.view.reset);
+    final opened = <String>[];
+    final parcel = Parcel(
+      id: 7,
+      name: '304549 - 10000',
+      cadastralMunicipality: 304549,
+      parcelNumber: '10000',
+      owner: 'ŠKOPAC ANA',
+      polygon: square(7, 'x', 46).polygon,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('sl'),
+        home: Scaffold(
+          body: SavedLocationsSheet(
+            parcels: [parcel],
+            locations: [
+              MapLocation(
+                id: 1,
+                name: 'Smreka 1',
+                latitude: 46.005,
+                longitude: 14.005,
+                type: LocationType.secnja,
+                parcelId: 7,
+              ),
+            ],
+            onNavigate: (_) {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onOpenParcel: (p) => opened.add(p.name),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('304549 - 10000'), findsNothing);
+    expect(find.text('10000'), findsOneWidget);
+    expect(find.text('KO 304549 · ŠKOPAC ANA'), findsOneWidget);
+    await tester.tap(find.text('10000'));
+    expect(opened, ['304549 - 10000']);
+  });
 }
