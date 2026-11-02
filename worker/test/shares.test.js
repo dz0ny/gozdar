@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import jpeg from 'jpeg-js';
 import { shares } from '../src/shares.js';
+import { PREVIEW_W, PREVIEW_H, previewBox, toPixel, drawLine } from '../src/preview.js';
 
 const DAY = 24 * 3600;
 
@@ -231,25 +233,36 @@ test('landing page carries a social preview', async () => {
   assert.ok(html.includes('name="twitter:card" content="summary_large_image"'));
 });
 
-test('preview image is a satellite crop around the parcel', async () => {
+test('preview image draws the parcel and the trees, and skips kataster when the WMS is down', async () => {
   const env = { SHARES: fakeKv() };
-  const { body } = await create(env);
+  const tree = { name: 'Smreka 1', lat: 46.05, lng: 14.05 };
+  const { body } = await create(env, payload([tree]));
+  const grey = { width: PREVIEW_W, height: PREVIEW_H, data: new Uint8Array(PREVIEW_W * PREVIEW_H * 4).fill(100) };
+  const satellite = jpeg.encode(grey, 90).data;
   const seen = [];
   const realFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
     seen.push(String(url));
-    return new Response(new Uint8Array([0xff, 0xd8]), { headers: { 'Content-Type': 'image/jpeg' } });
+    if (String(url).includes('geoserver')) return new Response('down', { status: 503 });
+    return new Response(satellite, { headers: { 'Content-Type': 'image/jpeg' } });
   };
+  let res;
   try {
-    const res = await call(env, 'GET', `/o/${body.id}/preview.jpg`);
-    assert.equal(res.status, 200);
-    assert.equal(res.headers.get('content-type'), 'image/jpeg');
+    res = await call(env, 'GET', `/o/${body.id}/preview.jpg`);
   } finally {
     globalThis.fetch = realFetch;
   }
-  assert.equal(seen.length, 1);
-  assert.match(seen[0], /World_Imagery\/MapServer\/export\?bbox=/);
-  assert.match(seen[0], /size=1200%2C630/);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), 'image/jpeg');
+  assert.equal(res.headers.get('cache-control'), 'no-store');
+  assert.ok(seen.some((u) => /World_Imagery\/MapServer\/export\?bbox=/.test(u)), 'satellite');
+  assert.ok(seen.some((u) => u.includes('kn_parcele') && u.includes('EPSG%3A3794')), 'kataster');
+  const out = jpeg.decode(new Uint8Array(await res.arrayBuffer()), { useTArray: true });
+  const box = previewBox([...payload().parcel.polygon, [tree.lat, tree.lng]]);
+  const [x, y] = toPixel([tree.lat, tree.lng], box).map(Math.round);
+  // Left of the number, inside the orange disc.
+  const i = (y * PREVIEW_W + x - 14) * 4;
+  assert.ok(out.data[i] > 200 && out.data[i + 2] < 100, `orange at the tree, got ${out.data.slice(i, i + 3)}`);
 });
 
 test('preview image of a missing share is 404', async () => {
@@ -279,4 +292,12 @@ test('landing page shows the app icon in the header', async () => {
   const html = await (await call(env, 'GET', `/o/${body.id}`)).text();
   assert.ok(html.includes('<header><img src="/icon.png"'));
   assert.ok(!html.includes('🌲'));
+});
+
+test('drawLine paints a see-through line evenly', () => {
+  const img = { width: 20, height: 5, data: new Uint8Array(20 * 5 * 4) };
+  drawLine(img, [2, 2], [17, 2], 1, [200, 200, 200, 0.5]);
+  const row = [];
+  for (let x = 3; x < 17; x++) row.push(img.data[(2 * 20 + x) * 4]);
+  assert.deepEqual(new Set(row), new Set([100]));
 });

@@ -1,6 +1,8 @@
 name = "gozdar-proxy"
 main = "src/index.js"
 compatibility_date = "2025-11-17"
+# jpeg-js returns a Buffer. Workers give Buffer only with this flag.
+compatibility_flags = ["nodejs_compat"]
 
 # The app calls gozdar-proxy.dz0ny.workers.dev. Keep it on.
 workers_dev = true

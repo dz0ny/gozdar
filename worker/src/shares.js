@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { ICON_PNG } from './icon.js';
+import { renderPreview } from './preview.js';
 
 // Sečnja share links. The owner uploads the marked trees of one parcel.
 // The logger gets https://gozdar.dz0ny.dev/o/<id>, and the link opens Gozdar.
@@ -275,49 +276,32 @@ function socialTags(id, title) {
   ].join('\n');
 }
 
-const PREVIEW_W = 1200;
-const PREVIEW_H = 630;
-
-// Satellite crop around the parcel and its trees, for the link preview.
+// Link preview image. Each request checks the share first, so a revoked
+// share loses its preview at once. The edge cache keeps one render per upload.
 async function previewImage(c) {
-  const record = await c.env.SHARES.get(c.req.param('id'), 'json');
+  const id = c.req.param('id');
+  const record = await c.env.SHARES.get(id, 'json');
   if (!record) return c.body(null, 404);
-  const { parcel, points } = record.payload;
-  const coords = [...(Array.isArray(parcel.polygon) ? parcel.polygon : []), ...points.map((p) => [p.lat, p.lng])]
-    .filter((p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]));
-  if (coords.length === 0) return c.body(null, 404);
-  const query = new URLSearchParams({
-    bbox: previewBox(coords).join(','),
-    bboxSR: '3857',
-    imageSR: '3857',
-    size: `${PREVIEW_W},${PREVIEW_H}`,
-    format: 'jpg',
-    f: 'image',
-  });
-  const res = await fetch(
-    `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?${query}`,
-    { cf: { cacheTtl: 86400, cacheEverything: true } },
-  );
-  if (!res.ok) return c.body(null, 502);
-  return c.body(res.body, 200, {
-    'Content-Type': 'image/jpeg',
-    'Cache-Control': 'no-store',
-  });
-}
-
-// Web Mercator box around [lat, lng] pairs with a margin, in the shape of
-// the preview image.
-function previewBox(coords) {
-  const R = 6378137;
-  const xs = coords.map(([, lng]) => (R * lng * Math.PI) / 180);
-  const ys = coords.map(([lat]) => R * Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)));
-  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
-  const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-  let w = Math.max(Math.max(...xs) - Math.min(...xs), 60) * 1.4;
-  let h = Math.max(Math.max(...ys) - Math.min(...ys), 60) * 1.4;
-  if (w / h > PREVIEW_W / PREVIEW_H) h = (w * PREVIEW_H) / PREVIEW_W;
-  else w = (h * PREVIEW_W) / PREVIEW_H;
-  return [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2].map((v) => v.toFixed(1));
+  const headers = { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' };
+  const cache = globalThis.caches?.default;
+  const key = new Request(`${SITE}/_preview/${encodeURIComponent(id)}/${record.expiresAt}`);
+  const hit = cache && (await cache.match(key));
+  if (hit) return c.body(hit.body, 200, headers);
+  let bytes;
+  try {
+    bytes = await renderPreview(record.payload);
+  } catch (e) {
+    console.error(`Preview failed: ${e.message}`);
+    return c.body(null, 502);
+  }
+  if (!bytes) return c.body(null, 404);
+  if (cache) {
+    const stored = new Response(bytes, {
+      headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=2592000' },
+    });
+    c.executionCtx.waitUntil(cache.put(key, stored));
+  }
+  return c.body(bytes, 200, headers);
 }
 
 // JSON inside a script tag. Escaping < keeps a name like </script> inert.
