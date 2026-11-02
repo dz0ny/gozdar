@@ -173,20 +173,81 @@ async function landing(c) {
   const { parcel, points } = record.payload;
   const ko = parcel.koName ?? (parcel.koNumber != null ? `k.o. ${parcel.koNumber}` : '');
   const title = `Parcela ${escapeHtml(parcel.number)}${ko ? `, ${escapeHtml(ko)}` : ''}`;
+  // The map gets the outline and the trees only. The owner stays out of the page.
+  const mapData = {
+    polygon: Array.isArray(parcel.polygon) ? parcel.polygon : [],
+    points: points.map((p) => ({ name: p.name, lat: p.lat, lng: p.lng, species: p.species })),
+  };
+  const rows = points.map((p, i) => {
+    const at = `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+    const species = p.species && !p.name.startsWith(p.species) ? ` · ${escapeHtml(p.species)}` : '';
+    return `<li data-i="${i}"><b>${i + 1}</b><span>${escapeHtml(p.name)}${species}</span>
+      <a class="geo" href="https://www.google.com/maps/search/?api=1&amp;query=${p.lat},${p.lng}">${at}</a></li>`;
+  });
   return c.html(
-    page(`
+    page(
+      `
   <p class="lead">Lastnik ti je poslal drevesa, označena za posek.</p>
   <div class="card">
     <strong>🪓 ${title}</strong>
     <span>${trees(points.length)} za posek</span>
   </div>
+  <div id="map"></div>
+  <ol class="trees">${rows.join('')}</ol>
   <a class="primary" href="gozdar://open/o/${escapeHtml(id)}">Uvozi v Gozdar</a>
   <p class="small">Gozdar doda parcelo in drevesa v Moj gozd. Na terenu jih najdeš
   na karti in do njih navigiraš, tudi brez signala.</p>
   <p class="small">Nimaš Gozdarja? Namesti ga, nato znova odpri to povezavo.</p>
   <a class="secondary" href="${IOS_URL}">iPhone</a>
-  <a class="secondary" href="${ANDROID_URL}">Android</a>`),
+  <a class="secondary" href="${ANDROID_URL}">Android</a>
+  <script type="application/json" id="data">${jsonForScript(mapData)}</script>
+  <script src="${LEAFLET}/leaflet.js"></script>
+  <script>${MAP_SCRIPT}</script>`,
+      `<link rel="stylesheet" href="${LEAFLET}/leaflet.css">`,
+    ),
   );
+}
+
+const LEAFLET = 'https://unpkg.com/leaflet@1.9.4/dist';
+
+// Draws the parcel and numbered trees. A tap on a list row zooms to that tree.
+const MAP_SCRIPT = `
+const data = JSON.parse(document.getElementById('data').textContent);
+const map = L.map('map', { scrollWheelZoom: false });
+const satellite = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  { maxZoom: 19, attribution: 'Esri' }).addTo(map);
+const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { maxZoom: 19, attribution: '© OpenStreetMap' });
+L.control.layers({ Satelit: satellite, Karta: osm }).addTo(map);
+const bounds = L.latLngBounds([]);
+if (data.polygon.length > 2) {
+  const outline = L.polygon(data.polygon, { color: '#d4a574', weight: 2, fillOpacity: 0.1 }).addTo(map);
+  bounds.extend(outline.getBounds());
+}
+const markers = data.points.map((p, i) => {
+  const icon = L.divIcon({ className: 'tree', html: String(i + 1), iconSize: [24, 24] });
+  const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
+  const label = document.createElement('div');
+  label.textContent = p.species && !p.name.startsWith(p.species) ? p.name + ' · ' + p.species : p.name;
+  marker.bindPopup(label);
+  bounds.extend([p.lat, p.lng]);
+  return marker;
+});
+if (bounds.isValid()) map.fitBounds(bounds, { padding: [24, 24], maxZoom: 18 });
+else map.setView([46.1, 14.8], 8);
+document.querySelectorAll('.trees li').forEach((row) => row.addEventListener('click', (e) => {
+  if (e.target.closest('a')) return;
+  const marker = markers[Number(row.dataset.i)];
+  map.setView(marker.getLatLng(), 18);
+  marker.openPopup();
+  document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}));
+`;
+
+// JSON inside a script tag. Escaping < keeps a name like </script> inert.
+function jsonForScript(value) {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
 // Slovenian plural: 1 drevo, 2 drevesi, 3 in 4 drevesa, 5 in več dreves.
@@ -204,17 +265,18 @@ function escapeHtml(value) {
   })[ch]);
 }
 
-function page(body) {
+function page(body, head = '') {
   return `<!doctype html>
 <html lang="sl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sečnja · Gozdar</title>
+${head}
 <style>
-  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  body { margin: 0; min-height: 100vh; display: flex; justify-content: center;
          font-family: -apple-system, system-ui, sans-serif; background: #1c2a1f; color: #eee; }
-  main { max-width: 360px; padding: 24px; }
+  main { width: 100%; max-width: 480px; padding: 24px 16px; box-sizing: border-box; }
   h1 { color: #d4a574; margin: 0 0 8px; font-size: 22px; }
   .lead { font-size: 17px; }
   .card { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 12px;
@@ -225,6 +287,17 @@ function page(body) {
   a.primary { background: #ff5722; color: #fff; font-size: 17px; }
   a.secondary { border: 1px solid #d4a574; color: #d4a574; }
   .small { color: #aab; font-size: 14px; line-height: 1.4; }
+  #map { height: 300px; border-radius: 12px; margin: 16px 0 8px; background: #2d3b2f; }
+  .tree { background: #ff5722; color: #fff; border: 2px solid #fff; border-radius: 50%;
+          font: 600 12px/20px -apple-system, system-ui, sans-serif; text-align: center; }
+  .trees { list-style: none; padding: 0; margin: 0 0 16px; }
+  .trees li { display: flex; align-items: center; gap: 10px; padding: 10px 4px;
+              border-bottom: 1px solid #2d3b2f; cursor: pointer; }
+  .trees li b { flex: none; width: 24px; height: 24px; border-radius: 50%; background: #ff5722;
+                color: #fff; font-size: 12px; line-height: 24px; text-align: center; }
+  .trees li span { flex: 1; }
+  .trees a.geo { display: inline; margin: 0; padding: 0; font-weight: 400; font-size: 13px;
+                 color: #aab; text-decoration: underline; }
 </style>
 </head>
 <body>

@@ -176,7 +176,34 @@ test('landing page explains the share and offers Uvozi', async () => {
   assert.ok(html.includes(`gozdar://open/o/${body.id}`), 'Uvozi opens the app');
   assert.ok(html.includes('Uvozi'));
   assert.ok(html.includes('https://apps.apple.com/app/id6756237942'), 'App Store link');
-  assert.ok(!html.includes('46.05'), 'no coordinates');
+});
+
+test('landing page shows each tree with its location on a map', async () => {
+  const env = { SHARES: fakeKv() };
+  const points = [
+    { name: 'Smreka 1', lat: 46.05, lng: 14.5, species: 'Smreka' },
+    { name: 'Bukev 2', lat: 46.06, lng: 14.51 },
+  ];
+  const { body } = await create(env, {
+    ...payload(points),
+    parcel: { ...payload().parcel, owner: 'Janez Novak' },
+  });
+  const html = await (await call(env, 'GET', `/o/${body.id}`)).text();
+  assert.ok(html.includes('id="map"'), 'has a map');
+  assert.ok(html.includes('leaflet'), 'loads the map library');
+  assert.ok(html.includes('Smreka 1') && html.includes('Bukev 2'), 'lists the trees');
+  assert.ok(html.includes('46.05000, 14.50000'), 'shows coordinates');
+  assert.ok(html.includes('[46.1,14]'), 'draws the parcel outline');
+  assert.ok(!html.includes('Janez Novak'), 'hides the owner');
+});
+
+test('landing page escapes tree names in the list and the map data', async () => {
+  const env = { SHARES: fakeKv() };
+  const evil = '</script><img src=x onerror=alert(1)>';
+  const { body } = await create(env, payload([{ name: evil, lat: 46.05, lng: 14.5 }]));
+  const html = await (await call(env, 'GET', `/o/${body.id}`)).text();
+  assert.ok(!html.includes('<img src=x'), 'no raw markup');
+  assert.equal(html.split('</script>').length - 1, html.split('<script').length - 1);
 });
 
 test('landing page for a missing share says it expired', async () => {
