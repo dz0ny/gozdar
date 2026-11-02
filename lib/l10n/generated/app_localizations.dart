@@ -1268,12 +1268,6 @@ abstract class AppLocalizations {
   /// **'Napaka pri dodajanju lokacije: {error}'**
   String mapTabLocationAddError(Object error);
 
-  /// No description provided for @mapTabSecnjaMarked.
-  ///
-  /// In sl, this message translates to:
-  /// **'Sečnja \"{name}\" označena'**
-  String mapTabSecnjaMarked(String name);
-
   /// No description provided for @mapTabSecnjaMarkError.
   ///
   /// In sl, this message translates to:
@@ -1764,36 +1758,6 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Vnesite ime'**
   String get mapwEnterName;
-
-  /// No description provided for @mapwMarkFellingTitle.
-  ///
-  /// In sl, this message translates to:
-  /// **'Označi sečnjo'**
-  String get mapwMarkFellingTitle;
-
-  /// No description provided for @mapwTreeDescLabel.
-  ///
-  /// In sl, this message translates to:
-  /// **'Opis drevesa'**
-  String get mapwTreeDescLabel;
-
-  /// No description provided for @mapwTreeDescHint.
-  ///
-  /// In sl, this message translates to:
-  /// **'npr. Hrast, Bukev, Smreka...'**
-  String get mapwTreeDescHint;
-
-  /// No description provided for @mapwEnterDescription.
-  ///
-  /// In sl, this message translates to:
-  /// **'Prosim vnesite opis'**
-  String get mapwEnterDescription;
-
-  /// No description provided for @mapwMarkAction.
-  ///
-  /// In sl, this message translates to:
-  /// **'Označi'**
-  String get mapwMarkAction;
 
   /// No description provided for @mapwDeleteLocationTitle.
   ///
@@ -4949,6 +4913,96 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Povezava velja do {date}'**
   String secnjaShareValidUntil(String date);
+
+  /// No description provided for @secnjaOutsideParcel.
+  ///
+  /// In sl, this message translates to:
+  /// **'Izven parcele'**
+  String get secnjaOutsideParcel;
+
+  /// No description provided for @secnjaDefaultName.
+  ///
+  /// In sl, this message translates to:
+  /// **'Drevo {n}'**
+  String secnjaDefaultName(int n);
+
+  /// No description provided for @secnjaMarkAction.
+  ///
+  /// In sl, this message translates to:
+  /// **'Označi'**
+  String get secnjaMarkAction;
+
+  /// No description provided for @secnjaFinish.
+  ///
+  /// In sl, this message translates to:
+  /// **'Končaj'**
+  String get secnjaFinish;
+
+  /// No description provided for @secnjaHere.
+  ///
+  /// In sl, this message translates to:
+  /// **'Tu stojim'**
+  String get secnjaHere;
+
+  /// No description provided for @secnjaMarkingTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'🪓 Sečnja · {parcel}'**
+  String secnjaMarkingTitle(String parcel);
+
+  /// No description provided for @secnjaMarkedCount.
+  ///
+  /// In sl, this message translates to:
+  /// **'{count, plural, one{{count} drevo} two{{count} drevesi} few{{count} drevesa} other{{count} dreves}}'**
+  String secnjaMarkedCount(int count);
+
+  /// No description provided for @secnjaShareAction.
+  ///
+  /// In sl, this message translates to:
+  /// **'Deli sekaču'**
+  String get secnjaShareAction;
+
+  /// No description provided for @secnjaMarkedSnack.
+  ///
+  /// In sl, this message translates to:
+  /// **'{count, plural, one{Označeno {count} drevo} two{Označeni {count} drevesi} few{Označena {count} drevesa} other{Označenih {count} dreves}}'**
+  String secnjaMarkedSnack(int count);
+
+  /// No description provided for @pointDefaultName.
+  ///
+  /// In sl, this message translates to:
+  /// **'Točka {n}'**
+  String pointDefaultName(int n);
+
+  /// No description provided for @pointChipBoundary.
+  ///
+  /// In sl, this message translates to:
+  /// **'Mejnik'**
+  String get pointChipBoundary;
+
+  /// No description provided for @pointChipHide.
+  ///
+  /// In sl, this message translates to:
+  /// **'Lovska preža'**
+  String get pointChipHide;
+
+  /// No description provided for @pointChipSpring.
+  ///
+  /// In sl, this message translates to:
+  /// **'Izvir'**
+  String get pointChipSpring;
+
+  /// No description provided for @pointChipSkidTrail.
+  ///
+  /// In sl, this message translates to:
+  /// **'Vlaka'**
+  String get pointChipSkidTrail;
+
+  /// No description provided for @pointOwnNameLabel.
+  ///
+  /// In sl, this message translates to:
+  /// **'Svoje ime (neobvezno)'**
+  String get pointOwnNameLabel;
 }
 
 class _AppLocalizationsDelegate

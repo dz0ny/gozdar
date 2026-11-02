@@ -506,14 +506,6 @@
       }
     }
   },
-  "mapTabSecnjaMarked": "Sečnja \"{name}\" označena",
-  "@mapTabSecnjaMarked": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "mapTabSecnjaMarkError": "Napaka pri označevanju sečnje: {error}",
   "@mapTabSecnjaMarkError": {
     "placeholders": {
@@ -813,11 +805,6 @@
   "mapwLocationNameLabel": "Ime lokacije",
   "mapwLocationNameHint": "Vnesite ime za to lokacijo",
   "mapwEnterName": "Vnesite ime",
-  "mapwMarkFellingTitle": "Označi sečnjo",
-  "mapwTreeDescLabel": "Opis drevesa",
-  "mapwTreeDescHint": "npr. Hrast, Bukev, Smreka...",
-  "mapwEnterDescription": "Prosim vnesite opis",
-  "mapwMarkAction": "Označi",
   "mapwDeleteLocationTitle": "Izbriši lokacijo",
   "mapwDeleteLocationSure": "Ali ste prepričani, da želite izbrisati \"{name}\"?",
   "@mapwDeleteLocationSure": {
@@ -2067,5 +2054,55 @@
         "type": "String"
       }
     }
-  }
+  },
+  "secnjaOutsideParcel": "Izven parcele",
+  "secnjaDefaultName": "Drevo {n}",
+  "@secnjaDefaultName": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "secnjaMarkAction": "Označi",
+  "secnjaFinish": "Končaj",
+  "secnjaHere": "Tu stojim",
+  "secnjaMarkingTitle": "🪓 Sečnja · {parcel}",
+  "@secnjaMarkingTitle": {
+    "placeholders": {
+      "parcel": {
+        "type": "String"
+      }
+    }
+  },
+  "secnjaMarkedCount": "{count, plural, one{{count} drevo} two{{count} drevesi} few{{count} drevesa} other{{count} dreves}}",
+  "@secnjaMarkedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "secnjaShareAction": "Deli sekaču",
+  "secnjaMarkedSnack": "{count, plural, one{Označeno {count} drevo} two{Označeni {count} drevesi} few{Označena {count} drevesa} other{Označenih {count} dreves}}",
+  "@secnjaMarkedSnack": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pointDefaultName": "Točka {n}",
+  "@pointDefaultName": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pointChipBoundary": "Mejnik",
+  "pointChipHide": "Lovska preža",
+  "pointChipSpring": "Izvir",
+  "pointChipSkidTrail": "Vlaka",
+  "pointOwnNameLabel": "Svoje ime (neobvezno)"
 }

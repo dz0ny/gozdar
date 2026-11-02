@@ -15,23 +15,30 @@ import 'sheet_parts.dart';
 class MapDialogs {
   MapDialogs._(); // Private constructor - static methods only
 
-  /// Sheet for naming something placed at [position] from the long-press
-  /// quick view: the shared header (back returns to the quick view through
-  /// [onBack]), one text field and a full-width action. Returns the trimmed
-  /// text, or null when backed out or closed.
-  static Future<String?> _showNameSheet({
+  /// Sheet for a new point at [position] from the long-press quick view.
+  /// Nothing is mandatory: the default name "Točka [nextNumber]" is a
+  /// selected chip, and common names are chips too. The keyboard opens only
+  /// when the user taps the optional field. Back returns to the quick view
+  /// through [onBack]. Returns the name and coordinates, or null when the
+  /// user backs out or closes the sheet.
+  static Future<({String name, double latitude, double longitude})?>
+      showAddLocationDialog({
     required BuildContext context,
     required LatLng position,
-    required IconData icon,
-    required Color color,
-    required String title,
-    required String label,
-    required String hint,
-    required String emptyError,
-    required IconData actionIcon,
-    required String actionLabel,
+    required int nextNumber,
+    String? parcelLabel,
     VoidCallback? onBack,
   }) async {
+    final l10n = context.l10n;
+    final defaultName = l10n.pointDefaultName(nextNumber);
+    final chips = [
+      defaultName,
+      l10n.pointChipBoundary,
+      l10n.pointChipHide,
+      l10n.pointChipSpring,
+      l10n.pointChipSkidTrail,
+    ];
+    final coords = NavigateToSheet.coordinates(position);
     final controller = TextEditingController();
     var backedOut = false;
     final name = await showModalBottomSheet<String>(
@@ -40,16 +47,13 @@ class MapDialogs {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) {
-        String? error;
+        String? selected = defaultName;
         return StatefulBuilder(
           builder: (context, setState) {
-            void submit() {
-              final text = controller.text.trim();
-              if (text.isEmpty) {
-                setState(() => error = emptyError);
-                return;
-              }
-              Navigator.of(context).pop(text);
+            void save() {
+              final typed = controller.text.trim();
+              Navigator.of(context)
+                  .pop(typed.isNotEmpty ? typed : (selected ?? defaultName));
             }
 
             return Padding(
@@ -66,38 +70,57 @@ class MapDialogs {
                     children: [
                       const SheetHandle(),
                       SheetHeader(
-                        icon: icon,
-                        color: color,
-                        title: title,
-                        subtitle: NavigateToSheet.coordinates(position),
+                        icon: Icons.add_location_alt,
+                        color: Colors.red,
+                        title: context.l10n.mapwAddLocationTitle,
+                        subtitle: parcelLabel == null
+                            ? coords
+                            : '$parcelLabel · $coords',
                         onBack: () {
                           backedOut = true;
                           Navigator.of(context).pop();
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final chip in chips)
+                            ChoiceChip(
+                              label: Text(chip),
+                              selected: chip == selected,
+                              onSelected: (_) => setState(() {
+                                selected = chip == selected ? null : chip;
+                                controller.clear();
+                              }),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                       TextField(
                         controller: controller,
-                        autofocus: true,
                         textCapitalization: TextCapitalization.sentences,
                         textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => submit(),
-                        style: Theme.of(context).textTheme.bodyLarge,
+                        onChanged: (text) {
+                          if (text.isNotEmpty && selected != null) {
+                            setState(() => selected = null);
+                          }
+                        },
+                        onSubmitted: (_) => save(),
                         decoration: InputDecoration(
-                          labelText: label,
-                          hintText: hint,
-                          errorText: error,
+                          labelText: context.l10n.pointOwnNameLabel,
                           border: const OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 16),
                       FilledButton.icon(
-                        onPressed: submit,
+                        onPressed: save,
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        icon: Icon(actionIcon),
-                        label: Text(actionLabel),
+                        icon: const Icon(Icons.add_location),
+                        label: Text(context.l10n.commonSave),
                       ),
                     ],
                   ),
@@ -109,57 +132,11 @@ class MapDialogs {
       },
     );
     if (backedOut) onBack?.call();
-    return name;
-  }
-
-  /// Name a new point at [position]. Returns the name and coordinates, or
-  /// null when cancelled.
-  static Future<({String name, double latitude, double longitude})?>
-      showAddLocationDialog({
-    required BuildContext context,
-    required LatLng position,
-    VoidCallback? onBack,
-  }) async {
-    final name = await _showNameSheet(
-      context: context,
-      position: position,
-      icon: Icons.add_location_alt,
-      color: Colors.red,
-      title: context.l10n.mapwAddLocationTitle,
-      label: context.l10n.mapwLocationNameLabel,
-      hint: context.l10n.mapwLocationNameHint,
-      emptyError: context.l10n.mapwEnterName,
-      actionIcon: Icons.add_location,
-      actionLabel: context.l10n.commonAdd,
-      onBack: onBack,
-    );
     if (name == null) return null;
     return (
       name: name,
       latitude: position.latitude,
       longitude: position.longitude,
-    );
-  }
-
-  /// Mark a tree to be cut at [position]. Returns its description, or null
-  /// when cancelled.
-  static Future<String?> showAddSecnjaDialog({
-    required BuildContext context,
-    required LatLng position,
-    VoidCallback? onBack,
-  }) {
-    return _showNameSheet(
-      context: context,
-      position: position,
-      icon: Icons.carpenter,
-      color: Colors.deepOrange,
-      title: context.l10n.mapwMarkFellingTitle,
-      label: context.l10n.mapwTreeDescLabel,
-      hint: context.l10n.mapwTreeDescHint,
-      emptyError: context.l10n.mapwEnterDescription,
-      actionIcon: Icons.carpenter,
-      actionLabel: context.l10n.mapwMarkAction,
-      onBack: onBack,
     );
   }
 

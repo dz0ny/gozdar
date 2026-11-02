@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
@@ -41,6 +42,10 @@ import '../services/vlake_settings.dart';
 import '../widgets/navigation_compass_dialog.dart';
 import '../widgets/tile_download_dialog.dart';
 import '../widgets/map_long_press_menu.dart';
+import '../widgets/secnja_marking_panel.dart';
+import '../widgets/species_management_sheet.dart';
+import '../services/secnja_marking_prefs.dart';
+import '../services/species_service.dart';
 import '../widgets/navigate_to_sheet.dart';
 import '../widgets/map_controls.dart';
 import '../widgets/map_layer_selector.dart';
@@ -355,6 +360,17 @@ class MapTabState extends State<MapTab> {
   // True while a PDF is being generated for the pending import panel.
   bool _printingParcel = false;
   _MeasurementState _measurement = const _MeasurementState();
+
+  // Sečnja marking mode: crosshair at the map centre, one tap per tree.
+  bool _secnjaMarking = false;
+  final _secnjaPrefs = SecnjaMarkingPrefs();
+  List<String> _secnjaSpeciesList = const [];
+  String? _secnjaSpecies;
+  // Marks made in this session, newest last, for undo and the share prompt.
+  final List<MapLocation> _secnjaSession = [];
+  int? _secnjaParcelId;
+  String _secnjaTitle = '';
+  int _secnjaCount = 0;
   _DistanceUnit _distanceUnit = _DistanceUnit.meters;
   _AreaUnit _areaUnit = _AreaUnit.hectares;
 
@@ -614,9 +630,18 @@ class MapTabState extends State<MapTab> {
 
   /// Show dialog to add a new location with editable coordinates
   Future<void> _showAddLocationDialog(LatLng position) async {
+    final mapProvider = context.read<MapProvider>();
+    final points = mapProvider.locations.where((l) => !l.isSecnja).length;
+    final parcel = mapProvider.parcels
+        .where((p) => p.containsPoint(position))
+        .fold<Parcel?>(null, (best, p) => best == null || p.areaM2 < best.areaM2 ? p : best);
     final result = await MapDialogs.showAddLocationDialog(
       context: context,
       position: position,
+      nextNumber: points + 1,
+      parcelLabel: parcel == null
+          ? null
+          : L10n.current.mapTabParcelShort(parcel.parcelNumber ?? parcel.name),
       onBack: () => _showLongPressMenu(position),
     );
 
@@ -652,50 +677,143 @@ class MapTabState extends State<MapTab> {
     }
   }
 
-  /// Show dialog to add sečnja marker (tree to be cut)
-  Future<void> _showAddSecnjaDialog(LatLng position) async {
-    final name = await MapDialogs.showAddSecnjaDialog(
-      context: context,
-      position: position,
-      onBack: () => _showLongPressMenu(position),
-    );
-
-    if (name != null) {
-      await _addSecnja(name, position.latitude, position.longitude);
-    }
+  /// Enters the sečnja marking mode with the crosshair on [position].
+  Future<void> _startSecnjaMarking(LatLng position) async {
+    _mapController.move(position, _mapController.camera.zoom);
+    final species = await SpeciesService().getSpecies();
+    final remembered = await _secnjaPrefs.getSpecies();
+    if (!mounted) return;
+    setState(() {
+      _secnjaMarking = true;
+      _secnjaSession.clear();
+      _secnjaSpeciesList = species;
+      _secnjaSpecies = species.contains(remembered) ? remembered : null;
+    });
+    await _refreshSecnjaHeader();
   }
 
-  /// Add a sečnja marker to the database
-  Future<void> _addSecnja(String name, double lat, double lng) async {
+  /// Updates the panel header for the parcel under the crosshair.
+  Future<void> _refreshSecnjaHeader() async {
+    if (!_secnjaMarking) return;
+    final db = DatabaseService();
+    final center = _mapController.camera.center;
+    final parcelId = await db.parcelIdAt(center);
+    final count = parcelId == null
+        ? await db.countSecnjaWithoutParcel()
+        : (await db.getSecnjaByParcel(parcelId)).length;
+    final parcel = parcelId == null ? null : await db.getParcel(parcelId);
+    if (!mounted || !_secnjaMarking) return;
+    setState(() {
+      _secnjaParcelId = parcelId;
+      _secnjaCount = count;
+      _secnjaTitle = parcel == null
+          ? L10n.current.secnjaOutsideParcel
+          : L10n.current.secnjaMarkingTitle(parcel.parcelNumber ?? parcel.name);
+    });
+  }
+
+  /// Marks the tree under the crosshair.
+  Future<void> _markSecnjaAtCrosshair() async {
+    HapticFeedback.mediumImpact();
+    final center = _mapController.camera.center;
+    final location = MapLocation(
+      name: nextSecnjaName(
+        species: _secnjaSpecies,
+        existing: _secnjaCount,
+        l10n: L10n.current,
+      ),
+      latitude: center.latitude,
+      longitude: center.longitude,
+      type: LocationType.secnja,
+      parcelId: _secnjaParcelId,
+    );
     try {
-      final location = MapLocation(
-        name: name,
-        latitude: lat,
-        longitude: lng,
-        type: LocationType.secnja,
-      );
-
-      final mapProvider = context.read<MapProvider>();
-      final success = await mapProvider.addLocation(location);
-
-      if (mounted) {
-        if (success) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(L10n.current.mapTabSecnjaMarked(name))));
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(L10n.current.mapTabErrorWithMessage(mapProvider.error ?? ''))),
-          );
-        }
-      }
+      location.id = await DatabaseService().insertLocation(location);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(L10n.current.mapTabSecnjaMarkError(e))),
         );
       }
+      return;
     }
+    _secnjaSession.add(location);
+    if (!mounted) return;
+    setState(() => _secnjaCount++);
+    unawaited(context.read<MapProvider>().loadLocations());
+  }
+
+  /// Removes the last mark of this session.
+  Future<void> _undoSecnjaMark() async {
+    if (_secnjaSession.isEmpty) return;
+    final last = _secnjaSession.removeLast();
+    await DatabaseService().deleteLocation(last.id);
+    if (!mounted) return;
+    unawaited(context.read<MapProvider>().loadLocations());
+    await _refreshSecnjaHeader();
+  }
+
+  Future<void> _selectSecnjaSpecies(String? species) async {
+    setState(() => _secnjaSpecies = species);
+    await _secnjaPrefs.setSpecies(species);
+  }
+
+  Future<void> _addSecnjaSpecies() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      builder: (context) => const SpeciesManagementSheet(),
+    );
+    final species = await SpeciesService().getSpecies();
+    if (!mounted) return;
+    setState(() {
+      _secnjaSpeciesList = species;
+      if (!species.contains(_secnjaSpecies)) _secnjaSpecies = null;
+    });
+  }
+
+  /// Leaves the marking mode and offers to share the last marked parcel.
+  void _finishSecnjaMarking() {
+    final marked = _secnjaSession.length;
+    final parcelId = _secnjaSession.reversed
+        .map((m) => m.parcelId)
+        .firstWhere((id) => id != null, orElse: () => null);
+    setState(() {
+      _secnjaMarking = false;
+      _secnjaSession.clear();
+    });
+    if (marked == 0) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(L10n.current.secnjaMarkedSnack(marked)),
+        action: parcelId == null ? null : _secnjaShareSnackAction(parcelId),
+      ),
+    );
+  }
+
+  /// Snackbar action that shares [parcelId] with a logger. Null until the
+  /// share flow exists.
+  SnackBarAction? _secnjaShareSnackAction(int parcelId) => null;
+
+  Widget _buildSecnjaPanel() {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: SecnjaMarkingPanel(
+        title: _secnjaTitle,
+        count: _secnjaCount,
+        species: _secnjaSpeciesList,
+        selectedSpecies: _secnjaSpecies,
+        onSpeciesSelected: _selectSecnjaSpecies,
+        onAddSpecies: _addSecnjaSpecies,
+        onUndo: _secnjaSession.isEmpty ? null : _undoSecnjaMark,
+        onMark: _markSecnjaAtCrosshair,
+        onLocate: _centerOnGpsLocation,
+        onFinish: _finishSecnjaMarking,
+      ),
+    );
   }
 
   /// Show log entry form with pre-filled location
@@ -1763,7 +1881,7 @@ class MapTabState extends State<MapTab> {
       existingParcel: parcelAtPosition,
       onAddLocation: () => _showAddLocationDialog(position),
       onAddLog: () => _showAddLogDialog(position),
-      onAddSecnja: () => _showAddSecnjaDialog(position),
+      onAddSecnja: () => _startSecnjaMarking(position),
       onImportParcel: () {
         // Back on the import panel returns to this menu.
         _importBackTo = position;
@@ -2281,12 +2399,13 @@ class MapTabState extends State<MapTab> {
                 },
                 // Handle long press to show action menu as a bottom sheet
                 onLongPress: (tapPosition, point) {
-                  if (_measurement.isActive) return;
+                  if (_measurement.isActive || _secnjaMarking) return;
                   _showLongPressMenu(point);
                 },
                 // Save map state when position/zoom/rotation changes
                 onMapEvent: (event) {
                   if (event is MapEventMoveEnd || event is MapEventRotateEnd) {
+                    unawaited(_refreshSecnjaHeader());
                     _cameraSettleDebounce?.cancel();
                     _onCameraSettled(event.camera);
                   } else if (event is MapEventMove ||
@@ -2603,9 +2722,20 @@ class MapTabState extends State<MapTab> {
 
           if (_measurement.isActive) _buildMeasurementPanel(context),
 
+          if (_secnjaMarking)
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: _MeasurementCrosshair(color: Colors.deepOrange),
+                ),
+              ),
+            ),
+
+          if (_secnjaMarking) _buildSecnjaPanel(),
+
           // Attribution overlay (bottom left) - tap to see usage rights.
           // Hidden while measuring so it doesn't overlap the measurement panel.
-          if (!_measurement.isActive)
+          if (!_measurement.isActive && !_secnjaMarking)
             Positioned(
               bottom: 4,
               left: 4,
@@ -2661,6 +2791,7 @@ class MapTabState extends State<MapTab> {
         // The found-parcel sheet (open while _searchedParcel is set) would
         // sit under the GPS button.
         hideBottomControls: _measurement.isActive ||
+            _secnjaMarking ||
             _pendingImportParcel != null ||
             _searchedParcel != null,
       ),

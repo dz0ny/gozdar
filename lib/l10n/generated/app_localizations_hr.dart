@@ -742,11 +742,6 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String mapTabSecnjaMarked(String name) {
-    return 'Sječa \"$name\" označena';
-  }
-
-  @override
   String mapTabSecnjaMarkError(Object error) {
     return 'Pogreška pri označavanju sječe: $error';
   }
@@ -1062,21 +1057,6 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get mapwEnterName => 'Unesite naziv';
-
-  @override
-  String get mapwMarkFellingTitle => 'Označi sječu';
-
-  @override
-  String get mapwTreeDescLabel => 'Opis stabla';
-
-  @override
-  String get mapwTreeDescHint => 'npr. Hrast, Bukva, Smreka...';
-
-  @override
-  String get mapwEnterDescription => 'Molimo unesite opis';
-
-  @override
-  String get mapwMarkAction => 'Označi';
 
   @override
   String get mapwDeleteLocationTitle => 'Izbriši lokaciju';
@@ -2913,4 +2893,73 @@ class AppLocalizationsHr extends AppLocalizations {
   String secnjaShareValidUntil(String date) {
     return 'Poveznica vrijedi do $date';
   }
+
+  @override
+  String get secnjaOutsideParcel => 'Izvan čestice';
+
+  @override
+  String secnjaDefaultName(int n) {
+    return 'Stablo $n';
+  }
+
+  @override
+  String get secnjaMarkAction => 'Označi';
+
+  @override
+  String get secnjaFinish => 'Završi';
+
+  @override
+  String get secnjaHere => 'Ovdje sam';
+
+  @override
+  String secnjaMarkingTitle(String parcel) {
+    return '🪓 Sječa · $parcel';
+  }
+
+  @override
+  String secnjaMarkedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count stabala',
+      few: '$count stabla',
+      one: '$count stablo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get secnjaShareAction => 'Podijeli sjekaču';
+
+  @override
+  String secnjaMarkedSnack(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Označeno $count stabala',
+      few: 'Označena $count stabla',
+      one: 'Označeno $count stablo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pointDefaultName(int n) {
+    return 'Točka $n';
+  }
+
+  @override
+  String get pointChipBoundary => 'Međaš';
+
+  @override
+  String get pointChipHide => 'Lovačka čeka';
+
+  @override
+  String get pointChipSpring => 'Izvor';
+
+  @override
+  String get pointChipSkidTrail => 'Vlaka';
+
+  @override
+  String get pointOwnNameLabel => 'Vlastiti naziv (neobavezno)';
 }

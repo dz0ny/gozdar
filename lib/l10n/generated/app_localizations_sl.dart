@@ -751,11 +751,6 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String mapTabSecnjaMarked(String name) {
-    return 'Sečnja \"$name\" označena';
-  }
-
-  @override
   String mapTabSecnjaMarkError(Object error) {
     return 'Napaka pri označevanju sečnje: $error';
   }
@@ -1070,21 +1065,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get mapwEnterName => 'Vnesite ime';
-
-  @override
-  String get mapwMarkFellingTitle => 'Označi sečnjo';
-
-  @override
-  String get mapwTreeDescLabel => 'Opis drevesa';
-
-  @override
-  String get mapwTreeDescHint => 'npr. Hrast, Bukev, Smreka...';
-
-  @override
-  String get mapwEnterDescription => 'Prosim vnesite opis';
-
-  @override
-  String get mapwMarkAction => 'Označi';
 
   @override
   String get mapwDeleteLocationTitle => 'Izbriši lokacijo';
@@ -2915,4 +2895,75 @@ class AppLocalizationsSl extends AppLocalizations {
   String secnjaShareValidUntil(String date) {
     return 'Povezava velja do $date';
   }
+
+  @override
+  String get secnjaOutsideParcel => 'Izven parcele';
+
+  @override
+  String secnjaDefaultName(int n) {
+    return 'Drevo $n';
+  }
+
+  @override
+  String get secnjaMarkAction => 'Označi';
+
+  @override
+  String get secnjaFinish => 'Končaj';
+
+  @override
+  String get secnjaHere => 'Tu stojim';
+
+  @override
+  String secnjaMarkingTitle(String parcel) {
+    return '🪓 Sečnja · $parcel';
+  }
+
+  @override
+  String secnjaMarkedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dreves',
+      few: '$count drevesa',
+      two: '$count drevesi',
+      one: '$count drevo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get secnjaShareAction => 'Deli sekaču';
+
+  @override
+  String secnjaMarkedSnack(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Označenih $count dreves',
+      few: 'Označena $count drevesa',
+      two: 'Označeni $count drevesi',
+      one: 'Označeno $count drevo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pointDefaultName(int n) {
+    return 'Točka $n';
+  }
+
+  @override
+  String get pointChipBoundary => 'Mejnik';
+
+  @override
+  String get pointChipHide => 'Lovska preža';
+
+  @override
+  String get pointChipSpring => 'Izvir';
+
+  @override
+  String get pointChipSkidTrail => 'Vlaka';
+
+  @override
+  String get pointOwnNameLabel => 'Svoje ime (neobvezno)';
 }
