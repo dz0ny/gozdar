@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'map_dialogs.dart';
 import '../models/received_share.dart';
 import 'package:latlong2/latlong.dart';
 import '../l10n/l10n.dart';
@@ -19,6 +20,10 @@ class SavedLocationsSheet extends StatelessWidget {
   final void Function(MapLocation location) onDelete;
   final void Function()? onAddByCoordinates;
 
+  /// Deletes a location after a swipe to the left. Returns true when it is
+  /// gone. Null turns swiping off.
+  final Future<bool> Function(MapLocation location)? onSwipeDelete;
+
   const SavedLocationsSheet({
     super.key,
     required this.locations,
@@ -29,6 +34,7 @@ class SavedLocationsSheet extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     this.onAddByCoordinates,
+    this.onSwipeDelete,
   });
 
   /// Show the saved locations sheet as a modal bottom sheet
@@ -42,6 +48,7 @@ class SavedLocationsSheet extends StatelessWidget {
     required void Function(MapLocation location) onEdit,
     required void Function(MapLocation location) onDelete,
     void Function()? onAddByCoordinates,
+    Future<bool> Function(MapLocation location)? onSwipeDelete,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -56,7 +63,7 @@ class SavedLocationsSheet extends StatelessWidget {
             color: Theme.of(context).colorScheme.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: _ContentWidget(
+          child: _SwipeableContent(
             scrollController: scrollController,
             locations: locations,
             logs: logs,
@@ -66,6 +73,7 @@ class SavedLocationsSheet extends StatelessWidget {
             onEdit: onEdit,
             onDelete: onDelete,
             onAddByCoordinates: onAddByCoordinates,
+            onSwipeDelete: onSwipeDelete,
           ),
         ),
       ),
@@ -74,7 +82,7 @@ class SavedLocationsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _ContentWidget(
+    return _SwipeableContent(
       scrollController: ScrollController(),
       locations: locations,
       logs: logs,
@@ -84,6 +92,69 @@ class SavedLocationsSheet extends StatelessWidget {
       onEdit: onEdit,
       onDelete: onDelete,
       onAddByCoordinates: onAddByCoordinates,
+      onSwipeDelete: onSwipeDelete,
+    );
+  }
+}
+
+/// Keeps the sheet's list in step with swipe deletes: a swiped row must leave
+/// the list at once, or Dismissible fails.
+class _SwipeableContent extends StatefulWidget {
+  final ScrollController scrollController;
+  final List<MapLocation> locations;
+  final List<LogEntry> logs;
+  final List<Parcel> parcels;
+  final List<ReceivedShare> receivedShares;
+  final void Function(NavigationTarget target) onNavigate;
+  final void Function(MapLocation location) onEdit;
+  final void Function(MapLocation location) onDelete;
+  final void Function()? onAddByCoordinates;
+  final Future<bool> Function(MapLocation location)? onSwipeDelete;
+
+  const _SwipeableContent({
+    required this.scrollController,
+    required this.locations,
+    required this.logs,
+    required this.parcels,
+    this.receivedShares = const [],
+    required this.onNavigate,
+    required this.onEdit,
+    required this.onDelete,
+    this.onAddByCoordinates,
+    this.onSwipeDelete,
+  });
+
+  @override
+  State<_SwipeableContent> createState() => _SwipeableContentState();
+}
+
+class _SwipeableContentState extends State<_SwipeableContent> {
+  final _removed = <int>{};
+
+  @override
+  Widget build(BuildContext context) {
+    final swipe = widget.onSwipeDelete;
+    return _ContentWidget(
+      scrollController: widget.scrollController,
+      locations: widget.locations.where((l) => !_removed.contains(l.id)).toList(),
+      logs: widget.logs,
+      parcels: widget.parcels,
+      receivedShares: widget.receivedShares,
+      onNavigate: widget.onNavigate,
+      onEdit: widget.onEdit,
+      onDelete: widget.onDelete,
+      onAddByCoordinates: widget.onAddByCoordinates,
+      onSwipeDelete: swipe == null
+          ? null
+          : (location) async {
+              final confirmed = await MapDialogs.showDeleteLocationDialog(
+                context: context,
+                location: location,
+              );
+              if (!confirmed) return false;
+              return swipe(location);
+            },
+      onSwiped: (location) => setState(() => _removed.add(location.id)),
     );
   }
 }
@@ -99,6 +170,11 @@ class _ContentWidget extends StatelessWidget {
   final void Function(MapLocation location) onDelete;
   final void Function()? onAddByCoordinates;
 
+  /// Deletes a location after a swipe to the left. Returns true when it is
+  /// gone. Null turns swiping off.
+  final Future<bool> Function(MapLocation location)? onSwipeDelete;
+  final void Function(MapLocation location)? onSwiped;
+
   const _ContentWidget({
     required this.scrollController,
     required this.locations,
@@ -109,7 +185,28 @@ class _ContentWidget extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     this.onAddByCoordinates,
+    this.onSwipeDelete,
+    this.onSwiped,
   });
+
+  /// Wraps a location row so a swipe to the left deletes it.
+  Widget _swipeable(MapLocation location, Widget child) {
+    final delete = onSwipeDelete;
+    if (delete == null) return child;
+    return Dismissible(
+      key: ValueKey('location_${location.id}'),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) => delete(location),
+      onDismissed: (_) => onSwiped?.call(location),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        color: Colors.red,
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      child: child,
+    );
+  }
 
   /// Find containing parcel for a point
   String? _findParcelName(double lat, double lng) {
@@ -194,12 +291,15 @@ class _ContentWidget extends StatelessWidget {
                       location.latitude,
                       location.longitude,
                     );
-                    return _LocationListTile(
-                      location: location,
-                      parcelName: parcelName,
-                      onNavigate: onNavigate,
-                      onEdit: onEdit,
-                      onDelete: onDelete,
+                    return _swipeable(
+                      location,
+                      _LocationListTile(
+                        location: location,
+                        parcelName: parcelName,
+                        onNavigate: onNavigate,
+                        onEdit: onEdit,
+                        onDelete: onDelete,
+                      ),
                     );
                   }),
                 ],
@@ -216,12 +316,15 @@ class _ContentWidget extends StatelessWidget {
                       location.latitude,
                       location.longitude,
                     );
-                    return _LocationListTile(
-                      location: location,
-                      parcelName: parcelName,
-                      onNavigate: onNavigate,
-                      onEdit: onEdit,
-                      onDelete: onDelete,
+                    return _swipeable(
+                      location,
+                      _LocationListTile(
+                        location: location,
+                        parcelName: parcelName,
+                        onNavigate: onNavigate,
+                        onEdit: onEdit,
+                        onDelete: onDelete,
+                      ),
                     );
                   }),
                 ],
