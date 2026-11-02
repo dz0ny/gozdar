@@ -1089,9 +1089,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
       startNavigation: startNavigation,
     );
 
-    // Set navigation target and switch to map
-    context.read<NavigationNotifier>().navigateToMapWithTarget(target);
-    context.go(AppRoutes.map);
+    goToMapWithTarget(context, target);
   }
 
   /// "Na karti" (outlined) and "Navigiraj" (filled), one line each.

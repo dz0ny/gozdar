@@ -1,6 +1,21 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../models/navigation_target.dart';
 import '../models/parcel.dart';
+import 'route_names.dart';
+
+/// Shows [target] on the map. A screen pushed with Navigator covers the
+/// map, so this closes it first.
+void goToMapWithTarget(BuildContext context, NavigationTarget target) {
+  context.read<NavigationNotifier>().navigateToMapWithTarget(target);
+  final router = GoRouter.of(context);
+  final navigator = Navigator.of(context);
+  if (ModalRoute.of(context)?.settings is! Page && navigator.canPop()) {
+    navigator.pop();
+  }
+  router.go(AppRoutes.map);
+}
 
 /// Handles cross-tab navigation commands for go_router
 /// Replaces MainScreen.navigateToMapWithTarget(), etc.
