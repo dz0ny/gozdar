@@ -213,14 +213,11 @@ const LEAFLET = 'https://unpkg.com/leaflet@1.9.4/dist';
 // Draws the parcel and numbered trees. A tap on a list row zooms to that tree.
 const MAP_SCRIPT = `
 const data = JSON.parse(document.getElementById('data').textContent);
-const map = L.map('map', { scrollWheelZoom: false });
+const map = L.map('map', { scrollWheelZoom: false, zoomControl: false });
 map.attributionControl.setPrefix(false);
-const satellite = L.tileLayer(
+L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   { maxZoom: 19, attribution: 'Esri' }).addTo(map);
-const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  { maxZoom: 19, attribution: '© OpenStreetMap' });
-L.control.layers({ Satelit: satellite, Karta: osm }).addTo(map);
 const bounds = L.latLngBounds([]);
 if (data.polygon.length > 2) {
   const outline = L.polygon(data.polygon, { color: '#d4a574', weight: 2, fillOpacity: 0.1 }).addTo(map);
