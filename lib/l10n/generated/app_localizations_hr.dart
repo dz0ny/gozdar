@@ -2198,6 +2198,10 @@ class AppLocalizationsHr extends AppLocalizations {
   String get svcNetUnknown => 'Došlo je do pogreške. Pokušajte ponovno.';
 
   @override
+  String get svcDownloadInterrupted =>
+      'Preuzimanje je prekinuto. Sljedeći put nastavlja se gdje je stalo.';
+
+  @override
   String get aboutTitle => 'Postavke';
 
   @override
@@ -2353,7 +2357,8 @@ class AppLocalizationsHr extends AppLocalizations {
       'Preuzmi samo svoju statističku regiju — preporučuje se Wi-Fi veza.';
 
   @override
-  String get aboutShareKataster => 'Dijeli regije s telefonima u blizini';
+  String get aboutShareKataster =>
+      'Dijeli preuzete podatke s telefonima u blizini';
 
   @override
   String aboutShareKatasterActive(int count) {
@@ -2362,7 +2367,7 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get aboutShareKatasterDesc =>
-      'Telefoni na istoj Wi-Fi mreži mogu od vas preuzeti regije koje ste već preuzeli – brže i bez mobilnih podataka.';
+      'Telefoni na istoj Wi-Fi mreži mogu od vas preuzeti regije, baze vlasnika i druge podatke koje ste već preuzeli – brže i bez mobilnih podataka. Šifrirana baza vlasnika ostaje šifrirana.';
 
   @override
   String get aboutPublicOwners => 'javni vlasnici';

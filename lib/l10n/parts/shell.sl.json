@@ -90,7 +90,7 @@
   "aboutAddRegion": "Dodaj regijo",
   "aboutDownloadRegion": "Prenesi regijo",
   "aboutDownloadRegionHint": "Prenesi le svojo statistično regijo — priporočena povezava Wi-Fi.",
-  "aboutShareKataster": "Deli regije s telefoni v bližini",
+  "aboutShareKataster": "Deli prenesene podatke s telefoni v bližini",
   "aboutShareKatasterActive": "Deljenje vključeno • telefonov v bližini: {count}",
   "@aboutShareKatasterActive": {
     "placeholders": {
@@ -99,7 +99,7 @@
       }
     }
   },
-  "aboutShareKatasterDesc": "Telefoni v istem omrežju Wi-Fi lahko regije, ki ste jih že prenesli, dobijo od vas – hitreje in brez mobilnih podatkov.",
+  "aboutShareKatasterDesc": "Telefoni v istem omrežju Wi-Fi lahko regije, baze lastnikov in druge podatke, ki ste jih že prenesli, dobijo od vas – hitreje in brez mobilnih podatkov. Šifrirana baza lastnikov ostane šifrirana.",
   "aboutPublicOwners": "javni lastniki",
   "aboutKatasterUpdateAvailable": "Na voljo je novejši kataster ({date})",
   "@aboutKatasterUpdateAvailable": {

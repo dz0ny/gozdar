@@ -2205,6 +2205,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get svcNetUnknown => 'Prišlo je do napake. Poskusite znova.';
 
   @override
+  String get svcDownloadInterrupted =>
+      'Prenos je bil prekinjen. Ob naslednjem poskusu se nadaljuje, kjer se je ustavil.';
+
+  @override
   String get aboutTitle => 'Nastavitve';
 
   @override
@@ -2360,7 +2364,8 @@ class AppLocalizationsSl extends AppLocalizations {
       'Prenesi le svojo statistično regijo — priporočena povezava Wi-Fi.';
 
   @override
-  String get aboutShareKataster => 'Deli regije s telefoni v bližini';
+  String get aboutShareKataster =>
+      'Deli prenesene podatke s telefoni v bližini';
 
   @override
   String aboutShareKatasterActive(int count) {
@@ -2369,7 +2374,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get aboutShareKatasterDesc =>
-      'Telefoni v istem omrežju Wi-Fi lahko regije, ki ste jih že prenesli, dobijo od vas – hitreje in brez mobilnih podatkov.';
+      'Telefoni v istem omrežju Wi-Fi lahko regije, baze lastnikov in druge podatke, ki ste jih že prenesli, dobijo od vas – hitreje in brez mobilnih podatkov. Šifrirana baza lastnikov ostane šifrirana.';
 
   @override
   String get aboutPublicOwners => 'javni lastniki';

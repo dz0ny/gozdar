@@ -27,5 +27,6 @@
   "svcNetTimeout": "Veza je istekla. Pokušajte ponovno.",
   "svcNetNoConnection": "Nema internetske veze. Provjerite mrežu.",
   "svcNetServerError": "Poslužitelj nije dostupan. Pokušajte kasnije.",
-  "svcNetUnknown": "Došlo je do pogreške. Pokušajte ponovno."
+  "svcNetUnknown": "Došlo je do pogreške. Pokušajte ponovno.",
+  "svcDownloadInterrupted": "Preuzimanje je prekinuto. Sljedeći put nastavlja se gdje je stalo."
 }

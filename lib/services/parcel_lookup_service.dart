@@ -2,14 +2,15 @@ import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import '../l10n/l10n.dart';
 import 'cadastral_service.dart';
 import 'kataster_sharing_service.dart';
 import 'kataster_update_service.dart';
+import 'resumable_download.dart';
 
 /// Thrown when a download is cancelled by the caller.
 class ParcelDownloadCancelled implements Exception {
@@ -338,9 +339,11 @@ class ParcelLookupService {
   }
 
   /// Stream-download a region database from [url] into [fileName] and open it,
-  /// adding it to the loaded set (other regions stay loaded). Reports progress
-  /// via [onProgress]; throw [ParcelDownloadCancelled] from [isCancelled] to
-  /// abort. Writes to a `.part` file and only swaps in on success.
+  /// adding it to the loaded set (other regions stay loaded). Tries a nearby
+  /// phone first. Reports progress via [onProgress]; throw
+  /// [ParcelDownloadCancelled] from [isCancelled] to abort. Writes to a
+  /// `.part` file that an interrupted download continues from (see
+  /// [ResumableDownload]) and only swaps in on success.
   Future<ParcelImportResult> downloadAndOpen(
     String url, {
     required String fileName,
@@ -349,7 +352,6 @@ class ParcelLookupService {
   }) async {
     final target = _join(await _dirPath(), fileName);
     final part = File('$target.part');
-    if (await part.exists()) await part.delete();
 
     final peerDownloaded = await KatasterSharingService.instance.downloadFileTo(
       fileName,
@@ -357,67 +359,41 @@ class ParcelLookupService {
       onProgress: onProgress,
       isCancelled: isCancelled,
     );
-    if (peerDownloaded) {
-      _dropOpen(target);
-      await _deleteDbFiles(target);
-      await part.rename(target);
-      try {
-        _writeSource(target, 'downloaded');
-        final opened = _openDb(target);
-        _dbs.add(opened);
-        return ParcelImportResult(opened.rowCount);
-      } on FormatException {
-        await _deleteDbFiles(target);
-        throw const FormatException('Prenesena datoteka ni baza parcel.');
+    if (!peerDownloaded) {
+      if (isCancelled?.call() ?? false) {
+        throw const ParcelDownloadCancelled();
+      }
+      final result = await ResumableDownload.fetch(
+        url,
+        part,
+        onProgress: onProgress,
+        isCancelled: isCancelled,
+      );
+      switch (result.outcome) {
+        case DownloadOutcome.cancelled:
+          throw const ParcelDownloadCancelled();
+        case DownloadOutcome.failed:
+          throw FormatException(result.statusCode != null
+              ? L10n.current.svcDownloadFailedHttp(result.statusCode!)
+              : L10n.current.svcDownloadInterrupted);
+        case DownloadOutcome.complete:
+          break;
       }
     }
-    if (isCancelled?.call() ?? false) {
-      throw const ParcelDownloadCancelled();
-    }
-    if (await part.exists()) await part.delete();
 
-    final client = http.Client();
+    // Swap into place and (re)open, replacing this region if already loaded.
+    _dropOpen(target);
+    await _deleteDbFiles(target);
+    await part.rename(target);
+    await ResumableDownload.discard(part);
     try {
-      final response = await client.send(http.Request('GET', Uri.parse(url)));
-      if (response.statusCode != 200) {
-        throw FormatException('Prenos ni uspel (HTTP ${response.statusCode}).');
-      }
-      final total = response.contentLength;
-      var received = 0;
-      final sink = part.openWrite();
-      try {
-        await for (final chunk in response.stream) {
-          if (isCancelled?.call() ?? false) {
-            throw const ParcelDownloadCancelled();
-          }
-          sink.add(chunk);
-          received += chunk.length;
-          onProgress?.call(received, total);
-        }
-      } finally {
-        await sink.close();
-      }
-
-      // Swap into place and (re)open, replacing this region if already loaded.
-      _dropOpen(target);
+      _writeSource(target, 'downloaded');
+      final opened = _openDb(target);
+      _dbs.add(opened);
+      return ParcelImportResult(opened.rowCount);
+    } on FormatException {
       await _deleteDbFiles(target);
-      await part.rename(target);
-      try {
-        _writeSource(target, 'downloaded');
-        final opened = _openDb(target);
-        _dbs.add(opened);
-        return ParcelImportResult(opened.rowCount);
-      } on FormatException {
-        await _deleteDbFiles(target);
-        throw const FormatException('Prenesena datoteka ni baza parcel.');
-      }
-    } finally {
-      client.close();
-      if (await part.exists()) {
-        try {
-          await part.delete();
-        } catch (_) {}
-      }
+      throw const FormatException('Prenesena datoteka ni baza parcel.');
     }
   }
 

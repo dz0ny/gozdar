@@ -3709,6 +3709,12 @@ abstract class AppLocalizations {
   /// **'Prišlo je do napake. Poskusite znova.'**
   String get svcNetUnknown;
 
+  /// No description provided for @svcDownloadInterrupted.
+  ///
+  /// In sl, this message translates to:
+  /// **'Prenos je bil prekinjen. Ob naslednjem poskusu se nadaljuje, kjer se je ustavil.'**
+  String get svcDownloadInterrupted;
+
   /// No description provided for @aboutTitle.
   ///
   /// In sl, this message translates to:
@@ -3981,7 +3987,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutShareKataster.
   ///
   /// In sl, this message translates to:
-  /// **'Deli regije s telefoni v bližini'**
+  /// **'Deli prenesene podatke s telefoni v bližini'**
   String get aboutShareKataster;
 
   /// No description provided for @aboutShareKatasterActive.
@@ -3993,7 +3999,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutShareKatasterDesc.
   ///
   /// In sl, this message translates to:
-  /// **'Telefoni v istem omrežju Wi-Fi lahko regije, ki ste jih že prenesli, dobijo od vas – hitreje in brez mobilnih podatkov.'**
+  /// **'Telefoni v istem omrežju Wi-Fi lahko regije, baze lastnikov in druge podatke, ki ste jih že prenesli, dobijo od vas – hitreje in brez mobilnih podatkov. Šifrirana baza lastnikov ostane šifrirana.'**
   String get aboutShareKatasterDesc;
 
   /// No description provided for @aboutPublicOwners.

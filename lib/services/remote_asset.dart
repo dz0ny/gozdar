@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+
+import 'kataster_sharing_service.dart';
+import 'resumable_download.dart';
 
 /// Downloads a single remote file into the application-support directory on
 /// first use and re-uses the cached copy afterwards — the same "fetch once,
@@ -23,10 +25,12 @@ class RemoteAsset {
     return await f.exists() && await f.length() > 0;
   }
 
-  /// Ensure [fileName] is present locally, downloading it from [url] if needed.
-  /// Streams to a `.part` file and only commits on success, so a failed or
-  /// interrupted download never leaves a corrupt file. Returns the local path,
-  /// or null when no copy exists and the download failed.
+  /// Ensure [fileName] is present locally, fetching it if needed: from a
+  /// nearby phone that has it (see [KatasterSharingService]), else from
+  /// [url]. Streams to a `.part` file and only commits on success, so a
+  /// failed download never leaves a corrupt file; an interrupted one is
+  /// continued, now or on the next call (see [ResumableDownload]). Returns
+  /// the local path, or null when no copy exists and the download failed.
   ///
   /// With [refresh] an existing copy is re-downloaded and replaced on success
   /// (the old file stays intact until then). Callers must close any handle on
@@ -49,42 +53,35 @@ class RemoteAsset {
         return target;
       }
       final part = File('$target.part');
-      if (await part.exists()) await part.delete();
-
-      final client = http.Client();
-      try {
-        final resp =
-            await client.send(http.Request('GET', Uri.parse(url)));
-        if (resp.statusCode != 200) {
-          debugPrint('RemoteAsset $fileName: HTTP ${resp.statusCode}');
+      // A refresh must not pick up the peer copy of the file we already have.
+      final fromPeer = !refresh &&
+          await KatasterSharingService.instance.downloadFileTo(
+            fileName,
+            part,
+            onProgress: onProgress,
+            isCancelled: isCancelled,
+            discover: false,
+          );
+      if (!fromPeer) {
+        final result = await ResumableDownload.fetch(
+          url,
+          part,
+          onProgress: onProgress,
+          isCancelled: isCancelled,
+        );
+        if (!result.isComplete) {
+          if (result.statusCode != null) {
+            debugPrint('RemoteAsset $fileName: HTTP ${result.statusCode}');
+          }
           return null;
         }
-        final total = resp.contentLength;
-        var received = 0;
-        final sink = part.openWrite();
-        try {
-          await for (final chunk in resp.stream) {
-            if (isCancelled?.call() ?? false) return null;
-            sink.add(chunk);
-            received += chunk.length;
-            onProgress?.call(received, total);
-          }
-        } finally {
-          await sink.close();
-        }
-        if (isCancelled?.call() ?? false) return null;
-        await beforeSwap?.call();
-        if (await targetFile.exists()) await targetFile.delete();
-        await part.rename(target);
-        return target;
-      } finally {
-        client.close();
-        if (await part.exists()) {
-          try {
-            await part.delete();
-          } catch (_) {}
-        }
       }
+      if (isCancelled?.call() ?? false) return null;
+      await beforeSwap?.call();
+      if (await targetFile.exists()) await targetFile.delete();
+      await part.rename(target);
+      await ResumableDownload.discard(part);
+      return target;
     } catch (e) {
       debugPrint('RemoteAsset.ensure($fileName) failed: $e');
       return null;

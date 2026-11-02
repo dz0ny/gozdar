@@ -36,6 +36,9 @@ class VlakeService {
   factory VlakeService() => instance;
 
   static const _fileName = 'vlake.bin';
+
+  /// File name in the app-support dir, for sharing with nearby phones.
+  static const fileName = _fileName;
   static String get _url => '${ParcelLookupService.r2BaseUrl}/$_fileName';
 
   List<VlakeLine>? _lines;

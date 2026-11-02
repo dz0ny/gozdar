@@ -3,14 +3,15 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'aes_file_decryptor.dart';
+import 'kataster_sharing_service.dart';
 import 'parcel_lookup_service.dart';
 import 'public_parcel_settings.dart';
 import 'remote_asset.dart';
+import 'resumable_download.dart';
 import '../l10n/l10n.dart';
 
 /// Thrown when an owners-database download is cancelled by the caller.
@@ -94,6 +95,13 @@ class OwnerLookupService {
   factory OwnerLookupService() => instance;
 
   static const _fileName = 'owners.sqlite';
+
+  /// File names in the app-support dir, for sharing with nearby phones. The
+  /// owners database is shared as downloaded (encrypted), never the live
+  /// file.
+  static const sharedFileName = '$_fileName.aes';
+  static const publicFileName = _publicFileName;
+  static const publicHrFileName = _publicHrFileName;
 
   // Redistributable public-owners DB (legal-entity owners + managers, built
   // from the GURS KN open data; CC-BY). Hosted on R2 and downloaded on first
@@ -529,12 +537,14 @@ class OwnerLookupService {
     return OwnerImportResult(_rowCount);
   }
 
-  /// Stream-download the owners database from [url] into the app and open it.
-  /// When [password] is given the download is treated as an AES-256 encrypted
-  /// file (see [AesFileDecryptor]) and decrypted on the fly. Reports progress
-  /// via [onProgress]; throw via [isCancelled] to abort. Downloads to a `.part`
-  /// file and only replaces the live database on success, so a failed/cancelled
-  /// download never corrupts an existing one.
+  /// Download the owners database from [url] (or from a nearby phone that
+  /// has it) into the app and open it. When [password] is given the download
+  /// is an AES-256 encrypted file (see [AesFileDecryptor]): it is decrypted
+  /// after it arrived and kept as [sharedFileName], the form nearby phones
+  /// get it in. Reports progress via [onProgress] (download, then
+  /// decryption); throw via [isCancelled] to abort. The download continues
+  /// where it stopped after an interruption (see [ResumableDownload]), and
+  /// the live database is only replaced on success.
   Future<OwnerImportResult> downloadAndOpen(
     String url, {
     String? password,
@@ -542,69 +552,78 @@ class OwnerLookupService {
     bool Function()? isCancelled,
   }) async {
     final target = await _targetPath();
-    final part = File('$target.part');
-    if (await part.exists()) await part.delete();
+    final encrypted = password != null && password.isNotEmpty;
+    // The file as served; for an encrypted one, a separate file to decrypt.
+    final download = File(encrypted ? '$target.aes.part' : '$target.part');
 
-    final client = http.Client();
-    try {
-      final response = await client.send(http.Request('GET', Uri.parse(url)));
-      if (response.statusCode != 200) {
-        throw FormatException(
-          L10n.current.svcDownloadFailedHttp(response.statusCode),
+    final fromPeer = encrypted &&
+        await KatasterSharingService.instance.downloadFileTo(
+          sharedFileName,
+          download,
+          onProgress: onProgress,
+          isCancelled: isCancelled,
         );
+    if (!fromPeer) {
+      final result = await ResumableDownload.fetch(
+        url,
+        download,
+        onProgress: onProgress,
+        isCancelled: isCancelled,
+      );
+      switch (result.outcome) {
+        case DownloadOutcome.cancelled:
+          throw const OwnerDownloadCancelled();
+        case DownloadOutcome.failed:
+          throw FormatException(result.statusCode != null
+              ? L10n.current.svcDownloadFailedHttp(result.statusCode!)
+              : L10n.current.svcDownloadInterrupted);
+        case DownloadOutcome.complete:
+          break;
       }
-      final total = response.contentLength;
+    }
+
+    final part = File('$target.part');
+    if (encrypted) {
+      final total = await download.length();
       final sink = part.openWrite();
       try {
-        if (password != null && password.isNotEmpty) {
-          await AesFileDecryptor.decrypt(
-            input: response.stream,
-            out: sink,
-            password: password,
-            onBytes: (b) => onProgress?.call(b, total),
-            isCancelled: isCancelled,
-          );
-        } else {
-          var received = 0;
-          await for (final chunk in response.stream) {
-            if (isCancelled?.call() ?? false) {
-              throw const OwnerDownloadCancelled();
-            }
-            sink.add(chunk);
-            received += chunk.length;
-            onProgress?.call(received, total);
-          }
-        }
+        await AesFileDecryptor.decrypt(
+          input: download.openRead(),
+          out: sink,
+          password: password,
+          onBytes: (b) => onProgress?.call(b, total),
+          isCancelled: isCancelled,
+        );
       } on AesCancelled {
         throw const OwnerDownloadCancelled();
       } on AesDecryptException catch (e) {
+        // The download stays, so another password needs no new download.
         throw FormatException(e.message);
       } finally {
         await sink.close();
-      }
-
-      _close();
-      await _deleteDbFiles(target);
-      await part.rename(target);
-      _path = target;
-      try {
-        _open(target);
-        _writeSource(target, 'downloaded');
-        _scheduleSearchIndex();
-      } on FormatException {
-        await _deleteDbFiles(target);
-        _path = null;
-        throw const FormatException('Prenesena datoteka ni baza lastnikov.');
-      }
-      return OwnerImportResult(_rowCount);
-    } finally {
-      client.close();
-      if (await part.exists()) {
-        try {
+        if (await part.exists() && isCancelled?.call() == true) {
           await part.delete();
-        } catch (_) {}
+        }
       }
     }
+
+    _close();
+    await _deleteDbFiles(target);
+    await part.rename(target);
+    _path = target;
+    try {
+      _open(target);
+      _writeSource(target, 'downloaded');
+      _scheduleSearchIndex();
+    } on FormatException {
+      await _deleteDbFiles(target);
+      await ResumableDownload.discard(download);
+      _path = null;
+      throw const FormatException('Prenesena datoteka ni baza lastnikov.');
+    }
+    if (encrypted) await download.rename('$target.aes');
+    await ResumableDownload.discard(download); // its resume bookkeeping
+    return OwnerImportResult(_rowCount);
   }
 
   /// Delete the imported database.
@@ -616,7 +635,8 @@ class OwnerLookupService {
 
   /// Delete the database file together with its WAL/SHM/journal sidecars.
   Future<void> _deleteDbFiles(String path) async {
-    for (final suffix in ['', '-wal', '-shm', '-journal', '.src']) {
+    // .aes: the encrypted download kept for sharing; it belongs to this file.
+    for (final suffix in ['', '-wal', '-shm', '-journal', '.src', '.aes']) {
       final file = File('$path$suffix');
       if (await file.exists()) {
         try {

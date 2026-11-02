@@ -8,6 +8,10 @@ import 'package:http/http.dart' as http;
 import 'package:nsd/nsd.dart' as nsd;
 import 'package:path_provider/path_provider.dart';
 
+import 'owner_lookup_service.dart';
+import 'resumable_download.dart';
+import 'vlake_service.dart';
+
 class KatasterPeer {
   final String host;
   final int port;
@@ -127,15 +131,23 @@ class KatasterSharingService {
     }
   }
 
+  /// Fetches [fileName] from a nearby phone that has it into [target],
+  /// continuing a part left there earlier. With [discover] it first looks
+  /// for phones (and briefly waits for them); without, only phones already
+  /// found are asked, so a background download never triggers the system's
+  /// local-network prompt.
   Future<bool> downloadFileTo(
     String fileName,
     File target, {
     void Function(int received, int? total)? onProgress,
     bool Function()? isCancelled,
+    bool discover = true,
   }) async {
-    await startDiscovery();
-    if (_peers.isEmpty) {
-      await Future<void>.delayed(const Duration(seconds: 2));
+    if (discover) {
+      await startDiscovery();
+      if (_peers.isEmpty) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+      }
     }
 
     for (final peer in List<KatasterPeer>.from(_peers)) {
@@ -161,33 +173,18 @@ class KatasterSharingService {
     void Function(int received, int? total)? onProgress,
     bool Function()? isCancelled,
   }) async {
-    final request = http.Request(
-      'GET',
-      Uri.parse('${peer.baseUrl}/kataster/files/${Uri.encodeComponent(fileName)}'),
+    // Resumes a part left by an earlier attempt; few retries, since the
+    // caller falls back to the internet when the peer goes away.
+    final result = await ResumableDownload.fetch(
+      '${peer.baseUrl}/kataster/files/${Uri.encodeComponent(fileName)}',
+      target,
+      client: _httpClient,
+      connectTimeout: const Duration(seconds: 5),
+      attempts: 2,
+      onProgress: onProgress,
+      isCancelled: isCancelled,
     );
-    try {
-      final response = await _httpClient.send(request).timeout(
-            const Duration(seconds: 5),
-          );
-      if (response.statusCode != HttpStatus.ok) return false;
-
-      final sink = target.openWrite();
-      var received = 0;
-      try {
-        await for (final chunk in response.stream) {
-          if (isCancelled?.call() ?? false) return false;
-          sink.add(chunk);
-          received += chunk.length;
-          onProgress?.call(received, response.contentLength);
-        }
-      } finally {
-        await sink.close();
-      }
-      return received > 0;
-    } catch (e) {
-      debugPrint('KatasterSharingService._downloadFromPeer failed: $e');
-      return false;
-    }
+    return result.isComplete;
   }
 
   Future<List<SharedKatasterFile>> listLocalFiles() async {
@@ -263,12 +260,7 @@ class KatasterSharingService {
       final dir = await getApplicationSupportDirectory();
       final file = File('${dir.path}${Platform.pathSeparator}$fileName');
       if (await file.exists()) {
-        request.response
-          ..statusCode = HttpStatus.ok
-          ..headers.contentType = ContentType.binary
-          ..headers.set(HttpHeaders.contentLengthHeader, await file.length());
-        await request.response.addStream(file.openRead());
-        await request.response.close();
+        await serveFile(request, file);
         return;
       }
     }
@@ -277,9 +269,60 @@ class KatasterSharingService {
     await request.response.close();
   }
 
+  /// Sends [file], or the requested tail of it (`Range: bytes=N-`) so an
+  /// interrupted copy on the other phone continues instead of restarting.
+  /// The ETag (size + modification time) lets that phone check with
+  /// `If-Range` that the file is still the one it started on.
+  @visibleForTesting
+  static Future<void> serveFile(HttpRequest request, File file) async {
+    final length = await file.length();
+    final etag = '"$length-${(await file.lastModified()).millisecondsSinceEpoch}"';
+    final response = request.response
+      ..headers.contentType = ContentType.binary
+      ..headers.set(HttpHeaders.etagHeader, etag)
+      ..headers.set(HttpHeaders.acceptRangesHeader, 'bytes');
+
+    final ifRange = request.headers.value(HttpHeaders.ifRangeHeader);
+    final range = RegExp(r'^bytes=(\d+)-$')
+        .firstMatch(request.headers.value(HttpHeaders.rangeHeader) ?? '');
+    final start = range == null ? null : int.tryParse(range.group(1)!);
+    if (start != null && (ifRange == null || ifRange == etag)) {
+      if (start >= length) {
+        response
+          ..statusCode = HttpStatus.requestedRangeNotSatisfiable
+          ..headers.set(HttpHeaders.contentRangeHeader, 'bytes */$length');
+        await response.close();
+        return;
+      }
+      response
+        ..statusCode = HttpStatus.partialContent
+        ..headers.set(
+          HttpHeaders.contentRangeHeader,
+          'bytes $start-${length - 1}/$length',
+        )
+        ..headers.set(HttpHeaders.contentLengthHeader, length - start);
+      await response.addStream(file.openRead(start));
+    } else {
+      response
+        ..statusCode = HttpStatus.ok
+        ..headers.set(HttpHeaders.contentLengthHeader, length);
+      await response.addStream(file.openRead());
+    }
+    await response.close();
+  }
+
+  /// Downloaded data other phones may fetch: kataster regions, the owner
+  /// databases and the Vlake overlay.
+  static const _sharedAssets = {
+    OwnerLookupService.sharedFileName,
+    OwnerLookupService.publicFileName,
+    OwnerLookupService.publicHrFileName,
+    VlakeService.fileName,
+  };
+
   bool _isSharedFileName(String fileName) =>
-      fileName.startsWith('parcels') &&
-      fileName.endsWith('.sqlite') &&
       !fileName.contains('/') &&
-      !fileName.contains('\\');
+      !fileName.contains('\\') &&
+      ((fileName.startsWith('parcels') && fileName.endsWith('.sqlite')) ||
+          _sharedAssets.contains(fileName));
 }
