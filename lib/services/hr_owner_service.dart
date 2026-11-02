@@ -7,7 +7,17 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import 'cache_settings.dart';
+import 'ko_locator.dart';
 import 'owner_lookup_service.dart';
+
+/// A cached Croatian parcel whose holders matched [HrOwnerService.searchCached].
+class HrOwnerHit {
+  const HrOwnerHit(this.sifko, this.parcela, this.info);
+
+  final int sifko;
+  final String parcela;
+  final OwnerInfo info;
+}
 
 /// Holders (posjednici) of a Croatian parcel, fetched from the public DGU
 /// cadastre (oss.uredjenazemlja.hr). Every answer is kept on disk with no
@@ -87,6 +97,49 @@ class HrOwnerService {
       unawaited(_save(stored));
     }
     return info;
+  }
+
+  /// Replaces the on-disk cache for tests, as raw `sifko/parcela` entries.
+  @visibleForTesting
+  void debugSetStored(Map<String, dynamic> entries) => _stored = entries;
+
+  /// Cached parcels whose holder names, addresses or KO name contain every
+  /// word of [words] (any order, ignoring case and diacritics). DGU has no
+  /// search by owner, so parcels looked up before are the only way back from
+  /// a name to its parcels. Words under 3 characters are ignored; none left
+  /// means no hits. [onlySifko] restricts to one KO.
+  Future<List<HrOwnerHit>> searchCached(
+    List<String> words, {
+    int? onlySifko,
+    int limit = 15,
+  }) async {
+    final terms = [
+      for (final w in words)
+        if (w.trim().length >= 3) KoLocator.fold(w.trim()),
+    ];
+    if (terms.isEmpty) return const [];
+    final stored = await _load();
+    final hits = <HrOwnerHit>[];
+    for (final entry in stored.entries) {
+      final value = entry.value;
+      if (value is! Map<String, dynamic>) continue;
+      // Keys are "sifko/parcela", as in [lookup].
+      final slash = entry.key.indexOf('/');
+      if (slash <= 0) continue;
+      final sifko = int.tryParse(entry.key.substring(0, slash));
+      if (sifko == null) continue;
+      if (onlySifko != null && sifko != onlySifko) continue;
+      final info = _fromJson(value);
+      final hay = KoLocator.fold([
+        ...info.owners,
+        for (final h in info.holders) h.address ?? '',
+        info.koName ?? '',
+      ].join(' '));
+      if (!terms.every(hay.contains)) continue;
+      hits.add(HrOwnerHit(sifko, entry.key.substring(slash + 1), info));
+      if (hits.length >= limit) break;
+    }
+    return hits;
   }
 
   Future<File> _file() async =>

@@ -74,4 +74,51 @@ void main() {
       expect(info.holder('A').share, isNull);
     });
   });
+
+  group('HrOwnerService.searchCached', () {
+    setUp(() {
+      HrOwnerService.instance.debugSetStored({
+        '302759/100/1': {
+          'koName': 'PREZID',
+          'address': 'PREZID 12, 51303 PLEŠCE',
+          'holders': [
+            {'name': 'KOVAČIĆ ANTE', 'share': '1/1', 'address': 'PREZID 12'},
+          ],
+        },
+        '304549/55': {
+          'koName': 'DELNICE',
+          'address': null,
+          'holders': [
+            {'name': 'HORVAT IVA', 'share': '1/2', 'address': null},
+          ],
+        },
+      });
+    });
+
+    test('finds a parcel by holder name, ignoring case and diacritics', () async {
+      final hits = await HrOwnerService.instance.searchCached(['kovacic']);
+      expect(hits, hasLength(1));
+      expect(hits.single.sifko, 302759);
+      expect(hits.single.parcela, '100/1');
+    });
+
+    test('every word must match name, address or KO', () async {
+      expect(
+        await HrOwnerService.instance.searchCached(['ante', 'prezid']),
+        hasLength(1),
+      );
+      expect(
+        await HrOwnerService.instance.searchCached(['horvat', 'prezid']),
+        isEmpty,
+      );
+    });
+
+    test('restricts to one KO and ignores short words', () async {
+      expect(
+        await HrOwnerService.instance.searchCached(['horvat'], onlySifko: 302759),
+        isEmpty,
+      );
+      expect(await HrOwnerService.instance.searchCached(['ho']), isEmpty);
+    });
+  });
 }

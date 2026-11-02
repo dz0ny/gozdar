@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gozdar/l10n/l10n.dart';
+import 'package:gozdar/services/hr_owner_service.dart';
 import 'package:gozdar/services/ko_locator.dart';
 import 'package:gozdar/services/owner_lookup_service.dart';
 import 'package:gozdar/theme/app_theme.dart';
@@ -17,6 +18,8 @@ void main() {
   KoLocator.instance.loadForTesting(
     File('test/fixtures/ko_index_small.json').readAsStringSync(),
   );
+  // No Croatian lookups cached; keeps the owner search off the disk.
+  setUpAll(() => HrOwnerService.instance.debugSetStored({}));
 
   // Inside BABNO POLJE of the fixture index.
   const babnoCenter = LatLng(45.655, 14.555);

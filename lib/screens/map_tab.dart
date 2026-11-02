@@ -30,6 +30,7 @@ import '../widgets/log_entry_form.dart';
 import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/public_parcel_settings.dart';
+import '../services/map_parcels_worker.dart';
 import '../services/parcel_lookup_service.dart';
 import '../services/parcel_pdf_service.dart';
 import '../services/region_locator.dart';
@@ -247,6 +248,10 @@ class MapTabState extends State<MapTab> {
   /// Debounce timer for mid-gesture zoom refreshes (continuous pinches), so a
   /// query runs at most a few times per gesture instead of every frame.
   Timer? _offlineZoomDebounce;
+
+  /// Settles moves that end without a [MapEventMoveEnd]: the app's own camera
+  /// moves (search result, "show on map"), flings and double-tap zooms.
+  Timer? _cameraSettleDebounce;
 
   /// Prebuilt Vlake polylines, rebuilt in [_refreshVlake] rather than in
   /// [build] so a plain rebuild doesn't re-scan ~78k line bounding boxes.
@@ -540,6 +545,7 @@ class MapTabState extends State<MapTab> {
   void dispose() {
     AuctionService.instance.removeListener(_onAuctionsChanged);
     _offlineZoomDebounce?.cancel();
+    _cameraSettleDebounce?.cancel();
     _locationTracker.dispose();
     _mapController.dispose();
     super.dispose();
@@ -807,6 +813,7 @@ class MapTabState extends State<MapTab> {
   /// query entirely. Clears the overlay when no offline DB is loaded or the map
   /// is zoomed out, and rebuilds the cached polygon lists used by [build].
   void _refreshOfflineParcels() {
+    final generation = ++_offlineLoadGeneration;
     final svc = ParcelLookupService.instance;
     final bounds = _visibleBounds;
     final overlays = context.read<MapProvider>().activeOverlays;
@@ -850,30 +857,48 @@ class MapTabState extends State<MapTab> {
       LatLng(bounds.south - latPad, bounds.west - lonPad),
       LatLng(bounds.north + latPad, bounds.east + lonPad),
     );
-    final parcels = svc.parcelsInBounds(
-      west: padded.west,
-      east: padded.east,
-      south: padded.south,
-      north: padded.north,
-    );
-    // Pre-compute each parcel's public-owner category so the polygon builder can
-    // tint by owner type without per-frame DB queries. Only when at least one
-    // category highlight is enabled.
-    Map<String, PublicOwnerCategory> categories = const {};
-    if (anyCategory) {
-      final owners = OwnerLookupService.instance;
-      categories = {
-        for (final p in parcels)
-          p.id: ?owners.publicCategory(p.cadastralMunicipality, p.parcelNumber),
-      };
+    unawaited(_loadOfflineParcels(padded, labels, anyCategory, generation));
+  }
+
+  /// Bumped by every [_refreshOfflineParcels], so a slower earlier load can't
+  /// overwrite a newer viewport.
+  int _offlineLoadGeneration = 0;
+
+  /// Loads the parcels of [padded] off the UI isolate (see
+  /// [MapParcelsWorker]), with each parcel's public-owner category when
+  /// [anyCategory] so the polygon builder can tint by owner type.
+  Future<void> _loadOfflineParcels(
+    LatLngBounds padded,
+    bool labels,
+    bool anyCategory,
+    int generation,
+  ) async {
+    MapParcels result;
+    try {
+      result = await MapParcelsWorker.instance.parcelsInBounds(
+        padded,
+        categories: anyCategory,
+      );
+    } catch (e) {
+      debugPrint('Offline kataster worker failed, loading inline: $e');
+      result = MapParcels(
+        ParcelLookupService.instance.parcelsInBounds(
+          west: padded.west,
+          east: padded.east,
+          south: padded.south,
+          north: padded.north,
+        ),
+        const {},
+      );
     }
+    if (!mounted || generation != _offlineLoadGeneration) return;
 
     _offlineQueriedBounds = padded;
     _offlineQueriedLabels = labels;
     _offlineQueriedAnyCategory = anyCategory;
     setState(() {
-      _offlineParcels = parcels;
-      _publicParcelCategory = categories;
+      _offlineParcels = result.parcels;
+      _publicParcelCategory = result.categories;
       _rebuildOfflinePolygons(labels: labels);
     });
   }
@@ -926,6 +951,21 @@ class MapTabState extends State<MapTab> {
     _invalidateOfflineQueryCache();
     if (_offlineParcels.isEmpty) return;
     setState(() => _rebuildOfflinePolygons(labels: _offlineLabelsVisible));
+  }
+
+  /// The camera came to rest: save it and re-cull what depends on the
+  /// viewport.
+  void _onCameraSettled(MapCamera camera) {
+    _saveMapState();
+    _visibleBounds = camera.visibleBounds;
+    // Re-cull the Vlake overlay once movement settles.
+    _refreshVlake();
+    // Re-cull the offline kataster overlay once settled.
+    _refreshOfflineParcels();
+    // Offer to download the region's parcels when panning into it.
+    _maybePromptRegionDownload(camera.center);
+    // A region downloaded since adds auction outlines.
+    AuctionService.instance.refreshOutlines();
   }
 
   /// Handle a mid-gesture zoom change. The overlay/label visibility flips at the
@@ -2247,16 +2287,21 @@ class MapTabState extends State<MapTab> {
                 // Save map state when position/zoom/rotation changes
                 onMapEvent: (event) {
                   if (event is MapEventMoveEnd || event is MapEventRotateEnd) {
-                    _saveMapState();
-                    _visibleBounds = event.camera.visibleBounds;
-                    // Re-cull the Vlake overlay once movement settles.
-                    _refreshVlake();
-                    // Re-cull the offline kataster overlay once settled.
-                    _refreshOfflineParcels();
-                    // Offer to download the region's parcels when panning into it.
-                    _maybePromptRegionDownload(event.camera.center);
-                    // A region downloaded since adds auction outlines.
-                    AuctionService.instance.refreshOutlines();
+                    _cameraSettleDebounce?.cancel();
+                    _onCameraSettled(event.camera);
+                  } else if (event is MapEventMove ||
+                      event is MapEventFlingAnimationEnd ||
+                      event is MapEventDoubleTapZoomEnd) {
+                    // No MoveEnd follows these, so settle once they stop;
+                    // a gesture's own MoveEnd cancels this.
+                    _cameraSettleDebounce?.cancel();
+                    final camera = event.camera;
+                    _cameraSettleDebounce = Timer(
+                      const Duration(milliseconds: 250),
+                      () {
+                        if (mounted) _onCameraSettled(camera);
+                      },
+                    );
                   }
                   // Track zoom level for dynamic marker sizing
                   if (event.camera.zoom != _currentZoom) {

@@ -128,6 +128,17 @@ class ParcelLookupService {
 
   void _clearDecodeCache() => _decodeCache.clear();
 
+  /// Geometry blob version, for readers that decode `poly` themselves.
+  static const blobVersion = _blobVersion;
+
+  /// Files of the loaded regions, for a background reader that opens its own
+  /// connections (see `MapParcelsWorker`). `id` changes whenever a file is
+  /// reopened, e.g. replaced by a newer download at the same path.
+  List<({String path, bool hasRtree, int id})> get regionFiles => [
+        for (final r in _dbs)
+          (path: r.path, hasRtree: r.hasRtree, id: identityHashCode(r.db)),
+      ];
+
   /// Whether at least one offline parcels database is loaded.
   bool get isAvailable => _dbs.isNotEmpty;
 
@@ -173,6 +184,10 @@ class ParcelLookupService {
     }
     return total;
   }
+
+  /// Opens the region database at [path] directly, for tests.
+  @visibleForTesting
+  void openForTesting(String path) => _dbs.add(_openDb(path));
 
   /// Open every `parcels*.sqlite` found in app storage. Safe on every app start.
   Future<void> init() async {

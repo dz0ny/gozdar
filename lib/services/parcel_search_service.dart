@@ -1,5 +1,6 @@
 import 'package:latlong2/latlong.dart';
 
+import 'hr_owner_service.dart';
 import 'ko_locator.dart';
 import 'owner_lookup_service.dart';
 import 'parcel_lookup_service.dart';
@@ -55,7 +56,13 @@ class ParsedParcelQuery {
   /// "123", "123/4" or "123/4a", or null when the query has none.
   final String? parcelNumber;
 
-  static final _parcelToken = RegExp(r'^\d+(?:/\d+)?[A-Za-z]?$');
+  /// A parcel number; "123-4" counts as "123/4" (phone keyboards put the
+  /// dash where the slash is hard to reach).
+  static final _parcelToken = RegExp(r'^\d+(?:[/-]\d+)?[A-Za-z]?$');
+
+  /// [token] in the register's form: lower case, "/" between the numbers.
+  static String _normalizeNumber(String token) =>
+      token.toLowerCase().replaceFirst('-', '/');
 
   factory ParsedParcelQuery.parse(String input) {
     final tokens = input.trim().split(RegExp(r'\s+')).where((t) => t.isNotEmpty);
@@ -63,7 +70,7 @@ class ParsedParcelQuery {
     final words = <String>[];
     for (final t in tokens) {
       if (number == null && _parcelToken.hasMatch(t)) {
-        number = t.toLowerCase();
+        number = _normalizeNumber(t);
       } else {
         words.add(t);
       }
@@ -123,8 +130,10 @@ class ParcelSearchService {
 
   /// Owner matches for the free text of [query]: every word may match the
   /// owner name, the address or (with several words) the KO name, in any
-  /// order. Empty when no owners database is open, nothing long enough was
-  /// typed, or a parcel number was typed.
+  /// order. Searches the Croatian holders cached from earlier lookups (DGU
+  /// cannot search by owner) and the Slovenian owners database when one is
+  /// open. Empty when nothing long enough was typed or a parcel number was
+  /// typed.
   static Future<List<ParcelSuggestion>> owners(
     String query, {
     KoInfo? ko,
@@ -132,11 +141,31 @@ class ParcelSearchService {
   }) async {
     final parsed = ParsedParcelQuery.parse(query);
     if (parsed.parcelNumber != null ||
-        parsed.words.length < OwnerLookupService.minQueryLength ||
-        !OwnerLookupService.instance.isAvailable) {
+        parsed.words.length < OwnerLookupService.minQueryLength) {
       return const [];
     }
     final words = parsed.words.split(RegExp(r'\s+'));
+    final out = <ParcelSuggestion>[];
+
+    // Few and only ever looked up on purpose, so they go first.
+    final hr = await HrOwnerService.instance.searchCached(
+      words,
+      onlySifko: ko?.sifko,
+      limit: limit,
+    );
+    for (final hit in hr) {
+      out.add(_ownerSuggestion(
+        sifko: hit.sifko,
+        parcela: hit.parcela,
+        koName: hit.info.koName,
+        owners: hit.info.owners,
+        address: hit.info.address,
+      ));
+    }
+
+    if (out.length >= limit || !OwnerLookupService.instance.isAvailable) {
+      return out;
+    }
     final terms = [
       for (final w in words)
         OwnerSearchTerm(
@@ -152,24 +181,39 @@ class ParcelSearchService {
       onlySifko: ko?.sifko,
       limit: limit,
     );
-    final out = <ParcelSuggestion>[];
     for (final hit in result.hits) {
-      final koName = hit.koName ?? KoLocator.instance.bySifko(hit.sifko)?.name;
-      final owners = hit.owners.take(2).join(', ');
-      out.add(ParcelSuggestion(
-        kind: ParcelSuggestionKind.owner,
-        title: L10n.current.parcelFoundTitle(hit.parcela),
-        subtitle: [
-          L10n.current.parcelFoundKo(koName ?? '${hit.sifko}'),
-          if (owners.isNotEmpty) owners,
-          if (hit.address != null) hit.address!,
-        ].join(' • '),
+      out.add(_ownerSuggestion(
         sifko: hit.sifko,
         parcela: hit.parcela,
+        koName: hit.koName,
+        owners: hit.owners,
+        address: hit.address,
       ));
       if (out.length >= limit) break;
     }
     return out;
+  }
+
+  static ParcelSuggestion _ownerSuggestion({
+    required int sifko,
+    required String parcela,
+    required String? koName,
+    required List<String> owners,
+    required String? address,
+  }) {
+    final ko = koName ?? KoLocator.instance.bySifko(sifko)?.name;
+    final names = owners.take(2).join(', ');
+    return ParcelSuggestion(
+      kind: ParcelSuggestionKind.owner,
+      title: L10n.current.parcelFoundTitle(parcela),
+      subtitle: [
+        L10n.current.parcelFoundKo(ko ?? '$sifko'),
+        if (names.isNotEmpty) names,
+        ?address,
+      ].join(' • '),
+      sifko: sifko,
+      parcela: parcela,
+    );
   }
 
   /// The KO the map is looking at. Uses the exact offline parcel data when a
@@ -198,7 +242,9 @@ class ParcelSearchService {
       return null;
     }
     final k = KoLocator.instance.bySifko(code);
-    return k == null ? null : (k, tokens[1].toLowerCase());
+    return k == null
+        ? null
+        : (k, ParsedParcelQuery._normalizeNumber(tokens[1]));
   }
 
   static ParcelSuggestion _parcelFor(KoInfo k, String number) =>

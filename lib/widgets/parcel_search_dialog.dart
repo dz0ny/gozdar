@@ -64,7 +64,9 @@ class ParcelSearchDialog extends StatefulWidget {
       // Keep the sheet below the status bar so its title and corners aren't
       // tucked under the clock.
       useSafeArea: true,
-      useRootNavigator: false,
+      // Root navigator: the map's parcel panels are persistent sheets of the
+      // app scaffold and would otherwise be drawn over the search field.
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (context) => ParcelSearchDialog(
         mapController: mapController,

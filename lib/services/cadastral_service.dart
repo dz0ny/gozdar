@@ -7,7 +7,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:proj4dart/proj4dart.dart' as proj4;
 
 import '../l10n/l10n.dart';
+import 'hr_owner_service.dart';
 import 'http_cache_service.dart';
+import 'parcel_lookup_service.dart';
 
 /// A fetched parcel plus its bounding box, kept in the spatial cache.
 class _CachedParcel {
@@ -304,10 +306,31 @@ class CadastralService {
 
   /// Query cadastral parcel by KO number and parcel number
   /// Returns null if no parcel found or on error
+  /// Parcel [parcelNumber] of KO [koNumber]: from the downloaded cadastre
+  /// regions first (works offline, and is the only source for Croatian
+  /// parcels), then from the GURS proxy for Slovenian KOs.
   Future<WfsParcel?> queryParcelByKoAndNumber(
     String koNumber,
     String parcelNumber,
   ) async {
+    final sifko = int.tryParse(koNumber);
+    if (sifko != null) {
+      final local = ParcelLookupService.instance.byNumber(
+        sifko,
+        parcelNumber.trim(),
+      );
+      if (local != null && local.polygon.isNotEmpty) {
+        return WfsParcel(
+          localId: local.id,
+          label: local.parcelNumber,
+          nationalCadastralReference: '$sifko ${local.parcelNumber}',
+          area: local.area,
+          polygon: local.polygon,
+        );
+      }
+      // The GURS proxy knows no Croatian parcels.
+      if (HrOwnerService.isCroatianKo(sifko)) return null;
+    }
     try {
       // URL encode parcel number (handles slashes like "1/1")
       final encodedParcel = Uri.encodeComponent(parcelNumber);

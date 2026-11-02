@@ -176,6 +176,10 @@ class OwnerLookupService {
   @visibleForTesting
   void openForTesting(String path) => _open(path);
 
+  /// Opens [path] as the public-owners database, for tests.
+  @visibleForTesting
+  void openPublicForTesting(String path) => _openPublic(path);
+
   /// Builds the search index for the database opened with [openForTesting].
   @visibleForTesting
   Future<void> buildSearchIndexForTesting() async {
@@ -715,22 +719,35 @@ class OwnerLookupService {
     if (sifko == null || parcela == null) return null;
     final key = parcela.trim();
     if (key.isEmpty) return null;
+    // The map asks for every visible parcel each time it settles; answers
+    // only change when a public-owners database is swapped.
+    final dbs = (_publicDb, _publicHrDb);
+    if (_publicCategoryCacheFor != dbs) {
+      _publicCategoryCache.clear();
+      _publicCategoryCacheFor = dbs;
+    }
+    final cacheKey = '$sifko/$key';
+    if (_publicCategoryCache.containsKey(cacheKey)) {
+      return _publicCategoryCache[cacheKey];
+    }
+    final category = _lookupPublicCategory(sifko, key);
+    if (_publicCategoryCache.length >= _publicCategoryCacheCap) {
+      _publicCategoryCache.remove(_publicCategoryCache.keys.first);
+    }
+    return _publicCategoryCache[cacheKey] = category;
+  }
+
+  /// [publicCategory] answers keyed by "sifko/parcela", null (no public
+  /// owner) included; valid for the databases in [_publicCategoryCacheFor].
+  final Map<String, PublicOwnerCategory?> _publicCategoryCache = {};
+  (Database?, Database?)? _publicCategoryCacheFor;
+
+  /// About two dense regions' worth of parcels; oldest answers go first.
+  static const _publicCategoryCacheCap = 100000;
+
+  PublicOwnerCategory? _lookupPublicCategory(int sifko, String key) {
     try {
-      final rows = _publicRows(sifko, key);
-      if (rows.isEmpty) return null;
-      PublicOwnerCategory? owner;
-      PublicOwnerCategory? manager;
-      for (final r in rows) {
-        final name = (r['naziv'] as String?)?.trim();
-        if (name == null || name.isEmpty) continue;
-        final c = _classifyOwner(name);
-        if (r['vloga'] == 'L') {
-          owner = _moreSpecific(owner, c);
-        } else {
-          manager = _moreSpecific(manager, c);
-        }
-      }
-      return owner ?? manager;
+      return categoryOfRows(_publicRows(sifko, key));
     } catch (e) {
       debugPrint('OwnerLookupService.publicCategory failed: $e');
       return null;
@@ -739,14 +756,42 @@ class OwnerLookupService {
 
   /// Rows (name, role) for one parcel from every open public-owners database.
   List<Row> _publicRows(int sifko, String key) => [
-        for (final db in _publicDbs)
-          ...db.select(
-            'SELECT n.naziv AS naziv, o.vloga AS vloga '
-            'FROM owners o JOIN names n ON n.id = o.name_id '
-            'WHERE o.sifko = ? AND o.parcela = ?',
-            [sifko, key],
-          ),
+        for (final db in _publicDbs) ...db.select(publicRowsSql, [sifko, key]),
       ];
+
+  /// Files of the open public-owners databases, for a background reader
+  /// that opens its own connections (see `MapParcelsWorker`). `id` changes
+  /// whenever a file is reopened, e.g. after a refresh download.
+  List<({String path, int id})> get publicDbFiles => [
+        for (final db in _publicDbs)
+          if (db.select('PRAGMA database_list').firstOrNull?['file']
+              case final String file when file.isNotEmpty)
+            (path: file, id: identityHashCode(db)),
+      ];
+
+  /// Rows (name, role) of one parcel (sifko, parcela) in a public-owners
+  /// database.
+  static const publicRowsSql = 'SELECT n.naziv AS naziv, o.vloga AS vloga '
+      'FROM owners o JOIN names n ON n.id = o.name_id '
+      'WHERE o.sifko = ? AND o.parcela = ?';
+
+  /// Public-owner category from a parcel's [publicRowsSql] rows: the owner's
+  /// ("L") category, else the manager's; null when none is public.
+  static PublicOwnerCategory? categoryOfRows(Iterable<Row> rows) {
+    PublicOwnerCategory? owner;
+    PublicOwnerCategory? manager;
+    for (final r in rows) {
+      final name = (r['naziv'] as String?)?.trim();
+      if (name == null || name.isEmpty) continue;
+      final c = _classifyOwner(name);
+      if (r['vloga'] == 'L') {
+        owner = _moreSpecific(owner, c);
+      } else {
+        manager = _moreSpecific(manager, c);
+      }
+    }
+    return owner ?? manager;
+  }
 
   static final _localGovernment = RegExp(r'\b(GRAD|OPĆINA|OPĆINE|ŽUPANIJA)\b');
 

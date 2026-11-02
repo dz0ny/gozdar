@@ -55,6 +55,8 @@ void main() {
       expect(p.words, 'babno polje');
       expect(p.parcelNumber, '123/4');
       expect(ParsedParcelQuery.parse('novak').parcelNumber, isNull);
+      // A dash, as phone keyboards make it easy to type, means a slash.
+      expect(ParsedParcelQuery.parse('prezid 1226-4').parcelNumber, '1226/4');
     });
 
     test('a number in the selected KO offers that parcel', () {
