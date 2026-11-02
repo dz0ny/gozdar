@@ -1,5 +1,8 @@
 ---
-import { Axe, Crosshair, Send, MapPinned, Link2 } from "lucide-react";
+import { Picture } from "astro:assets";
+import { Axe, Crosshair, Send, MapPinned } from "lucide-react";
+import markingShot from "@/assets/screens/05-secnja-marking.webp";
+import sharedShot from "@/assets/screens/06-secnja-shared.webp";
 
 const steps = [
 	{
@@ -50,22 +53,39 @@ const steps = [
     </div>
 
     <div class="lg:col-span-5" data-reveal>
-      <figure class="mx-auto max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl shadow-black/40">
-        <figcaption class="text-sm text-faint">Sporočilo, ki ga dobi sekač (primer)</figcaption>
-        <div class="mt-4 rounded-2xl rounded-bl-sm bg-muted p-4">
-          <p class="font-semibold text-foreground">🪓 Sečnja · parc. 512/3</p>
-          <p class="mt-1 text-[0.95rem] text-muted-foreground">14 dreves za posek</p>
-          <p class="mt-3 flex items-center gap-1.5 break-all text-[0.95rem] text-primary">
-            <Link2 className="size-4 shrink-0" aria-hidden="true" />
-            gozdar.dz0ny.dev/o/…
-          </p>
+      <div class="relative mx-auto h-[30rem] max-w-sm sm:h-[34rem]">
+        <div class="absolute left-0 top-0 w-[62%] overflow-hidden rounded-[2rem] border-[6px] border-muted shadow-2xl shadow-black/50">
+          <Picture
+            src={markingShot}
+            formats={["webp"]}
+            fallbackFormat="webp"
+            width={240}
+            widths={[240, 480]}
+            sizes="(min-width: 640px) 240px, 58vw"
+            alt="Način označevanja: križec na drevesu, izbrana vrsta Jelka, 11 dreves na parceli 1132/1 in gumb Označi"
+            loading="lazy"
+            class="block h-auto w-full"
+          />
         </div>
-        <ul class="mt-6 grid gap-3 text-[0.95rem] text-muted-foreground">
-          <li class="border-t border-border pt-3">Povezava velja 30 dni od zadnje posodobitve.</li>
-          <li class="border-t border-border pt-3">Spremembe lastnika se sekaču prenesejo same.</li>
-          <li class="border-t border-border pt-3">Povezavo lahko kadarkoli prekličete. Brez računov in prijave.</li>
-        </ul>
-      </figure>
+        <div class="absolute bottom-0 right-0 w-[56%] overflow-hidden rounded-[2rem] border-[6px] border-muted shadow-2xl shadow-black/60">
+          <Picture
+            src={sharedShot}
+            formats={["webp"]}
+            fallbackFormat="webp"
+            width={216}
+            widths={[216, 432]}
+            sizes="(min-width: 640px) 216px, 52vw"
+            alt="Seznam dreves za sečnjo z gumbom Deli znova in napisom Deljeno, velja do 2. 12. 2026"
+            loading="lazy"
+            class="block h-auto w-full"
+          />
+        </div>
+      </div>
+      <ul class="mx-auto mt-8 grid max-w-sm gap-3 text-[0.95rem] text-muted-foreground">
+        <li class="border-t border-border pt-3">Povezava velja 30 dni od zadnje posodobitve.</li>
+        <li class="border-t border-border pt-3">Spremembe lastnika se sekaču prenesejo same.</li>
+        <li class="border-t border-border pt-3">Povezavo lahko kadarkoli prekličete. Brez računov in prijave.</li>
+      </ul>
     </div>
   </div>
 </section>
