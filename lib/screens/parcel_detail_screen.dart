@@ -1357,6 +1357,13 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                         onShare: () => _runSecnja(() => runSecnjaShare(context, _parcel)),
                         onRevoke: () => _runSecnja(() => runSecnjaRevoke(context, _parcel)),
                         onDelete: _deleteSecnjaMark,
+                        onStartNavigation: (point, name) => NavigateToSheet.show(
+                          context,
+                          destination: point,
+                          name: name,
+                          onInAppNavigation: () =>
+                              _navigateToPoint(point, name, startNavigation: true),
+                        ),
                       ),
                     ),
                   ],

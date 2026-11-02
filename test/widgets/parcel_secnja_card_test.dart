@@ -15,6 +15,7 @@ List<MapLocation> marks(int n) => [
 void main() {
   setUpAll(() => initializeDateFormatting());
   group('swipe', swipeTests);
+  group('actions', actionTests);
 
   group('secnjaShareState', () {
     test('not shared', () {
@@ -162,5 +163,32 @@ void swipeTests() {
     await tester.pumpAndSettle();
     expect(deleted, ['Smreka 1']);
     expect(find.text('Smreka 1'), findsOneWidget);
+  });
+}
+
+void actionTests() {
+  testWidgets('row shows the tree on the map, the arrow starts navigation', (tester) async {
+    final calls = <String>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('sl'),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ParcelSecnjaCard(
+              secnja: marks(1),
+              onNavigateToPoint: (_, name) => calls.add('map $name'),
+              onStartNavigation: (_, name) => calls.add('navigate $name'),
+              onShare: () {},
+              onRevoke: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Drevo 1'));
+    await tester.tap(find.byIcon(Icons.navigation));
+    expect(calls, ['map Drevo 1', 'navigate Drevo 1']);
   });
 }

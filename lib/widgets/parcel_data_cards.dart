@@ -259,6 +259,10 @@ class ParcelSecnjaCard extends StatefulWidget {
   /// True while a share or revoke runs. Disables the buttons.
   final bool busy;
 
+  /// Starts navigation to a tree from its arrow. Null makes the arrow show
+  /// the tree on the map, like a tap on the row.
+  final void Function(LatLng point, String name)? onStartNavigation;
+
   /// Deletes a tree after a swipe to the left and a confirm. Returns true
   /// when it is gone. Null turns swiping off.
   final Future<bool> Function(MapLocation mark)? onDelete;
@@ -273,6 +277,7 @@ class ParcelSecnjaCard extends StatefulWidget {
     required this.onRevoke,
     this.busy = false,
     this.onDelete,
+    this.onStartNavigation,
   });
 
   @override
@@ -381,7 +386,7 @@ class _ParcelSecnjaCardState extends State<ParcelSecnjaCard> {
                 trailing: IconButton(
                   icon: const Icon(Icons.navigation, color: Colors.blue),
                   tooltip: context.l10n.parcelNavigate,
-                  onPressed: () => onNavigateToPoint(
+                  onPressed: () => (widget.onStartNavigation ?? onNavigateToPoint)(
                     LatLng(location.latitude, location.longitude),
                     location.name,
                   ),
