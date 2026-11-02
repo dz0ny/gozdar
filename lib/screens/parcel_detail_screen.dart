@@ -28,6 +28,7 @@ import '../services/drone_settings.dart';
 import '../services/kml_service.dart';
 import '../services/map_preferences_service.dart';
 import '../services/owner_lookup_service.dart';
+import '../services/secnja_share_flow.dart';
 import '../services/si_valuation_service.dart';
 import '../services/auction_service.dart';
 import '../widgets/auction_sheet.dart';
@@ -60,6 +61,8 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   bool _isLoading = false;
   List<MapLocation> _locationsInParcel = []; // Regular POIs
   List<MapLocation> _secnjaInParcel = []; // Trees marked for cutting
+  SecnjaShareState _secnjaShareState = SecnjaShareState.notShared;
+  bool _secnjaBusy = false;
   List<LogEntry> _logsInParcel = [];
   double _logsVolume = 0.0;
   LogsProvider? _logsProvider;
@@ -133,19 +136,48 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   Future<void> _loadLocationsInParcel() async {
     try {
       final allLocations = await _databaseService.getAllLocations();
-      final inParcel = allLocations
+      final points = allLocations
           .where(
-            (loc) => _parcel.containsPoint(LatLng(loc.latitude, loc.longitude)),
+            (loc) =>
+                !loc.isSecnja &&
+                _parcel.containsPoint(LatLng(loc.latitude, loc.longitude)),
           )
           .toList();
+      // Sečnja marks belong to the parcel by id, so polygon edits keep them.
+      final secnja = _parcel.id == 0
+          ? <MapLocation>[]
+          : await _databaseService.getSecnjaByParcel(_parcel.id);
+      final stored = _parcel.id == 0 ? null : await _databaseService.getParcel(_parcel.id);
+      if (stored != null) {
+        _parcel
+          ..shareId = stored.shareId
+          ..shareEditToken = stored.shareEditToken
+          ..shareHash = stored.shareHash
+          ..sharedAt = stored.sharedAt
+          ..shareExpiresAt = stored.shareExpiresAt;
+      }
+      final state = _parcel.isShared
+          ? secnjaShareState(_parcel, (await buildSecnjaPayload(_parcel)).contentHash)
+          : SecnjaShareState.notShared;
       if (!mounted) return;
       setState(() {
-        // Separate regular locations from sečnja markers
-        _locationsInParcel = inParcel.where((loc) => !loc.isSecnja).toList();
-        _secnjaInParcel = inParcel.where((loc) => loc.isSecnja).toList();
+        _locationsInParcel = points;
+        _secnjaInParcel = secnja;
+        _secnjaShareState = state;
       });
     } catch (e) {
       debugPrint('Error loading locations in parcel: $e');
+    }
+  }
+
+  /// Runs a share or revoke, then reloads the card.
+  Future<void> _runSecnja(Future<bool> Function() action) async {
+    setState(() => _secnjaBusy = true);
+    try {
+      await action();
+    } finally {
+      await _loadLocationsInParcel();
+      if (mounted) setState(() => _secnjaBusy = false);
     }
   }
 
@@ -1285,11 +1317,18 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                   ],
 
                   // Sečnja Card (trees marked for cutting within parcel)
-                  if (_secnjaInParcel.isNotEmpty) ...[
+                  if (_secnjaInParcel.isNotEmpty || _parcel.isShared) ...[
                     const SizedBox(height: 16),
-                    ParcelSecnjaCard(
-                      secnja: _secnjaInParcel,
-                      onNavigateToPoint: _navigateToPoint,
+                    Builder(
+                      builder: (context) => ParcelSecnjaCard(
+                        secnja: _secnjaInParcel,
+                        onNavigateToPoint: _navigateToPoint,
+                        shareState: _secnjaShareState,
+                        expiresAt: _parcel.shareExpiresAt,
+                        busy: _secnjaBusy,
+                        onShare: () => _runSecnja(() => runSecnjaShare(context, _parcel)),
+                        onRevoke: () => _runSecnja(() => runSecnjaRevoke(context, _parcel)),
+                      ),
                     ),
                   ],
 

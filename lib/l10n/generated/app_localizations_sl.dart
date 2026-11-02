@@ -2966,4 +2966,30 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get pointOwnNameLabel => 'Svoje ime (neobvezno)';
+
+  @override
+  String get secnjaShareAgain => 'Deli znova';
+
+  @override
+  String get secnjaShareUpdate => 'Posodobi povezavo';
+
+  @override
+  String secnjaSharedUntil(String date) {
+    return 'Deljeno · velja do $date';
+  }
+
+  @override
+  String get secnjaRevoke => 'Prekliči';
+
+  @override
+  String get secnjaRevokeConfirm =>
+      'Preklic povezave? Sekač je ne bo mogel več odpreti.';
+
+  @override
+  String get secnjaShareFailed => 'Deljenje ni uspelo — preveri povezavo';
+
+  @override
+  String secnjaForCutCount(int count) {
+    return '$count za posek';
+  }
 }

@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/log_entry.dart';
 import '../models/map_location.dart';
 import '../l10n/l10n.dart';
+import '../services/secnja_share_flow.dart';
 import '../utils/formats.dart';
 
 /// Card displaying logs within a parcel
@@ -249,16 +250,30 @@ class ParcelLocationsCard extends StatelessWidget {
 class ParcelSecnjaCard extends StatelessWidget {
   final List<MapLocation> secnja;
   final Function(LatLng point, String name) onNavigateToPoint;
+  final SecnjaShareState shareState;
+  final DateTime? expiresAt;
+  final VoidCallback onShare;
+  final VoidCallback onRevoke;
+
+  /// True while a share or revoke runs. Disables the buttons.
+  final bool busy;
 
   const ParcelSecnjaCard({
     super.key,
     required this.secnja,
     required this.onNavigateToPoint,
+    this.shareState = SecnjaShareState.notShared,
+    this.expiresAt,
+    required this.onShare,
+    required this.onRevoke,
+    this.busy = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (secnja.isEmpty) return const SizedBox.shrink();
+    final shared = shareState != SecnjaShareState.notShared;
+    // A shared parcel keeps its card without marks, so the link can be revoked.
+    if (secnja.isEmpty && !shared) return const SizedBox.shrink();
 
     final divider = Divider(
       height: 1,
@@ -329,6 +344,50 @@ class ParcelSecnjaCard extends StatelessWidget {
               );
             },
           ),
+          divider,
+          _shareFooter(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _shareFooter(BuildContext context) {
+    final l10n = context.l10n;
+    final shared = shareState != SecnjaShareState.notShared;
+    final label = switch (shareState) {
+      SecnjaShareState.notShared => l10n.secnjaShareAction,
+      SecnjaShareState.sharedUnchanged => l10n.secnjaShareAgain,
+      SecnjaShareState.sharedChanged => l10n.secnjaShareUpdate,
+    };
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (secnja.isNotEmpty)
+            FilledButton.icon(
+              onPressed: busy ? null : onShare,
+              style: FilledButton.styleFrom(backgroundColor: Colors.deepOrange),
+              icon: const Icon(Icons.ios_share),
+              label: Text(label),
+            ),
+          if (shared)
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    expiresAt == null
+                        ? ''
+                        : l10n.secnjaSharedUntil(Fmt.date(expiresAt!.toLocal())),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                TextButton(
+                  onPressed: busy ? null : onRevoke,
+                  child: Text(l10n.secnjaRevoke),
+                ),
+              ],
+            ),
         ],
       ),
     );

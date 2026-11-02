@@ -5003,6 +5003,48 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Svoje ime (neobvezno)'**
   String get pointOwnNameLabel;
+
+  /// No description provided for @secnjaShareAgain.
+  ///
+  /// In sl, this message translates to:
+  /// **'Deli znova'**
+  String get secnjaShareAgain;
+
+  /// No description provided for @secnjaShareUpdate.
+  ///
+  /// In sl, this message translates to:
+  /// **'Posodobi povezavo'**
+  String get secnjaShareUpdate;
+
+  /// No description provided for @secnjaSharedUntil.
+  ///
+  /// In sl, this message translates to:
+  /// **'Deljeno · velja do {date}'**
+  String secnjaSharedUntil(String date);
+
+  /// No description provided for @secnjaRevoke.
+  ///
+  /// In sl, this message translates to:
+  /// **'Prekliči'**
+  String get secnjaRevoke;
+
+  /// No description provided for @secnjaRevokeConfirm.
+  ///
+  /// In sl, this message translates to:
+  /// **'Preklic povezave? Sekač je ne bo mogel več odpreti.'**
+  String get secnjaRevokeConfirm;
+
+  /// No description provided for @secnjaShareFailed.
+  ///
+  /// In sl, this message translates to:
+  /// **'Deljenje ni uspelo — preveri povezavo'**
+  String get secnjaShareFailed;
+
+  /// No description provided for @secnjaForCutCount.
+  ///
+  /// In sl, this message translates to:
+  /// **'{count} za posek'**
+  String secnjaForCutCount(int count);
 }
 
 class _AppLocalizationsDelegate

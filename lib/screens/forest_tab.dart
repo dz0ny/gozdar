@@ -49,6 +49,8 @@ class ForestTabState extends State<ForestTab> {
   Future<void> refresh() => _loadData();
 
   List<Parcel> _parcels = [];
+  // Sečnja marks per parcel id, for the count on each row.
+  Map<int, int> _secnjaCounts = {};
   bool _isLoading = true;
   String? _selectedOwnerFilter; // null means show all
 
@@ -96,9 +98,11 @@ class ForestTabState extends State<ForestTab> {
 
     try {
       final parcels = await _databaseService.getAllParcels();
+      final secnjaCounts = await _databaseService.getSecnjaCountsByParcel();
 
       setState(() {
         _parcels = parcels;
+        _secnjaCounts = secnjaCounts;
         _isLoading = false;
       });
     } catch (e) {
@@ -887,6 +891,16 @@ class ForestTabState extends State<ForestTab> {
               Row(
                 children: [
                   Text(parcel.areaFormatted),
+                  if ((_secnjaCounts[parcel.id] ?? 0) > 0) ...[
+                    Text(' · ', style: TextStyle(color: Colors.grey[400])),
+                    Text(
+                      '🪓 ${context.l10n.secnjaForCutCount(_secnjaCounts[parcel.id]!)}',
+                      style: const TextStyle(
+                        color: Colors.deepOrange,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                   if (parcel.treesCut > 0 || parcel.woodCut > 0) ...[
                     Text(' · ', style: TextStyle(color: Colors.grey[400])),
                     if (parcel.treesCut > 0)
