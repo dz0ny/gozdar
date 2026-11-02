@@ -1663,6 +1663,12 @@ abstract class AppLocalizations {
   /// **'Lokacija preimenovana v \"{newName}\"'**
   String mapTabLocationRenamed(String newName);
 
+  /// No description provided for @mapwAddLogTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Dodaj hlod'**
+  String get mapwAddLogTitle;
+
   /// No description provided for @mapwAddLocationTitle.
   ///
   /// In sl, this message translates to:

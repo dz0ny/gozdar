@@ -18,7 +18,6 @@ import '../models/map_location.dart';
 import '../models/map_layer.dart';
 import '../models/parcel.dart';
 import '../models/navigation_target.dart';
-import '../models/log_entry.dart';
 import '../services/database_service.dart';
 import '../services/hr_owner_service.dart';
 import '../services/auction_service.dart';
@@ -27,7 +26,7 @@ import '../services/ko_locator.dart';
 import '../utils/formats.dart';
 import '../widgets/download_progress_view.dart';
 import '../widgets/owner_list.dart';
-import '../widgets/log_entry_form.dart';
+import '../widgets/add_log_sheet.dart';
 import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/public_parcel_settings.dart';
@@ -47,6 +46,7 @@ import '../widgets/species_management_sheet.dart';
 import '../services/secnja_marking.dart';
 import '../services/secnja_marking_prefs.dart';
 import '../services/species_service.dart';
+import '../services/log_input_prefs_service.dart';
 import '../widgets/navigate_to_sheet.dart';
 import '../widgets/map_controls.dart';
 import '../widgets/map_layer_selector.dart';
@@ -885,49 +885,43 @@ class MapTabState extends State<MapTab> {
 
   /// Show log entry form with pre-filled location
   Future<void> _showAddLogDialog(LatLng position) async {
-    // Create a partial log entry with just the location
-    final prefilledEntry = LogEntry(
-      volume: 0,
-      latitude: position.latitude,
-      longitude: position.longitude,
+    final mapProvider = context.read<MapProvider>();
+    final parcel = mapProvider.parcels
+        .where((p) => p.containsPoint(position))
+        .fold<Parcel?>(null, (best, p) => best == null || p.areaM2 < best.areaM2 ? p : best);
+    final prefs = LogInputPrefsService();
+    final lastLength = await prefs.getLastLength();
+    final species = await prefs.getCurrentSpecies();
+    if (!mounted) return;
+    final entry = await AddLogSheet.show(
+      context: context,
+      position: position,
+      parcelLabel: parcel == null
+          ? null
+          : L10n.current.mapTabParcelShort(parcel.parcelNumber ?? parcel.name),
+      lastLength: lastLength,
+      species: species,
+      onBack: () => _showLongPressMenu(position),
     );
-
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (dialogContext) => LogEntryForm(
-          logEntry: prefilledEntry,
-          // LogEntryForm pops without a result; it only reports the saved
-          // entry through onSave. Persist it and refresh the map markers here.
-          // Use the tab's own context (not the popping dialog's) for the
-          // provider lookup and snackbar.
-          onSave: (entry) async {
-            final mapProvider = context.read<MapProvider>();
-            try {
-              await DatabaseService().insertLog(entry);
-              await mapProvider.loadGeolocatedLogs();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      L10n.current.mapTabLogAdded(
-                        Fmt.num(entry.volume, 3),
-                      ),
-                    ),
-                  ),
-                );
-              }
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(L10n.current.mapTabLogAddError(e))),
-                );
-              }
-            }
-          },
-        ),
-        fullscreenDialog: true,
-      ),
-    );
+    if (entry == null) return;
+    try {
+      await DatabaseService().insertLog(entry);
+      await prefs.saveLastDimensions(entry.diameter!, entry.length!);
+      await mapProvider.loadGeolocatedLogs();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(L10n.current.mapTabLogAdded(Fmt.num(entry.volume, 3))),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(L10n.current.mapTabLogAddError(e))),
+        );
+      }
+    }
   }
 
   /// Navigate to parcel detail screen

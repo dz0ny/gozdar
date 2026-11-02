@@ -1016,6 +1016,9 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String get mapwAddLogTitle => 'Dodaj hlod';
+
+  @override
   String get mapwAddLocationTitle => 'Dodaj lokacijo';
 
   @override

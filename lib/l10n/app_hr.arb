@@ -260,6 +260,7 @@
   "mapTabUsageEsriDesc": "Esri satelitske snimke dostupne su za osobnu i nekomercijalnu uporabu. Za komercijalnu uporabu potrebna je licencija.",
   "mapTabUsageDisclaimer": "Ova je aplikacija namijenjena informativnoj uporabi. Za službene podatke obratite se nadležnim institucijama.",
   "mapTabLocationRenamed": "Lokacija preimenovana u \"{newName}\"",
+  "mapwAddLogTitle": "Dodaj trupac",
   "mapwAddLocationTitle": "Dodaj lokaciju",
   "mapwAddLocationHint": "Koordinate iz dugog pritiska ili unesite vlastite",
   "mapwLatLabel": "Zemljopisna širina (Lat)",

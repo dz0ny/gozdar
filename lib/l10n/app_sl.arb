@@ -789,6 +789,7 @@
       }
     }
   },
+  "mapwAddLogTitle": "Dodaj hlod",
   "mapwAddLocationTitle": "Dodaj lokacijo",
   "mapwAddLocationHint": "Koordinate iz dolgo-pritiska ali vnesite svoje",
   "mapwLatLabel": "Zemljepisna širina (Lat)",

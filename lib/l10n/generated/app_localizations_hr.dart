@@ -1008,6 +1008,9 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
+  String get mapwAddLogTitle => 'Dodaj trupac';
+
+  @override
   String get mapwAddLocationTitle => 'Dodaj lokaciju';
 
   @override
