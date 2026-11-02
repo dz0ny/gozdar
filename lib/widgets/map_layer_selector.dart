@@ -1073,7 +1073,6 @@ class _ReceivedSharesSectionState extends State<ReceivedSharesSection> {
               final who = p.owner ?? p.koName ?? p.koNumber?.toString() ?? '';
               return ListTile(
                 contentPadding: const EdgeInsets.only(left: 16, right: 4),
-                leading: const Icon(Icons.carpenter, color: Colors.blue),
                 title: Text(
                   '🪓 ${l10n.secnjaReceivedRow(p.parcelNumber, who, share.daysLeft)}',
                 ),
