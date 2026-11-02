@@ -214,6 +214,7 @@ const LEAFLET = 'https://unpkg.com/leaflet@1.9.4/dist';
 const MAP_SCRIPT = `
 const data = JSON.parse(document.getElementById('data').textContent);
 const map = L.map('map', { scrollWheelZoom: false });
+map.attributionControl.setPrefix(false);
 const satellite = L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   { maxZoom: 19, attribution: 'Esri' }).addTo(map);
@@ -282,8 +283,8 @@ ${head}
   .card { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 12px;
           background: #2d3b2f; margin: 16px 0; }
   .card span { color: #ff8a50; font-weight: 600; }
-  a { display: block; text-align: center; text-decoration: none; border-radius: 12px; padding: 14px;
-      margin: 10px 0; font-weight: 600; }
+  a.primary, a.secondary { display: block; text-align: center; text-decoration: none;
+      border-radius: 12px; padding: 14px; margin: 10px 0; font-weight: 600; }
   a.primary { background: #ff5722; color: #fff; font-size: 17px; }
   a.secondary { border: 1px solid #d4a574; color: #d4a574; }
   .small { color: #aab; font-size: 14px; line-height: 1.4; }
@@ -296,8 +297,7 @@ ${head}
   .trees li b { flex: none; width: 24px; height: 24px; border-radius: 50%; background: #ff5722;
                 color: #fff; font-size: 12px; line-height: 24px; text-align: center; }
   .trees li span { flex: 1; }
-  .trees a.geo { display: inline; margin: 0; padding: 0; font-weight: 400; font-size: 13px;
-                 color: #aab; text-decoration: underline; }
+  .trees a.geo { font-size: 13px; color: #aab; }
 </style>
 </head>
 <body>
