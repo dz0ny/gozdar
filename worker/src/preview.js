@@ -41,6 +41,22 @@ export function previewBox(coords) {
   return [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2];
 }
 
+const MAX_VERTICES = 500;
+const MAX_TREES = 200;
+// The cadastral layer covers Slovenia. Larger boxes show no useful lines.
+const SLOVENIA = { minLat: 45.2, maxLat: 47, minLng: 13.2, maxLng: 16.8 };
+const MAX_KATASTER_SPAN_M = 50000;
+
+const validLatLng = (lat, lng) =>
+  Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 85 && Math.abs(lng) <= 180;
+
+// Keeps every n-th item so that at most `max` items stay.
+function thin(items, max) {
+  if (items.length <= max) return items;
+  const step = Math.ceil(items.length / max);
+  return items.filter((_, i) => i % step === 0);
+}
+
 // Pixel of [lat, lng] in an image of the box.
 export function toPixel([lat, lng], box) {
   const [x0, y0, x1, y1] = box;
@@ -120,6 +136,11 @@ function drawNumber(img, n, cx, cy, scale, color) {
 // works in EPSG:3794, so each image pixel maps to a pixel of that layer.
 async function drawKataster(img, box, fetchFn) {
   const [x0, y0, x1, y1] = box;
+  if (x1 - x0 > MAX_KATASTER_SPAN_M) return;
+  const inside =
+    latOf(y0) >= SLOVENIA.minLat && latOf(y1) <= SLOVENIA.maxLat &&
+    lngOf(x0) >= SLOVENIA.minLng && lngOf(x1) <= SLOVENIA.maxLng;
+  if (!inside) return;
   // Corners: top left, top right, bottom left, bottom right.
   const corners = [[x0, y1], [x1, y1], [x0, y0], [x1, y0]].map(([x, y]) =>
     proj4('EPSG:4326', 'EPSG:3794', [lngOf(x), latOf(y)]),
@@ -130,6 +151,7 @@ async function drawKataster(img, box, fetchFn) {
   const maxN = Math.max(...corners.map((c) => c[1]));
   const sw = PREVIEW_W;
   const sh = Math.round((PREVIEW_W * (maxN - minN)) / (maxE - minE));
+  if (!Number.isFinite(sh) || sh < 1 || sh > 2 * PREVIEW_H) return;
   const params = new URLSearchParams({
     SERVICE: 'WMS',
     VERSION: '1.1.1',
@@ -183,10 +205,15 @@ async function drawKataster(img, box, fetchFn) {
 }
 
 // Renders the preview as JPEG bytes, or null when the share has no place.
-export async function renderPreview({ parcel, points }, fetchFn = fetch) {
-  const outline = (Array.isArray(parcel.polygon) ? parcel.polygon : []).filter(
-    (p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]),
+export async function renderPreview({ parcel, points: allPoints }, fetchFn = fetch) {
+  // Limits keep the drawing cost small for any share.
+  const outline = thin(
+    (Array.isArray(parcel.polygon) ? parcel.polygon : []).filter(
+      (p) => Array.isArray(p) && validLatLng(p[0], p[1]),
+    ),
+    MAX_VERTICES,
   );
+  const points = allPoints.filter((p) => validLatLng(p.lat, p.lng)).slice(0, MAX_TREES);
   const coords = [...outline, ...points.map((p) => [p.lat, p.lng])];
   if (coords.length === 0) return null;
   const box = previewBox(coords);

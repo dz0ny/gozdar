@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import jpeg from 'jpeg-js';
 import { shares } from '../src/shares.js';
-import { PREVIEW_W, PREVIEW_H, previewBox, toPixel, drawLine } from '../src/preview.js';
+import { PREVIEW_W, PREVIEW_H, previewBox, toPixel, drawLine, renderPreview } from '../src/preview.js';
 
 const DAY = 24 * 3600;
 
@@ -300,4 +300,22 @@ test('drawLine paints a see-through line evenly', () => {
   const row = [];
   for (let x = 3; x < 17; x++) row.push(img.data[(2 * 20 + x) * 4]);
   assert.deepEqual(new Set(row), new Set([100]));
+});
+
+test('preview of a share outside Slovenia skips the kataster and stays fast with a huge polygon', async () => {
+  const grey = { width: PREVIEW_W, height: PREVIEW_H, data: new Uint8Array(PREVIEW_W * PREVIEW_H * 4).fill(100) };
+  const satellite = jpeg.encode(grey, 90).data;
+  const seen = [];
+  const fetchFn = async (url) => {
+    seen.push(String(url));
+    return new Response(satellite, { headers: { 'Content-Type': 'image/jpeg' } });
+  };
+  // A zigzag across 10 degrees: every segment spans the whole image.
+  const polygon = Array.from({ length: 20000 }, (_, i) => [i % 2 ? 40 : 50, 5 + (i / 20000) * 10]);
+  const points = Array.from({ length: 5000 }, (_, i) => ({ name: `t${i}`, lat: 45, lng: 10 }));
+  const started = Date.now();
+  const bytes = await renderPreview({ parcel: { number: '1', polygon }, points }, fetchFn);
+  assert.ok(bytes.length > 0);
+  assert.ok(Date.now() - started < 15000, `took ${Date.now() - started} ms`);
+  assert.ok(!seen.some((u) => u.includes('geoserver')), 'no kataster outside Slovenia');
 });
