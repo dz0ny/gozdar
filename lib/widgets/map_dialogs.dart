@@ -16,9 +16,9 @@ class MapDialogs {
   MapDialogs._(); // Private constructor - static methods only
 
   /// Sheet for a new point at [position] from the long-press quick view.
-  /// Nothing is mandatory: the default name "Točka [nextNumber]" is a
-  /// selected chip, and common names are chips too. The keyboard opens only
-  /// when the user taps the optional field. Back returns to the quick view
+  /// Nothing is mandatory: an empty name saves as "Točka [nextNumber]",
+  /// shown as the field's hint. The keyboard opens only when the user taps
+  /// the field. Back returns to the quick view
   /// through [onBack]. Returns the name and coordinates, or null when the
   /// user backs out or closes the sheet.
   static Future<({String name, double latitude, double longitude})?>
@@ -31,13 +31,6 @@ class MapDialogs {
   }) async {
     final l10n = context.l10n;
     final defaultName = l10n.pointDefaultName(nextNumber);
-    final chips = [
-      defaultName,
-      l10n.pointChipBoundary,
-      l10n.pointChipHide,
-      l10n.pointChipSpring,
-      l10n.pointChipSkidTrail,
-    ];
     final coords = NavigateToSheet.coordinates(position);
     final controller = TextEditingController();
     var backedOut = false;
@@ -47,87 +40,61 @@ class MapDialogs {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) {
-        String? selected = defaultName;
-        return StatefulBuilder(
-          builder: (context, setState) {
-            void save() {
-              final typed = controller.text.trim();
-              Navigator.of(context)
-                  .pop(typed.isNotEmpty ? typed : (selected ?? defaultName));
-            }
+        void save() {
+          final typed = controller.text.trim();
+          Navigator.of(context).pop(typed.isNotEmpty ? typed : defaultName);
+        }
 
-            return Padding(
-              // Stay above the keyboard.
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 16, 16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SheetHandle(),
-                      SheetHeader(
-                        icon: Icons.add_location_alt,
-                        color: Colors.red,
-                        title: context.l10n.mapwAddLocationTitle,
-                        subtitle: parcelLabel == null
-                            ? coords
-                            : '$parcelLabel · $coords',
-                        onBack: () {
-                          backedOut = true;
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          for (final chip in chips)
-                            ChoiceChip(
-                              label: Text(chip),
-                              selected: chip == selected,
-                              onSelected: (_) => setState(() {
-                                selected = chip == selected ? null : chip;
-                                controller.clear();
-                              }),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: controller,
-                        textCapitalization: TextCapitalization.sentences,
-                        textInputAction: TextInputAction.done,
-                        onChanged: (text) {
-                          if (text.isNotEmpty && selected != null) {
-                            setState(() => selected = null);
-                          }
-                        },
-                        onSubmitted: (_) => save(),
-                        decoration: InputDecoration(
-                          labelText: context.l10n.pointOwnNameLabel,
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        onPressed: save,
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        icon: const Icon(Icons.add_location),
-                        label: Text(context.l10n.commonSave),
-                      ),
-                    ],
+        return Padding(
+          // Stay above the keyboard.
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SheetHandle(),
+                  SheetHeader(
+                    icon: Icons.add_location_alt,
+                    color: Colors.red,
+                    title: context.l10n.mapwAddLocationTitle,
+                    subtitle: parcelLabel == null
+                        ? coords
+                        : '$parcelLabel · $coords',
+                    onBack: () {
+                      backedOut = true;
+                      Navigator.of(context).pop();
+                    },
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    textCapitalization: TextCapitalization.sentences,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => save(),
+                    decoration: InputDecoration(
+                      labelText: context.l10n.pointOwnNameLabel,
+                      hintText: defaultName,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: save,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    icon: const Icon(Icons.add_location),
+                    label: Text(context.l10n.commonSave),
+                  ),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );

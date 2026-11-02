@@ -4962,34 +4962,10 @@ abstract class AppLocalizations {
   /// **'Točka {n}'**
   String pointDefaultName(int n);
 
-  /// No description provided for @pointChipBoundary.
-  ///
-  /// In sl, this message translates to:
-  /// **'Mejnik'**
-  String get pointChipBoundary;
-
-  /// No description provided for @pointChipHide.
-  ///
-  /// In sl, this message translates to:
-  /// **'Lovska preža'**
-  String get pointChipHide;
-
-  /// No description provided for @pointChipSpring.
-  ///
-  /// In sl, this message translates to:
-  /// **'Izvir'**
-  String get pointChipSpring;
-
-  /// No description provided for @pointChipSkidTrail.
-  ///
-  /// In sl, this message translates to:
-  /// **'Vlaka'**
-  String get pointChipSkidTrail;
-
   /// No description provided for @pointOwnNameLabel.
   ///
   /// In sl, this message translates to:
-  /// **'Svoje ime (neobvezno)'**
+  /// **'Ime (neobvezno)'**
   String get pointOwnNameLabel;
 
   /// No description provided for @secnjaShareAgain.

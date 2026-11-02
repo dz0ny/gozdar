@@ -2077,11 +2077,7 @@
       }
     }
   },
-  "pointChipBoundary": "Mejnik",
-  "pointChipHide": "Lovska preža",
-  "pointChipSpring": "Izvir",
-  "pointChipSkidTrail": "Vlaka",
-  "pointOwnNameLabel": "Svoje ime (neobvezno)",
+  "pointOwnNameLabel": "Ime (neobvezno)",
   "secnjaShareAgain": "Deli znova",
   "secnjaShareUpdate": "Posodobi povezavo",
   "secnjaSharedUntil": "Deljeno · velja do {date}",

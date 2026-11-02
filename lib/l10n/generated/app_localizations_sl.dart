@@ -2933,19 +2933,7 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get pointChipBoundary => 'Mejnik';
-
-  @override
-  String get pointChipHide => 'Lovska preža';
-
-  @override
-  String get pointChipSpring => 'Izvir';
-
-  @override
-  String get pointChipSkidTrail => 'Vlaka';
-
-  @override
-  String get pointOwnNameLabel => 'Svoje ime (neobvezno)';
+  String get pointOwnNameLabel => 'Ime (neobvezno)';
 
   @override
   String get secnjaShareAgain => 'Deli znova';

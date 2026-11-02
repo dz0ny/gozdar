@@ -45,21 +45,18 @@ void main() {
     expect((await result)!.name, 'Točka 7');
   });
 
-  testWidgets('tapping Izvir returns Izvir', (tester) async {
-    final result = await open(tester);
-    await tester.tap(find.text('Izvir'));
-    await tester.pump();
-    await save(tester);
-    expect((await result)!.name, 'Izvir');
-  });
 
-  testWidgets('typed text wins over chips', (tester) async {
+  testWidgets('typed text is the name', (tester) async {
     final result = await open(tester);
-    await tester.tap(find.text('Izvir'));
     await tester.enterText(find.byType(TextField), 'Stara bukev');
     await tester.pump();
     await save(tester);
     expect((await result)!.name, 'Stara bukev');
+  });
+
+  testWidgets('no name chips', (tester) async {
+    await open(tester);
+    expect(find.byType(ChoiceChip), findsNothing);
   });
 
   testWidgets('keyboard does not open', (tester) async {
@@ -69,15 +66,6 @@ void main() {
     expect(field.focusNode?.hasFocus ?? false, isFalse);
   });
 
-  testWidgets('no error text after save with empty field and no chip', (tester) async {
-    final result = await open(tester);
-    // Deselect the default chip.
-    await tester.tap(find.text('Točka 7'));
-    await tester.pump();
-    await save(tester);
-    expect(find.text('Vnesite ime'), findsNothing);
-    expect((await result)!.name, 'Točka 7');
-  });
 
   testWidgets('subtitle names the parcel', (tester) async {
     await open(tester, parcelLabel: 'Parcela 1234/5');

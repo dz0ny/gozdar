@@ -2930,19 +2930,7 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String get pointChipBoundary => 'Međaš';
-
-  @override
-  String get pointChipHide => 'Lovačka čeka';
-
-  @override
-  String get pointChipSpring => 'Izvor';
-
-  @override
-  String get pointChipSkidTrail => 'Vlaka';
-
-  @override
-  String get pointOwnNameLabel => 'Vlastiti naziv (neobavezno)';
+  String get pointOwnNameLabel => 'Naziv (neobavezno)';
 
   @override
   String get secnjaShareAgain => 'Podijeli ponovno';
