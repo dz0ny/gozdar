@@ -13,7 +13,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('profiles cold and warm offline tile reads', () async {
-    final tempDir = await Directory.systemTemp.createTemp('offline-tile-cache-profile-');
+    final tempDir = await Directory.systemTemp.createTemp(
+      'offline-tile-cache-profile-',
+    );
     final db = AppDatabase(NativeDatabase.memory());
     final databaseService = DatabaseService();
     final cache = OfflineTileCacheService.instance;
@@ -24,7 +26,9 @@ void main() {
 
     const styleHash = 'profile01';
     const tileCount = 1500;
-    final payload = Uint8List.fromList(List<int>.generate(12 * 1024, (i) => i % 251));
+    final payload = Uint8List.fromList(
+      List<int>.generate(12 * 1024, (i) => i % 251),
+    );
 
     await cache.saveStyleMeta(
       styleHash,
@@ -67,16 +71,19 @@ void main() {
     warmReadWatch.stop();
 
     final stats = await cache.listStylesDetailed();
-    final speedup = coldReadWatch.elapsedMicroseconds / warmReadWatch.elapsedMicroseconds;
+    final speedup =
+        coldReadWatch.elapsedMicroseconds / warmReadWatch.elapsedMicroseconds;
 
-    print('offline_tile_cache_profile '
-        'tiles=$tileCount '
-        'bytes_per_tile=${payload.length} '
-        'cold_read_ms=${coldReadWatch.elapsedMilliseconds} '
-        'warm_read_ms=${warmReadWatch.elapsedMilliseconds} '
-        'speedup=${speedup.toStringAsFixed(2)}x '
-        'indexed_tile_count=${stats.single.tileCount} '
-        'indexed_size_bytes=${stats.single.sizeBytes}');
+    print(
+      'offline_tile_cache_profile '
+      'tiles=$tileCount '
+      'bytes_per_tile=${payload.length} '
+      'cold_read_ms=${coldReadWatch.elapsedMilliseconds} '
+      'warm_read_ms=${warmReadWatch.elapsedMilliseconds} '
+      'speedup=${speedup.toStringAsFixed(2)}x '
+      'indexed_tile_count=${stats.single.tileCount} '
+      'indexed_size_bytes=${stats.single.sizeBytes}',
+    );
 
     expect(stats.single.tileCount, tileCount);
     expect(stats.single.sizeBytes, tileCount * payload.length);

@@ -49,16 +49,17 @@ class ParcelRegion {
   });
 
   factory ParcelRegion.fromJson(Map<String, dynamic> j) => ParcelRegion(
-        code: (j['code'] ?? '').toString(),
-        name: (j['name'] ?? '').toString(),
-        file: (j['file'] ?? '').toString(),
-        bytes: (j['bytes'] as num?)?.toInt(),
-        rows: (j['rows'] as num?)?.toInt(),
-        date: j['date']?.toString(),
-        source: j['source']?.toString(),
-        country: (j['country']?.toString().toLowerCase()) ??
-            ((j['source']?.toString() ?? '').contains('(HR)') ? 'hr' : 'si'),
-      );
+    code: (j['code'] ?? '').toString(),
+    name: (j['name'] ?? '').toString(),
+    file: (j['file'] ?? '').toString(),
+    bytes: (j['bytes'] as num?)?.toInt(),
+    rows: (j['rows'] as num?)?.toInt(),
+    date: j['date']?.toString(),
+    source: j['source']?.toString(),
+    country:
+        (j['country']?.toString().toLowerCase()) ??
+        ((j['source']?.toString() ?? '').contains('(HR)') ? 'hr' : 'si'),
+  );
 
   /// Approximate size in MB, or null when unknown.
   double? get sizeMb => bytes != null ? bytes! / (1024 * 1024) : null;
@@ -136,9 +137,9 @@ class ParcelLookupService {
   /// connections (see `MapParcelsWorker`). `id` changes whenever a file is
   /// reopened, e.g. replaced by a newer download at the same path.
   List<({String path, bool hasRtree, int id})> get regionFiles => [
-        for (final r in _dbs)
-          (path: r.path, hasRtree: r.hasRtree, id: identityHashCode(r.db)),
-      ];
+    for (final r in _dbs)
+      (path: r.path, hasRtree: r.hasRtree, id: identityHashCode(r.db)),
+  ];
 
   /// Whether at least one offline parcels database is loaded.
   bool get isAvailable => _dbs.isNotEmpty;
@@ -148,10 +149,11 @@ class ParcelLookupService {
 
   /// Names of the loaded regions (falls back to the file name), sorted.
   List<String> get loadedRegions {
-    final names = _dbs
-        .map((d) => d.region ?? d.fileName.replaceFirst('.sqlite', ''))
-        .toList()
-      ..sort();
+    final names =
+        _dbs
+            .map((d) => d.region ?? d.fileName.replaceFirst('.sqlite', ''))
+            .toList()
+          ..sort();
     return names;
   }
 
@@ -165,8 +167,9 @@ class ParcelLookupService {
   String? get dataDate => _dbs.isNotEmpty ? _dbs.first.dataDate : null;
 
   /// GURS data date per loaded database file (null when the DB has none).
-  Map<String, String?> get loadedDataDates =>
-      {for (final d in _dbs) d.fileName: d.dataDate};
+  Map<String, String?> get loadedDataDates => {
+    for (final d in _dbs) d.fileName: d.dataDate,
+  };
 
   Future<String> _dirPath() async =>
       (await getApplicationSupportDirectory()).path;
@@ -373,9 +376,11 @@ class ParcelLookupService {
         case DownloadOutcome.cancelled:
           throw const ParcelDownloadCancelled();
         case DownloadOutcome.failed:
-          throw FormatException(result.statusCode != null
-              ? L10n.current.svcDownloadFailedHttp(result.statusCode!)
-              : L10n.current.svcDownloadInterrupted);
+          throw FormatException(
+            result.statusCode != null
+                ? L10n.current.svcDownloadFailedHttp(result.statusCode!)
+                : L10n.current.svcDownloadInterrupted,
+          );
         case DownloadOutcome.complete:
           break;
       }
@@ -460,8 +465,15 @@ class ParcelLookupService {
     return out;
   }
 
-  void _appendBounds(_RegionDb r, double w, double e, double s, double n,
-      int limit, List<CadastralParcel> out) {
+  void _appendBounds(
+    _RegionDb r,
+    double w,
+    double e,
+    double s,
+    double n,
+    int limit,
+    List<CadastralParcel> out,
+  ) {
     try {
       final ResultSet rows;
       if (r.hasRtree) {
@@ -622,7 +634,8 @@ class ParcelLookupService {
     for (var i = 0, j = n - 1; i < n; j = i++) {
       final xi = ring[i].longitude, yi = ring[i].latitude;
       final xj = ring[j].longitude, yj = ring[j].latitude;
-      final intersects = ((yi > lat) != (yj > lat)) &&
+      final intersects =
+          ((yi > lat) != (yj > lat)) &&
           (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi);
       if (intersects) inside = !inside;
     }

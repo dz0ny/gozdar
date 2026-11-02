@@ -34,10 +34,7 @@ class SharedKatasterFile {
 
   const SharedKatasterFile({required this.fileName, required this.bytes});
 
-  Map<String, dynamic> toJson() => {
-        'fileName': fileName,
-        'bytes': bytes,
-      };
+  Map<String, dynamic> toJson() => {'fileName': fileName, 'bytes': bytes};
 
   factory SharedKatasterFile.fromJson(Map<String, dynamic> json) =>
       SharedKatasterFile(
@@ -73,9 +70,12 @@ class KatasterSharingService {
     if (_server != null) return;
     try {
       _server = await HttpServer.bind(InternetAddress.anyIPv4, defaultPort);
-      _server!.listen(_handleRequest, onError: (error) {
-        debugPrint('KatasterSharingService server error: $error');
-      });
+      _server!.listen(
+        _handleRequest,
+        onError: (error) {
+          debugPrint('KatasterSharingService server error: $error');
+        },
+      );
       await _advertise();
     } catch (e) {
       debugPrint('KatasterSharingService.startSharing failed: $e');
@@ -94,7 +94,8 @@ class KatasterSharingService {
     if (_discovering) return;
     _discoverySubscription ??= _flutterNsd.stream.listen(
       _handleDiscoveredService,
-      onError: (error) => debugPrint('KatasterSharingService discovery: $error'),
+      onError: (error) =>
+          debugPrint('KatasterSharingService discovery: $error'),
     );
     try {
       await _flutterNsd.discoverServices(discoveryServiceType);
@@ -122,7 +123,10 @@ class KatasterSharingService {
       if (response.statusCode != HttpStatus.ok) return const [];
       final data = jsonDecode(response.body) as List<dynamic>;
       return data
-          .map((entry) => SharedKatasterFile.fromJson(entry as Map<String, dynamic>))
+          .map(
+            (entry) =>
+                SharedKatasterFile.fromJson(entry as Map<String, dynamic>),
+          )
           .where((entry) => entry.fileName.isNotEmpty)
           .toList();
     } catch (e) {
@@ -248,7 +252,8 @@ class KatasterSharingService {
       return;
     }
 
-    final match = RegExp(r'^/kataster/files/([^/]+)$').firstMatch(request.uri.path);
+    final match = RegExp(r'^/kataster/files/([^/]+)$')
+        .firstMatch(request.uri.path);
     if (match != null) {
       final fileName = Uri.decodeComponent(match.group(1)!);
       if (!_isSharedFileName(fileName)) {
@@ -276,7 +281,8 @@ class KatasterSharingService {
   @visibleForTesting
   static Future<void> serveFile(HttpRequest request, File file) async {
     final length = await file.length();
-    final etag = '"$length-${(await file.lastModified()).millisecondsSinceEpoch}"';
+    final etag =
+        '"$length-${(await file.lastModified()).millisecondsSinceEpoch}"';
     final response = request.response
       ..headers.contentType = ContentType.binary
       ..headers.set(HttpHeaders.etagHeader, etag)

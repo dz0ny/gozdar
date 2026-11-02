@@ -22,11 +22,11 @@ class _KatasterShareTileState extends State<KatasterShareTile> {
   @override
   void initState() {
     super.initState();
-    _peersSubscription = KatasterSharingService.instance.peersStream.listen(
-      (peers) {
-        if (mounted) setState(() => _peerCount = peers.length);
-      },
-    );
+    _peersSubscription = KatasterSharingService.instance.peersStream.listen((
+      peers,
+    ) {
+      if (mounted) setState(() => _peerCount = peers.length);
+    });
   }
 
   @override
@@ -38,8 +38,10 @@ class _KatasterShareTileState extends State<KatasterShareTile> {
   @override
   Widget build(BuildContext context) {
     return SwitchListTile(
-      secondary: Icon(Icons.wifi_tethering,
-          color: Theme.of(context).colorScheme.primary),
+      secondary: Icon(
+        Icons.wifi_tethering,
+        color: Theme.of(context).colorScheme.primary,
+      ),
       title: Text(context.l10n.aboutShareKataster),
       subtitle: Text(
         _sharing

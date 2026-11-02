@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
 import '../services/update_service.dart';
 
@@ -7,11 +8,7 @@ class UpdateBanner extends StatelessWidget {
   final UpdateService updateService;
   final VoidCallback? onDismiss;
 
-  const UpdateBanner({
-    super.key,
-    required this.updateService,
-    this.onDismiss,
-  });
+  const UpdateBanner({super.key, required this.updateService, this.onDismiss});
 
   @override
   Widget build(BuildContext context) {
@@ -21,13 +18,13 @@ class UpdateBanner extends StatelessWidget {
         final status = updateService.status;
 
         // Don't show banner for these states
-        if (status == UpdateStatus.idle ||
-            status == UpdateStatus.checking) {
+        if (status == UpdateStatus.idle || status == UpdateStatus.checking) {
           return const SizedBox.shrink();
         }
 
         return Positioned(
-          bottom: MediaQuery.of(context).padding.bottom + 80, // Above bottom nav
+          bottom:
+              MediaQuery.of(context).padding.bottom + 80, // Above bottom nav
           left: 16,
           right: 16,
           child: Material(
@@ -96,10 +93,7 @@ class UpdateBanner extends StatelessWidget {
               if (release != null)
                 Text(
                   context.l10n.updateVersion(release.version),
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
             ],
           ),
@@ -164,10 +158,7 @@ class UpdateBanner extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 '$percent%',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 11,
-                ),
+                style: const TextStyle(color: Colors.white70, fontSize: 11),
               ),
             ],
           ),
@@ -196,10 +187,7 @@ class UpdateBanner extends StatelessWidget {
               ),
               Text(
                 context.l10n.updateReadyHint,
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ],
           ),
@@ -237,10 +225,7 @@ class UpdateBanner extends StatelessWidget {
               if (updateService.errorMessage != null)
                 Text(
                   updateService.errorMessage!,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

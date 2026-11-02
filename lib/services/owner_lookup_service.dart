@@ -65,15 +65,15 @@ class OwnerInfo {
 
   /// The owners in a stored or joined owner string, one name each.
   static List<String> split(String? owners) => [
-        for (final o in (owners ?? '').split(separator))
-          if (o.trim().isNotEmpty) o.trim(),
-      ];
+    for (final o in (owners ?? '').split(separator))
+      if (o.trim().isNotEmpty) o.trim(),
+  ];
 
   /// The holder record for [name], or a bare one when there is none.
   OwnerHolder holder(String name) => holders.firstWhere(
-        (h) => h.name == name,
-        orElse: () => OwnerHolder(name),
-      );
+    (h) => h.name == name,
+    orElse: () => OwnerHolder(name),
+  );
 }
 
 /// Result of importing an owners database file.
@@ -131,15 +131,14 @@ class OwnerLookupService {
   Database? _publicHrDb;
   String? _publicHrPath;
 
-  Iterable<Database> get _publicDbs =>
-      [?_publicDb, ?_publicHrDb];
+  Iterable<Database> get _publicDbs => [?_publicDb, ?_publicHrDb];
 
   /// Files of the open public-owners databases, for searches that open their
   /// own connection on a background isolate.
   List<String> get _publicPaths => [
-        if (_publicDb != null) ?_publicPath,
-        if (_publicHrDb != null) ?_publicHrPath,
-      ];
+    if (_publicDb != null) ?_publicPath,
+    if (_publicHrDb != null) ?_publicHrPath,
+  ];
 
   int _publicRowCount = 0;
   String? _publicBuilt;
@@ -334,8 +333,9 @@ class OwnerLookupService {
     }
     try {
       final meta = db.select("SELECT v FROM meta WHERE k='rows'");
-      _publicRowCount =
-          meta.isEmpty ? 0 : (int.tryParse(meta.first['v'].toString()) ?? 0);
+      _publicRowCount = meta.isEmpty
+          ? 0
+          : (int.tryParse(meta.first['v'].toString()) ?? 0);
     } catch (_) {
       _publicRowCount = 0;
     }
@@ -374,10 +374,14 @@ class OwnerLookupService {
     _path = path;
   }
 
-  static bool _detectSearchIndex(Database db) => db.select(
-    "SELECT name FROM sqlite_master WHERE name IN "
-    "('owner_name_search', 'owner_address_search')",
-  ).length == 2;
+  static bool _detectSearchIndex(Database db) =>
+      db
+          .select(
+            "SELECT name FROM sqlite_master WHERE name IN "
+            "('owner_name_search', 'owner_address_search')",
+          )
+          .length ==
+      2;
 
   /// Builds the search index in a background isolate if the open database
   /// lacks it. Runs once per database; searches use the slower full scan
@@ -570,7 +574,8 @@ class OwnerLookupService {
     // The file as served; for an encrypted one, a separate file to decrypt.
     final download = File(encrypted ? '$target.aes.part' : '$target.part');
 
-    final fromPeer = encrypted &&
+    final fromPeer =
+        encrypted &&
         await KatasterSharingService.instance.downloadFileTo(
           sharedFileName,
           download,
@@ -588,9 +593,11 @@ class OwnerLookupService {
         case DownloadOutcome.cancelled:
           throw const OwnerDownloadCancelled();
         case DownloadOutcome.failed:
-          throw FormatException(result.statusCode != null
-              ? L10n.current.svcDownloadFailedHttp(result.statusCode!)
-              : L10n.current.svcDownloadInterrupted);
+          throw FormatException(
+            result.statusCode != null
+                ? L10n.current.svcDownloadFailedHttp(result.statusCode!)
+                : L10n.current.svcDownloadInterrupted,
+          );
         case DownloadOutcome.complete:
           break;
       }
@@ -790,22 +797,23 @@ class OwnerLookupService {
 
   /// Rows (name, role) for one parcel from every open public-owners database.
   List<Row> _publicRows(int sifko, String key) => [
-        for (final db in _publicDbs) ...db.select(publicRowsSql, [sifko, key]),
-      ];
+    for (final db in _publicDbs) ...db.select(publicRowsSql, [sifko, key]),
+  ];
 
   /// Files of the open public-owners databases, for a background reader
   /// that opens its own connections (see `MapParcelsWorker`). `id` changes
   /// whenever a file is reopened, e.g. after a refresh download.
   List<({String path, int id})> get publicDbFiles => [
-        for (final db in _publicDbs)
-          if (db.select('PRAGMA database_list').firstOrNull?['file']
-              case final String file when file.isNotEmpty)
-            (path: file, id: identityHashCode(db)),
-      ];
+    for (final db in _publicDbs)
+      if (db.select('PRAGMA database_list').firstOrNull?['file']
+          case final String file when file.isNotEmpty)
+        (path: file, id: identityHashCode(db)),
+  ];
 
   /// Rows (name, role) of one parcel (sifko, parcela) in a public-owners
   /// database.
-  static const publicRowsSql = 'SELECT n.naziv AS naziv, o.vloga AS vloga '
+  static const publicRowsSql =
+      'SELECT n.naziv AS naziv, o.vloga AS vloga '
       'FROM owners o JOIN names n ON n.id = o.name_id '
       'WHERE o.sifko = ? AND o.parcela = ?';
 
@@ -1038,10 +1046,10 @@ class OwnerLookupService {
   }
 
   static List<OwnerSearchTerm> _foldTerms(List<OwnerSearchTerm> words) => [
-        for (final w in words)
-          if (foldForSearch(w.text.trim()).length >= minQueryLength)
-            OwnerSearchTerm(foldForSearch(w.text.trim()), w.sifkos),
-      ];
+    for (final w in words)
+      if (foldForSearch(w.text.trim()).length >= minQueryLength)
+        OwnerSearchTerm(foldForSearch(w.text.trim()), w.sifkos),
+  ];
 
   static List<Row> _searchAny(
     Database db, {
@@ -1070,7 +1078,9 @@ class OwnerLookupService {
           "OR ${_foldSql('naslov')} LIKE ? ESCAPE '\\'$ko)",
         );
       }
-      args..add(like)..add(like);
+      args
+        ..add(like)
+        ..add(like);
     }
     if (onlySifko != null) {
       where.add('sifko = ?');
@@ -1129,7 +1139,8 @@ class OwnerLookupService {
     final n = foldForSearch((name ?? '').trim());
     final a = foldForSearch((address ?? '').trim());
     if (n.isEmpty && a.isEmpty) return null;
-    final tooShort = (n.isNotEmpty && n.length < minQueryLength) ||
+    final tooShort =
+        (n.isNotEmpty && n.length < minQueryLength) ||
         (a.isNotEmpty && a.length < minQueryLength);
     return (n: n, a: a, tooShort: tooShort);
   }
@@ -1231,10 +1242,8 @@ class OwnerLookupService {
     return expr;
   }
 
-  static String _likeEscape(String s) => s
-      .replaceAll('\\', '\\\\')
-      .replaceAll('%', '\\%')
-      .replaceAll('_', '\\_');
+  static String _likeEscape(String s) =>
+      s.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_');
 
   /// Folds owner rows (one per co-owner) into one hit per KO + parcela,
   /// keeping the order in which each parcel first appears.

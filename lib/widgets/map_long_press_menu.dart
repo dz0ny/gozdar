@@ -344,8 +344,9 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: bold
-                  ? theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700)
+                  ? theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    )
                   : theme.textTheme.bodyLarge,
             ),
           ),
@@ -387,19 +388,27 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
                 padding: const EdgeInsets.only(top: 4),
                 child: Row(
                   children: [
-                    const Icon(Icons.carpenter, size: 20, color: Colors.deepOrange),
+                    const Icon(
+                      Icons.carpenter,
+                      size: 20,
+                      color: Colors.deepOrange,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         '🪓 ${context.l10n.secnjaForCutCount(widget.parcelSecnjaCount)}',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Colors.deepOrange,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: Colors.deepOrange,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     if (widget.onViewParcel != null)
-                      const Icon(Icons.chevron_right, size: 20, color: Colors.deepOrange),
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 20,
+                        color: Colors.deepOrange,
+                      ),
                   ],
                 ),
               ),

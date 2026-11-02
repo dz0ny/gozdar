@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/parcel.dart';
 import '../l10n/l10n.dart';
 import '../utils/formats.dart';
@@ -40,9 +41,8 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   context.l10n.parcelWoodTitle,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -91,9 +91,8 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                     children: [
                       Text(
                         context.l10n.parcelCutLabel,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: muted,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium
+                            ?.copyWith(color: muted),
                       ),
                       Text(
                         Fmt.m3(parcel.woodCut),
@@ -137,11 +136,15 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    context.l10n.parcelWoodUsed(Fmt.num(parcel.woodUsedPercent, 0)),
+                    context.l10n.parcelWoodUsed(
+                      Fmt.num(parcel.woodUsedPercent, 0),
+                    ),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   Text(
-                    context.l10n.parcelCutRemaining(Fmt.num(parcel.woodRemaining, 2)),
+                    context.l10n.parcelCutRemaining(
+                      Fmt.num(parcel.woodRemaining, 2),
+                    ),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.green[300],
                       fontWeight: FontWeight.bold,
@@ -162,9 +165,8 @@ class ParcelWoodTrackingCard extends StatelessWidget {
                     children: [
                       Text(
                         context.l10n.parcelTreesCutLabel,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: muted,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium
+                            ?.copyWith(color: muted),
                       ),
                       Text(
                         '${parcel.treesCut}',

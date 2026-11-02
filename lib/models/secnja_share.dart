@@ -24,18 +24,18 @@ class SecnjaPoint {
   LatLng get position => LatLng(lat, lng);
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'lat': lat,
-        'lng': lng,
-        if (species != null) 'species': species,
-      };
+    'name': name,
+    'lat': lat,
+    'lng': lng,
+    if (species != null) 'species': species,
+  };
 
   factory SecnjaPoint.fromJson(Map<String, dynamic> json) => SecnjaPoint(
-        name: json['name'] as String,
-        lat: (json['lat'] as num).toDouble(),
-        lng: (json['lng'] as num).toDouble(),
-        species: json['species'] as String?,
-      );
+    name: json['name'] as String,
+    lat: (json['lat'] as num).toDouble(),
+    lng: (json['lng'] as num).toDouble(),
+    species: json['species'] as String?,
+  );
 }
 
 /// The data that a sečnja share link carries: one parcel and its marked
@@ -105,24 +105,26 @@ class SecnjaSharePayload {
   }
 
   Map<String, dynamic> toJson() => {
-        'v': 1,
-        'parcel': {
-          'number': parcelNumber,
-          if (koNumber != null) 'koNumber': koNumber,
-          if (koName != null) 'koName': koName,
-          if (owner != null) 'owner': owner,
-          if (areaHa != null) 'areaHa': areaHa,
-          'polygon': [
-            for (final p in polygon) [p.latitude, p.longitude],
-          ],
-        },
-        'points': [for (final p in points) p.toJson()],
-        'createdAt': createdAt.toUtc().toIso8601String(),
-      };
+    'v': 1,
+    'parcel': {
+      'number': parcelNumber,
+      if (koNumber != null) 'koNumber': koNumber,
+      if (koName != null) 'koName': koName,
+      if (owner != null) 'owner': owner,
+      if (areaHa != null) 'areaHa': areaHa,
+      'polygon': [
+        for (final p in polygon) [p.latitude, p.longitude],
+      ],
+    },
+    'points': [for (final p in points) p.toJson()],
+    'createdAt': createdAt.toUtc().toIso8601String(),
+  };
 
   /// Throws [FormatException] for a payload this app version cannot read.
   factory SecnjaSharePayload.fromJson(Map<String, dynamic> json) {
-    if (json['v'] != 1) throw FormatException('Unknown share version ${json['v']}');
+    if (json['v'] != 1) {
+      throw FormatException('Unknown share version ${json['v']}');
+    }
     final parcel = json['parcel'] as Map<String, dynamic>;
     final expires = json['expiresAt'] as String?;
     return SecnjaSharePayload(
@@ -133,10 +135,7 @@ class SecnjaSharePayload {
       areaHa: (parcel['areaHa'] as num?)?.toDouble(),
       polygon: [
         for (final p in (parcel['polygon'] as List? ?? const []))
-          LatLng(
-            ((p as List)[0] as num).toDouble(),
-            (p[1] as num).toDouble(),
-          ),
+          LatLng(((p as List)[0] as num).toDouble(), (p[1] as num).toDouble()),
       ],
       points: [
         for (final p in (json['points'] as List))

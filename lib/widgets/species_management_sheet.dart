@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
 import '../services/species_service.dart';
 
@@ -72,9 +73,11 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(added
-                ? context.l10n.logsSpeciesAdded(newSpecies)
-                : context.l10n.logsSpeciesExists(newSpecies)),
+            content: Text(
+              added
+                  ? context.l10n.logsSpeciesAdded(newSpecies)
+                  : context.l10n.logsSpeciesExists(newSpecies),
+            ),
           ),
         );
       }
@@ -149,27 +152,25 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
       height: MediaQuery.of(context).size.height * 0.7,
       padding: const EdgeInsets.all(16),
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Text(
-                  context.l10n.logsMenuManageSpecies,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (_isLoading)
-              const Expanded(
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else ...[
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Text(
+                context.l10n.logsMenuManageSpecies,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_isLoading)
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+          else ...[
             Row(
               children: [
                 Expanded(
@@ -191,8 +192,8 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
             Text(
               context.l10n.logsSpeciesCount(_species.length),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -204,13 +205,17 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
                           Icon(
                             Icons.forest_outlined,
                             size: 48,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             context.l10n.logsSpeciesNone,
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -238,9 +243,9 @@ class _SpeciesManagementSheetState extends State<SpeciesManagementSheet> {
                       },
                     ),
             ),
-            ],
           ],
-        ),
+        ],
+      ),
     );
   }
 }

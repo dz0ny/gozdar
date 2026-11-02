@@ -14,17 +14,20 @@ import 'package:latlong2/latlong.dart';
 /// Square parcel with its south-west corner at ([lat], [lng]) and [size]
 /// degrees per side.
 Parcel square(String name, double lat, double lng, double size) => Parcel(
-      name: name,
-      polygon: [
-        LatLng(lat, lng),
-        LatLng(lat + size, lng),
-        LatLng(lat + size, lng + size),
-        LatLng(lat, lng + size),
-      ],
-    );
+  name: name,
+  polygon: [
+    LatLng(lat, lng),
+    LatLng(lat + size, lng),
+    LatLng(lat + size, lng + size),
+    LatLng(lat, lng + size),
+  ],
+);
 
-MapLocation mark(double lat, double lng, {LocationType type = LocationType.secnja}) =>
-    MapLocation(name: 'Drevo', latitude: lat, longitude: lng, type: type);
+MapLocation mark(
+  double lat,
+  double lng, {
+  LocationType type = LocationType.secnja,
+}) => MapLocation(name: 'Drevo', latitude: lat, longitude: lng, type: type);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -44,11 +47,14 @@ void main() {
   Future<MapLocation> stored(int id) async =>
       (await service.getAllLocations()).firstWhere((l) => l.id == id);
 
-  test('insertLocation assigns the containing parcel to a sečnja mark', () async {
-    final parcelId = await service.insertParcel(square('A', 46, 14, 0.01));
-    final id = await service.insertLocation(mark(46.005, 14.005));
-    expect((await stored(id)).parcelId, parcelId);
-  });
+  test(
+    'insertLocation assigns the containing parcel to a sečnja mark',
+    () async {
+      final parcelId = await service.insertParcel(square('A', 46, 14, 0.01));
+      final id = await service.insertLocation(mark(46.005, 14.005));
+      expect((await stored(id)).parcelId, parcelId);
+    },
+  );
 
   test('overlapping parcels: smallest wins', () async {
     await service.insertParcel(square('Big', 46, 14, 0.1));
@@ -79,7 +85,9 @@ void main() {
 
   test('backfillSecnjaParcels links existing marks', () async {
     final a = await service.insertParcel(square('A', 46, 14, 0.01));
-    final rowId = await db.into(db.mapLocations).insert(
+    final rowId = await db
+        .into(db.mapLocations)
+        .insert(
           MapLocationsCompanion.insert(
             name: 'Old',
             latitude: 46.005,
@@ -105,12 +113,13 @@ void main() {
     final id = await service.insertLocation(mark(46.015, 14.005));
     expect((await stored(id)).parcelId, isNull);
     final p = (await service.getParcel(a))!;
-    await service.updateParcel(p.copyWith(polygon: square('A', 46, 14, 0.02).polygon));
+    await service.updateParcel(
+      p.copyWith(polygon: square('A', 46, 14, 0.02).polygon),
+    );
     expect((await stored(id)).parcelId, a);
   });
 
-  test('deleteParcelWithContents removes marks linked by parcelId even outside the polygon',
-      () async {
+  test('deleteParcelWithContents removes marks linked by parcelId even outside the polygon', () async {
     final a = await service.insertParcel(square('A', 46, 14, 0.01));
     final outside = mark(50, 10)..parcelId = a;
     await service.insertLocation(outside);
@@ -146,7 +155,6 @@ void main() {
     expect(p.isShared, isFalse);
     expect(p.shareEditToken, isNull);
   });
-
 }
 
 void markingTests() {
@@ -165,12 +173,23 @@ void markingTests() {
     final a = await service.insertParcel(square('A', 46, 14, 0.01));
     final b = await service.insertParcel(square('B', 47, 14, 0.01));
 
-    final first = await markSecnjaAt(const LatLng(46.005, 14.005), species: 'Smreka', l10n: l10n);
+    final first = await markSecnjaAt(
+      const LatLng(46.005, 14.005),
+      species: 'Smreka',
+      l10n: l10n,
+    );
     final second = await markSecnjaAt(const LatLng(47.005, 14.005), l10n: l10n);
-    final third = await markSecnjaAt(const LatLng(46.006, 14.006), species: 'Smreka', l10n: l10n);
+    final third = await markSecnjaAt(
+      const LatLng(46.006, 14.006),
+      species: 'Smreka',
+      l10n: l10n,
+    );
 
     expect([first.parcelId, second.parcelId, third.parcelId], [a, b, a]);
-    expect([first.name, second.name, third.name], ['Smreka 1', 'Drevo 1', 'Smreka 2']);
+    expect(
+      [first.name, second.name, third.name],
+      ['Smreka 1', 'Drevo 1', 'Smreka 2'],
+    );
     expect(first.id, isNot(0));
   });
 }
@@ -191,34 +210,44 @@ void autoImportTests() {
     cadastralMunicipality: 1717,
     parcelNumber: '1043/2',
     area: 1000,
-    polygon: [LatLng(46, 14), LatLng(46.01, 14), LatLng(46.01, 14.01), LatLng(46, 14.01)],
+    polygon: [
+      LatLng(46, 14),
+      LatLng(46.01, 14),
+      LatLng(46.01, 14.01),
+      LatLng(46, 14.01),
+    ],
   );
 
   Future<bool> fakeImport(CadastralParcel c) async {
-    await service.insertParcel(Parcel(
-      name: '1717 - ${c.parcelNumber}',
-      polygon: c.polygon,
-      cadastralMunicipality: c.cadastralMunicipality,
-      parcelNumber: c.parcelNumber,
-    ));
+    await service.insertParcel(
+      Parcel(
+        name: '1717 - ${c.parcelNumber}',
+        polygon: c.polygon,
+        cadastralMunicipality: c.cadastralMunicipality,
+        parcelNumber: c.parcelNumber,
+      ),
+    );
     return true;
   }
 
-  test('a mark outside saved parcels imports the cadastral parcel and links to it', () async {
-    final id = await service.insertLocation(mark(46.005, 14.005));
-    final queried = <LatLng>[];
-    final parcelId = await importSecnjaParcelAt(
-      const LatLng(46.005, 14.005),
-      query: (p) async {
-        queried.add(p);
-        return cadastral;
-      },
-      import: fakeImport,
-    );
-    expect(queried, hasLength(1));
-    expect(parcelId, isNotNull);
-    expect((await stored(service, id)).parcelId, parcelId);
-  });
+  test(
+    'a mark outside saved parcels imports the cadastral parcel and links to it',
+    () async {
+      final id = await service.insertLocation(mark(46.005, 14.005));
+      final queried = <LatLng>[];
+      final parcelId = await importSecnjaParcelAt(
+        const LatLng(46.005, 14.005),
+        query: (p) async {
+          queried.add(p);
+          return cadastral;
+        },
+        import: fakeImport,
+      );
+      expect(queried, hasLength(1));
+      expect(parcelId, isNotNull);
+      expect((await stored(service, id)).parcelId, parcelId);
+    },
+  );
 
   test('a mark inside a saved parcel imports nothing', () async {
     final a = await service.insertParcel(square('A', 46, 14, 0.01));

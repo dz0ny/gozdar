@@ -34,7 +34,8 @@ class HrOwnerService {
   /// Sent as the portal's own web app does, so the API treats us like a
   /// browser on oss.uredjenazemlja.hr.
   static const _headers = {
-    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) '
+    'User-Agent':
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) '
         'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 '
         'Mobile/15E148 Safari/604.1',
     'Accept': 'application/json, text/plain, */*',
@@ -130,11 +131,13 @@ class HrOwnerService {
       if (sifko == null) continue;
       if (onlySifko != null && sifko != onlySifko) continue;
       final info = _fromJson(value);
-      final hay = KoLocator.fold([
-        ...info.owners,
-        for (final h in info.holders) h.address ?? '',
-        info.koName ?? '',
-      ].join(' '));
+      final hay = KoLocator.fold(
+        [
+          ...info.owners,
+          for (final h in info.holders) h.address ?? '',
+          info.koName ?? '',
+        ].join(' '),
+      );
       if (!terms.every(hay.contains)) continue;
       hits.add(HrOwnerHit(sifko, entry.key.substring(slash + 1), info));
       if (hits.length >= limit) break;
@@ -173,21 +176,22 @@ class HrOwnerService {
   }
 
   static Map<String, dynamic> _toJson(OwnerInfo info) => {
-        'koName': info.koName,
-        'address': info.address,
-        'holders': [
-          for (final name in info.owners)
-            {
-              'name': name,
-              'share': info.holder(name).share,
-              'address': info.holder(name).address,
-            },
-        ],
-      };
+    'koName': info.koName,
+    'address': info.address,
+    'holders': [
+      for (final name in info.owners)
+        {
+          'name': name,
+          'share': info.holder(name).share,
+          'address': info.holder(name).address,
+        },
+    ],
+  };
 
   static OwnerInfo _fromJson(Map<String, dynamic> j) {
     final holders = [
-      for (final h in (j['holders'] as List<dynamic>).cast<Map<String, dynamic>>())
+      for (final h
+          in (j['holders'] as List<dynamic>).cast<Map<String, dynamic>>())
         OwnerHolder(
           h['name'] as String,
           share: h['share'] as String?,
@@ -225,8 +229,10 @@ class HrOwnerService {
 
   Future<Map<String, dynamic>?> _parcelInfo(String parcelId) async {
     final res = await _client
-        .get(Uri.parse('$_base/cad/parcel-info?parcelId=$parcelId'),
-            headers: _headers)
+        .get(
+          Uri.parse('$_base/cad/parcel-info?parcelId=$parcelId'),
+          headers: _headers,
+        )
         .timeout(_timeout);
     if (res.statusCode != 200) return null;
     return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
@@ -264,18 +270,21 @@ class HrOwnerService {
         if (name == null || name.isEmpty) continue;
         if (owners.contains(name)) continue;
         final rawAddr = (p['address'] as String?)?.trim();
-        final addr = (rawAddr == null ||
+        final addr =
+            (rawAddr == null ||
                 rawAddr.isEmpty ||
                 rawAddr.toUpperCase() == _unknownAddress)
             ? null
             : rawAddr;
         final share = (p['ownership'] as String?)?.trim();
         owners.add(name);
-        holders.add(OwnerHolder(
-          name,
-          share: (share == null || share.isEmpty) ? null : share,
-          address: addr,
-        ));
+        holders.add(
+          OwnerHolder(
+            name,
+            share: (share == null || share.isEmpty) ? null : share,
+            address: addr,
+          ),
+        );
         address ??= addr;
       }
     }

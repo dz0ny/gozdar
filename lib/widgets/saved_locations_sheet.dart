@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+
 import 'map_dialogs.dart';
+
 import 'package:latlong2/latlong.dart';
+
 import '../l10n/l10n.dart';
 import '../utils/parcel_labels.dart';
 import '../models/map_location.dart';
@@ -140,7 +143,9 @@ class _SwipeableContentState extends State<_SwipeableContent> {
     final swipe = widget.onSwipeDelete;
     return _ContentWidget(
       scrollController: widget.scrollController,
-      locations: widget.locations.where((l) => !_removed.contains(l.id)).toList(),
+      locations: widget.locations
+          .where((l) => !_removed.contains(l.id))
+          .toList(),
       logs: widget.logs,
       parcels: widget.parcels,
       onNavigate: widget.onNavigate,
@@ -243,7 +248,8 @@ class _ContentWidget extends StatelessWidget {
   /// outside every parcel. Inside a group: points, sečnja, then logs.
   List<_ParcelGroup> _groups(List<LogEntry> geolocatedLogs) {
     final byParcel = <Parcel?, _ParcelGroup>{};
-    _ParcelGroup groupOf(Parcel? p) => byParcel.putIfAbsent(p, () => _ParcelGroup(p));
+    _ParcelGroup groupOf(Parcel? p) =>
+        byParcel.putIfAbsent(p, () => _ParcelGroup(p));
     final sorted = [
       ...locations.where((l) => !l.isSecnja),
       ...locations.where((l) => l.isSecnja),
@@ -252,10 +258,15 @@ class _ContentWidget extends StatelessWidget {
       groupOf(_parcelFor(l.parcelId, l.latitude, l.longitude)).locations.add(l);
     }
     for (final log in geolocatedLogs) {
-      groupOf(_parcelFor(log.parcelId, log.latitude!, log.longitude!)).logs.add(log);
+      groupOf(_parcelFor(log.parcelId, log.latitude!, log.longitude!)).logs
+          .add(log);
     }
     final named = byParcel.values.where((g) => g.parcel != null).toList()
-      ..sort((a, b) => a.parcel!.name.toLowerCase().compareTo(b.parcel!.name.toLowerCase()));
+      ..sort(
+        (a, b) => a.parcel!.name.toLowerCase().compareTo(
+          b.parcel!.name.toLowerCase(),
+        ),
+      );
     return [...named, ?byParcel[null]];
   }
 
@@ -266,93 +277,93 @@ class _ContentWidget extends StatelessWidget {
     final totalCount = locations.length + geolocatedLogs.length;
 
     return Column(
-        children: [
-          // Handle bar
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              borderRadius: BorderRadius.circular(2),
-            ),
+      children: [
+        // Handle bar
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 12),
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            borderRadius: BorderRadius.circular(2),
           ),
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-            child: Row(
-              children: [
-                Icon(Icons.place, color: Theme.of(context).colorScheme.primary),
+        ),
+        // Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+          child: Row(
+            children: [
+              Icon(Icons.place, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                context.l10n.mapwSavedLocations,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const Spacer(),
+              Text(
+                '$totalCount',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (onAddByCoordinates != null) ...[
                 const SizedBox(width: 8),
-                Text(
-                  context.l10n.mapwSavedLocations,
-                  style: Theme.of(context).textTheme.titleLarge,
+                IconButton(
+                  icon: const Icon(Icons.add_location_alt),
+                  tooltip: context.l10n.mapwAddByCoordinates,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onAddByCoordinates!();
+                  },
                 ),
-                const Spacer(),
-                Text(
-                  '$totalCount',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+              ],
+            ],
+          ),
+        ),
+        // List
+        Expanded(
+          child: totalCount == 0
+              ? _buildEmptyState(context)
+              : ListView(
+                  controller: scrollController,
+                  children: [
+                    for (final group in _groups(geolocatedLogs)) ...[
+                      if (group.parcel case final parcel?)
+                        _ParcelHeader(
+                          parcel: parcel,
+                          count: group.locations.length + group.logs.length,
+                          onTap: onOpenParcel == null
+                              ? null
+                              : () {
+                                  Navigator.pop(context);
+                                  onOpenParcel!(parcel);
+                                },
+                        )
+                      else
+                        _SectionHeader(
+                          icon: Icons.not_listed_location,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          title: context.l10n.secnjaOutsideParcel,
+                          count: group.locations.length + group.logs.length,
+                        ),
+                      for (final location in group.locations)
+                        _swipeable(
+                          location,
+                          _LocationListTile(
+                            location: location,
+                            onNavigate: onNavigate,
+                            onEdit: onEdit,
+                            onDelete: onDelete,
+                          ),
+                        ),
+                      for (final log in group.logs)
+                        _LogListTile(log: log, onNavigate: onNavigate),
+                    ],
+                  ],
                 ),
-                if (onAddByCoordinates != null) ...[
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.add_location_alt),
-                    tooltip: context.l10n.mapwAddByCoordinates,
-                    onPressed: () {
-                      Navigator.pop(context);
-                      onAddByCoordinates!();
-                    },
-                  ),
-                ],
-              ],
-            ),
-          ),
-          // List
-          Expanded(
-            child: totalCount == 0
-                ? _buildEmptyState(context)
-                : ListView(
-              controller: scrollController,
-              children: [
-                for (final group in _groups(geolocatedLogs)) ...[
-                  if (group.parcel case final parcel?)
-                    _ParcelHeader(
-                      parcel: parcel,
-                      count: group.locations.length + group.logs.length,
-                      onTap: onOpenParcel == null
-                          ? null
-                          : () {
-                              Navigator.pop(context);
-                              onOpenParcel!(parcel);
-                            },
-                    )
-                  else
-                    _SectionHeader(
-                      icon: Icons.not_listed_location,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      title: context.l10n.secnjaOutsideParcel,
-                      count: group.locations.length + group.logs.length,
-                    ),
-                  for (final location in group.locations)
-                    _swipeable(
-                      location,
-                      _LocationListTile(
-                        location: location,
-                        onNavigate: onNavigate,
-                        onEdit: onEdit,
-                        onDelete: onDelete,
-                      ),
-                    ),
-                  for (final log in group.logs)
-                    _LogListTile(log: log, onNavigate: onNavigate),
-                ],
-              ],
-            ),
-          ),
-        ],
-      );
+        ),
+      ],
+    );
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -369,9 +380,8 @@ class _ContentWidget extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             context.l10n.mapwNoSavedLocations,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -444,7 +454,10 @@ class _ParcelHeader extends StatelessWidget {
               ),
             ),
             if (onTap != null)
-              Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
           ],
         ),
       ),
@@ -475,10 +488,8 @@ class _SectionHeader extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.titleSmall
+                ?.copyWith(color: color, fontWeight: FontWeight.bold),
           ),
           const SizedBox(width: 4),
           Text(
@@ -589,10 +600,7 @@ class _LogListTile extends StatelessWidget {
   final LogEntry log;
   final void Function(NavigationTarget target) onNavigate;
 
-  const _LogListTile({
-    required this.log,
-    required this.onNavigate,
-  });
+  const _LogListTile({required this.log, required this.onNavigate});
 
   @override
   Widget build(BuildContext context) {

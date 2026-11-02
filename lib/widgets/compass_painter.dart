@@ -1,8 +1,10 @@
 import 'dart:math';
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../l10n/l10n.dart';
 
 /// Large compass painter that shows direction to a target location

@@ -147,22 +147,30 @@ void main() {
         });
 
         test('a word that names a KO also matches parcels in it', () async {
-          const kos = {'kozarisce': [1700]};
+          const kos = {
+            'kozarisce': [1700],
+          };
           expect(await any(['ziga', 'kozarisce'], kos: kos), ['1700/5']);
           expect(await any(['novak', 'kozarisce'], kos: kos), isEmpty);
         });
 
-        test('words under 3 characters are ignored; none left is too short',
-            () async {
-          expect(await any(['novak', '12']), ['1651/1234/2', '1651/88']);
-          final r = await service.searchAnyAsync([const OwnerSearchTerm('no')]);
-          expect(r.tooShort, isTrue);
-        });
+        test(
+          'words under 3 characters are ignored; none left is too short',
+          () async {
+            expect(await any(['novak', '12']), ['1651/1234/2', '1651/88']);
+            final r = await service.searchAnyAsync([
+              const OwnerSearchTerm('no'),
+            ]);
+            expect(r.tooShort, isTrue);
+          },
+        );
 
         test('onlySifko restricts to one KO', () async {
           expect(await any(['novak'], onlySifko: 1700), isEmpty);
-          expect(await any(['novak'], onlySifko: 1651),
-              ['1651/1234/2', '1651/88']);
+          expect(await any(['novak'], onlySifko: 1651), [
+            '1651/1234/2',
+            '1651/88',
+          ]);
         });
       });
 
@@ -195,10 +203,9 @@ void main() {
         tearDownAll(service.closePublicForTesting);
 
         Future<List<String>> any(List<String> words, {int? onlySifko}) async {
-          final r = await service.searchAnyAsync(
-            [for (final w in words) OwnerSearchTerm(w, const [])],
-            onlySifko: onlySifko,
-          );
+          final r = await service.searchAnyAsync([
+            for (final w in words) OwnerSearchTerm(w, const []),
+          ], onlySifko: onlySifko);
           return r.hits.map((h) => '${h.sifko}/${h.parcela}').toList();
         }
 
@@ -209,25 +216,32 @@ void main() {
         });
 
         test('only the matching owner is listed', () async {
-          final r = await service.searchAnyAsync(
-            [const OwnerSearchTerm('grosuplje', [])],
-          );
+          final r = await service.searchAnyAsync([
+            const OwnerSearchTerm('grosuplje', []),
+          ]);
           expect(r.hits.first.owners, ['OBČINA GROSUPLJE']);
         });
 
         test('private and public hits are merged', () async {
           expect(await any(['novak']), ['1651/1234/2', '1651/88']);
-          final r = await service.searchAnyAsync([const OwnerSearchTerm('zzzz')]);
+          final r = await service.searchAnyAsync([
+            const OwnerSearchTerm('zzzz'),
+          ]);
           expect(r.hits, isEmpty);
         });
       });
 
-      test('searchOwnersAsync gives the same result off the UI isolate',
-          () async {
-        final result = await service.searchOwnersAsync(name: 'sustar');
-        expect(result.hits, hasLength(3));
-        expect((await service.searchOwnersAsync(name: 'su')).tooShort, isTrue);
-      });
+      test(
+        'searchOwnersAsync gives the same result off the UI isolate',
+        () async {
+          final result = await service.searchOwnersAsync(name: 'sustar');
+          expect(result.hits, hasLength(3));
+          expect(
+            (await service.searchOwnersAsync(name: 'su')).tooShort,
+            isTrue,
+          );
+        },
+      );
     });
   }
 }

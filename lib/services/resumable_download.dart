@@ -109,7 +109,8 @@ class ResumableDownload {
     // Without a validator we can't tell whether the part still matches.
     if (have > 0 && validator.isEmpty) have = 0;
 
-    final request = http.Request('GET', Uri.parse(url))..headers.addAll(headers);
+    final request = http.Request('GET', Uri.parse(url))
+      ..headers.addAll(headers);
     if (have > 0) {
       request.headers['Range'] = 'bytes=$have-';
       request.headers['If-Range'] = validator;
@@ -176,7 +177,8 @@ class ResumableDownload {
 
     final int? total;
     if (resumed) {
-      total = _contentRangeTotal(response.headers['content-range']) ??
+      total =
+          _contentRangeTotal(response.headers['content-range']) ??
           (response.contentLength == null
               ? null
               : have + response.contentLength!);
@@ -192,7 +194,9 @@ class ResumableDownload {
       }
     }
 
-    final sink = part.openWrite(mode: resumed ? FileMode.append : FileMode.write);
+    final sink = part.openWrite(
+      mode: resumed ? FileMode.append : FileMode.write,
+    );
     var received = have;
     try {
       await for (final chunk in response.stream.timeout(stallTimeout)) {

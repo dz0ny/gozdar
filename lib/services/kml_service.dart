@@ -1,7 +1,9 @@
 import 'dart:io';
+
 import 'package:latlong2/latlong.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../models/parcel.dart';
 import '../models/log_entry.dart';
 import '../models/map_location.dart';
@@ -209,8 +211,7 @@ class KmlService {
         ShareParams(
           files: [XFile(filePath)],
           subject: L10n.current.svcKmlParcelShareSubject(parcel.name),
-          text:
-              L10n.current.svcKmlParcelShareText(
+          text: L10n.current.svcKmlParcelShareText(
             parcel.name,
             logs.length,
             secnja.length,
@@ -441,9 +442,8 @@ class KmlService {
         final folderContent = folderMatch.group(1) ?? '';
 
         // Get folder name
-        final nameMatch = RegExp(
-          r'<name>(.*?)</name>',
-        ).firstMatch(folderContent);
+        final nameMatch = RegExp(r'<name>(.*?)</name>')
+            .firstMatch(folderContent);
         final folderName = nameMatch != null
             ? _unescapeXml(nameMatch.group(1) ?? '')
             : '';
@@ -529,17 +529,15 @@ class KmlService {
     final koMatch = RegExp(r'KO:\s*(\d+)').firstMatch(description);
     if (koMatch != null) ko = int.tryParse(koMatch.group(1) ?? '');
 
-    final parcelNumMatch = RegExp(
-      r'Št\.\s*parcele:\s*(.+)',
-    ).firstMatch(description);
+    final parcelNumMatch = RegExp(r'Št\.\s*parcele:\s*(.+)')
+        .firstMatch(description);
     if (parcelNumMatch != null) parcelNumber = parcelNumMatch.group(1)?.trim();
 
     final ownerMatch = RegExp(r'Lastnik:\s*(.+)').firstMatch(description);
     if (ownerMatch != null) owner = ownerMatch.group(1)?.trim();
 
-    final allowanceMatch = RegExp(
-      r'Dovoljen posek:\s*([\d.]+)',
-    ).firstMatch(description);
+    final allowanceMatch = RegExp(r'Dovoljen posek:\s*([\d.]+)')
+        .firstMatch(description);
     if (allowanceMatch != null) {
       woodAllowance = double.tryParse(allowanceMatch.group(1) ?? '0') ?? 0;
     }
@@ -549,9 +547,8 @@ class KmlService {
       woodCut = double.tryParse(cutMatch.group(1) ?? '0') ?? 0;
     }
 
-    final treesMatch = RegExp(
-      r'Posekanih dreves:\s*(\d+)',
-    ).firstMatch(description);
+    final treesMatch = RegExp(r'Posekanih dreves:\s*(\d+)')
+        .firstMatch(description);
     if (treesMatch != null) {
       treesCut = int.tryParse(treesMatch.group(1) ?? '0') ?? 0;
     }
@@ -638,9 +635,8 @@ class KmlService {
     if (volume == 0) {
       final nameMatch = RegExp(r'<name>(.*?)</name>').firstMatch(placemark);
       if (nameMatch != null) {
-        final nameVolumeMatch = RegExp(
-          r'([\d.]+)\s*m³',
-        ).firstMatch(nameMatch.group(1) ?? '');
+        final nameVolumeMatch = RegExp(r'([\d.]+)\s*m³')
+            .firstMatch(nameMatch.group(1) ?? '');
         if (nameVolumeMatch != null) {
           volume = double.tryParse(nameVolumeMatch.group(1) ?? '0') ?? 0;
         }

@@ -54,7 +54,8 @@ class RemoteAsset {
       }
       final part = File('$target.part');
       // A refresh must not pick up the peer copy of the file we already have.
-      final fromPeer = !refresh &&
+      final fromPeer =
+          !refresh &&
           await KatasterSharingService.instance.downloadFileTo(
             fileName,
             part,

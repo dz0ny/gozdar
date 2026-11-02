@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
+
 import '../models/log_entry.dart';
 import '../services/location_settings.dart';
 import '../services/species_service.dart';
@@ -99,7 +102,9 @@ class _LogEntryFormState extends State<LogEntryForm> {
       if (!serviceEnabled) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.logsFormLocationServicesDisabled)),
+            SnackBar(
+              content: Text(context.l10n.logsFormLocationServicesDisabled),
+            ),
           );
         }
         return;
@@ -138,9 +143,9 @@ class _LogEntryFormState extends State<LogEntryForm> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(context.l10n.logsFormLocationAdded)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.logsFormLocationAdded)),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -211,11 +216,15 @@ class _LogEntryFormState extends State<LogEntryForm> {
       setState(() {
         _selectedSpecies = match;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(added
-            ? context.l10n.logsSpeciesAdded(newSpecies)
-            : context.l10n.logsSpeciesExists(match)),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            added
+                ? context.l10n.logsSpeciesAdded(newSpecies)
+                : context.l10n.logsSpeciesExists(match),
+          ),
+        ),
+      );
     }
   }
 
@@ -279,7 +288,9 @@ class _LogEntryFormState extends State<LogEntryForm> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isNew ? context.l10n.logsFormTitleNew : context.l10n.commonEdit),
+        title: Text(
+          _isNew ? context.l10n.logsFormTitleNew : context.l10n.commonEdit,
+        ),
         actions: [
           IconButton(icon: const Icon(Icons.check), onPressed: _saveEntry),
         ],
@@ -318,9 +329,8 @@ class _LogEntryFormState extends State<LogEntryForm> {
                       _isCalculateMode
                           ? context.l10n.logsFormModeCalculate
                           : context.l10n.logsFormModeDirect,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: Colors.grey[400]),
                     ),
                   ],
                 ),
@@ -395,9 +405,9 @@ class _LogEntryFormState extends State<LogEntryForm> {
                               context.l10n.logsFormCalculatedVolume,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSecondaryContainer,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSecondaryContainer,
                                   ),
                             ),
                             Text(
@@ -405,9 +415,9 @@ class _LogEntryFormState extends State<LogEntryForm> {
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSecondaryContainer,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSecondaryContainer,
                                   ),
                             ),
                           ],
@@ -485,7 +495,10 @@ class _LogEntryFormState extends State<LogEntryForm> {
               ],
             ),
             const SizedBox(height: 24),
-            Text(context.l10n.logsLocationLabel, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              context.l10n.logsLocationLabel,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             if (_latitude != null && _longitude != null)
               Card(

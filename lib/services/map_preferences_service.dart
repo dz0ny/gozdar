@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/map_layer.dart';
 
 /// Service to persist map state (position, zoom, rotation, layers)
@@ -12,7 +13,8 @@ class MapPreferencesService {
   static const String _keyWorkerUrl = 'map_worker_url';
 
   // Default proxy URL
-  static const String defaultWorkerUrl = 'https://gozdar-proxy.dz0ny.workers.dev';
+  static const String defaultWorkerUrl =
+      'https://gozdar-proxy.dz0ny.workers.dev';
 
   // Default values (Ljubljana, Slovenia)
   static const double defaultLatitude = 46.0569;

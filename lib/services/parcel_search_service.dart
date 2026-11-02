@@ -65,7 +65,10 @@ class ParsedParcelQuery {
       token.toLowerCase().replaceFirst('-', '/');
 
   factory ParsedParcelQuery.parse(String input) {
-    final tokens = input.trim().split(RegExp(r'\s+')).where((t) => t.isNotEmpty);
+    final tokens = input
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((t) => t.isNotEmpty);
     String? number;
     final words = <String>[];
     for (final t in tokens) {
@@ -106,9 +109,7 @@ class ParcelSearchService {
     if (codeFirst != null) out.add(_parcelFor(codeFirst.$1, codeFirst.$2));
 
     if (number != null) {
-      final targets = ko != null
-          ? [ko]
-          : wordsKos.take(3).toList();
+      final targets = ko != null ? [ko] : wordsKos.take(3).toList();
       for (final k in targets) {
         out.add(_parcelFor(k, number));
       }
@@ -154,13 +155,15 @@ class ParcelSearchService {
       limit: limit,
     );
     for (final hit in hr) {
-      out.add(_ownerSuggestion(
-        sifko: hit.sifko,
-        parcela: hit.parcela,
-        koName: hit.info.koName,
-        owners: hit.info.owners,
-        address: hit.info.address,
-      ));
+      out.add(
+        _ownerSuggestion(
+          sifko: hit.sifko,
+          parcela: hit.parcela,
+          koName: hit.info.koName,
+          owners: hit.info.owners,
+          address: hit.info.address,
+        ),
+      );
     }
 
     if (out.length >= limit || !OwnerLookupService.instance.isAvailable) {
@@ -172,7 +175,10 @@ class ParcelSearchService {
           w,
           // A lone word is better served by the KO suggestion row.
           words.length > 1 && w.length >= 3
-              ? [for (final k in KoLocator.instance.search(w, limit: 40)) k.sifko]
+              ? [
+                  for (final k in KoLocator.instance.search(w, limit: 40))
+                    k.sifko,
+                ]
               : const [],
         ),
     ];
@@ -182,13 +188,15 @@ class ParcelSearchService {
       limit: limit,
     );
     for (final hit in result.hits) {
-      out.add(_ownerSuggestion(
-        sifko: hit.sifko,
-        parcela: hit.parcela,
-        koName: hit.koName,
-        owners: hit.owners,
-        address: hit.address,
-      ));
+      out.add(
+        _ownerSuggestion(
+          sifko: hit.sifko,
+          parcela: hit.parcela,
+          koName: hit.koName,
+          owners: hit.owners,
+          address: hit.address,
+        ),
+      );
       if (out.length >= limit) break;
     }
     return out;
@@ -237,8 +245,7 @@ class ParcelSearchService {
     final tokens = query.trim().split(RegExp(r'\s+'));
     if (tokens.length != 2) return null;
     final code = int.tryParse(tokens[0]);
-    if (code == null ||
-        !ParsedParcelQuery._parcelToken.hasMatch(tokens[1])) {
+    if (code == null || !ParsedParcelQuery._parcelToken.hasMatch(tokens[1])) {
       return null;
     }
     final k = KoLocator.instance.bySifko(code);
@@ -258,9 +265,9 @@ class ParcelSearchService {
       );
 
   static ParcelSuggestion _koSuggestion(KoInfo k) => ParcelSuggestion(
-        kind: ParcelSuggestionKind.ko,
-        title: k.name,
-        subtitle: L10n.current.parcelSearchKoSubtitle(k.sifko),
-        ko: k,
-      );
+    kind: ParcelSuggestionKind.ko,
+    title: k.name,
+    subtitle: L10n.current.parcelSearchKoSubtitle(k.sifko),
+    ko: k,
+  );
 }

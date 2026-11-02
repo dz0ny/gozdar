@@ -1,7 +1,9 @@
 import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../config/distribution.dart';
 import '../l10n/l10n.dart';
 import '../router/app_router.dart';
@@ -125,9 +127,9 @@ class _MainScaffoldState extends State<MainScaffold> {
         leading: const Icon(Icons.map_outlined),
         content: Text(
           L10n.current.updateKatasterBanner(
-          update.manifest.date ?? '',
-          update.bytes > 0 ? ', ~$mb MB' : '',
-        ),
+            update.manifest.date ?? '',
+            update.bytes > 0 ? ', ~$mb MB' : '',
+          ),
         ),
         actions: [
           TextButton(

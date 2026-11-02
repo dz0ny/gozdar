@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../models/log_batch.dart';
 import '../models/log_entry.dart';
 import '../models/parcel.dart';
@@ -50,14 +51,13 @@ class LogEntryFormParams {
 /// links shared before. Both download the share, then go to the map. They
 /// sit outside the tab shell, so a cold and a warm start both reach them.
 List<GoRoute> receiveShareRoutes() => [
-      for (final prefix in ['o', 's'])
-        GoRoute(
-          path: '/$prefix/:id',
-          builder: (context, state) => ReceiveShareScreen(
-            shareId: state.pathParameters['id']!,
-          ),
-        ),
-    ];
+  for (final prefix in ['o', 's'])
+    GoRoute(
+      path: '/$prefix/:id',
+      builder: (context, state) =>
+          ReceiveShareScreen(shareId: state.pathParameters['id']!),
+    ),
+];
 
 /// Create the GoRouter configuration
 GoRouter createRouter({required bool showOnboarding, String? initialLocation}) {

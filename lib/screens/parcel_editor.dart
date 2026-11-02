@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+
 import '../models/parcel.dart';
 import '../models/map_layer.dart';
 import '../services/location_settings.dart';
@@ -168,9 +169,9 @@ class _ParcelEditorState extends State<ParcelEditor> {
 
   void _finishDrawing() {
     if (_polygon.length < 3) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(context.l10n.parcelEditorNeedThreePoints)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.parcelEditorNeedThreePoints)),
+      );
       return;
     }
     setState(() {
@@ -180,16 +181,16 @@ class _ParcelEditorState extends State<ParcelEditor> {
 
   void _saveParcel() {
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(context.l10n.parcelEditorNameRequired)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.parcelEditorNameRequired)),
+      );
       return;
     }
 
     if (_polygon.length < 3) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(context.l10n.parcelEditorNeedThreePoints)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.parcelEditorNeedThreePoints)),
+      );
       return;
     }
 
@@ -337,16 +338,14 @@ class _ParcelEditorState extends State<ParcelEditor> {
 
   /// Bottom-bar buttons: tighter padding so three labelled buttons fit.
   static final ButtonStyle _compactButton = ButtonStyle(
-    padding: WidgetStateProperty.all(
-      const EdgeInsets.symmetric(horizontal: 8),
-    ),
+    padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 8)),
   );
 
   /// One-line label that shrinks rather than wraps on narrow phones.
   Widget _fitLabel(String text) => FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(text, maxLines: 1, softWrap: false),
-      );
+    fit: BoxFit.scaleDown,
+    child: Text(text, maxLines: 1, softWrap: false),
+  );
 
   /// Numbered vertex markers when there is room for the numbers (zoomed in
   /// and vertices at least [_minLabelSpacing] px apart); small dots
@@ -357,9 +356,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
   bool _roomForNumbers(MapCamera camera) {
     if (camera.zoom < _minLabelZoom) return false;
     if (_polygon.length < 2) return true;
-    final points = [
-      for (final p in _polygon) camera.latLngToScreenOffset(p),
-    ];
+    final points = [for (final p in _polygon) camera.latLngToScreenOffset(p)];
     // Neighbours along the outline (closing edge included) are where the
     // markers pile up; O(n) keeps this cheap on every camera move.
     for (var i = 0; i < points.length; i++) {
@@ -438,9 +435,11 @@ class _ParcelEditorState extends State<ParcelEditor> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.parcel == null
+        title: Text(
+          widget.parcel == null
               ? context.l10n.parcelEditorAddTitle
-              : context.l10n.parcelEditorEditTitle),
+              : context.l10n.parcelEditorEditTitle,
+        ),
         actions: [
           IconButton(icon: const Icon(Icons.check), onPressed: _saveParcel),
         ],
@@ -528,9 +527,8 @@ class _ParcelEditorState extends State<ParcelEditor> {
                 ),
                 Text(
                   context.l10n.parcelEditorArea(areaPreview),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),

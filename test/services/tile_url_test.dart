@@ -4,7 +4,12 @@ import 'package:gozdar/services/tile_download_service.dart';
 void main() {
   test('tileUrl fills z/x/y the way the map requests them', () {
     expect(
-      TileDownloadService.tileUrl('https://t.example/{z}/{x}/{y}.png', 15, 17800, 11600),
+      TileDownloadService.tileUrl(
+        'https://t.example/{z}/{x}/{y}.png',
+        15,
+        17800,
+        11600,
+      ),
       'https://t.example/15/17800/11600.png',
     );
   });

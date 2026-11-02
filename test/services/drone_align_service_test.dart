@@ -53,7 +53,13 @@ Future<List<int>> photoPng(
     }
   }
   final done = Completer<ui.Image>();
-  ui.decodeImageFromPixels(pixels, w, h, ui.PixelFormat.rgba8888, done.complete);
+  ui.decodeImageFromPixels(
+    pixels,
+    w,
+    h,
+    ui.PixelFormat.rgba8888,
+    done.complete,
+  );
   final image = await done.future;
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
   return data!.buffer.asUint8List();
@@ -62,8 +68,9 @@ Future<List<int>> photoPng(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('alignment pulls GPS-shifted photos back towards the truth',
-      (tester) async {
+  testWidgets('alignment pulls GPS-shifted photos back towards the truth', (
+    tester,
+  ) async {
     await tester.runAsync(() async {
       final dir = await Directory.systemTemp.createTemp('align_test');
       addTearDown(() => dir.delete(recursive: true));
@@ -114,10 +121,14 @@ void main() {
       double meanError(List<DronePhoto> ps) {
         var sum = 0.0;
         for (var i = 0; i < ps.length; i++) {
-          final x = (ps[i].position.longitude - origin.longitude) *
-              math.pi / 180 * _r * cosLat;
-          final y = (ps[i].position.latitude - origin.latitude) *
-              math.pi / 180 * _r;
+          final x =
+              (ps[i].position.longitude - origin.longitude) *
+              math.pi /
+              180 *
+              _r *
+              cosLat;
+          final y =
+              (ps[i].position.latitude - origin.latitude) * math.pi / 180 * _r;
           sum += math.sqrt(
             math.pow(x - truth[i].$1, 2) + math.pow(y - truth[i].$2, 2),
           );

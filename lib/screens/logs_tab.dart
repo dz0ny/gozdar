@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../models/log_batch.dart';
 import '../models/log_entry.dart';
 import '../providers/logs_provider.dart';
@@ -24,8 +27,12 @@ class LogsTab extends StatelessWidget {
   /// PRM preset matching a species, so picking "Bukev" also selects the
   /// beech/oak factor. Only presets; a custom factor is left alone.
   static const Map<String, double> _speciesPrm = {
-    'bukev': 0.67, 'bukva': 0.67, 'hrast': 0.67,
-    'smreka': 0.57, 'jelka': 0.57, 'jela': 0.57,
+    'bukev': 0.67,
+    'bukva': 0.67,
+    'hrast': 0.67,
+    'smreka': 0.57,
+    'jelka': 0.57,
+    'jela': 0.57,
   };
   static const List<double> _prmPresets = [0.65, 0.67, 0.57, 0.60];
 
@@ -36,8 +43,9 @@ class LogsTab extends StatelessWidget {
     final provider = context.read<LogsProvider>();
     final species = await SpeciesService().getSpecies();
     if (!context.mounted) return;
-    final current =
-        species.contains(provider.currentSpecies) ? provider.currentSpecies : null;
+    final current = species.contains(provider.currentSpecies)
+        ? provider.currentSpecies
+        : null;
 
     void select(BuildContext sheetContext, String? value) {
       provider.setCurrentSpecies(value);
@@ -162,7 +170,11 @@ class LogsTab extends StatelessWidget {
             );
           } else if (!success && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(context.l10n.logsErrorWithDetail('${provider.error}'))),
+              SnackBar(
+                content: Text(
+                  context.l10n.logsErrorWithDetail('${provider.error}'),
+                ),
+              ),
             );
           }
         },
@@ -197,7 +209,9 @@ class LogsTab extends StatelessWidget {
       );
     } else if (!success && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.logsErrorWithDetail('${provider.error}'))),
+        SnackBar(
+          content: Text(context.l10n.logsErrorWithDetail('${provider.error}')),
+        ),
       );
     }
   }
@@ -241,7 +255,11 @@ class LogsTab extends StatelessWidget {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.logsErrorWithDetail('${provider.error}'))),
+            SnackBar(
+              content: Text(
+                context.l10n.logsErrorWithDetail('${provider.error}'),
+              ),
+            ),
           );
         }
       }
@@ -275,9 +293,7 @@ class LogsTab extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: Text(context.l10n.logsMenuDeleteAll),
           ),
         ],
@@ -293,7 +309,11 @@ class LogsTab extends StatelessWidget {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(context.l10n.logsErrorWithDetail('${provider.error}'))),
+            SnackBar(
+              content: Text(
+                context.l10n.logsErrorWithDetail('${provider.error}'),
+              ),
+            ),
           );
         }
       }
@@ -304,9 +324,9 @@ class LogsTab extends StatelessWidget {
     final provider = context.read<LogsProvider>();
 
     if (!provider.hasEntries) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.logsNoEntriesToSave)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.logsNoEntriesToSave)));
       return;
     }
 
@@ -328,9 +348,11 @@ class LogsTab extends StatelessWidget {
                   : batches.reduce((a, b) => a.id >= b.id ? a : b);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(context.l10n.logsSavedToBatch(
-                    batch.name ?? context.l10n.batchDefaultTitle,
-                  )),
+                  content: Text(
+                    context.l10n.logsSavedToBatch(
+                      batch.name ?? context.l10n.batchDefaultTitle,
+                    ),
+                  ),
                   duration: const Duration(seconds: 6),
                   action: SnackBarAction(
                     label: context.l10n.logsOpenAction,
@@ -371,7 +393,9 @@ class LogsTab extends StatelessWidget {
       builder: (context) => const SpeciesManagementSheet(),
     );
     // The selected species may have been removed or the list was empty.
-    if (context.mounted) await context.read<LogsProvider>().ensureValidSpecies();
+    if (context.mounted) {
+      await context.read<LogsProvider>().ensureValidSpecies();
+    }
   }
 
   @override
@@ -456,7 +480,10 @@ class LogsTab extends StatelessWidget {
                     onTap: () => _showConversionDialog(context),
                     borderRadius: BorderRadius.circular(12),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
                           Column(
@@ -464,7 +491,10 @@ class LogsTab extends StatelessWidget {
                             children: [
                               Text(
                                 Fmt.m3(provider.totalVolume),
-                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.green[400],
                                     ),
@@ -472,59 +502,78 @@ class LogsTab extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 '${Fmt.num(provider.prmVolume, 2)} PRM  •  ${Fmt.num(provider.nmVolume, 2)} NM',
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                      color: Colors.grey[500],
-                                    ),
+                                style: Theme.of(context).textTheme.bodyLarge
+                                    ?.copyWith(color: Colors.grey[500]),
                               ),
                             ],
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                context.l10n.logsCountLogs(provider.entryCount),
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      color: Colors.grey[500],
-                                    ),
-                              ),
-                              const SizedBox(height: 4),
-                              // Species for new logs: a chip with a caret so it
-                              // reads as a picker, not as status.
-                              Material(
-                                color: Colors.transparent,
-                                shape: StadiumBorder(
-                                  side: BorderSide(color: Theme.of(context).colorScheme.outline),
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  context.l10n.logsCountLogs(
+                                    provider.entryCount,
+                                  ),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(color: Colors.grey[500]),
                                 ),
-                                clipBehavior: Clip.antiAlias,
-                                child: InkWell(
-                                  onTap: () => _showSpeciesPicker(context),
-                                  child: Tooltip(
-                                    message: context.l10n.logsSpeciesLabel,
-                                    child: Padding(
-                                      padding: const EdgeInsets.fromLTRB(10, 6, 4, 6),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.forest, size: 18, color: Colors.green[400]),
-                                          const SizedBox(width: 6),
-                                          Flexible(
-                                            child: Text(
-                                              provider.currentSpecies ?? context.l10n.logsSpeciesLabel,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
+                                const SizedBox(height: 4),
+                                // Species for new logs: a chip with a caret so it
+                                // reads as a picker, not as status.
+                                Material(
+                                  color: Colors.transparent,
+                                  shape: StadiumBorder(
+                                    side: BorderSide(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline,
+                                    ),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: InkWell(
+                                    onTap: () => _showSpeciesPicker(context),
+                                    child: Tooltip(
+                                      message: context.l10n.logsSpeciesLabel,
+                                      child: Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          10,
+                                          6,
+                                          4,
+                                          6,
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.forest,
+                                              size: 18,
+                                              color: Colors.green[400],
                                             ),
-                                          ),
-                                          const Icon(Icons.arrow_drop_down, size: 20),
-                                        ],
+                                            const SizedBox(width: 6),
+                                            Flexible(
+                                              child: Text(
+                                                provider.currentSpecies ??
+                                                    context
+                                                        .l10n
+                                                        .logsSpeciesLabel,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            const Icon(
+                                              Icons.arrow_drop_down,
+                                              size: 20,
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -590,7 +639,10 @@ class LogsTab extends StatelessWidget {
         final species = sortedSpecies[groupIndex];
         final entries = groupedLogs[species]!;
         final count = entries.length;
-        final totalVolume = entries.fold<double>(0, (sum, entry) => sum + entry.volume);
+        final totalVolume = entries.fold<double>(
+          0,
+          (sum, entry) => sum + entry.volume,
+        );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -601,25 +653,24 @@ class LogsTab extends StatelessWidget {
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: Row(
                 children: [
-                  Icon(
-                    Icons.forest,
-                    size: 20,
-                    color: Colors.green[400],
-                  ),
+                  Icon(Icons.forest, size: 20, color: Colors.green[400]),
                   const SizedBox(width: 8),
                   Text(
                     species,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                   const Spacer(),
                   Text(
-                    context.l10n.logsGroupSummary(count, Fmt.num(totalVolume, 2)),
+                    context.l10n.logsGroupSummary(
+                      count,
+                      Fmt.num(totalVolume, 2),
+                    ),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -648,24 +699,18 @@ class LogsTab extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.forest_outlined,
-                size: 48,
-                color: Colors.grey[400],
-              ),
+              Icon(Icons.forest_outlined, size: 48, color: Colors.grey[400]),
               const SizedBox(height: 12),
               Text(
                 context.l10n.logsEmptyTitle,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Colors.grey[500],
-                    ),
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(color: Colors.grey[500]),
               ),
               const SizedBox(height: 8),
               Text(
                 context.l10n.logsEmptyHint,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[400],
-                    ),
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: Colors.grey[400]),
               ),
             ],
           ),

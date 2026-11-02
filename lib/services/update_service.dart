@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:ota_update/ota_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+
 import '../config/distribution.dart';
 import '../l10n/l10n.dart';
 
@@ -80,7 +82,8 @@ class UpdateService extends ChangeNotifier {
       return false;
     }
 
-    if (_status == UpdateStatus.checking || _status == UpdateStatus.downloading) {
+    if (_status == UpdateStatus.checking ||
+        _status == UpdateStatus.downloading) {
       return false;
     }
 
@@ -97,9 +100,9 @@ class UpdateService extends ChangeNotifier {
         'https://api.github.com/repos/$_githubOwner/$_githubRepo/releases/latest',
       );
 
-      final response = await http.get(uri, headers: {
-        'Accept': 'application/vnd.github.v3+json',
-      }).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(uri, headers: {'Accept': 'application/vnd.github.v3+json'})
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 404) {
         // No releases yet
@@ -141,7 +144,8 @@ class UpdateService extends ChangeNotifier {
     if (tagName == null) return null;
 
     // Parse version from tag (e.g., "v1.0.1+2" or "v1.0.1")
-    final versionMatch = RegExp(r'v?(\d+\.\d+\.\d+)(?:\+(\d+))?').firstMatch(tagName);
+    final versionMatch = RegExp(r'v?(\d+\.\d+\.\d+)(?:\+(\d+))?')
+        .firstMatch(tagName);
     if (versionMatch == null) return null;
 
     final version = versionMatch.group(1)!;
@@ -166,7 +170,8 @@ class UpdateService extends ChangeNotifier {
       buildNumber: buildNumber,
       downloadUrl: downloadUrl,
       releaseNotes: data['body'] as String? ?? '',
-      publishedAt: DateTime.tryParse(data['published_at'] as String? ?? '') ??
+      publishedAt:
+          DateTime.tryParse(data['published_at'] as String? ?? '') ??
           DateTime.now(),
     );
   }
@@ -216,69 +221,72 @@ class UpdateService extends ChangeNotifier {
     try {
       OtaUpdate()
           .execute(
-        _latestRelease!.downloadUrl,
-        destinationFilename: 'gozdar-${_latestRelease!.version}.apk',
-      )
+            _latestRelease!.downloadUrl,
+            destinationFilename: 'gozdar-${_latestRelease!.version}.apk',
+          )
           .listen(
-        (event) {
-          switch (event.status) {
-            case OtaStatus.DOWNLOADING:
-              _downloadProgress = double.tryParse(event.value ?? '0') ?? 0;
-              _downloadProgress = _downloadProgress / 100;
-              notifyListeners();
-              break;
-            case OtaStatus.INSTALLING:
-              _status = UpdateStatus.readyToInstall;
-              _downloadProgress = 1.0;
-              notifyListeners();
-              break;
-            case OtaStatus.ALREADY_RUNNING_ERROR:
+            (event) {
+              switch (event.status) {
+                case OtaStatus.DOWNLOADING:
+                  _downloadProgress = double.tryParse(event.value ?? '0') ?? 0;
+                  _downloadProgress = _downloadProgress / 100;
+                  notifyListeners();
+                  break;
+                case OtaStatus.INSTALLING:
+                  _status = UpdateStatus.readyToInstall;
+                  _downloadProgress = 1.0;
+                  notifyListeners();
+                  break;
+                case OtaStatus.ALREADY_RUNNING_ERROR:
+                  _status = UpdateStatus.error;
+                  _errorMessage = L10n.current.updateErrorAlreadyRunning;
+                  notifyListeners();
+                  break;
+                case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
+                  _status = UpdateStatus.error;
+                  _errorMessage = L10n.current.updateErrorPermission;
+                  notifyListeners();
+                  break;
+                case OtaStatus.INTERNAL_ERROR:
+                  _status = UpdateStatus.error;
+                  _errorMessage =
+                      event.value ?? L10n.current.updateErrorInternal;
+                  notifyListeners();
+                  break;
+                case OtaStatus.DOWNLOAD_ERROR:
+                  _status = UpdateStatus.error;
+                  _errorMessage =
+                      event.value ?? L10n.current.updateErrorDownload;
+                  notifyListeners();
+                  break;
+                case OtaStatus.CHECKSUM_ERROR:
+                  _status = UpdateStatus.error;
+                  _errorMessage = L10n.current.updateErrorChecksum;
+                  notifyListeners();
+                  break;
+                case OtaStatus.INSTALLATION_DONE:
+                  // Installation completed successfully
+                  _status = UpdateStatus.idle;
+                  notifyListeners();
+                  break;
+                case OtaStatus.INSTALLATION_ERROR:
+                  _status = UpdateStatus.error;
+                  _errorMessage =
+                      event.value ?? L10n.current.updateErrorInstall;
+                  notifyListeners();
+                  break;
+                case OtaStatus.CANCELED:
+                  _status = UpdateStatus.available;
+                  notifyListeners();
+                  break;
+              }
+            },
+            onError: (e) {
               _status = UpdateStatus.error;
-              _errorMessage = L10n.current.updateErrorAlreadyRunning;
+              _errorMessage = e.toString();
               notifyListeners();
-              break;
-            case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
-              _status = UpdateStatus.error;
-              _errorMessage = L10n.current.updateErrorPermission;
-              notifyListeners();
-              break;
-            case OtaStatus.INTERNAL_ERROR:
-              _status = UpdateStatus.error;
-              _errorMessage = event.value ?? L10n.current.updateErrorInternal;
-              notifyListeners();
-              break;
-            case OtaStatus.DOWNLOAD_ERROR:
-              _status = UpdateStatus.error;
-              _errorMessage = event.value ?? L10n.current.updateErrorDownload;
-              notifyListeners();
-              break;
-            case OtaStatus.CHECKSUM_ERROR:
-              _status = UpdateStatus.error;
-              _errorMessage = L10n.current.updateErrorChecksum;
-              notifyListeners();
-              break;
-            case OtaStatus.INSTALLATION_DONE:
-              // Installation completed successfully
-              _status = UpdateStatus.idle;
-              notifyListeners();
-              break;
-            case OtaStatus.INSTALLATION_ERROR:
-              _status = UpdateStatus.error;
-              _errorMessage = event.value ?? L10n.current.updateErrorInstall;
-              notifyListeners();
-              break;
-            case OtaStatus.CANCELED:
-              _status = UpdateStatus.available;
-              notifyListeners();
-              break;
-          }
-        },
-        onError: (e) {
-          _status = UpdateStatus.error;
-          _errorMessage = e.toString();
-          notifyListeners();
-        },
-      );
+            },
+          );
     } catch (e) {
       _status = UpdateStatus.error;
       _errorMessage = e.toString();

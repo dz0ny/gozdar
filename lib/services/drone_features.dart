@@ -63,8 +63,22 @@ class FeatureMatch {
 }
 
 const _circle = <(int, int)>[
-  (0, -3), (1, -3), (2, -2), (3, -1), (3, 0), (3, 1), (2, 2), (1, 3),
-  (0, 3), (-1, 3), (-2, 2), (-3, 1), (-3, 0), (-3, -1), (-2, -2), (-1, -3),
+  (0, -3),
+  (1, -3),
+  (2, -2),
+  (3, -1),
+  (3, 0),
+  (3, 1),
+  (2, 2),
+  (1, 3),
+  (0, 3),
+  (-1, 3),
+  (-2, 2),
+  (-3, 1),
+  (-3, 0),
+  (-3, -1),
+  (-2, -2),
+  (-1, -3),
 ];
 
 const _briefRadius = 15;
@@ -121,7 +135,12 @@ List<Keypoint> detectKeypoints(
   found.sort((a, b) => b.$1.compareTo(a.$1));
   return [
     for (final f in found.take(maxPoints))
-      Keypoint(f.$2.toDouble(), f.$3.toDouble(), f.$1, _brief(smooth, w, f.$2, f.$3)),
+      Keypoint(
+        f.$2.toDouble(),
+        f.$3.toDouble(),
+        f.$1,
+        _brief(smooth, w, f.$2, f.$3),
+      ),
   ];
 }
 
@@ -180,7 +199,8 @@ Float32List _boxBlur(Float32List g, int w, int h) {
       final b = integral[(y - r) * (w + 1) + x + r + 1];
       final c = integral[(y + r + 1) * (w + 1) + x - r];
       final d = integral[(y + r + 1) * (w + 1) + x + r + 1];
-      out[y * w + x] = ((d - b - c + a) / ((2 * r + 1) * (2 * r + 1))).toDouble();
+      out[y * w + x] = ((d - b - c + a) / ((2 * r + 1) * (2 * r + 1)))
+          .toDouble();
     }
   }
   return out;

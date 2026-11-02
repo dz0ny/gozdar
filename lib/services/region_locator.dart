@@ -45,7 +45,9 @@ class RegionLocator {
         final props = (feat['properties'] as Map?) ?? const {};
         final name = (props['name'] ?? '').toString();
         final code = (props['code'] ?? '').toString();
-        final rings = _ringsFromGeometry(feat['geometry'] as Map<String, dynamic>);
+        final rings = _ringsFromGeometry(
+          feat['geometry'] as Map<String, dynamic>,
+        );
         if (rings.isEmpty) continue;
         var mnLon = double.infinity, mnLat = double.infinity;
         var mxLon = -double.infinity, mxLat = -double.infinity;
@@ -57,15 +59,17 @@ class RegionLocator {
             if (p.latitude > mxLat) mxLat = p.latitude;
           }
         }
-        out.add(RegionInfo(
-          name: name,
-          code: code,
-          rings: rings,
-          minLon: mnLon,
-          minLat: mnLat,
-          maxLon: mxLon,
-          maxLat: mxLat,
-        ));
+        out.add(
+          RegionInfo(
+            name: name,
+            code: code,
+            rings: rings,
+            minLon: mnLon,
+            minLat: mnLat,
+            maxLon: mxLon,
+            maxLat: mxLat,
+          ),
+        );
       }
       _regions = out;
     } catch (_) {
@@ -80,7 +84,10 @@ class RegionLocator {
     if (regions == null) return null;
     final lon = point.longitude, lat = point.latitude;
     for (final r in regions) {
-      if (lon < r.minLon || lon > r.maxLon || lat < r.minLat || lat > r.maxLat) {
+      if (lon < r.minLon ||
+          lon > r.maxLon ||
+          lat < r.minLat ||
+          lat > r.maxLat) {
         continue;
       }
       var inside = false;

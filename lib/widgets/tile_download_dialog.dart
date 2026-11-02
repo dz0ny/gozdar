@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+
 import '../l10n/l10n.dart';
 import '../utils/formats.dart';
 
@@ -150,11 +151,13 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
   int get _estimatedTileCount {
     return _downloadableLayers.fold<int>(
       0,
-      (sum, layer) => sum + _tileCacheService.estimateTileCount(
-        bounds: widget.bounds,
-        minZoom: widget.currentZoom.clamp(1, layer.downloadMaxZoom).toInt(),
-        maxZoom: layer.downloadMaxZoom,
-      ),
+      (sum, layer) =>
+          sum +
+          _tileCacheService.estimateTileCount(
+            bounds: widget.bounds,
+            minZoom: widget.currentZoom.clamp(1, layer.downloadMaxZoom).toInt(),
+            maxZoom: layer.downloadMaxZoom,
+          ),
     );
   }
 
@@ -185,7 +188,9 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
               (layer) => TileDownloadRequest(
                 isSlovenian: layer.isSlovenian,
                 urlTemplate: layer.resolveUrlTemplate(_workerUrl)!,
-                minZoom: widget.currentZoom.clamp(1, layer.downloadMaxZoom).toInt(),
+                minZoom: widget.currentZoom
+                    .clamp(1, layer.downloadMaxZoom)
+                    .toInt(),
                 maxZoom: layer.downloadMaxZoom,
                 layerName: layer.name,
               ),
@@ -259,9 +264,9 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       await _loadCacheStats();
       await _refreshLocalStyles();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.mapwCacheCleared)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.l10n.mapwCacheCleared)));
       }
     }
   }
@@ -287,7 +292,10 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
 
   void _syncStyleFromPeers(PeerCatalog catalog, StyleInfo style) {
     final peers = _peerCatalogs
-        .where((entry) => entry.styles.any((candidate) => candidate.hash == style.hash))
+        .where(
+          (entry) =>
+              entry.styles.any((candidate) => candidate.hash == style.hash),
+        )
         .map((entry) => entry.peer)
         .toList();
 
@@ -299,40 +307,57 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     });
 
     _syncSubscription = _tileSharingService
-        .syncStyleFromPeers(peers: peers, styleHash: style.hash, styleMeta: style)
+        .syncStyleFromPeers(
+          peers: peers,
+          styleHash: style.hash,
+          styleMeta: style,
+        )
         .listen((event) async {
-      if (!mounted) return;
-      if (event is PeerSyncStarted) {
-        setState(() {
-          _syncStatus = L10n.current.mapwSyncing(style.displayName);
-          _syncProgress = event.totalTiles == 0 ? 1 : 0;
+          if (!mounted) return;
+          if (event is PeerSyncStarted) {
+            setState(() {
+              _syncStatus = L10n.current.mapwSyncing(style.displayName);
+              _syncProgress = event.totalTiles == 0 ? 1 : 0;
+            });
+          } else if (event is PeerSyncTileDownloaded) {
+            setState(() {
+              _syncProgress = event.total == 0
+                  ? 1
+                  : event.downloaded / event.total;
+              _syncStatus = L10n.current.mapwSyncDownloaded(
+                event.downloaded,
+                event.total,
+              );
+            });
+          } else if (event is PeerSyncTileSkipped) {
+            setState(() {
+              _syncProgress = event.total == 0
+                  ? 1
+                  : event.skipped / event.total;
+              _syncStatus = L10n.current.mapwSyncFromCache(
+                event.skipped,
+                event.total,
+              );
+            });
+          } else if (event is PeerSyncComplete) {
+            await _loadCacheStats();
+            await _refreshLocalStyles();
+            setState(() {
+              _isSyncing = false;
+              _syncProgress = 1;
+              _syncStatus = L10n.current.mapwSyncDone(
+                event.downloaded,
+                event.skipped,
+                event.failed,
+              );
+            });
+          } else if (event is PeerSyncCancelled) {
+            setState(() {
+              _isSyncing = false;
+              _syncStatus = L10n.current.mapwSyncCancelled;
+            });
+          }
         });
-      } else if (event is PeerSyncTileDownloaded) {
-        setState(() {
-          _syncProgress = event.total == 0 ? 1 : event.downloaded / event.total;
-          _syncStatus = L10n.current.mapwSyncDownloaded(event.downloaded, event.total);
-        });
-      } else if (event is PeerSyncTileSkipped) {
-        setState(() {
-          _syncProgress = event.total == 0 ? 1 : event.skipped / event.total;
-          _syncStatus = L10n.current.mapwSyncFromCache(event.skipped, event.total);
-        });
-      } else if (event is PeerSyncComplete) {
-        await _loadCacheStats();
-        await _refreshLocalStyles();
-        setState(() {
-          _isSyncing = false;
-          _syncProgress = 1;
-          _syncStatus =
-              L10n.current.mapwSyncDone(event.downloaded, event.skipped, event.failed);
-        });
-      } else if (event is PeerSyncCancelled) {
-        setState(() {
-          _isSyncing = false;
-          _syncStatus = L10n.current.mapwSyncCancelled;
-        });
-      }
-    });
   }
 
   void _showSharingSheet() {
@@ -456,7 +481,8 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                           IconButton(
                             icon: const Icon(Icons.add, size: 20),
                             tooltip: context.l10n.mapwAddDeviceManually,
-                            onPressed: () => _showAddPeerDialog(context, refreshSheet),
+                            onPressed: () =>
+                                _showAddPeerDialog(context, refreshSheet),
                           ),
                         ],
                       ),
@@ -466,24 +492,33 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
                           context.l10n.mapwNoDevicesFound,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
+                              ),
                         ),
                       ),
-                    ..._peerCatalogs.map((catalog) => _buildPeerCard(context, catalog, refreshSheet)),
+                    ..._peerCatalogs.map(
+                      (catalog) =>
+                          _buildPeerCard(context, catalog, refreshSheet),
+                    ),
                     ..._discoveredPeers
-                        .where((peer) => !_peerCatalogs.any((catalog) => catalog.peer == peer))
+                        .where(
+                          (peer) => !_peerCatalogs.any(
+                            (catalog) => catalog.peer == peer,
+                          ),
+                        )
                         .map(
                           (peer) => ListTile(
                             leading: const Icon(Icons.devices),
                             title: Text(peer.ipAddress),
                             subtitle: Text(context.l10n.mapwFetchingCatalog),
                             trailing: IconButton(
-                              icon: const Icon(Icons.remove_circle_outline, size: 20),
+                              icon: const Icon(
+                                Icons.remove_circle_outline,
+                                size: 20,
+                              ),
                               onPressed: () {
                                 _tileSharingService.removePeer(peer);
                                 refreshSheet();
@@ -567,17 +602,18 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                 child: Text(
                   context.l10n.mapwNoCachedTilesOnDevice,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
+                    color: Theme.of(context).colorScheme.onSurface
                         .withValues(alpha: 0.6),
                   ),
                 ),
               ),
             ...catalog.styles.map((style) {
-              final localMatch =
-                  _localStyles.where((localStyle) => localStyle.hash == style.hash);
-              final localCount = localMatch.isNotEmpty ? localMatch.first.tileCount : 0;
+              final localMatch = _localStyles.where(
+                (localStyle) => localStyle.hash == style.hash,
+              );
+              final localCount = localMatch.isNotEmpty
+                  ? localMatch.first.tileCount
+                  : 0;
               final missingTiles = style.tileCount - localCount;
 
               return ListTile(
@@ -609,7 +645,11 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
                               : '+${_formatNumber(missingTiles)}',
                         ),
                       )
-                    : const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                    : const Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                        size: 20,
+                      ),
               );
             }),
           ],
@@ -618,7 +658,10 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     );
   }
 
-  Future<void> _showAddPeerDialog(BuildContext context, VoidCallback refreshSheet) async {
+  Future<void> _showAddPeerDialog(
+    BuildContext context,
+    VoidCallback refreshSheet,
+  ) async {
     final controller = TextEditingController();
     await showDialog<void>(
       context: context,
@@ -654,7 +697,10 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
     refreshSheet();
   }
 
-  Future<void> _confirmDeleteStyle(BuildContext context, StyleInfo style) async {
+  Future<void> _confirmDeleteStyle(
+    BuildContext context,
+    StyleInfo style,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -672,7 +718,10 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(context.l10n.commonDelete, style: const TextStyle(color: Colors.red)),
+            child: Text(
+              context.l10n.commonDelete,
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -759,7 +808,10 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
               children: [
                 Text(
                   context.l10n.mapwTileDownloadTitle,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   context.l10n.mapwForOfflineWork,
@@ -773,10 +825,14 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
               isLabelVisible: _discoveredPeers.isNotEmpty,
               label: Text('${_discoveredPeers.length}'),
               child: Icon(
-                _isServerRunning ? Icons.wifi_tethering : Icons.wifi_tethering_off,
+                _isServerRunning
+                    ? Icons.wifi_tethering
+                    : Icons.wifi_tethering_off,
               ),
             ),
-            tooltip: _isServerRunning ? context.l10n.mapwSharingEnabled : context.l10n.mapwSharingDisabled,
+            tooltip: _isServerRunning
+                ? context.l10n.mapwSharingEnabled
+                : context.l10n.mapwSharingDisabled,
             onPressed: _showSharingSheet,
           ),
         ],
@@ -795,7 +851,9 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
           color: colorScheme.primary,
         ),
         title: Text(
-          widget.layers.length > 1 ? context.l10n.mapwLayersShort : context.l10n.mapwTabBase,
+          widget.layers.length > 1
+              ? context.l10n.mapwLayersShort
+              : context.l10n.mapwTabBase,
           style: TextStyle(color: colorScheme.onSurface),
         ),
         subtitle: Text(
@@ -812,7 +870,10 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       color: colorScheme.surfaceContainerHighest,
       child: ListTile(
         leading: Icon(Icons.zoom_in, color: colorScheme.primary),
-        title: Text(context.l10n.mapwZoomLevel, style: TextStyle(color: colorScheme.onSurface)),
+        title: Text(
+          context.l10n.mapwZoomLevel,
+          style: TextStyle(color: colorScheme.onSurface),
+        ),
         subtitle: Text(
           '$_minZoom → $_maxZoom',
           style: TextStyle(color: colorScheme.onSurfaceVariant),
@@ -827,7 +888,10 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       color: colorScheme.surfaceContainerHighest,
       child: ListTile(
         leading: Icon(Icons.grid_view, color: colorScheme.primary),
-        title: Text(context.l10n.mapwEstimate, style: TextStyle(color: colorScheme.onSurface)),
+        title: Text(
+          context.l10n.mapwEstimate,
+          style: TextStyle(color: colorScheme.onSurface),
+        ),
         subtitle: Text(
           context.l10n.mapwEstimatedTilesAndSize(
             _estimatedTileCount,
@@ -870,7 +934,8 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
           style: const TextStyle(fontWeight: FontWeight.w500),
           textAlign: TextAlign.center,
         ),
-        if (_tileCacheService.currentDownloadVisualState.currentLayerName != null) ...[
+        if (_tileCacheService.currentDownloadVisualState.currentLayerName !=
+            null) ...[
           const SizedBox(height: 4),
           Text(
             _tileCacheService.currentDownloadVisualState.currentLayerName!,
@@ -918,7 +983,10 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
           const SizedBox(height: 12),
           Text(
             context.l10n.mapwLayerNotDownloadable,
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade900),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.orange.shade900,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -944,7 +1012,10 @@ class _TileDownloadDialogState extends State<TileDownloadDialog> {
       color: colorScheme.surfaceContainerLow,
       child: ListTile(
         leading: Icon(Icons.storage, color: colorScheme.onSurfaceVariant),
-        title: Text(context.l10n.mapwCache, style: TextStyle(color: colorScheme.onSurface)),
+        title: Text(
+          context.l10n.mapwCache,
+          style: TextStyle(color: colorScheme.onSurface),
+        ),
         subtitle: Text(
           context.l10n.mapwCacheStats('$totalTiles', '$totalSizeMB'),
           style: TextStyle(color: colorScheme.onSurfaceVariant),

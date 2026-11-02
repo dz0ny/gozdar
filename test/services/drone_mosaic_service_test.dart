@@ -15,7 +15,8 @@ Future<File> solidPng(Directory dir, String name, ui.Color color) async {
   );
   final image = await recorder.endRecording().toImage(64, 48);
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
-  return File('${dir.path}/$name')..writeAsBytesSync(data!.buffer.asUint8List());
+  return File('${dir.path}/$name')
+    ..writeAsBytesSync(data!.buffer.asUint8List());
 }
 
 void main() {
@@ -45,10 +46,10 @@ void main() {
         height: 48,
       );
 
-      final img = await DroneMosaicService.instance.render(
-        [photo(red, 14.5005), photo(blue, 14.5021)],
-        square,
-      );
+      final img = await DroneMosaicService.instance.render([
+        photo(red, 14.5005),
+        photo(blue, 14.5021),
+      ], square);
       expect(img, isNotNull);
 
       final codec = await ui.instantiateImageCodec(img!.png);

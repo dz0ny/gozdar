@@ -14,7 +14,9 @@ void main() {
     await OnboardingService.initialize();
   });
 
-  testWidgets('App builds and shows navigation bar', (WidgetTester tester) async {
+  testWidgets('App builds and shows navigation bar', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const GozdarApp());
     await tester.pumpAndSettle();
 

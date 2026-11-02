@@ -106,36 +106,36 @@ class Auction {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'publicationId': publicationId,
-        'sifko': sifko,
-        'koName': koName,
-        'parcela': parcela,
-        'area': area,
-        'startingPrice': startingPrice,
-        'estimatedPrice': estimatedPrice,
-        'share': share,
-        'saleStartAt': saleStartAt.toIso8601String(),
-        'status': status,
-        'court': court,
-        'kind': kind,
-      };
+    'id': id,
+    'publicationId': publicationId,
+    'sifko': sifko,
+    'koName': koName,
+    'parcela': parcela,
+    'area': area,
+    'startingPrice': startingPrice,
+    'estimatedPrice': estimatedPrice,
+    'share': share,
+    'saleStartAt': saleStartAt.toIso8601String(),
+    'status': status,
+    'court': court,
+    'kind': kind,
+  };
 
   static Auction fromJson(Map<String, dynamic> j) => Auction(
-        id: j['id'] as String,
-        publicationId: j['publicationId'] as String? ?? '',
-        sifko: j['sifko'] as int,
-        koName: j['koName'] as String?,
-        parcela: j['parcela'] as String,
-        area: (j['area'] as num?)?.toDouble(),
-        startingPrice: (j['startingPrice'] as num?)?.toDouble(),
-        estimatedPrice: (j['estimatedPrice'] as num?)?.toDouble(),
-        share: j['share'] as String?,
-        saleStartAt: DateTime.parse(j['saleStartAt'] as String),
-        status: j['status'] as String,
-        court: j['court'] as String?,
-        kind: j['kind'] as String?,
-      );
+    id: j['id'] as String,
+    publicationId: j['publicationId'] as String? ?? '',
+    sifko: j['sifko'] as int,
+    koName: j['koName'] as String?,
+    parcela: j['parcela'] as String,
+    area: (j['area'] as num?)?.toDouble(),
+    startingPrice: (j['startingPrice'] as num?)?.toDouble(),
+    estimatedPrice: (j['estimatedPrice'] as num?)?.toDouble(),
+    share: j['share'] as String?,
+    saleStartAt: DateTime.parse(j['saleStartAt'] as String),
+    status: j['status'] as String,
+    court: j['court'] as String?,
+    kind: j['kind'] as String?,
+  );
 }
 
 /// Parcels up for sale in Slovenian court auctions, from the public list of
@@ -145,8 +145,7 @@ class AuctionService extends ChangeNotifier {
   AuctionService._();
   static final AuctionService instance = AuctionService._();
 
-  static const _listUrl =
-      'https://api.sodnedrazbe.si/public/publication/list';
+  static const _listUrl = 'https://api.sodnedrazbe.si/public/publication/list';
   static const _pageSize = 500;
   static const _timeout = Duration(seconds: 30);
   static const _maxAge = Duration(days: 1);
@@ -218,8 +217,8 @@ class AuctionService extends ChangeNotifier {
   /// Loads the cached list, refetching it when it is a day old. Never
   /// throws; an old list beats none when sodnedrazbe.si is unreachable.
   Future<void> ensureLoaded() {
-    final fresh = _fetchedAt != null &&
-        DateTime.now().difference(_fetchedAt!) < _maxAge;
+    final fresh =
+        _fetchedAt != null && DateTime.now().difference(_fetchedAt!) < _maxAge;
     if (fresh) return Future.value();
     return _loading ??= _load().whenComplete(() => _loading = null);
   }
@@ -230,15 +229,14 @@ class AuctionService extends ChangeNotifier {
     if (useCache && _fetchedAt == null) {
       stored = await _read();
       if (stored != null) _apply(stored);
-      final fresh = _fetchedAt != null &&
+      final fresh =
+          _fetchedAt != null &&
           DateTime.now().difference(_fetchedAt!) < _maxAge;
       if (fresh) return;
     }
     final rows = await _fetchAll();
     if (rows == null) return;
-    final auctions = [
-      for (final r in rows) ?Auction.fromRow(r),
-    ];
+    final auctions = [for (final r in rows) ?Auction.fromRow(r)];
     _setAuctions(auctions, DateTime.now());
     if (useCache) unawaited(_write());
   }
@@ -276,7 +274,8 @@ class AuctionService extends ChangeNotifier {
   }
 
   void _setAuctions(List<Auction> auctions, DateTime fetchedAt) {
-    _auctions = auctions..sort((a, b) => a.saleStartAt.compareTo(b.saleStartAt));
+    _auctions = auctions
+      ..sort((a, b) => a.saleStartAt.compareTo(b.saleStartAt));
     _fetchedAt = fetchedAt;
     final byParcel = <String, List<Auction>>{};
     for (final a in auctions) {
@@ -306,20 +305,21 @@ class AuctionService extends ChangeNotifier {
     final at = DateTime.tryParse(stored['fetchedAt'] as String? ?? '');
     final list = stored['auctions'] as List?;
     if (at == null || list == null) return;
-    _setAuctions(
-      [for (final j in list.cast<Map<String, dynamic>>()) Auction.fromJson(j)],
-      at,
-    );
+    _setAuctions([
+      for (final j in list.cast<Map<String, dynamic>>()) Auction.fromJson(j),
+    ], at);
   }
 
   Future<void> _write() async {
     try {
       final file = await _file();
       await file.parent.create(recursive: true);
-      await file.writeAsString(jsonEncode({
-        'fetchedAt': _fetchedAt?.toIso8601String(),
-        'auctions': [for (final a in _auctions) a.toJson()],
-      }));
+      await file.writeAsString(
+        jsonEncode({
+          'fetchedAt': _fetchedAt?.toIso8601String(),
+          'auctions': [for (final a in _auctions) a.toJson()],
+        }),
+      );
     } catch (e) {
       debugPrint('AuctionService cache write failed: $e');
     }

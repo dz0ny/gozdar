@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/parcel.dart';
 import '../services/cadastral_service.dart';
 import '../services/hr_owner_service.dart';
@@ -64,52 +65,48 @@ class ParcelFoundSheet extends StatelessWidget {
 
   /// First owner and how many more, the address below; tap lists everyone.
   Widget _ownerText(OwnerInfo info, ThemeData theme) => Builder(
-        builder: (context) {
-          final many = info.owners.length > 1;
-          return InkWell(
-            onTap: many
-                ? () => OwnersSheet.show(
-                      context,
-                      owners: info.owners,
-                      info: info,
-                    )
-                : null,
-            borderRadius: BorderRadius.circular(6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    builder: (context) {
+      final many = info.owners.length > 1;
+      return InkWell(
+        onTap: many
+            ? () => OwnersSheet.show(context, owners: info.owners, info: info)
+            : null,
+        borderRadius: BorderRadius.circular(6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        ownerSummary(info.owners),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyLarge,
-                      ),
-                    ),
-                    if (many)
-                      Icon(
-                        Icons.chevron_right,
-                        size: 20,
-                        color: theme.colorScheme.primary,
-                      ),
-                  ],
-                ),
-                if (info.address != null)
-                  Text(
-                    info.address!,
+                Flexible(
+                  child: Text(
+                    ownerSummary(info.owners),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                ),
+                if (many)
+                  Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: theme.colorScheme.primary,
                   ),
               ],
             ),
-          );
-        },
+            if (info.address != null)
+              Text(
+                info.address!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
       );
+    },
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +119,8 @@ class ParcelFoundSheet extends StatelessWidget {
     );
     final ko = KoLocator.instance.bySifko(sifko);
     // "BABNO POLJE (1651)" as in the Gozd list; "KO 1651" without a name.
-    final koLabel = ko?.label ??
+    final koLabel =
+        ko?.label ??
         (ownerInfo?.koName != null
             ? '${ownerInfo!.koName} (${wfsParcel.koNumber})'
             : context.l10n.parcelFoundKo(wfsParcel.koNumber));
@@ -140,7 +138,11 @@ class ParcelFoundSheet extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: cs.outline.withValues(alpha: 0.3)),
           boxShadow: const [
-            BoxShadow(color: Colors.black38, blurRadius: 12, offset: Offset(0, 2)),
+            BoxShadow(
+              color: Colors.black38,
+              blurRadius: 12,
+              offset: Offset(0, 2),
+            ),
           ],
         ),
         child: Column(
@@ -212,8 +214,7 @@ class ParcelFoundSheet extends StatelessWidget {
                               return const SizedBox.shrink();
                             }
                             return InkWell(
-                              onTap: () =>
-                                  ParcelValuationCard.show(context, v),
+                              onTap: () => ParcelValuationCard.show(context, v),
                               borderRadius: BorderRadius.circular(6),
                               child: Row(
                                 children: [

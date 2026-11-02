@@ -74,7 +74,8 @@ class DroneMissionService {
     // Heading h (clockwise from north): line direction = (sin h, cos h).
     // Rotate so that direction maps to +x.
     (double, double) toLocal(LatLng p) {
-      final x = (p.longitude - origin.longitude) * math.pi / 180 * _earthR * cosLat;
+      final x =
+          (p.longitude - origin.longitude) * math.pi / 180 * _earthR * cosLat;
       final y = (p.latitude - origin.latitude) * math.pi / 180 * _earthR;
       return (x * s + y * c, x * c - y * s);
     }
@@ -223,7 +224,8 @@ class DroneMissionService {
       return b.toString();
     }
 
-    final missionConfig = '''
+    final missionConfig =
+        '''
     <wpml:missionConfig>
       <wpml:flyToWaylineMode>safely</wpml:flyToWaylineMode>
       <wpml:finishAction>goHome</wpml:finishAction>
@@ -232,7 +234,8 @@ class DroneMissionService {
       <wpml:globalTransitionalSpeed>${options.speedMs}</wpml:globalTransitionalSpeed>
     </wpml:missionConfig>''';
 
-    final template = '''<?xml version="1.0" encoding="UTF-8"?>
+    final template =
+        '''<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:wpml="http://www.dji.com/wpmz/1.0.6">
   <Document>
     <wpml:author>Gozdar</wpml:author>
@@ -261,7 +264,8 @@ ${placemarks(executable: false)}
   </Document>
 </kml>''';
 
-    final waylines = '''<?xml version="1.0" encoding="UTF-8"?>
+    final waylines =
+        '''<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:wpml="http://www.dji.com/wpmz/1.0.6">
   <Document>
 $missionConfig

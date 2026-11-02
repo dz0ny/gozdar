@@ -194,7 +194,8 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   void _onSuggestionTap(ParcelSuggestion s) {
     if (s.kind == ParcelSuggestionKind.ko) {
       // Keep a typed parcel number, drop the words that named the KO.
-      final number = ParsedParcelQuery.parse(_controller.text.text).parcelNumber;
+      final number = ParsedParcelQuery.parse(_controller.text.text)
+          .parcelNumber;
       _setKo(s.ko, keepText: number ?? '');
     } else {
       _open(s);
@@ -349,12 +350,16 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
             .where((w) => w.isNotEmpty)
             .toList();
         bool matches(Auction a) {
-          final hay = KoLocator.fold('${a.sifko} ${a.koName ?? ''} ${a.parcela}');
+          final hay = KoLocator.fold(
+            '${a.sifko} ${a.koName ?? ''} ${a.parcela}',
+          );
           return words.every(hay.contains);
         }
 
-        final list = [for (final a in all) if (matches(a)) a]
-          ..sort((a, b) => _distance(a).compareTo(_distance(b)));
+        final list = [
+          for (final a in all)
+            if (matches(a)) a,
+        ]..sort((a, b) => _distance(a).compareTo(_distance(b)));
         if (list.isEmpty) {
           return _hint(context, Icons.search_off, context.l10n.auctionsEmpty);
         }
@@ -369,8 +374,8 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
                 child: Text(
                   context.l10n.auctionsHint,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               );
             }
@@ -401,9 +406,8 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         '${context.l10n.mapTabParcelShort(a.parcela)} · $ko',
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+        style: Theme.of(context).textTheme.titleMedium
+            ?.copyWith(fontWeight: FontWeight.w600),
       ),
       subtitle: Text(
         [
@@ -448,7 +452,9 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
                   context.l10n.parcelFoundKo(ko.label),
                   overflow: TextOverflow.ellipsis,
                 ),
-                tooltip: _koFromMap ? context.l10n.parcelSearchByMapPosition : null,
+                tooltip: _koFromMap
+                    ? context.l10n.parcelSearchByMapPosition
+                    : null,
                 deleteButtonTooltipMessage: context.l10n.parcelSearchRemoveKo,
                 onDeleted: () => _setKo(null),
               ),
@@ -492,7 +498,8 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   Widget _body(BuildContext context) {
     final rows = _controller.suggestions;
     final parsed = ParsedParcelQuery.parse(_controller.text.text);
-    final needsKo = parsed.parcelNumber != null &&
+    final needsKo =
+        parsed.parcelNumber != null &&
         _controller.ko == null &&
         !rows.any((s) => s.kind == ParcelSuggestionKind.parcel);
 
@@ -523,9 +530,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         if (needsKo && i == 0) {
           return ListTile(
             leading: const Icon(Icons.info_outline),
-            title: Text(
-              context.l10n.parcelSearchNeedsKo(parsed.parcelNumber!),
-            ),
+            title: Text(context.l10n.parcelSearchNeedsKo(parsed.parcelNumber!)),
           );
         }
         return _tile(context, rows[i - (needsKo ? 1 : 0)]);
@@ -548,9 +553,8 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         s.title,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+        style: Theme.of(context).textTheme.titleMedium
+            ?.copyWith(fontWeight: FontWeight.w600),
       ),
       subtitle: s.subtitle == null
           ? null
@@ -591,9 +595,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
             Text(
               text,
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
+              style: Theme.of(context).textTheme.bodyMedium
                   ?.copyWith(color: cs.onSurfaceVariant),
             ),
             if (action != null) ...[const SizedBox(height: 16), action],

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
+
 import 'package:geolocator/geolocator.dart';
+
 import '../models/log_batch.dart';
 import '../services/location_settings.dart';
 import '../utils/formats.dart';
@@ -22,9 +25,7 @@ class SaveBatchSheet extends StatefulWidget {
 
   /// Default name offered in the field: "Hlodi 18. 10. 2026".
   static String defaultName(DateTime now) =>
-      L10n.current.logsSaveSheetDefaultName(
-        Fmt.date(now),
-      );
+      L10n.current.logsSaveSheetDefaultName(Fmt.date(now));
 
   @override
   State<SaveBatchSheet> createState() => _SaveBatchSheetState();
@@ -90,19 +91,20 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
     final name = _nameController.text.trim();
     setState(() => _isSaving = true);
     try {
-      await widget.onSave(LogBatch(
-        name: name.isEmpty ? null : name,
-        latitude: _latitude,
-        longitude: _longitude,
-        totalVolume: widget.totalVolume,
-        logCount: widget.logCount,
-      ));
+      await widget.onSave(
+        LogBatch(
+          name: name.isEmpty ? null : name,
+          latitude: _latitude,
+          longitude: _longitude,
+          totalVolume: widget.totalVolume,
+          logCount: widget.logCount,
+        ),
+      );
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.logsSaveError)),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(context.l10n.logsSaveError)));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -133,9 +135,7 @@ class _SaveBatchSheetState extends State<SaveBatchSheet> {
               widget.logCount,
               Fmt.num(widget.totalVolume, 2),
             ),
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
+            style: Theme.of(context).textTheme.bodyMedium
                 ?.copyWith(color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 16),

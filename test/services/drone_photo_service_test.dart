@@ -13,7 +13,8 @@ List<int> fakeJpeg({
   int width = 8192,
   int height = 6144,
 }) {
-  final xmp = '<x:xmpmeta><rdf:Description '
+  final xmp =
+      '<x:xmpmeta><rdf:Description '
       'drone-dji:GpsLatitude="$lat" drone-dji:GpsLongitude="$lon" '
       'drone-dji:RelativeAltitude="$relAlt" '
       'drone-dji:GimbalYawDegree="$yaw" '
@@ -76,14 +77,16 @@ void main() {
     expect(scan.total, 4);
   });
 
-  test('a photo just outside whose footprint overlaps the edge is kept',
-      () async {
-    final dir = await Directory.systemTemp.createTemp('photos_edge');
-    addTearDown(() => dir.delete(recursive: true));
-    // About 11 m north of the parcel. The kept footprint reaches 20 m.
-    final f = File('${dir.path}/edge.jpg')
-      ..writeAsBytesSync(fakeJpeg(lat: 46.0519, lon: 14.5013));
-    final scan = await svc.readAll([f], square);
-    expect(scan.inside, hasLength(1));
-  });
+  test(
+    'a photo just outside whose footprint overlaps the edge is kept',
+    () async {
+      final dir = await Directory.systemTemp.createTemp('photos_edge');
+      addTearDown(() => dir.delete(recursive: true));
+      // About 11 m north of the parcel. The kept footprint reaches 20 m.
+      final f = File('${dir.path}/edge.jpg')
+        ..writeAsBytesSync(fakeJpeg(lat: 46.0519, lon: 14.5013));
+      final scan = await svc.readAll([f], square);
+      expect(scan.inside, hasLength(1));
+    },
+  );
 }

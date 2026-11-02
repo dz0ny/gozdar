@@ -5,22 +5,21 @@ Map<String, dynamic> _row({
   String status = 'waiting_start',
   Object? ko = '2301',
   Object? parcel = '868',
-}) =>
-    {
-      'id': 'b2c60bcc-6511-4d61-aba6-c81c9647f8c8',
-      'publicationId': '20260916-0104-007',
-      'status': status,
-      'saleStartAt': '2027-11-24T12:30:01Z',
-      'cadastralMunicipalityCode': ko,
-      'cadastralMunicipalityName': 'RAVNICA',
-      'parcelNumber': parcel,
-      'area': '209',
-      'startingPrice': '160',
-      'estimatedPrice': '160',
-      'shareInTheBasicLegalPosition': '1/1',
-      'courtRelation': {'valueContent': 'Okrožno sodišče v Novi Gorici'},
-      'subjectTypeRelation': {'valueContent': 'Zemljišča'},
-    };
+}) => {
+  'id': 'b2c60bcc-6511-4d61-aba6-c81c9647f8c8',
+  'publicationId': '20260916-0104-007',
+  'status': status,
+  'saleStartAt': '2027-11-24T12:30:01Z',
+  'cadastralMunicipalityCode': ko,
+  'cadastralMunicipalityName': 'RAVNICA',
+  'parcelNumber': parcel,
+  'area': '209',
+  'startingPrice': '160',
+  'estimatedPrice': '160',
+  'shareInTheBasicLegalPosition': '1/1',
+  'courtRelation': {'valueContent': 'Okrožno sodišče v Novi Gorici'},
+  'subjectTypeRelation': {'valueContent': 'Zemljišča'},
+};
 
 void main() {
   group('Auction.fromRow', () {

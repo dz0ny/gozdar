@@ -134,7 +134,8 @@ class AuctionSheet extends StatelessWidget {
             SheetHeader(
               icon: Icons.gavel,
               title: l10n.auctionTitle,
-              subtitle: '${l10n.mapTabParcelShort(a.parcela)}\n'
+              subtitle:
+                  '${l10n.mapTabParcelShort(a.parcela)}\n'
                   '${l10n.parcelFoundKo(ko)}',
             ),
             const SizedBox(height: 12),
@@ -162,16 +163,26 @@ class AuctionSheet extends StatelessWidget {
                     ),
                   Divider(height: 32, color: cs.outlineVariant),
                   if (a.estimatedPrice != null)
-                    _row(context, l10n.auctionEstimated,
-                        '${euros(context, a.estimatedPrice!)} €'),
+                    _row(
+                      context,
+                      l10n.auctionEstimated,
+                      '${euros(context, a.estimatedPrice!)} €',
+                    ),
                   if (a.share != null)
                     _row(context, l10n.auctionShare, a.share!),
                   if (a.area != null)
-                    _row(context, l10n.mapwArea,
-                        '${euros(context, a.area!)} m²'),
-                  _row(context, l10n.auctionDate,
-                      auctionDate(context, a.saleStartAt)),
-                  if (a.court != null) _row(context, l10n.auctionCourt, a.court!),
+                    _row(
+                      context,
+                      l10n.mapwArea,
+                      '${euros(context, a.area!)} m²',
+                    ),
+                  _row(
+                    context,
+                    l10n.auctionDate,
+                    auctionDate(context, a.saleStartAt),
+                  ),
+                  if (a.court != null)
+                    _row(context, l10n.auctionCourt, a.court!),
                   Divider(height: 32, color: cs.outlineVariant),
                   Text(l10n.auctionSource, style: muted),
                   Align(

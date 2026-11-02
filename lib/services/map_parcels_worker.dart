@@ -67,16 +67,18 @@ class MapParcelsWorker {
     final id = _nextId++;
     final reply = Completer<_Reply>();
     _pending[id] = reply;
-    send.send(_Request(
-      id: id,
-      config: config,
-      west: bounds.west,
-      east: bounds.east,
-      south: bounds.south,
-      north: bounds.north,
-      limit: limit,
-      categories: categories,
-    ));
+    send.send(
+      _Request(
+        id: id,
+        config: config,
+        west: bounds.west,
+        east: bounds.east,
+        south: bounds.south,
+        north: bounds.north,
+        limit: limit,
+        categories: categories,
+      ),
+    );
     final r = await reply.future;
     if (r.error != null) throw StateError(r.error!);
 
@@ -126,8 +128,11 @@ class MapParcelsWorker {
         _pending.remove(msg.id)?.complete(msg);
       }
     });
-    await Isolate.spawn(_workerMain, _replies.sendPort,
-        debugName: 'MapParcelsWorker');
+    await Isolate.spawn(
+      _workerMain,
+      _replies.sendPort,
+      debugName: 'MapParcelsWorker',
+    );
     return ready.future;
   }
 }
@@ -226,12 +231,12 @@ class _WorkerState {
         rows = region.db.select(
           region.hasRtree
               ? 'SELECT p.sifko, p.parcela, p.area, p.eid, p.poly '
-                  'FROM parcels_rtree x JOIN parcels p ON p.id = x.id '
-                  'WHERE x.max_lon >= ? AND x.min_lon <= ? '
-                  'AND x.max_lat >= ? AND x.min_lat <= ? LIMIT ?'
+                    'FROM parcels_rtree x JOIN parcels p ON p.id = x.id '
+                    'WHERE x.max_lon >= ? AND x.min_lon <= ? '
+                    'AND x.max_lat >= ? AND x.min_lat <= ? LIMIT ?'
               : 'SELECT sifko, parcela, area, eid, poly FROM parcels '
-                  'WHERE max_lon >= ? AND min_lon <= ? '
-                  'AND max_lat >= ? AND min_lat <= ? LIMIT ?',
+                    'WHERE max_lon >= ? AND min_lon <= ? '
+                    'AND max_lat >= ? AND min_lat <= ? LIMIT ?',
           [r.west, r.east, r.south, r.north, r.limit - eids.length],
         );
       } catch (e) {

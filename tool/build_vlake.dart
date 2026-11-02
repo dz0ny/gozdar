@@ -52,9 +52,9 @@ void main(List<String> args) {
     final geom = f['geometry'] as Map<String, dynamic>?;
     final coords = geom?['coordinates'] as List?;
     if (coords == null || coords.isEmpty) {
-      builder.add((ByteData(4)..setUint32(0, 0, Endian.little))
-          .buffer
-          .asUint8List());
+      builder.add(
+        (ByteData(4)..setUint32(0, 0, Endian.little)).buffer.asUint8List(),
+      );
       continue;
     }
     final n = coords.length;

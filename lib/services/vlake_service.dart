@@ -84,7 +84,8 @@ class VlakeService {
     if (lines == null) return const [];
     final result = <VlakeLine>[];
     for (final l in lines) {
-      final outside = l.maxLat < south ||
+      final outside =
+          l.maxLat < south ||
           l.minLat > north ||
           l.maxLng < west ||
           l.minLng > east;
@@ -102,8 +103,7 @@ const _magic = 0x564C4B31; // "VLK1"
 List<VlakeLine> _parseVlake(Uint8List bytes) {
   final data = ByteData.sublistView(bytes);
   var off = 0;
-  if (data.lengthInBytes < 8 ||
-      data.getUint32(off, Endian.little) != _magic) {
+  if (data.lengthInBytes < 8 || data.getUint32(off, Endian.little) != _magic) {
     return const [];
   }
   off += 4;

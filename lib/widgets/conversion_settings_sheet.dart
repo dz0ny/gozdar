@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
 import '../utils/decimal_input.dart';
 import '../utils/formats.dart';
@@ -21,7 +22,8 @@ class ConversionSettingsSheet extends StatefulWidget {
   });
 
   @override
-  State<ConversionSettingsSheet> createState() => _ConversionSettingsSheetState();
+  State<ConversionSettingsSheet> createState() =>
+      _ConversionSettingsSheetState();
 }
 
 class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
@@ -77,108 +79,148 @@ class _ConversionSettingsSheetState extends State<ConversionSettingsSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            Row(
+          Row(
+            children: [
+              Text(
+                context.l10n.logsConvTitle,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Current values display
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
               children: [
                 Text(
-                  context.l10n.logsConvTitle,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Fmt.m3(widget.totalVolume),
+                  style: Theme.of(context).textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
+                const SizedBox(height: 4),
+                Text(
+                  '${Fmt.num(ConversionFactors(prm: _prm, nm: _nm).toPrm(widget.totalVolume), 2)} PRM  •  '
+                  '${Fmt.num(ConversionFactors(prm: _prm, nm: _nm).toNm(widget.totalVolume), 2)} NM',
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+          ),
+          const SizedBox(height: 16),
 
-            // Current values display
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+          // PRM presets
+          Text(
+            context.l10n.logsConvPrmTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          Text(
+            context.l10n.logsConvPrmDesc,
+            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _FactorChip(
+                label: context.l10n.logsConvDefault,
+                value: 0.65,
+                selected: _prm == 0.65,
+                onTap: () => _setPrm(0.65),
               ),
-              child: Column(
-                children: [
-                  Text(
-                    Fmt.m3(widget.totalVolume),
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${Fmt.num(ConversionFactors(prm: _prm, nm: _nm).toPrm(widget.totalVolume), 2)} PRM  •  '
-                    '${Fmt.num(ConversionFactors(prm: _prm, nm: _nm).toNm(widget.totalVolume), 2)} NM',
-                  ),
-                ],
+              _FactorChip(
+                label: context.l10n.logsConvBeechOak,
+                value: 0.67,
+                selected: _prm == 0.67,
+                onTap: () => _setPrm(0.67),
               ),
-            ),
-            const SizedBox(height: 16),
-
-            // PRM presets
-            Text(context.l10n.logsConvPrmTitle, style: Theme.of(context).textTheme.titleSmall),
-            Text(
-              context.l10n.logsConvPrmDesc,
-              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _FactorChip(label: context.l10n.logsConvDefault, value: 0.65, selected: _prm == 0.65, onTap: () => _setPrm(0.65)),
-                _FactorChip(label: context.l10n.logsConvBeechOak, value: 0.67, selected: _prm == 0.67, onTap: () => _setPrm(0.67)),
-                _FactorChip(label: context.l10n.logsConvSpruceFir, value: 0.57, selected: _prm == 0.57, onTap: () => _setPrm(0.57)),
-                _FactorChip(label: context.l10n.logsConvSoftHardwood, value: 0.60, selected: _prm == 0.60, onTap: () => _setPrm(0.60)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _CustomFactorField(
-              controller: _prmController,
-              onChanged: (value) => setState(() => _prm = value),
-            ),
-            const SizedBox(height: 12),
-
-            // NM presets
-            Text(context.l10n.logsConvNmTitle, style: Theme.of(context).textTheme.titleSmall),
-            Text(
-              context.l10n.logsConvNmDesc,
-              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _FactorChip(label: context.l10n.logsConvDefault, value: 0.40, selected: _nm == 0.40, onTap: () => _setNm(0.40)),
-                _FactorChip(label: context.l10n.logsConvHardWood, value: 0.45, selected: _nm == 0.45, onTap: () => _setNm(0.45)),
-                _FactorChip(label: context.l10n.logsConvSoftWood, value: 0.35, selected: _nm == 0.35, onTap: () => _setNm(0.35)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _CustomFactorField(
-              controller: _nmController,
-              onChanged: (value) => setState(() => _nm = value),
-            ),
-            const SizedBox(height: 16),
-
-            // Apply button
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  widget.onChanged(_prm, _nm);
-                  Navigator.pop(context);
-                },
-                child: Text(context.l10n.logsConvConfirm),
+              _FactorChip(
+                label: context.l10n.logsConvSpruceFir,
+                value: 0.57,
+                selected: _prm == 0.57,
+                onTap: () => _setPrm(0.57),
               ),
+              _FactorChip(
+                label: context.l10n.logsConvSoftHardwood,
+                value: 0.60,
+                selected: _prm == 0.60,
+                onTap: () => _setPrm(0.60),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _CustomFactorField(
+            controller: _prmController,
+            onChanged: (value) => setState(() => _prm = value),
+          ),
+          const SizedBox(height: 12),
+
+          // NM presets
+          Text(
+            context.l10n.logsConvNmTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          Text(
+            context.l10n.logsConvNmDesc,
+            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _FactorChip(
+                label: context.l10n.logsConvDefault,
+                value: 0.40,
+                selected: _nm == 0.40,
+                onTap: () => _setNm(0.40),
+              ),
+              _FactorChip(
+                label: context.l10n.logsConvHardWood,
+                value: 0.45,
+                selected: _nm == 0.45,
+                onTap: () => _setNm(0.45),
+              ),
+              _FactorChip(
+                label: context.l10n.logsConvSoftWood,
+                value: 0.35,
+                selected: _nm == 0.35,
+                onTap: () => _setNm(0.35),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _CustomFactorField(
+            controller: _nmController,
+            onChanged: (value) => setState(() => _nm = value),
+          ),
+          const SizedBox(height: 16),
+
+          // Apply button
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () {
+                widget.onChanged(_prm, _nm);
+                Navigator.pop(context);
+              },
+              child: Text(context.l10n.logsConvConfirm),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -198,7 +240,11 @@ class _FactorChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Chip(label: '$label (${Fmt.num(value, 2)})', selected: selected, onTap: onTap);
+    return _Chip(
+      label: '$label (${Fmt.num(value, 2)})',
+      selected: selected,
+      onTap: onTap,
+    );
   }
 }
 
@@ -244,10 +290,7 @@ class _CustomFactorField extends StatelessWidget {
   final TextEditingController controller;
   final void Function(double value) onChanged;
 
-  const _CustomFactorField({
-    required this.controller,
-    required this.onChanged,
-  });
+  const _CustomFactorField({required this.controller, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {

@@ -135,7 +135,11 @@ class DronePhotoService {
       }
       final len = (b[i + 2] << 8) | b[i + 3];
       final isSof =
-          marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC;
+          marker >= 0xC0 &&
+          marker <= 0xCF &&
+          marker != 0xC4 &&
+          marker != 0xC8 &&
+          marker != 0xCC;
       if (isSof) {
         final h = (b[i + 5] << 8) | b[i + 6];
         final w = (b[i + 7] << 8) | b[i + 8];
@@ -202,7 +206,10 @@ class DronePhotoService {
         unreadable++;
       } else if (!meta.isNadir) {
         notNadir++;
-      } else if (polygonTouches(poly, footprintCorners(meta, origin, options))) {
+      } else if (polygonTouches(
+        poly,
+        footprintCorners(meta, origin, options),
+      )) {
         inside.add(meta);
       } else {
         outside++;

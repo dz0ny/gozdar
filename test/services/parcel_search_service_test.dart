@@ -10,9 +10,9 @@ void main() {
   );
 
   List<(int?, String?)> parcels(String query, {KoInfo? ko}) => [
-        for (final s in ParcelSearchService.instant(query, ko: ko))
-          if (s.parcela != null) (s.sifko, s.parcela),
-      ];
+    for (final s in ParcelSearchService.instant(query, ko: ko))
+      if (s.parcela != null) (s.sifko, s.parcela),
+  ];
 
   group('ParcelSearchService.instant', () {
     test('"KO code, parcel" comes first, the other reading after', () {

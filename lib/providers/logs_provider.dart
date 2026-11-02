@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../models/log_entry.dart';
 import '../models/log_batch.dart';
 import '../services/database_service.dart';

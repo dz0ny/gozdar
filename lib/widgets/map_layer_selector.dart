@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
 import '../models/map_layer.dart';
 import '../services/public_parcel_settings.dart';
@@ -166,9 +167,8 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                color: Theme.of(context).colorScheme.onSurfaceVariant
+                    .withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -181,9 +181,8 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                 Expanded(
                   child: Text(
                     context.l10n.mapwLayersTitle,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                 ),
                 IconButton(
@@ -208,18 +207,17 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.3),
+                    color: Theme.of(context).colorScheme.primary
+                        .withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
               labelColor: Theme.of(context).colorScheme.onPrimary,
-              unselectedLabelColor: Theme.of(
-                context,
-              ).colorScheme.onSurfaceVariant,
+              unselectedLabelColor: Theme.of(context)
+                  .colorScheme
+                  .onSurfaceVariant,
               labelStyle: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -270,13 +268,15 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       MapLayer.dofIr,
       MapLayer.dmr,
     ]);
-    final international =
-        _buildBaseLayerSection(context.l10n.mapwInternationalMaps, [
-      MapLayer.openStreetMap,
-      MapLayer.openTopoMap,
-      MapLayer.esriWorldImagery,
-      MapLayer.esriTopoMap,
-    ]);
+    final international = _buildBaseLayerSection(
+      context.l10n.mapwInternationalMaps,
+      [
+        MapLayer.openStreetMap,
+        MapLayer.openTopoMap,
+        MapLayer.esriWorldImagery,
+        MapLayer.esriTopoMap,
+      ],
+    );
     // Slovenian maps only cover Slovenia, so Croatian users get the
     // international ones (ESRI satellite covers Croatia) first.
     final croatian = context.l10n.localeName == 'hr';
@@ -399,9 +399,8 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                     const SizedBox(height: 2),
                     Text(
                       layer.attribution,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -579,15 +578,16 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     }
 
     final isExpanded = _expandedCategories[category] ?? false;
-    final activeCount = filteredLayers
+    final activeCount =
+        filteredLayers
             .where((layer) => _selectedOverlays.contains(layer.type))
             .length +
         (showVlakeTile && _vlakeVisible ? 1 : 0) +
         (showAuctionsTile && _auctionsVisible ? 1 : 0) +
         (showPublicParcelTiles
             ? PublicOwnerCategory.values
-                .where(PublicParcelSettings.instance.isOn)
-                .length
+                  .where(PublicParcelSettings.instance.isOn)
+                  .length
             : 0);
 
     return Card(
@@ -819,8 +819,9 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
                   Text(
                     'Gozdne vlake',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight:
-                          _vlakeVisible ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: _vlakeVisible
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -975,4 +976,3 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
     }
   }
 }
-

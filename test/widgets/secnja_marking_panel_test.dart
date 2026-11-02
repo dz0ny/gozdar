@@ -10,7 +10,10 @@ void main() {
 
   group('nextSecnjaName', () {
     test('uses species and count', () {
-      expect(nextSecnjaName(species: 'Smreka', existing: 2, l10n: l10n), 'Smreka 3');
+      expect(
+        nextSecnjaName(species: 'Smreka', existing: 2, l10n: l10n),
+        'Smreka 3',
+      );
     });
     test('falls back to Drevo', () {
       expect(nextSecnjaName(existing: 2, l10n: l10n), 'Drevo 3');
@@ -73,16 +76,18 @@ void main() {
     expect(calls, isEmpty);
   });
 
-  testWidgets('tapping a chip selects it; tapping the selected chip deselects',
-      (tester) async {
-    var calls = await pumpPanel(tester);
-    await tester.tap(find.text('Bukev'));
-    expect(calls, ['species:Bukev']);
+  testWidgets(
+    'tapping a chip selects it; tapping the selected chip deselects',
+    (tester) async {
+      var calls = await pumpPanel(tester);
+      await tester.tap(find.text('Bukev'));
+      expect(calls, ['species:Bukev']);
 
-    calls = await pumpPanel(tester, selected: 'Bukev');
-    await tester.tap(find.text('Bukev'));
-    expect(calls, ['species:null']);
-  });
+      calls = await pumpPanel(tester, selected: 'Bukev');
+      await tester.tap(find.text('Bukev'));
+      expect(calls, ['species:null']);
+    },
+  );
 
   testWidgets('header shows title and count', (tester) async {
     await pumpPanel(tester, count: 4);

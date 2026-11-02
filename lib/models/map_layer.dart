@@ -199,9 +199,12 @@ class MapLayer {
     final size = 2 * origin / (1 << z);
     final minX = -origin + x * size;
     final maxY = origin - y * size;
-    return [minX, maxY - size, minX + size, maxY]
-        .map((v) => v.toStringAsFixed(2))
-        .join(',');
+    return [
+      minX,
+      maxY - size,
+      minX + size,
+      maxY,
+    ].map((v) => v.toStringAsFixed(2)).join(',');
   }
 
   /// Resolve the layer to an XYZ template.
@@ -243,8 +246,7 @@ class MapLayer {
   static const esriWorldImagery = MapLayer(
     type: MapLayerType.esriWorldImagery,
     name: 'ESRI Satelit',
-    urlTemplate:
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    urlTemplate: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: '© Esri',
     maxZoom: 21,
   );
@@ -253,8 +255,7 @@ class MapLayer {
   static const esriTopoMap = MapLayer(
     type: MapLayerType.esriTopoMap,
     name: 'ESRI Topo',
-    urlTemplate:
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    urlTemplate: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
     attribution: '© Esri',
     maxZoom: 21,
   );

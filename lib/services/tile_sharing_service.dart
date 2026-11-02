@@ -20,7 +20,9 @@ class TilePeer {
 
   @override
   bool operator ==(Object other) {
-    return other is TilePeer && other.ipAddress == ipAddress && other.port == port;
+    return other is TilePeer &&
+        other.ipAddress == ipAddress &&
+        other.port == port;
   }
 
   @override
@@ -38,10 +40,7 @@ class PeerTileResponse {
   final Uint8List bytes;
   final String? contentType;
 
-  const PeerTileResponse({
-    required this.bytes,
-    required this.contentType,
-  });
+  const PeerTileResponse({required this.bytes, required this.contentType});
 }
 
 sealed class PeerSyncEvent {}
@@ -109,9 +108,12 @@ class TileSharingService {
 
     try {
       _server = await HttpServer.bind(InternetAddress.anyIPv4, defaultPort);
-      _server!.listen(_handleRequest, onError: (error) {
-        debugPrint('[TileSharing] Server error: $error');
-      });
+      _server!.listen(
+        _handleRequest,
+        onError: (error) {
+          debugPrint('[TileSharing] Server error: $error');
+        },
+      );
       await _advertise();
     } catch (e) {
       debugPrint('[TileSharing] Failed to start server: $e');
@@ -133,10 +135,7 @@ class TileSharingService {
       _activeDiscovery!.addServiceListener((service, status) {
         if (service.host == null || service.port == null) return;
 
-        final peer = TilePeer(
-          ipAddress: service.host!,
-          port: service.port!,
-        );
+        final peer = TilePeer(ipAddress: service.host!, port: service.port!);
 
         if (status == nsd.ServiceStatus.found) {
           _discoveredPeers.add(peer);
@@ -172,7 +171,9 @@ class TileSharingService {
   Future<PeerCatalog?> fetchPeerCatalog(TilePeer peer) async {
     try {
       final uri = Uri.parse('${peer.baseUrl}/styles');
-      final response = await _httpClient.get(uri).timeout(const Duration(seconds: 5));
+      final response = await _httpClient
+          .get(uri)
+          .timeout(const Duration(seconds: 5));
       if (response.statusCode != 200) return null;
 
       final data = jsonDecode(response.body) as List<dynamic>;
@@ -187,7 +188,9 @@ class TileSharingService {
   }
 
   Future<List<PeerCatalog>> fetchAllPeerCatalogs() async {
-    final futures = _discoveredPeers.map((peer) => fetchPeerCatalog(peer)).toList();
+    final futures = _discoveredPeers
+        .map((peer) => fetchPeerCatalog(peer))
+        .toList();
     final results = await Future.wait(futures);
     return results.whereType<PeerCatalog>().toList();
   }
@@ -198,12 +201,16 @@ class TileSharingService {
   ) async {
     try {
       final uri = Uri.parse('${peer.baseUrl}/tiles/$styleHash/list');
-      final response = await _httpClient.get(uri).timeout(const Duration(seconds: 10));
+      final response = await _httpClient
+          .get(uri)
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;
 
       final data = jsonDecode(response.body) as List<dynamic>;
       return data
-          .map((entry) => CachedTileCoord.fromJson(entry as Map<String, dynamic>))
+          .map(
+            (entry) => CachedTileCoord.fromJson(entry as Map<String, dynamic>),
+          )
           .toList();
     } catch (e) {
       debugPrint('[TileSharing] fetchPeerTileList(${peer.ipAddress}): $e');
@@ -220,7 +227,9 @@ class TileSharingService {
   ) async {
     try {
       final uri = Uri.parse('${peer.baseUrl}/tiles/$styleHash/$z/$x/$y');
-      final response = await _httpClient.get(uri).timeout(const Duration(seconds: 5));
+      final response = await _httpClient
+          .get(uri)
+          .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         return PeerTileResponse(
           bytes: response.bodyBytes,
@@ -273,10 +282,15 @@ class TileSharingService {
     CachedTileCoord tile,
   ) async {
     if (urlTemplate.isEmpty) return;
-    final url = TileDownloadService.tileUrl(urlTemplate, tile.z, tile.x, tile.y);
+    final url = TileDownloadService.tileUrl(
+      urlTemplate,
+      tile.z,
+      tile.x,
+      tile.y,
+    );
     try {
-      final onMap =
-          await BuiltInMapCachingProvider.getOrCreateInstance().getTile(url);
+      final onMap = await BuiltInMapCachingProvider.getOrCreateInstance()
+          .getTile(url);
       if (onMap != null) return;
     } catch (_) {
       return; // Built-in cache unavailable.
@@ -385,7 +399,9 @@ class TileSharingService {
             );
             await _putOnMap(styleMeta.urlTemplate, tile, tileResponse.bytes);
             downloaded++;
-            controller.add(PeerSyncTileDownloaded(downloaded: downloaded, total: total));
+            controller.add(
+              PeerSyncTileDownloaded(downloaded: downloaded, total: total),
+            );
           } else {
             failed++;
           }
@@ -404,7 +420,11 @@ class TileSharingService {
       controller.add(PeerSyncCancelled());
     } else {
       controller.add(
-        PeerSyncComplete(downloaded: downloaded, skipped: skipped, failed: failed),
+        PeerSyncComplete(
+          downloaded: downloaded,
+          skipped: skipped,
+          failed: failed,
+        ),
       );
     }
     await controller.close();

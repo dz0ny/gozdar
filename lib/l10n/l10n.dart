@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+
 import 'generated/app_localizations.dart';
 
 export 'generated/app_localizations.dart';
@@ -12,9 +13,7 @@ extension L10nContext on BuildContext {
 class L10n {
   L10n._();
 
-  static AppLocalizations _current = lookupAppLocalizations(
-    const Locale('sl'),
-  );
+  static AppLocalizations _current = lookupAppLocalizations(const Locale('sl'));
 
   static AppLocalizations get current => _current;
 

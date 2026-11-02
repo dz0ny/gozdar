@@ -51,8 +51,10 @@ class _Server {
       }
       response
         ..statusCode = HttpStatus.partialContent
-        ..headers.set(HttpHeaders.contentRangeHeader,
-            'bytes $start-${body.length - 1}/${body.length}')
+        ..headers.set(
+          HttpHeaders.contentRangeHeader,
+          'bytes $start-${body.length - 1}/${body.length}',
+        )
         ..contentLength = body.length - start
         ..add(body.sublist(start));
       await response.close();
@@ -93,8 +95,12 @@ void main() {
     expect(result.isComplete, isTrue);
     expect(await part.readAsBytes(), body);
     expect(server.ranges.last, startsWith('bytes='));
-    expect(int.parse(server.ranges.last!.substring(6, server.ranges.last!.length - 1)),
-        greaterThan(0));
+    expect(
+      int.parse(
+        server.ranges.last!.substring(6, server.ranges.last!.length - 1),
+      ),
+      greaterThan(0),
+    );
   });
 
   test('continues a part left by an earlier run', () async {
@@ -128,38 +134,42 @@ void main() {
     expect(await part.readAsBytes(), body);
   });
 
-  test('starts over when the server ignores If-Range for a changed file',
-      () async {
-    final body = _bytes(120000, 6);
-    final server = _Server(body, '"v2"', honourIfRange: false);
-    await server.start();
-    addTearDown(server.stop);
-    final part = File('${dir.path}/f.part')
-      ..writeAsBytesSync(_bytes(40000, 9)); // from the old file
-    File('${part.path}.validator').writeAsStringSync('"v1"');
+  test(
+    'starts over when the server ignores If-Range for a changed file',
+    () async {
+      final body = _bytes(120000, 6);
+      final server = _Server(body, '"v2"', honourIfRange: false);
+      await server.start();
+      addTearDown(server.stop);
+      final part = File('${dir.path}/f.part')
+        ..writeAsBytesSync(_bytes(40000, 9)); // from the old file
+      File('${part.path}.validator').writeAsStringSync('"v1"');
 
-    final result = await ResumableDownload.fetch(server.url, part);
+      final result = await ResumableDownload.fetch(server.url, part);
 
-    expect(result.isComplete, isTrue);
-    expect(await part.readAsBytes(), body);
-    expect(server.ranges, ['bytes=40000-', null]);
-  });
+      expect(result.isComplete, isTrue);
+      expect(await part.readAsBytes(), body);
+      expect(server.ranges, ['bytes=40000-', null]);
+    },
+  );
 
-  test('a finished part that was kept is confirmed without a new download',
-      () async {
-    final body = _bytes(80000, 4);
-    final server = _Server(body, '"v1"');
-    await server.start();
-    addTearDown(server.stop);
-    final part = File('${dir.path}/f.part');
-    await ResumableDownload.fetch(server.url, part);
+  test(
+    'a finished part that was kept is confirmed without a new download',
+    () async {
+      final body = _bytes(80000, 4);
+      final server = _Server(body, '"v1"');
+      await server.start();
+      addTearDown(server.stop);
+      final part = File('${dir.path}/f.part');
+      await ResumableDownload.fetch(server.url, part);
 
-    final again = await ResumableDownload.fetch(server.url, part);
+      final again = await ResumableDownload.fetch(server.url, part);
 
-    expect(again.isComplete, isTrue);
-    expect(server.ranges.sublist(1), ['bytes=80000-', null]); // GET, HEAD
-    expect(await part.readAsBytes(), body);
-  });
+      expect(again.isComplete, isTrue);
+      expect(server.ranges.sublist(1), ['bytes=80000-', null]); // GET, HEAD
+      expect(await part.readAsBytes(), body);
+    },
+  );
 
   test('reports a refused request', () async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -178,26 +188,30 @@ void main() {
     expect(result.statusCode, 404);
   });
 
-  test('a nearby phone serves the rest of a file it was cut off from',
-      () async {
-    final body = _bytes(150000, 5);
-    final source = File('${dir.path}/parcels-x.sqlite')..writeAsBytesSync(body);
-    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    addTearDown(() => server.close(force: true));
-    final ranges = <String?>[];
-    server.listen((r) {
-      ranges.add(r.headers.value(HttpHeaders.rangeHeader));
-      KatasterSharingService.serveFile(r, source);
-    });
-    final url = 'http://127.0.0.1:${server.port}/kataster/files/parcels-x.sqlite';
-    final part = File('${dir.path}/got.part');
-    await ResumableDownload.fetch(url, part); // learns the ETag
-    await part.writeAsBytes(body.sublist(0, 60000)); // as if cut off here
+  test(
+    'a nearby phone serves the rest of a file it was cut off from',
+    () async {
+      final body = _bytes(150000, 5);
+      final source = File('${dir.path}/parcels-x.sqlite')
+        ..writeAsBytesSync(body);
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      final ranges = <String?>[];
+      server.listen((r) {
+        ranges.add(r.headers.value(HttpHeaders.rangeHeader));
+        KatasterSharingService.serveFile(r, source);
+      });
+      final url =
+          'http://127.0.0.1:${server.port}/kataster/files/parcels-x.sqlite';
+      final part = File('${dir.path}/got.part');
+      await ResumableDownload.fetch(url, part); // learns the ETag
+      await part.writeAsBytes(body.sublist(0, 60000)); // as if cut off here
 
-    final result = await ResumableDownload.fetch(url, part);
+      final result = await ResumableDownload.fetch(url, part);
 
-    expect(result.isComplete, isTrue);
-    expect(ranges.last, 'bytes=60000-');
-    expect(await part.readAsBytes(), body);
-  });
+      expect(result.isComplete, isTrue);
+      expect(ranges.last, 'bytes=60000-');
+      expect(await part.readAsBytes(), body);
+    },
+  );
 }

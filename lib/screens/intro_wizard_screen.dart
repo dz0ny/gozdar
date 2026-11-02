@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../l10n/l10n.dart';
 import '../router/route_names.dart';
 import '../services/onboarding_service.dart';
@@ -143,7 +144,10 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_totalPages, (index) => _buildDot(index)),
+                children: List.generate(
+                  _totalPages,
+                  (index) => _buildDot(index),
+                ),
               ),
             ),
 
@@ -183,17 +187,17 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
   }
 
   Widget _buildPage(WizardPage page) => switch (page) {
-        WizardPage.welcome => _buildWelcomePage(),
-        WizardPage.navigation => _buildNavigationPage(),
-        WizardPage.logs => _buildLogsPage(),
-        WizardPage.longPress => _buildLongPressPage(),
-        WizardPage.markers => _buildMarkersPage(),
-        WizardPage.secnja => _buildSecnjaPage(),
-        WizardPage.layers => _buildLayersPage(),
-        WizardPage.offline => _buildOfflinePage(),
-        WizardPage.compass => _buildCompassPage(),
-        WizardPage.terms => _buildTermsPage(),
-      };
+    WizardPage.welcome => _buildWelcomePage(),
+    WizardPage.navigation => _buildNavigationPage(),
+    WizardPage.logs => _buildLogsPage(),
+    WizardPage.longPress => _buildLongPressPage(),
+    WizardPage.markers => _buildMarkersPage(),
+    WizardPage.secnja => _buildSecnjaPage(),
+    WizardPage.layers => _buildLayersPage(),
+    WizardPage.offline => _buildOfflinePage(),
+    WizardPage.compass => _buildCompassPage(),
+    WizardPage.terms => _buildTermsPage(),
+  };
 
   Widget _buildSecnjaPage() {
     final l10n = context.l10n;
@@ -204,21 +208,36 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           const SizedBox(height: 16),
           Text(
             l10n.introSecnjaTitle,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          _buildMarkerExample(Icons.carpenter, Colors.deepOrange, l10n.mapwMenuFelling),
+          _buildMarkerExample(
+            Icons.carpenter,
+            Colors.deepOrange,
+            l10n.mapwMenuFelling,
+          ),
           const SizedBox(height: 24),
           _buildInfoCard([
-            _buildInfoRow(Icons.add_circle_outline, l10n.introSecnjaMarkTitle, l10n.introSecnjaMarkDesc,
-                iconColor: Colors.deepOrange),
-            _buildInfoRow(Icons.ios_share, l10n.introSecnjaShareTitle, l10n.introSecnjaShareDesc,
-                iconColor: Colors.deepOrange),
-            _buildInfoRow(Icons.forest, l10n.introSecnjaLoggerTitle, l10n.introSecnjaLoggerDesc,
-                iconColor: Colors.deepOrange),
+            _buildInfoRow(
+              Icons.add_circle_outline,
+              l10n.introSecnjaMarkTitle,
+              l10n.introSecnjaMarkDesc,
+              iconColor: Colors.deepOrange,
+            ),
+            _buildInfoRow(
+              Icons.ios_share,
+              l10n.introSecnjaShareTitle,
+              l10n.introSecnjaShareDesc,
+              iconColor: Colors.deepOrange,
+            ),
+            _buildInfoRow(
+              Icons.forest,
+              l10n.introSecnjaLoggerTitle,
+              l10n.introSecnjaLoggerDesc,
+              iconColor: Colors.deepOrange,
+            ),
           ]),
         ],
       ),
@@ -247,9 +266,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           const SizedBox(height: 32),
           Text(
             context.l10n.introWelcomeTitle,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
@@ -271,9 +289,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         children: [
           Text(
             context.l10n.introNavTitle,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
           // Real NavigationBar preview
@@ -306,9 +323,21 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           ),
           const SizedBox(height: 24),
           _buildInfoCard([
-            _buildInfoRow(Icons.map, context.l10n.navTabMap, context.l10n.introNavMapDesc),
-            _buildInfoRow(Icons.park, context.l10n.navTabForest, context.l10n.introNavForestDesc),
-            _buildInfoRow(Icons.forest, context.l10n.navTabLogs, context.l10n.introNavLogsDesc),
+            _buildInfoRow(
+              Icons.map,
+              context.l10n.navTabMap,
+              context.l10n.introNavMapDesc,
+            ),
+            _buildInfoRow(
+              Icons.park,
+              context.l10n.navTabForest,
+              context.l10n.introNavForestDesc,
+            ),
+            _buildInfoRow(
+              Icons.forest,
+              context.l10n.navTabLogs,
+              context.l10n.introNavLogsDesc,
+            ),
           ]),
         ],
       ),
@@ -323,9 +352,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         children: [
           Text(
             context.l10n.introLogsTitle,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
           // Log entry visualization
@@ -339,7 +367,10 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.straighten, color: Theme.of(context).colorScheme.primary),
+                    Icon(
+                      Icons.straighten,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     const SizedBox(width: 8),
                     Text(context.l10n.introLogsDiameter),
                   ],
@@ -347,7 +378,10 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.height, color: Theme.of(context).colorScheme.primary),
+                    Icon(
+                      Icons.height,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     const SizedBox(width: 8),
                     Text(context.l10n.introLogsLength),
                   ],
@@ -405,9 +439,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         children: [
           Text(
             context.l10n.introLongPressTitle,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
           // Icon
@@ -455,7 +488,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.tertiaryContainer
+                  .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -491,25 +525,48 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         children: [
           Text(
             context.l10n.introMarkersTitle,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 32),
           // Marker examples
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildMarkerExample(Icons.location_on, Colors.red, context.l10n.introMarkerPoint),
-              _buildMarkerExample(Icons.circle, Colors.brown, context.l10n.introMarkerLog),
-              _buildMarkerExample(Icons.carpenter, Colors.deepOrange, context.l10n.introMarkerCut),
+              _buildMarkerExample(
+                Icons.location_on,
+                Colors.red,
+                context.l10n.introMarkerPoint,
+              ),
+              _buildMarkerExample(
+                Icons.circle,
+                Colors.brown,
+                context.l10n.introMarkerLog,
+              ),
+              _buildMarkerExample(
+                Icons.carpenter,
+                Colors.deepOrange,
+                context.l10n.introMarkerCut,
+              ),
             ],
           ),
           const SizedBox(height: 32),
           _buildInfoCard([
-            _buildInfoRow(Icons.location_on, context.l10n.introMarkersRed, context.l10n.introMarkersRedDesc),
-            _buildInfoRow(Icons.circle, context.l10n.introMarkersBrown, context.l10n.introMarkersBrownDesc),
-            _buildInfoRow(Icons.carpenter, context.l10n.introMarkersOrange, context.l10n.introMarkersOrangeDesc),
+            _buildInfoRow(
+              Icons.location_on,
+              context.l10n.introMarkersRed,
+              context.l10n.introMarkersRedDesc,
+            ),
+            _buildInfoRow(
+              Icons.circle,
+              context.l10n.introMarkersBrown,
+              context.l10n.introMarkersBrownDesc,
+            ),
+            _buildInfoRow(
+              Icons.carpenter,
+              context.l10n.introMarkersOrange,
+              context.l10n.introMarkersOrangeDesc,
+            ),
           ]),
           const SizedBox(height: 16),
           Text(
@@ -532,9 +589,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         children: [
           Text(
             context.l10n.introLayersTitle,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
           // Layer button preview
@@ -559,10 +615,26 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           ),
           const SizedBox(height: 24),
           _buildInfoCard([
-            _buildInfoRow(Icons.satellite_alt, 'Ortofoto', context.l10n.introLayersOrthoDesc),
-            _buildInfoRow(Icons.grid_on, 'Kataster', context.l10n.introLayersCadastreDesc),
-            _buildInfoRow(Icons.park, context.l10n.introLayersStands, context.l10n.introLayersStandsDesc),
-            _buildInfoRow(Icons.map, context.l10n.introLayersTopo, context.l10n.introLayersTopoDesc),
+            _buildInfoRow(
+              Icons.satellite_alt,
+              'Ortofoto',
+              context.l10n.introLayersOrthoDesc,
+            ),
+            _buildInfoRow(
+              Icons.grid_on,
+              'Kataster',
+              context.l10n.introLayersCadastreDesc,
+            ),
+            _buildInfoRow(
+              Icons.park,
+              context.l10n.introLayersStands,
+              context.l10n.introLayersStandsDesc,
+            ),
+            _buildInfoRow(
+              Icons.map,
+              context.l10n.introLayersTopo,
+              context.l10n.introLayersTopoDesc,
+            ),
           ]),
         ],
       ),
@@ -577,9 +649,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         children: [
           Text(
             context.l10n.introOfflineTitle,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
           // Offline icon
@@ -618,7 +689,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.tertiaryContainer
+                  .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -654,9 +726,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
         children: [
           Text(
             context.l10n.introCompassTitle,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
           // Compass and navigation line preview
@@ -677,7 +748,10 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
               ),
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.deepOrange,
                   borderRadius: BorderRadius.circular(20),
@@ -689,7 +763,10 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
                     const SizedBox(width: 8),
                     Text(
                       context.l10n.introCompassMarker,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -746,9 +823,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
           const SizedBox(height: 32),
           Text(
             context.l10n.introTermsTitle,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
@@ -756,13 +832,15 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(16),
             ),
             child: RichText(
               textAlign: TextAlign.center,
               text: TextSpan(
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.7),
+                style: Theme.of(context).textTheme.bodyLarge
+                    ?.copyWith(height: 1.7),
                 children: [
                   TextSpan(text: context.l10n.introTermsBody),
                   TextSpan(
@@ -814,7 +892,8 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest
+            .withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -824,18 +903,30 @@ class _IntroWizardScreenState extends State<IntroWizardScreen> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String title, String subtitle, {Color? iconColor}) {
+  Widget _buildInfoRow(
+    IconData icon,
+    String title,
+    String subtitle, {
+    Color? iconColor,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: iconColor ?? Theme.of(context).colorScheme.primary),
+          Icon(
+            icon,
+            size: 20,
+            color: iconColor ?? Theme.of(context).colorScheme.primary,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 Text(
                   subtitle,
                   style: TextStyle(

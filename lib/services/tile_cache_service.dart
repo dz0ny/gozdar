@@ -19,6 +19,7 @@ class TileCacheService {
   static bool _ignoreDownloadEvents = false;
   static TileDownloadService? _downloadService;
   static BuiltInMapCachingProvider? _builtInCachingProvider;
+
   /// App-lifetime HTTP client for tile fetches (see [initialize]).
   static late final Client _httpClient;
   static _WmsAwareTileProvider? _tileProvider;
@@ -26,7 +27,8 @@ class TileCacheService {
   static final ValueNotifier<TileDownloadVisualState> _downloadVisualState =
       ValueNotifier(const TileDownloadVisualState());
 
-  final OfflineTileCacheService _offlineCache = OfflineTileCacheService.instance;
+  final OfflineTileCacheService _offlineCache =
+      OfflineTileCacheService.instance;
 
   factory TileCacheService() {
     return _instance;
@@ -113,8 +115,14 @@ class TileCacheService {
 
     try {
       final styles = await _offlineCache.listStylesDetailed();
-      final totalTiles = styles.fold<int>(0, (sum, style) => sum + style.tileCount);
-      final totalBytes = styles.fold<int>(0, (sum, style) => sum + style.sizeBytes);
+      final totalTiles = styles.fold<int>(
+        0,
+        (sum, style) => sum + style.tileCount,
+      );
+      final totalBytes = styles.fold<int>(
+        0,
+        (sum, style) => sum + style.sizeBytes,
+      );
 
       return {
         'initialized': true,
@@ -208,11 +216,13 @@ class TileCacheService {
     ];
     final totalTiles = filteredRequests.fold<int>(
       0,
-      (sum, request) => sum + estimateTileCount(
-        bounds: bounds,
-        minZoom: request.minZoom,
-        maxZoom: request.maxZoom,
-      ),
+      (sum, request) =>
+          sum +
+          estimateTileCount(
+            bounds: bounds,
+            minZoom: request.minZoom,
+            maxZoom: request.maxZoom,
+          ),
     );
 
     _downloadVisualState.value = TileDownloadVisualState(
@@ -248,7 +258,8 @@ class TileCacheService {
         }
       }
     } finally {
-      final wasCancelled = _downloadVisualState.value.isDownloading == false &&
+      final wasCancelled =
+          _downloadVisualState.value.isDownloading == false &&
           _downloadVisualState.value.layersCompleted <
               _downloadVisualState.value.layerCount;
       _downloadService?.dispose();
@@ -353,12 +364,15 @@ class TileCacheService {
     }
 
     if (event is TileDownloaded) {
-      final overlays = [...current.overlays, TileOverlay(
-        north: event.north,
-        south: event.south,
-        east: event.east,
-        west: event.west,
-      )];
+      final overlays = [
+        ...current.overlays,
+        TileOverlay(
+          north: event.north,
+          south: event.south,
+          east: event.east,
+          west: event.west,
+        ),
+      ];
       final trimmed = overlays.length > 500
           ? overlays.sublist(overlays.length - 500)
           : overlays;
@@ -377,9 +391,7 @@ class TileCacheService {
     }
 
     if (event is TileFailed) {
-      _downloadVisualState.value = current.copyWith(
-        failed: current.failed + 1,
-      );
+      _downloadVisualState.value = current.copyWith(failed: current.failed + 1);
       return;
     }
 

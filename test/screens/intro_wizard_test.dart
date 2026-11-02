@@ -25,27 +25,40 @@ void main() {
     });
   });
 
-  Future<GoRouter> pumpWizard(WidgetTester tester, {required int completed}) async {
+  Future<GoRouter> pumpWizard(
+    WidgetTester tester, {
+    required int completed,
+  }) async {
     SharedPreferences.setMockInitialValues({'onboarding_version': completed});
     await OnboardingService.initialize();
     final router = GoRouter(
       initialLocation: '/onboarding',
       routes: [
-        GoRoute(path: '/onboarding', builder: (_, _) => const IntroWizardScreen()),
-        GoRoute(path: '/forest', builder: (_, _) => const Scaffold(body: Text('FOREST'))),
+        GoRoute(
+          path: '/onboarding',
+          builder: (_, _) => const IntroWizardScreen(),
+        ),
+        GoRoute(
+          path: '/forest',
+          builder: (_, _) => const Scaffold(body: Text('FOREST')),
+        ),
       ],
     );
-    await tester.pumpWidget(MaterialApp.router(
-      routerConfig: router,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('sl'),
-    ));
+    await tester.pumpWidget(
+      MaterialApp.router(
+        routerConfig: router,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('sl'),
+      ),
+    );
     await tester.pumpAndSettle();
     return router;
   }
 
-  testWidgets('existing install: one page about sečnja, then done', (tester) async {
+  testWidgets('existing install: one page about sečnja, then done', (
+    tester,
+  ) async {
     await pumpWizard(tester, completed: 3);
     expect(find.text('Sečnja za sekača'), findsOneWidget);
     expect(find.text('Preskoči').hitTestable(), findsNothing);

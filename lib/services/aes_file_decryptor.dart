@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:pointycastle/export.dart';
+
 import '../l10n/l10n.dart';
 
 /// Thrown when decryption fails (wrong password or corrupt/invalid file).
@@ -26,7 +27,16 @@ class AesCancelled implements Exception {
 /// Decrypts a download as it streams in, writing plaintext to [out] without ever
 /// holding the whole (hundreds-of-MB) file in memory.
 class AesFileDecryptor {
-  static const _magic = [0x47, 0x5A, 0x44, 0x52, 0x41, 0x45, 0x53, 0x31]; // GZDRAES1
+  static const _magic = [
+    0x47,
+    0x5A,
+    0x44,
+    0x52,
+    0x41,
+    0x45,
+    0x53,
+    0x31,
+  ]; // GZDRAES1
   static const _iterations = 120000;
   static const _headerLen = 8 + 16 + 16;
 
@@ -87,7 +97,10 @@ class AesFileDecryptor {
         final salt = Uint8List.sublistView(pending, 8, 24);
         final iv = Uint8List.sublistView(pending, 24, 40);
         cipher = CBCBlockCipher(AESEngine())
-          ..init(false, ParametersWithIV(KeyParameter(_deriveKey(password, salt)), iv));
+          ..init(
+            false,
+            ParametersWithIV(KeyParameter(_deriveKey(password, salt)), iv),
+          );
         pending = pending.sublist(_headerLen);
       }
       emit(16); // always hold back the (possibly final) last block

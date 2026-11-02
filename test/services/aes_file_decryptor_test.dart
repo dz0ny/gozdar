@@ -77,8 +77,12 @@ void main() {
         yield enc.sublist(i, (i + 7).clamp(0, enc.length));
       }
     }
+
     await AesFileDecryptor.decrypt(
-        input: chunked(), out: sink, password: password);
+      input: chunked(),
+      out: sink,
+      password: password,
+    );
     await sink.close();
     final got = await out.readAsBytes();
     await tmp.delete(recursive: true);

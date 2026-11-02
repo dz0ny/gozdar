@@ -16,20 +16,20 @@ class HttpCacheEntry {
   }) : cachedAt = cachedAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() => {
-        'id': id == 0 ? null : id,
-        'url_hash': urlHash,
-        'url': url,
-        'response_body': responseBody,
-        'status_code': statusCode,
-        'cached_at': cachedAt.millisecondsSinceEpoch,
-      };
+    'id': id == 0 ? null : id,
+    'url_hash': urlHash,
+    'url': url,
+    'response_body': responseBody,
+    'status_code': statusCode,
+    'cached_at': cachedAt.millisecondsSinceEpoch,
+  };
 
   factory HttpCacheEntry.fromMap(Map<String, dynamic> map) => HttpCacheEntry(
-        id: map['id'] as int,
-        urlHash: map['url_hash'] as String,
-        url: map['url'] as String,
-        responseBody: map['response_body'] as String,
-        statusCode: map['status_code'] as int,
-        cachedAt: DateTime.fromMillisecondsSinceEpoch(map['cached_at'] as int),
-      );
+    id: map['id'] as int,
+    urlHash: map['url_hash'] as String,
+    url: map['url'] as String,
+    responseBody: map['response_body'] as String,
+    statusCode: map['status_code'] as int,
+    cachedAt: DateTime.fromMillisecondsSinceEpoch(map['cached_at'] as int),
+  );
 }

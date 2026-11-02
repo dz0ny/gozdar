@@ -39,8 +39,7 @@ class TileMathService {
     final latRad = lat * pi / 180;
     final n = pow(2, zoom).toDouble();
     final x = (n * ((lon + 180) / 360)).floor();
-    final y =
-        (n * (1 - (log(tan(latRad) + 1 / cos(latRad)) / pi)) / 2).floor();
+    final y = (n * (1 - (log(tan(latRad) + 1 / cos(latRad)) / pi)) / 2).floor();
     return (x, y);
   }
 
@@ -136,7 +135,8 @@ class TileMathService {
   }
 
   static int _orientation(LatLng p, LatLng q, LatLng r) {
-    final value = (q.longitude - p.longitude) * (r.latitude - q.latitude) -
+    final value =
+        (q.longitude - p.longitude) * (r.latitude - q.latitude) -
         (q.latitude - p.latitude) * (r.longitude - q.longitude);
     if (value == 0) return 0;
     return value > 0 ? 1 : 2;

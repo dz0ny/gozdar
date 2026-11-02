@@ -95,12 +95,15 @@ void main() {
       });
     });
 
-    test('finds a parcel by holder name, ignoring case and diacritics', () async {
-      final hits = await HrOwnerService.instance.searchCached(['kovacic']);
-      expect(hits, hasLength(1));
-      expect(hits.single.sifko, 302759);
-      expect(hits.single.parcela, '100/1');
-    });
+    test(
+      'finds a parcel by holder name, ignoring case and diacritics',
+      () async {
+        final hits = await HrOwnerService.instance.searchCached(['kovacic']);
+        expect(hits, hasLength(1));
+        expect(hits.single.sifko, 302759);
+        expect(hits.single.parcela, '100/1');
+      },
+    );
 
     test('every word must match name, address or KO', () async {
       expect(
@@ -115,7 +118,9 @@ void main() {
 
     test('restricts to one KO and ignores short words', () async {
       expect(
-        await HrOwnerService.instance.searchCached(['horvat'], onlySifko: 302759),
+        await HrOwnerService.instance.searchCached([
+          'horvat',
+        ], onlySifko: 302759),
         isEmpty,
       );
       expect(await HrOwnerService.instance.searchCached(['ho']), isEmpty);

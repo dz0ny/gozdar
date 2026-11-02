@@ -137,8 +137,10 @@ AlignResult solveAlign(AlignJob job) {
       final res = _correlate(pa, pb, r);
       if (res != null) {
         // The shift refers to the middle of the overlap of the two patches.
-        final mx = (math.max(pa.ox, pb.ox) + math.min(pa.ox + pa.w, pb.ox + pb.w)) / 2;
-        final my = (math.max(pa.oy, pb.oy) + math.min(pa.oy + pa.h, pb.oy + pb.h)) / 2;
+        final mx =
+            (math.max(pa.ox, pb.ox) + math.min(pa.ox + pa.w, pb.ox + pb.w)) / 2;
+        final my =
+            (math.max(pa.oy, pb.oy) + math.min(pa.oy + pa.h, pb.oy + pb.h)) / 2;
         constraints.add(
           _Constraint(
             i,
@@ -263,8 +265,10 @@ FeatureMatch? _featureFit(List<Keypoint> a, List<Keypoint> b) {
 }
 
 int _overlapArea(AlignPatch a, AlignPatch b) {
-  final int w = math.min<int>(a.ox + a.w, b.ox + b.w) - math.max<int>(a.ox, b.ox);
-  final int h = math.min<int>(a.oy + a.h, b.oy + b.h) - math.max<int>(a.oy, b.oy);
+  final int w =
+      math.min<int>(a.ox + a.w, b.ox + b.w) - math.max<int>(a.ox, b.ox);
+  final int h =
+      math.min<int>(a.oy + a.h, b.oy + b.h) - math.max<int>(a.oy, b.oy);
   return (w > 0 && h > 0) ? w * h : 0;
 }
 

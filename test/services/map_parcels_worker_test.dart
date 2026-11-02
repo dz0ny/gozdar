@@ -42,9 +42,15 @@ void main() {
         'INSERT INTO parcels (sifko, parcela, area, eid, poly, min_lon, '
         'max_lon, min_lat, max_lat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
-          sifko, parcela, 100.0, eid,
+          sifko,
+          parcela,
+          100.0,
+          eid,
           _poly([(lon, lat), (lon + .001, lat), (lon + .001, lat + .001)]),
-          lon, lon + .001, lat, lat + .001,
+          lon,
+          lon + .001,
+          lat,
+          lat + .001,
         ],
       );
     }
@@ -64,13 +70,20 @@ void main() {
     public.execute("INSERT INTO owners VALUES (1651, '100', 1, 'L')");
     public.close();
 
-    ParcelLookupService.instance.openForTesting('${dir.path}/parcels-test.sqlite');
-    OwnerLookupService.instance.openPublicForTesting('${dir.path}/public.sqlite');
+    ParcelLookupService.instance.openForTesting(
+      '${dir.path}/parcels-test.sqlite',
+    );
+    OwnerLookupService.instance.openPublicForTesting(
+      '${dir.path}/public.sqlite',
+    );
   });
 
   tearDownAll(() => dir.deleteSync(recursive: true));
 
-  final bounds = LatLngBounds(const LatLng(45.5, 14.4), const LatLng(45.7, 14.6));
+  final bounds = LatLngBounds(
+    const LatLng(45.5, 14.4),
+    const LatLng(45.7, 14.6),
+  );
 
   test('loads the parcels of a viewport off the UI isolate', () async {
     final result = await MapParcelsWorker.instance.parcelsInBounds(

@@ -1,8 +1,10 @@
 import 'dart:convert';
+
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
 import '../db/app_database.dart';
 import 'cache_settings.dart';
 import 'database_service.dart';
@@ -32,9 +34,13 @@ class HttpCacheService {
     try {
       final urlHash = _hashUrl(uri.toString());
       final cutoff = DateTime.now().subtract(_cacheTtl);
-      final row = await (_db.select(_db.httpCache)
-            ..where((t) => t.urlHash.equals(urlHash) & t.cachedAt.isBiggerThanValue(cutoff)))
-          .getSingleOrNull();
+      final row =
+          await (_db.select(_db.httpCache)..where(
+                (t) =>
+                    t.urlHash.equals(urlHash) &
+                    t.cachedAt.isBiggerThanValue(cutoff),
+              ))
+              .getSingleOrNull();
       if (row == null) return null;
       return http.Response(row.responseBody, row.statusCode);
     } catch (e, st) {
@@ -48,14 +54,20 @@ class HttpCacheService {
     if (!_shouldCache(uri) || response.statusCode != 200) return;
     try {
       final urlHash = _hashUrl(uri.toString());
-      await (_db.delete(_db.httpCache)..where((t) => t.urlHash.equals(urlHash))).go();
-      await _db.into(_db.httpCache).insert(HttpCacheCompanion.insert(
-            urlHash: urlHash,
-            url: uri.toString(),
-            responseBody: response.body,
-            statusCode: response.statusCode,
-            cachedAt: DateTime.now(),
-          ));
+      await (_db.delete(
+        _db.httpCache,
+      )..where((t) => t.urlHash.equals(urlHash))).go();
+      await _db
+          .into(_db.httpCache)
+          .insert(
+            HttpCacheCompanion.insert(
+              urlHash: urlHash,
+              url: uri.toString(),
+              responseBody: response.body,
+              statusCode: response.statusCode,
+              cachedAt: DateTime.now(),
+            ),
+          );
     } catch (e, st) {
       debugPrint('HttpCacheService.cacheResponse error: $e\n$st');
     }
@@ -83,7 +95,9 @@ class HttpCacheService {
   Future<int> clearExpired() async {
     try {
       final cutoff = DateTime.now().subtract(_cacheTtl);
-      return await (_db.delete(_db.httpCache)..where((t) => t.cachedAt.isSmallerThanValue(cutoff))).go();
+      return await (_db.delete(
+        _db.httpCache,
+      )..where((t) => t.cachedAt.isSmallerThanValue(cutoff))).go();
     } catch (e, st) {
       debugPrint('HttpCacheService.clearExpired error: $e\n$st');
       return 0;
@@ -104,12 +118,16 @@ class HttpCacheService {
   Future<Map<String, dynamic>> getStats() async {
     try {
       final cutoff = DateTime.now().subtract(_cacheTtl);
-      final rows = await (_db.select(_db.httpCache)
-            ..where((t) => t.cachedAt.isBiggerThanValue(cutoff)))
-          .get();
+      final rows = await (_db.select(
+        _db.httpCache,
+      )..where((t) => t.cachedAt.isBiggerThanValue(cutoff))).get();
       final total = rows.length;
       final size = rows.fold<int>(0, (sum, r) => sum + r.responseBody.length);
-      return {'entries': total, 'sizeBytes': size, 'sizeMB': (size / (1024 * 1024)).toStringAsFixed(2)};
+      return {
+        'entries': total,
+        'sizeBytes': size,
+        'sizeMB': (size / (1024 * 1024)).toStringAsFixed(2),
+      };
     } catch (e, st) {
       debugPrint('HttpCacheService.getStats error: $e\n$st');
       return {'entries': 0, 'sizeBytes': 0, 'sizeMB': '0.00'};

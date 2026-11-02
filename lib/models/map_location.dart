@@ -27,8 +27,8 @@ class MapLocation {
     DateTime? createdAt,
     this.parcelId,
     this.sourceShareId,
-  })  : typeIndex = type.index,
-        createdAt = createdAt ?? DateTime.now();
+  }) : typeIndex = type.index,
+       createdAt = createdAt ?? DateTime.now();
 
   bool get isSecnja => type == LocationType.secnja;
 
@@ -40,37 +40,36 @@ class MapLocation {
     LocationType? type,
     DateTime? createdAt,
     int? parcelId,
-  }) =>
-      MapLocation(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        latitude: latitude ?? this.latitude,
-        longitude: longitude ?? this.longitude,
-        type: type ?? this.type,
-        createdAt: createdAt ?? this.createdAt,
-        parcelId: parcelId ?? this.parcelId,
-        sourceShareId: sourceShareId,
-      );
+  }) => MapLocation(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    latitude: latitude ?? this.latitude,
+    longitude: longitude ?? this.longitude,
+    type: type ?? this.type,
+    createdAt: createdAt ?? this.createdAt,
+    parcelId: parcelId ?? this.parcelId,
+    sourceShareId: sourceShareId,
+  );
 
   Map<String, dynamic> toMap() => {
-        'id': id == 0 ? null : id,
-        'name': name,
-        'latitude': latitude,
-        'longitude': longitude,
-        'type_index': typeIndex,
-        'created_at': createdAt.millisecondsSinceEpoch,
-        'parcel_id': parcelId,
-        'source_share_id': sourceShareId,
-      };
+    'id': id == 0 ? null : id,
+    'name': name,
+    'latitude': latitude,
+    'longitude': longitude,
+    'type_index': typeIndex,
+    'created_at': createdAt.millisecondsSinceEpoch,
+    'parcel_id': parcelId,
+    'source_share_id': sourceShareId,
+  };
 
   factory MapLocation.fromMap(Map<String, dynamic> map) => MapLocation(
-        id: map['id'] as int,
-        name: map['name'] as String,
-        latitude: (map['latitude'] as num).toDouble(),
-        longitude: (map['longitude'] as num).toDouble(),
-        type: LocationType.values[map['type_index'] as int],
-        createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
-        parcelId: map['parcel_id'] as int?,
-        sourceShareId: map['source_share_id'] as String?,
-      );
+    id: map['id'] as int,
+    name: map['name'] as String,
+    latitude: (map['latitude'] as num).toDouble(),
+    longitude: (map['longitude'] as num).toDouble(),
+    type: LocationType.values[map['type_index'] as int],
+    createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
+    parcelId: map['parcel_id'] as int?,
+    sourceShareId: map['source_share_id'] as String?,
+  );
 }

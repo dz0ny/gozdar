@@ -23,7 +23,9 @@ class OnboardingService {
 
   static OnboardingService get instance {
     if (_instance == null) {
-      throw StateError('OnboardingService not initialized. Call initialize() first.');
+      throw StateError(
+        'OnboardingService not initialized. Call initialize() first.',
+      );
     }
     return _instance!;
   }

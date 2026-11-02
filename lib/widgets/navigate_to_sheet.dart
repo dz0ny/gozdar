@@ -91,9 +91,7 @@ class NavigateToSheet extends StatelessWidget {
         debugPrint('NavigateToSheet: $uri failed: $e');
       }
     }
-    messenger.showSnackBar(
-      SnackBar(content: Text(failedText)),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(failedText)));
   }
 
   void _copy(BuildContext context) {

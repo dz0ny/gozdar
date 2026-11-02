@@ -37,7 +37,10 @@ class _ReceiveShareScreenState extends State<ReceiveShareScreen> {
       final payload = result.payload;
       switch (result.outcome) {
         case ReceiveOutcome.imported:
-          message = l10n.secnjaReceived(payload!.parcelNumber, payload.points.length);
+          message = l10n.secnjaReceived(
+            payload!.parcelNumber,
+            payload.points.length,
+          );
           await mapProvider?.loadParcels();
           await mapProvider?.loadLocations();
           mapProvider?.focusOn(payload);
@@ -55,9 +58,11 @@ class _ReceiveShareScreenState extends State<ReceiveShareScreen> {
     }
     if (!mounted) return;
     // A first start still shows the intro after the share is stored.
-    context.go(OnboardingService.instance.isOnboardingCompleted
-        ? AppRoutes.map
-        : AppRoutes.onboarding);
+    context.go(
+      OnboardingService.instance.isOnboardingCompleted
+          ? AppRoutes.map
+          : AppRoutes.onboarding,
+    );
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 

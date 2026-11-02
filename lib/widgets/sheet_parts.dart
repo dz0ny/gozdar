@@ -15,9 +15,7 @@ class SheetHandle extends StatelessWidget {
         height: 4,
         margin: const EdgeInsets.only(top: 8, bottom: 10),
         decoration: BoxDecoration(
-          color: Theme.of(context)
-              .colorScheme
-              .onSurfaceVariant
+          color: Theme.of(context).colorScheme.onSurfaceVariant
               .withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(2),
         ),

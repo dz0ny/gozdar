@@ -56,21 +56,21 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
     for (final list in byCountry.values) {
       list.sort((a, b) => a.name.compareTo(b.name));
     }
-    final first =
-        Localizations.localeOf(context).languageCode == 'hr' ? 'hr' : 'si';
-    return byCountry.entries.toList()
-      ..sort((a, b) {
-        if (a.key == first) return -1;
-        if (b.key == first) return 1;
-        return a.key.compareTo(b.key);
-      });
+    final first = Localizations.localeOf(context).languageCode == 'hr'
+        ? 'hr'
+        : 'si';
+    return byCountry.entries.toList()..sort((a, b) {
+      if (a.key == first) return -1;
+      if (b.key == first) return 1;
+      return a.key.compareTo(b.key);
+    });
   }
 
   String _countryName(BuildContext context, String code) => switch (code) {
-        'si' => context.l10n.aboutCountrySi,
-        'hr' => context.l10n.aboutCountryHr,
-        _ => code.toUpperCase(),
-      };
+    'si' => context.l10n.aboutCountrySi,
+    'hr' => context.l10n.aboutCountryHr,
+    _ => code.toUpperCase(),
+  };
 
   /// Group digits with dots, e.g. 1354039 -> "1.354.039".
   String _formatCount(int n) {
@@ -184,10 +184,10 @@ class _RegionPickerSheetState extends State<RegionPickerSheet> {
               onPressed: _selected.isEmpty
                   ? null
                   : () => Navigator.of(context).pop(
-                        widget.regions
-                            .where((r) => _selected.contains(r.file))
-                            .toList(),
-                      ),
+                      widget.regions
+                          .where((r) => _selected.contains(r.file))
+                          .toList(),
+                    ),
               icon: const Icon(Icons.cloud_download_outlined),
               label: Text(
                 _selected.isEmpty

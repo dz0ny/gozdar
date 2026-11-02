@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../models/parcel.dart';
 import '../services/ko_locator.dart';
 import '../services/owner_lookup_service.dart';
@@ -82,16 +83,17 @@ class ParcelInfoCard extends StatelessWidget {
   /// the bundled KO index (which covers Croatia too); the bare number when
   /// neither knows it.
   String _koValue(int? sifko) {
-    final name = OwnerLookupService.instance.koName(sifko) ??
+    final name =
+        OwnerLookupService.instance.koName(sifko) ??
         KoLocator.instance.bySifko(sifko)?.name;
     return name != null ? '$name ($sifko)' : sifko.toString();
   }
 
   String _forestTypeLabel(BuildContext context) => switch (parcel.forestType) {
-        ForestType.deciduous => context.l10n.parcelForestTypeDeciduous,
-        ForestType.coniferous => context.l10n.parcelForestTypeConiferous,
-        ForestType.mixed => context.l10n.parcelForestTypeMixed,
-      };
+    ForestType.deciduous => context.l10n.parcelForestTypeDeciduous,
+    ForestType.coniferous => context.l10n.parcelForestTypeConiferous,
+    ForestType.mixed => context.l10n.parcelForestTypeMixed,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -109,9 +111,8 @@ class ParcelInfoCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: getForestTypeIcon(
-                        parcel.forestType,
-                      ).$2.withValues(alpha: 0.2),
+                      color: getForestTypeIcon(parcel.forestType).$2
+                          .withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -415,10 +416,10 @@ class ParcelValuationView extends StatelessWidget {
 
   /// "Gozd · raven 6 od 10".
   static String _partLine(BuildContext context, ValuationPart part) => [
-        _modelName(context, part.model),
-        if (part.level != null)
-          context.l10n.valuationLevel(part.level!.replaceAll('/', ' od ')),
-      ].join(' · ');
+    _modelName(context, part.model),
+    if (part.level != null)
+      context.l10n.valuationLevel(part.level!.replaceAll('/', ' od ')),
+  ].join(' · ');
 
   @override
   Widget build(BuildContext context) {
@@ -462,8 +463,7 @@ class ParcelValuationView extends StatelessWidget {
                 ),
             ],
           ),
-          if (single)
-            Text(_partLine(context, v.parts.single), style: muted),
+          if (single) Text(_partLine(context, v.parts.single), style: muted),
         ],
         // Several kinds of land: each with its share and value.
         if (!single) ...[
@@ -504,14 +504,26 @@ class ParcelValuationView extends StatelessWidget {
           const SizedBox(height: 8),
           Divider(height: 16, color: cs.outlineVariant),
           if (v.boniteta != null)
-            _factor(context, l10n.valuationBoniteta,
-                l10n.valuationBonitetaHint, '${v.boniteta}'),
+            _factor(
+              context,
+              l10n.valuationBoniteta,
+              l10n.valuationBonitetaHint,
+              '${v.boniteta}',
+            ),
           if (v.siteIndex != null)
-            _factor(context, l10n.valuationSiteIndex,
-                l10n.valuationSiteIndexHint, '${v.siteIndex}'),
+            _factor(
+              context,
+              l10n.valuationSiteIndex,
+              l10n.valuationSiteIndexHint,
+              '${v.siteIndex}',
+            ),
           if (v.openness != null)
-            _factor(context, l10n.valuationOpenness,
-                l10n.valuationOpennessHint, '${v.openness} %'),
+            _factor(
+              context,
+              l10n.valuationOpenness,
+              l10n.valuationOpennessHint,
+              '${v.openness} %',
+            ),
         ],
         Divider(height: 32, color: cs.outlineVariant),
         Text(

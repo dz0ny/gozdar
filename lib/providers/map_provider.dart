@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart' show LatLngBounds;
 import 'package:latlong2/latlong.dart';
+
 import '../l10n/l10n.dart';
 import '../models/map_location.dart';
 import '../models/map_layer.dart';

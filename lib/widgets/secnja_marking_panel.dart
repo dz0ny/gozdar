@@ -81,9 +81,12 @@ class SecnjaMarkingPanel extends StatelessWidget {
                         child: ChoiceChip(
                           label: Text(s),
                           selected: s == selectedSpecies,
-                          selectedColor: Colors.deepOrange.withValues(alpha: 0.25),
-                          onSelected: (_) =>
-                              onSpeciesSelected(s == selectedSpecies ? null : s),
+                          selectedColor: Colors.deepOrange.withValues(
+                            alpha: 0.25,
+                          ),
+                          onSelected: (_) => onSpeciesSelected(
+                            s == selectedSpecies ? null : s,
+                          ),
                         ),
                       ),
                     ActionChip(

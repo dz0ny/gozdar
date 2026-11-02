@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
 import '../models/map_location.dart';
 import '../services/database_service.dart';

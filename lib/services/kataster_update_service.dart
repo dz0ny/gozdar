@@ -49,7 +49,8 @@ class KatasterManifest {
     final resp = await http.get(Uri.parse(url));
     if (resp.statusCode != 200) {
       throw FormatException(
-          'Seznama regij ni bilo mogoče naložiti (HTTP ${resp.statusCode}).');
+        'Seznama regij ni bilo mogoče naložiti (HTTP ${resp.statusCode}).',
+      );
     }
     final data = jsonDecode(resp.body);
     if (data is List) {
@@ -107,7 +108,8 @@ class KatasterUpdate {
       }
     }
     final remoteBuilt = manifest.publicOwnersBuilt;
-    final publicOutdated = publicOwnersBuilt != null &&
+    final publicOutdated =
+        publicOwnersBuilt != null &&
         remoteBuilt != null &&
         publicOwnersBuilt.compareTo(remoteBuilt) < 0;
     return KatasterUpdate(
@@ -164,13 +166,12 @@ class KatasterUpdateService {
     required Map<String, String?> Function() loadedRegionDates,
     required String? Function() publicOwnersBuilt,
     required DateTime Function() clock,
-  }) =>
-      KatasterUpdateService._(
-        fetchManifest: fetchManifest,
-        loadedRegionDates: loadedRegionDates,
-        publicOwnersBuilt: publicOwnersBuilt,
-        clock: clock,
-      );
+  }) => KatasterUpdateService._(
+    fetchManifest: fetchManifest,
+    loadedRegionDates: loadedRegionDates,
+    publicOwnersBuilt: publicOwnersBuilt,
+    clock: clock,
+  );
 
   Future<void> init() async {
     if (_prefs != null) return;
@@ -181,7 +182,8 @@ class KatasterUpdateService {
     if (saved != null) {
       try {
         _manifest = KatasterManifest.fromJson(
-            jsonDecode(saved) as Map<String, dynamic>);
+          jsonDecode(saved) as Map<String, dynamic>,
+        );
       } catch (e) {
         debugPrint('KatasterUpdateService: discarding saved manifest: $e');
       }

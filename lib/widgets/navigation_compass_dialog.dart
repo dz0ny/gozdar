@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../l10n/l10n.dart';
 import '../services/location_settings.dart';
 import '../utils/formats.dart';
@@ -78,7 +80,8 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    final granted = permission != LocationPermission.denied &&
+    final granted =
+        permission != LocationPermission.denied &&
         permission != LocationPermission.deniedForever;
     if (mounted) {
       setState(() => _locationDenied = !granted);
@@ -483,10 +486,8 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
         const SizedBox(height: 4),
         Text(
           value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: displayColor,
-          ),
+          style: Theme.of(context).textTheme.titleLarge
+              ?.copyWith(fontWeight: FontWeight.bold, color: displayColor),
         ),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],

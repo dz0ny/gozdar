@@ -7,7 +7,8 @@ import 'package:gozdar/models/secnja_share.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:latlong2/latlong.dart';
 
-Parcel parcel({String? owner = 'Janez Novak', bool withPolygon = true}) => Parcel(
+Parcel parcel({String? owner = 'Janez Novak', bool withPolygon = true}) =>
+    Parcel(
       name: 'Parcela 1234/5',
       cadastralMunicipality: 1234,
       parcelNumber: '1234/5',
@@ -23,18 +24,31 @@ Parcel parcel({String? owner = 'Janez Novak', bool withPolygon = true}) => Parce
     );
 
 List<MapLocation> marks() => [
-      MapLocation(name: 'Smreka 1', latitude: 46.005, longitude: 14.005, type: LocationType.secnja),
-      MapLocation(name: 'Drevo 2', latitude: 46.006, longitude: 14.006, type: LocationType.secnja),
-    ];
+  MapLocation(
+    name: 'Smreka 1',
+    latitude: 46.005,
+    longitude: 14.005,
+    type: LocationType.secnja,
+  ),
+  MapLocation(
+    name: 'Drevo 2',
+    latitude: 46.006,
+    longitude: 14.006,
+    type: LocationType.secnja,
+  ),
+];
 
-SecnjaSharePayload build({String? owner = 'Janez Novak', List<MapLocation>? m, DateTime? now}) =>
-    SecnjaSharePayload.fromParcel(
-      parcel(owner: owner),
-      m ?? marks(),
-      koName: 'Dolenja vas',
-      species: const ['Smreka', 'Bukev'],
-      now: now ?? DateTime.utc(2026, 11, 2, 10),
-    );
+SecnjaSharePayload build({
+  String? owner = 'Janez Novak',
+  List<MapLocation>? m,
+  DateTime? now,
+}) => SecnjaSharePayload.fromParcel(
+  parcel(owner: owner),
+  m ?? marks(),
+  koName: 'Dolenja vas',
+  species: const ['Smreka', 'Bukev'],
+  now: now ?? DateTime.utc(2026, 11, 2, 10),
+);
 
 void main() {
   final l10n = lookupAppLocalizations(const Locale('sl'));
@@ -51,7 +65,12 @@ void main() {
     expect(json['parcel']['areaHa'], greaterThan(0));
     expect(json['parcel']['polygon'], hasLength(4));
     expect(json['parcel']['polygon'][0], [46.0, 14.0]);
-    expect(json['points'][0], {'name': 'Smreka 1', 'lat': 46.005, 'lng': 14.005, 'species': 'Smreka'});
+    expect(json['points'][0], {
+      'name': 'Smreka 1',
+      'lat': 46.005,
+      'lng': 14.005,
+      'species': 'Smreka',
+    });
     expect((json['points'][1] as Map).containsKey('species'), isFalse);
     expect(json['createdAt'], '2026-11-02T10:00:00.000Z');
   });
@@ -64,7 +83,10 @@ void main() {
 
   test('fromJson reads expiresAt from the server', () {
     final json = build().toJson()..['expiresAt'] = '2026-12-02T10:00:00.000Z';
-    expect(SecnjaSharePayload.fromJson(json).expiresAt, DateTime.utc(2026, 12, 2, 10));
+    expect(
+      SecnjaSharePayload.fromJson(json).expiresAt,
+      DateTime.utc(2026, 12, 2, 10),
+    );
   });
 
   test('blank owner and zero area are omitted', () {
@@ -114,11 +136,18 @@ void main() {
   });
 
   test('shareTitle names the parcel and k.o.', () {
-    expect(shareTitle(build(), l10n), '🪓 Sečnja — parcela 1234/5, k.o. Dolenja vas');
+    expect(
+      shareTitle(build(), l10n),
+      '🪓 Sečnja — parcela 1234/5, k.o. Dolenja vas',
+    );
   });
 
   test('shareTitle with koName null uses the k.o. number', () {
-    final p = SecnjaSharePayload.fromParcel(parcel(), marks(), species: const []);
+    final p = SecnjaSharePayload.fromParcel(
+      parcel(),
+      marks(),
+      species: const [],
+    );
     expect(shareTitle(p, l10n), '🪓 Sečnja — parcela 1234/5, k.o. 1234');
   });
 }

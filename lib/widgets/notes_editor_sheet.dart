@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
 
 /// Bottom sheet for editing notes
@@ -6,11 +7,7 @@ class NotesEditorSheet extends StatefulWidget {
   final String? initialNotes;
   final String? title;
 
-  const NotesEditorSheet({
-    super.key,
-    this.initialNotes,
-    this.title,
-  });
+  const NotesEditorSheet({super.key, this.initialNotes, this.title});
 
   @override
   State<NotesEditorSheet> createState() => _NotesEditorSheetState();
@@ -90,7 +87,10 @@ class _NotesEditorSheetState extends State<NotesEditorSheet> {
                   children: [
                     Text(
                       widget.title ?? context.l10n.logsNotesLabel,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const Spacer(),
                     IconButton(

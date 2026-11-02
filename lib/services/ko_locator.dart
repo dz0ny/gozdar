@@ -89,15 +89,17 @@ class KoLocator {
         }
         if (pts.length >= 3) rings.add(pts);
       }
-      out.add(KoInfo(
-        sifko: (e['s'] as num).toInt(),
-        name: (e['n'] ?? '').toString(),
-        rings: rings,
-        minLon: mnLon,
-        minLat: mnLat,
-        maxLon: mxLon,
-        maxLat: mxLat,
-      ));
+      out.add(
+        KoInfo(
+          sifko: (e['s'] as num).toInt(),
+          name: (e['n'] ?? '').toString(),
+          rings: rings,
+          minLon: mnLon,
+          minLat: mnLat,
+          maxLon: mxLon,
+          maxLat: mxLat,
+        ),
+      );
     }
     return out;
   }
@@ -132,7 +134,10 @@ class KoLocator {
     if (kos == null) return null;
     final lon = point.longitude, lat = point.latitude;
     for (final k in kos) {
-      if (lon < k.minLon || lon > k.maxLon || lat < k.minLat || lat > k.maxLat) {
+      if (lon < k.minLon ||
+          lon > k.maxLon ||
+          lat < k.minLat ||
+          lat > k.maxLat) {
         continue;
       }
       for (final ring in k.rings) {
@@ -143,8 +148,10 @@ class KoLocator {
     KoInfo? best;
     var bestD = tol * tol;
     for (final k in kos) {
-      if (lon < k.minLon - tol || lon > k.maxLon + tol ||
-          lat < k.minLat - tol || lat > k.maxLat + tol) {
+      if (lon < k.minLon - tol ||
+          lon > k.maxLon + tol ||
+          lat < k.minLat - tol ||
+          lat > k.maxLat + tol) {
         continue;
       }
       for (final ring in k.rings) {
@@ -182,7 +189,9 @@ class KoLocator {
         score = 0;
       } else if (k.folded.startsWith(q)) {
         score = 1;
-      } else if (k.folded.split(RegExp(r'[\s-]+')).any((w) => w.startsWith(q))) {
+      } else if (k.folded
+          .split(RegExp(r'[\s-]+'))
+          .any((w) => w.startsWith(q))) {
         score = 2;
       } else if (q.length >= 3 && k.folded.contains(q)) {
         score = 4;

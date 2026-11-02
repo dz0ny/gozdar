@@ -125,7 +125,8 @@ class OfflineTileStyles extends Table {
 @DataClassName('DbOfflineTileEntry')
 class OfflineTileEntries extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get styleHash => text().references(OfflineTileStyles, #styleHash)();
+  TextColumn get styleHash =>
+      text().references(OfflineTileStyles, #styleHash)();
   IntColumn get z => integer()();
   IntColumn get x => integer()();
   IntColumn get y => integer()();
@@ -215,10 +216,13 @@ class AppDatabase extends _$AppDatabase {
   /// Links sečnja marks without a parcel to the saved parcel under them.
   /// When parcels overlap, the smallest parcel gets the mark.
   Future<void> backfillSecnjaParcels() async {
-    final rows = await (select(mapLocations)
-          ..where((t) =>
-              t.parcelId.isNull() & t.typeIndex.equals(LocationType.secnja.index)))
-        .get();
+    final rows =
+        await (select(mapLocations)..where(
+              (t) =>
+                  t.parcelId.isNull() &
+                  t.typeIndex.equals(LocationType.secnja.index),
+            ))
+            .get();
     if (rows.isEmpty) return;
     final saved = (await select(parcels).get())
         .map((r) => Parcel(id: r.id, name: r.name, polygonJson: r.polygonJson))
@@ -226,8 +230,9 @@ class AppDatabase extends _$AppDatabase {
     for (final row in rows) {
       final id = smallestParcelAt(saved, LatLng(row.latitude, row.longitude));
       if (id == null) continue;
-      await (update(mapLocations)..where((t) => t.id.equals(row.id)))
-          .write(MapLocationsCompanion(parcelId: Value(id)));
+      await (update(mapLocations)..where((t) => t.id.equals(row.id))).write(
+        MapLocationsCompanion(parcelId: Value(id)),
+      );
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/log_entry.dart';
 import '../utils/formats.dart';
 
@@ -24,10 +25,7 @@ class LogCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         color: Colors.red,
-        child: const Icon(
-          Icons.delete,
-          color: Colors.white,
-        ),
+        child: const Icon(Icons.delete, color: Colors.white),
       ),
       child: InkWell(
         onTap: onTap,
@@ -51,17 +49,15 @@ class LogCard extends StatelessWidget {
                     children: [
                       TextSpan(
                         text: Fmt.m3(logEntry.volume),
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       if (logEntry.diameter != null && logEntry.length != null)
                         TextSpan(
                           text:
                               '   Ø ${Fmt.num(logEntry.diameter!, 0)} cm × ${Fmt.num(logEntry.length!, 1)} m',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: Colors.grey[400],
-                              ),
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(color: Colors.grey[400]),
                         ),
                     ],
                   ),
@@ -80,9 +76,9 @@ class LogCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.green[300],
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: Colors.green[300],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],

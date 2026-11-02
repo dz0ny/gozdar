@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../l10n/l10n.dart';
 import '../router/route_names.dart';
 import '../services/locale_settings.dart';
@@ -56,7 +57,6 @@ class _AboutScreenState extends State<AboutScreen> {
   bool _cancelOwnerDownload = false;
   int _ownerReceived = 0;
   int? _ownerTotal;
-
 
   @override
   void initState() {
@@ -113,7 +113,10 @@ class _AboutScreenState extends State<AboutScreen> {
                   const Divider(),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.school_outlined, color: colorScheme.primary),
+                    leading: Icon(
+                      Icons.school_outlined,
+                      color: colorScheme.primary,
+                    ),
                     title: Text(context.l10n.aboutShowIntro),
                     subtitle: Text(context.l10n.aboutShowIntroDesc),
                     trailing: const Icon(Icons.chevron_right),
@@ -247,9 +250,8 @@ class _AboutScreenState extends State<AboutScreen> {
               if (!service.isAvailable) {
                 return Text(
                   context.l10n.aboutNotImported,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: colorScheme.onSurfaceVariant),
                 );
               }
               final size = snapshot.data;
@@ -257,10 +259,12 @@ class _AboutScreenState extends State<AboutScreen> {
                   ? ' • ${(size / (1024 * 1024)).toStringAsFixed(1)} MB'
                   : '';
               return Text(
-                context.l10n.aboutOwnersCount(_formatCount(service.rowCount), sizeLabel),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+                context.l10n.aboutOwnersCount(
+                  _formatCount(service.rowCount),
+                  sizeLabel,
                 ),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
               );
             },
           ),
@@ -313,9 +317,7 @@ class _AboutScreenState extends State<AboutScreen> {
                 color: colorScheme.primary,
               ),
               title: Text(context.l10n.aboutOfflineOwnerSearch),
-              subtitle: Text(
-                context.l10n.aboutOfflineOwnerSearchDesc,
-              ),
+              subtitle: Text(context.l10n.aboutOfflineOwnerSearchDesc),
               value: OwnerOfflineSettingsService.instance.enabled,
               onChanged: (v) async {
                 await OwnerOfflineSettingsService.instance.setEnabled(v);
@@ -332,9 +334,7 @@ class _AboutScreenState extends State<AboutScreen> {
             contentPadding: EdgeInsets.zero,
             secondary: Icon(Icons.forest, color: colorScheme.primary),
             title: Text(context.l10n.aboutVlake),
-            subtitle: Text(
-              context.l10n.aboutVlakeDesc,
-            ),
+            subtitle: Text(context.l10n.aboutVlakeDesc),
             value: VlakeSettings.instance.enabled,
             onChanged: (v) async {
               await VlakeSettings.instance.setEnabled(v);
@@ -366,11 +366,12 @@ class _AboutScreenState extends State<AboutScreen> {
       children: [
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          secondary: Icon(Icons.cloud_download_outlined, color: colorScheme.primary),
-          title: Text(context.l10n.aboutHttpCache),
-          subtitle: Text(
-            context.l10n.aboutHttpCacheDesc,
+          secondary: Icon(
+            Icons.cloud_download_outlined,
+            color: colorScheme.primary,
           ),
+          title: Text(context.l10n.aboutHttpCache),
+          subtitle: Text(context.l10n.aboutHttpCacheDesc),
           value: CacheSettings.instance.httpEnabled,
           onChanged: (v) async {
             await CacheSettings.instance.setHttpEnabled(v);
@@ -381,9 +382,7 @@ class _AboutScreenState extends State<AboutScreen> {
           contentPadding: EdgeInsets.zero,
           secondary: Icon(Icons.map, color: colorScheme.primary),
           title: Text(context.l10n.aboutTileCache),
-          subtitle: Text(
-            context.l10n.aboutTileCacheDesc,
-          ),
+          subtitle: Text(context.l10n.aboutTileCacheDesc),
           value: CacheSettings.instance.tileEnabled,
           onChanged: (v) async {
             await CacheSettings.instance.setTileEnabled(v);
@@ -421,11 +420,15 @@ class _AboutScreenState extends State<AboutScreen> {
       if (mounted) setState(() {});
       messenger.showSnackBar(
         SnackBar(
-          content: Text(L10n.current.aboutOwnersImported(_formatCount(imported.rows))),
+          content: Text(
+            L10n.current.aboutOwnersImported(_formatCount(imported.rows)),
+          ),
         ),
       );
     } catch (e) {
-      final message = e is FormatException ? e.message : L10n.current.aboutImportFailed('$e');
+      final message = e is FormatException
+          ? e.message
+          : L10n.current.aboutImportFailed('$e');
       messenger.showSnackBar(SnackBar(content: Text(message)));
     }
   }
@@ -485,9 +488,8 @@ class _AboutScreenState extends State<AboutScreen> {
             if (!service.isAvailable) {
               return Text(
                 context.l10n.aboutKatasterNotLoaded,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
               );
             }
             final size = snapshot.data;
@@ -495,8 +497,9 @@ class _AboutScreenState extends State<AboutScreen> {
                 ? ' • ${(size / (1024 * 1024)).toStringAsFixed(0)} MB'
                 : '';
             final rawDate = service.dataDate;
-            final parsedDate =
-                rawDate != null ? DateTime.tryParse(rawDate) : null;
+            final parsedDate = rawDate != null
+                ? DateTime.tryParse(rawDate)
+                : null;
             final dateLabel = rawDate != null
                 ? ' • ${parsedDate != null ? Fmt.date(parsedDate) : rawDate}'
                 : '';
@@ -506,19 +509,19 @@ class _AboutScreenState extends State<AboutScreen> {
                 : '';
             return Text(
               context.l10n.aboutParcelsSummary(
-              regionLabel,
-              _formatCount(service.rowCount),
-              sizeLabel,
-              dateLabel,
-            ),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
+                regionLabel,
+                _formatCount(service.rowCount),
+                sizeLabel,
+                dateLabel,
               ),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: colorScheme.onSurfaceVariant),
             );
           },
         ),
         const SizedBox(height: 16),
-        if (!_downloadingParcels) _buildKatasterUpdateCard(context, colorScheme),
+        if (!_downloadingParcels)
+          _buildKatasterUpdateCard(context, colorScheme),
         if (_downloadingParcels)
           _buildDbDownloadProgress(
             context,
@@ -536,7 +539,9 @@ class _AboutScreenState extends State<AboutScreen> {
                   onPressed: _pickAndDownloadRegion,
                   icon: const Icon(Icons.cloud_download_outlined),
                   label: Text(
-                    service.isAvailable ? context.l10n.aboutAddRegion : context.l10n.aboutDownloadRegion,
+                    service.isAvailable
+                        ? context.l10n.aboutAddRegion
+                        : context.l10n.aboutDownloadRegion,
                   ),
                 ),
               ),
@@ -554,9 +559,8 @@ class _AboutScreenState extends State<AboutScreen> {
           const SizedBox(height: 6),
           Text(
             context.l10n.aboutDownloadRegionHint,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
         ],
       ],
@@ -565,7 +569,10 @@ class _AboutScreenState extends State<AboutScreen> {
 
   /// "Newer kataster available" card with a one-tap update of everything that
   /// is outdated on this device (loaded regions + public owners DB).
-  Widget _buildKatasterUpdateCard(BuildContext context, ColorScheme colorScheme) {
+  Widget _buildKatasterUpdateCard(
+    BuildContext context,
+    ColorScheme colorScheme,
+  ) {
     final update = KatasterUpdateService.instance.pending;
     if (update == null) return const SizedBox.shrink();
     final parts = <String>[
@@ -585,7 +592,9 @@ class _AboutScreenState extends State<AboutScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                context.l10n.aboutKatasterUpdateAvailable(update.manifest.date ?? ''),
+                context.l10n.aboutKatasterUpdateAvailable(
+                  update.manifest.date ?? '',
+                ),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.w600,
@@ -596,9 +605,8 @@ class _AboutScreenState extends State<AboutScreen> {
                   parts.join(' • '),
                   update.bytes > 0 ? ' • ~$mb MB' : '',
                 ),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onPrimaryContainer,
-                ),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: colorScheme.onPrimaryContainer),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -680,7 +688,9 @@ class _AboutScreenState extends State<AboutScreen> {
     try {
       regions = await ParcelLookupService.fetchRegions(_regionsManifestUrl);
     } catch (e) {
-      final message = e is FormatException ? e.message : L10n.current.aboutErrorWithDetail('$e');
+      final message = e is FormatException
+          ? e.message
+          : L10n.current.aboutErrorWithDetail('$e');
       messenger.showSnackBar(SnackBar(content: Text(message)));
       return;
     }
@@ -707,7 +717,11 @@ class _AboutScreenState extends State<AboutScreen> {
         if (_cancelParcelDownload) break;
         final region = regions[i];
         setState(() {
-          _parcelDownloadLabel = L10n.current.aboutRegionProgress(region.name, i + 1, regions.length);
+          _parcelDownloadLabel = L10n.current.aboutRegionProgress(
+            region.name,
+            i + 1,
+            regions.length,
+          );
           _parcelReceived = 0;
           _parcelTotal = region.bytes;
         });
@@ -805,7 +819,9 @@ class _AboutScreenState extends State<AboutScreen> {
     final messenger = ScaffoldMessenger.of(context);
     // The owners DB is AES-encrypted in transit; ask for the password to
     // decrypt it as it streams in.
-    final password = await _promptPassword(context.l10n.aboutOwnersPasswordTitle);
+    final password = await _promptPassword(
+      context.l10n.aboutOwnersPasswordTitle,
+    );
     if (password == null || password.isEmpty) return;
     setState(() {
       _downloadingOwners = true;
@@ -832,7 +848,9 @@ class _AboutScreenState extends State<AboutScreen> {
       if (mounted) setState(() {});
       messenger.showSnackBar(
         SnackBar(
-          content: Text(L10n.current.aboutOwnersDownloaded(_formatCount(result.rows))),
+          content: Text(
+            L10n.current.aboutOwnersDownloaded(_formatCount(result.rows)),
+          ),
         ),
       );
     } on OwnerDownloadCancelled {
@@ -840,7 +858,9 @@ class _AboutScreenState extends State<AboutScreen> {
         SnackBar(content: Text(L10n.current.aboutDownloadCancelled)),
       );
     } catch (e) {
-      final message = e is FormatException ? e.message : L10n.current.aboutDownloadFailed('$e');
+      final message = e is FormatException
+          ? e.message
+          : L10n.current.aboutDownloadFailed('$e');
       messenger.showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) {
@@ -1040,10 +1060,7 @@ class _AboutScreenState extends State<AboutScreen> {
               'https://www.e-prostor.gov.si',
               Icons.map,
             ),
-            if (!isCroatian) ...[
-              const Divider(height: 24),
-              dgu,
-            ],
+            if (!isCroatian) ...[const Divider(height: 24), dgu],
             const Divider(height: 24),
             _buildMapSourceItem(
               context,

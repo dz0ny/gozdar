@@ -36,7 +36,10 @@ void main() {
     expect(calls, ['close', 'navigate']);
   });
 
-  Future<List<String>> pumpParcelMenu(WidgetTester tester, {required int count}) async {
+  Future<List<String>> pumpParcelMenu(
+    WidgetTester tester, {
+    required int count,
+  }) async {
     final calls = <String>[];
     await tester.pumpWidget(
       MaterialApp(
@@ -68,7 +71,9 @@ void main() {
     return calls;
   }
 
-  testWidgets('parcel with marks shows the count and opens the parcel', (tester) async {
+  testWidgets('parcel with marks shows the count and opens the parcel', (
+    tester,
+  ) async {
     final calls = await pumpParcelMenu(tester, count: 4);
     expect(find.text('🪓 4 za posek'), findsOneWidget);
     await tester.tap(find.text('🪓 4 za posek'));

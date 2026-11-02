@@ -5,11 +5,7 @@ class SpeciesService {
   static const String _keySpecies = 'species_list';
 
   // Default species (Slovenian tree types)
-  static const List<String> _defaultSpecies = [
-    'Smreka',
-    'Bukev',
-    'Jelka',
-  ];
+  static const List<String> _defaultSpecies = ['Smreka', 'Bukev', 'Jelka'];
 
   /// Get the list of available species
   Future<List<String>> getSpecies() async {

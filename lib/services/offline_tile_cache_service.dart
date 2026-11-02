@@ -32,10 +32,7 @@ class DownloadRegion {
     final polygons = rawPolygons.map<List<List<double>>>((poly) {
       return (poly as List<dynamic>).map<List<double>>((vertex) {
         final value = vertex as List<dynamic>;
-        return [
-          (value[0] as num).toDouble(),
-          (value[1] as num).toDouble(),
-        ];
+        return [(value[0] as num).toDouble(), (value[1] as num).toDouble()];
       }).toList();
     }).toList();
 
@@ -94,21 +91,15 @@ class CachedTileCoord {
 
   Map<String, int> toJson() => {'z': z, 'x': x, 'y': y};
 
-  factory CachedTileCoord.fromJson(Map<String, dynamic> json) => CachedTileCoord(
-    json['z'] as int,
-    json['x'] as int,
-    json['y'] as int,
-  );
+  factory CachedTileCoord.fromJson(Map<String, dynamic> json) =>
+      CachedTileCoord(json['z'] as int, json['x'] as int, json['y'] as int);
 }
 
 class CachedTileData {
   final Uint8List bytes;
   final String? contentType;
 
-  const CachedTileData({
-    required this.bytes,
-    required this.contentType,
-  });
+  const CachedTileData({required this.bytes, required this.contentType});
 }
 
 class _CachedTileLocation {
@@ -185,14 +176,14 @@ class OfflineTileCacheService {
   Future<Set<String>> loadManifest(String styleHash) async {
     if (_manifests.containsKey(styleHash)) return _manifests[styleHash]!;
 
-    var rows = await (_db.select(_db.offlineTileEntries)
-          ..where((t) => t.styleHash.equals(styleHash)))
-        .get();
+    var rows = await (_db.select(
+      _db.offlineTileEntries,
+    )..where((t) => t.styleHash.equals(styleHash))).get();
     if (rows.isEmpty) {
       await _hydrateStyleFromDisk(styleHash);
-      rows = await (_db.select(_db.offlineTileEntries)
-            ..where((t) => t.styleHash.equals(styleHash)))
-          .get();
+      rows = await (_db.select(
+        _db.offlineTileEntries,
+      )..where((t) => t.styleHash.equals(styleHash))).get();
     }
 
     final manifest = rows.map((row) => _tileKey(row.z, row.x, row.y)).toSet();
@@ -200,7 +191,12 @@ class OfflineTileCacheService {
     return manifest;
   }
 
-  Future<CachedTileData?> getTileData(String styleHash, int z, int x, int y) async {
+  Future<CachedTileData?> getTileData(
+    String styleHash,
+    int z,
+    int x,
+    int y,
+  ) async {
     final cacheKey = '$styleHash/${_tileKey(z, x, y)}';
     final cached = _tileMemoryCache.remove(cacheKey);
     if (cached != null) {
@@ -323,14 +319,7 @@ class OfflineTileCacheService {
     Uint8List bytes, {
     String? contentType,
   }) async {
-    await putTile(
-      styleHash,
-      z,
-      x,
-      y,
-      bytes,
-      contentType: contentType,
-    );
+    await putTile(styleHash, z, x, y, bytes, contentType: contentType);
   }
 
   Future<void> saveStyleMeta(
@@ -362,31 +351,35 @@ class OfflineTileCacheService {
 
     await metaFile.writeAsString(jsonEncode(meta), flush: true);
 
-    final existing = await ((_db.select(_db.offlineTileStyles)
-          ..where((t) => t.styleHash.equals(styleHash)))
-        .getSingleOrNull());
-    await _db.into(_db.offlineTileStyles).insertOnConflictUpdate(
-      OfflineTileStylesCompanion(
-        styleHash: drift.Value(styleHash),
-        displayName: drift.Value(displayName),
-        urlTemplate: drift.Value(urlTemplate),
-        regionJson: drift.Value(meta['region'] != null ? jsonEncode(meta['region']) : null),
-        tileCount: drift.Value(existing?.tileCount ?? 0),
-        sizeBytes: drift.Value(existing?.sizeBytes ?? 0),
-        updatedAt: drift.Value(DateTime.now()),
-      ),
-    );
+    final existing = await ((_db.select(
+      _db.offlineTileStyles,
+    )..where((t) => t.styleHash.equals(styleHash))).getSingleOrNull());
+    await _db
+        .into(_db.offlineTileStyles)
+        .insertOnConflictUpdate(
+          OfflineTileStylesCompanion(
+            styleHash: drift.Value(styleHash),
+            displayName: drift.Value(displayName),
+            urlTemplate: drift.Value(urlTemplate),
+            regionJson: drift.Value(
+              meta['region'] != null ? jsonEncode(meta['region']) : null,
+            ),
+            tileCount: drift.Value(existing?.tileCount ?? 0),
+            sizeBytes: drift.Value(existing?.sizeBytes ?? 0),
+            updatedAt: drift.Value(DateTime.now()),
+          ),
+        );
   }
 
   Future<List<StyleInfo>> listStylesDetailed() async {
-    var rows = await (_db.select(_db.offlineTileStyles)
-          ..orderBy([(t) => drift.OrderingTerm.desc(t.updatedAt)]))
-        .get();
+    var rows = await (_db.select(
+      _db.offlineTileStyles,
+    )..orderBy([(t) => drift.OrderingTerm.desc(t.updatedAt)])).get();
     if (rows.isEmpty) {
       await _hydrateAllStylesFromDisk();
-      rows = await (_db.select(_db.offlineTileStyles)
-            ..orderBy([(t) => drift.OrderingTerm.desc(t.updatedAt)]))
-          .get();
+      rows = await (_db.select(
+        _db.offlineTileStyles,
+      )..orderBy([(t) => drift.OrderingTerm.desc(t.updatedAt)])).get();
     }
 
     return rows.map(_styleInfoFromRow).toList();
@@ -398,24 +391,26 @@ class OfflineTileCacheService {
   }
 
   Future<List<CachedTileCoord>> listTilesForStyle(String styleHash) async {
-    var rows = await ((_db.select(_db.offlineTileEntries)
-          ..where((t) => t.styleHash.equals(styleHash))
-          ..orderBy([
-            (t) => drift.OrderingTerm.asc(t.z),
-            (t) => drift.OrderingTerm.asc(t.x),
-            (t) => drift.OrderingTerm.asc(t.y),
-          ]))
-        .get());
+    var rows =
+        await ((_db.select(_db.offlineTileEntries)
+              ..where((t) => t.styleHash.equals(styleHash))
+              ..orderBy([
+                (t) => drift.OrderingTerm.asc(t.z),
+                (t) => drift.OrderingTerm.asc(t.x),
+                (t) => drift.OrderingTerm.asc(t.y),
+              ]))
+            .get());
     if (rows.isEmpty) {
       await _hydrateStyleFromDisk(styleHash);
-      rows = await ((_db.select(_db.offlineTileEntries)
-            ..where((t) => t.styleHash.equals(styleHash))
-            ..orderBy([
-              (t) => drift.OrderingTerm.asc(t.z),
-              (t) => drift.OrderingTerm.asc(t.x),
-              (t) => drift.OrderingTerm.asc(t.y),
-            ]))
-          .get());
+      rows =
+          await ((_db.select(_db.offlineTileEntries)
+                ..where((t) => t.styleHash.equals(styleHash))
+                ..orderBy([
+                  (t) => drift.OrderingTerm.asc(t.z),
+                  (t) => drift.OrderingTerm.asc(t.x),
+                  (t) => drift.OrderingTerm.asc(t.y),
+                ]))
+              .get());
     }
 
     return rows.map((row) => CachedTileCoord(row.z, row.x, row.y)).toList();
@@ -430,14 +425,20 @@ class OfflineTileCacheService {
     if (await dir.exists()) {
       await dir.delete(recursive: true);
     }
-    await (_db.delete(_db.offlineTileEntries)..where((t) => t.styleHash.equals(styleHash))).go();
-    await (_db.delete(_db.offlineTileStyles)..where((t) => t.styleHash.equals(styleHash))).go();
+    await (_db.delete(
+      _db.offlineTileEntries,
+    )..where((t) => t.styleHash.equals(styleHash))).go();
+    await (_db.delete(
+      _db.offlineTileStyles,
+    )..where((t) => t.styleHash.equals(styleHash))).go();
   }
 
   Future<int> getCacheSize() async {
-    final result = await _db.customSelect(
-      'SELECT COALESCE(SUM(size_bytes), 0) AS total FROM offline_tile_entries',
-    ).getSingle();
+    final result = await _db
+        .customSelect(
+          'SELECT COALESCE(SUM(size_bytes), 0) AS total FROM offline_tile_entries',
+        )
+        .getSingle();
     return result.read<int>('total');
   }
 
@@ -458,7 +459,9 @@ class OfflineTileCacheService {
   StyleInfo _styleInfoFromRow(DbOfflineTileStyle row) {
     final region = row.regionJson == null
         ? null
-        : DownloadRegion.fromJson(jsonDecode(row.regionJson!) as Map<String, dynamic>);
+        : DownloadRegion.fromJson(
+            jsonDecode(row.regionJson!) as Map<String, dynamic>,
+          );
     return StyleInfo(
       hash: row.styleHash,
       displayName: row.displayName,
@@ -508,12 +511,24 @@ class OfflineTileCacheService {
         displayName = json['displayName'] as String? ?? styleHash;
         urlTemplate = json['urlTemplate'] as String? ?? '';
         if (json['region'] != null) {
-          region = DownloadRegion.fromJson(json['region'] as Map<String, dynamic>);
+          region = DownloadRegion.fromJson(
+            json['region'] as Map<String, dynamic>,
+          );
         }
       } catch (_) {}
     }
 
-    final entries = <({int z, int x, int y, String relativePath, String? contentType, int sizeBytes})>[];
+    final entries =
+        <
+          ({
+            int z,
+            int x,
+            int y,
+            String relativePath,
+            String? contentType,
+            int sizeBytes,
+          })
+        >[];
     await for (final entity in styleDir.list(recursive: true)) {
       if (entity is! File) continue;
       final relativePath = entity.path.replaceFirst('$base/', '');
@@ -546,45 +561,55 @@ class OfflineTileCacheService {
     }
 
     await _db.transaction(() async {
-      await (_db.delete(_db.offlineTileEntries)..where((t) => t.styleHash.equals(styleHash))).go();
+      await (_db.delete(
+        _db.offlineTileEntries,
+      )..where((t) => t.styleHash.equals(styleHash))).go();
 
       var totalSize = 0;
       for (final entry in entries) {
         totalSize += entry.sizeBytes;
-        await _db.into(_db.offlineTileEntries).insert(
-          OfflineTileEntriesCompanion.insert(
-            styleHash: styleHash,
-            z: entry.z,
-            x: entry.x,
-            y: entry.y,
-            relativePath: drift.Value(entry.relativePath),
-            contentType: drift.Value(entry.contentType),
-            sizeBytes: entry.sizeBytes,
-            cachedAt: DateTime.now(),
-          ),
-        );
+        await _db
+            .into(_db.offlineTileEntries)
+            .insert(
+              OfflineTileEntriesCompanion.insert(
+                styleHash: styleHash,
+                z: entry.z,
+                x: entry.x,
+                y: entry.y,
+                relativePath: drift.Value(entry.relativePath),
+                contentType: drift.Value(entry.contentType),
+                sizeBytes: entry.sizeBytes,
+                cachedAt: DateTime.now(),
+              ),
+            );
       }
 
-      await _db.into(_db.offlineTileStyles).insertOnConflictUpdate(
-        OfflineTileStylesCompanion(
-          styleHash: drift.Value(styleHash),
-          displayName: drift.Value(displayName),
-          urlTemplate: drift.Value(urlTemplate),
-          regionJson: drift.Value(region == null ? null : jsonEncode(region.toJson())),
-          tileCount: drift.Value(entries.length),
-          sizeBytes: drift.Value(totalSize),
-          updatedAt: drift.Value(DateTime.now()),
-        ),
-      );
+      await _db
+          .into(_db.offlineTileStyles)
+          .insertOnConflictUpdate(
+            OfflineTileStylesCompanion(
+              styleHash: drift.Value(styleHash),
+              displayName: drift.Value(displayName),
+              urlTemplate: drift.Value(urlTemplate),
+              regionJson: drift.Value(
+                region == null ? null : jsonEncode(region.toJson()),
+              ),
+              tileCount: drift.Value(entries.length),
+              sizeBytes: drift.Value(totalSize),
+              updatedAt: drift.Value(DateTime.now()),
+            ),
+          );
     });
 
-    _manifests[styleHash] = entries.map((entry) => _tileKey(entry.z, entry.x, entry.y)).toSet();
+    _manifests[styleHash] = entries
+        .map((entry) => _tileKey(entry.z, entry.x, entry.y))
+        .toSet();
     for (final entry in entries) {
       _tileLocationCache['$styleHash/${_tileKey(entry.z, entry.x, entry.y)}'] =
           _CachedTileLocation(
-        relativePath: entry.relativePath,
-        contentType: entry.contentType,
-      );
+            relativePath: entry.relativePath,
+            contentType: entry.contentType,
+          );
     }
     await _writeManifest(base, styleHash, _manifests[styleHash]!);
   }
@@ -598,22 +623,23 @@ class OfflineTileCacheService {
     required String? contentType,
     required int sizeBytes,
   }) async {
-    final existingTile = await ((_db.select(_db.offlineTileEntries)
-          ..where(
-            (t) =>
-                t.styleHash.equals(styleHash) &
-                t.z.equals(z) &
-                t.x.equals(x) &
-                t.y.equals(y),
-          ))
-        .getSingleOrNull());
-    final existingStyle = await ((_db.select(_db.offlineTileStyles)
-          ..where((t) => t.styleHash.equals(styleHash)))
-        .getSingleOrNull());
+    final existingTile =
+        await ((_db.select(_db.offlineTileEntries)..where(
+              (t) =>
+                  t.styleHash.equals(styleHash) &
+                  t.z.equals(z) &
+                  t.x.equals(x) &
+                  t.y.equals(y),
+            ))
+            .getSingleOrNull());
+    final existingStyle = await ((_db.select(
+      _db.offlineTileStyles,
+    )..where((t) => t.styleHash.equals(styleHash))).getSingleOrNull());
 
     if (existingTile != null) {
       final base = await baseDir;
-      if (existingTile.relativePath != null && existingTile.relativePath != relativePath) {
+      if (existingTile.relativePath != null &&
+          existingTile.relativePath != relativePath) {
         final oldFile = File('$base/${existingTile.relativePath!}');
         if (await oldFile.exists()) {
           await oldFile.delete();
@@ -623,66 +649,85 @@ class OfflineTileCacheService {
 
     final tileCountDelta = existingTile == null ? 1 : 0;
     final sizeDelta = sizeBytes - (existingTile?.sizeBytes ?? 0);
-    await _db.into(_db.offlineTileEntries).insertOnConflictUpdate(
-      OfflineTileEntriesCompanion(
-        id: existingTile == null ? const drift.Value.absent() : drift.Value(existingTile.id),
-        styleHash: drift.Value(styleHash),
-        z: drift.Value(z),
-        x: drift.Value(x),
-        y: drift.Value(y),
-        relativePath: drift.Value(relativePath),
-        contentType: drift.Value(contentType),
-        sizeBytes: drift.Value(sizeBytes),
-        cachedAt: drift.Value(DateTime.now()),
-      ),
-    );
+    await _db
+        .into(_db.offlineTileEntries)
+        .insertOnConflictUpdate(
+          OfflineTileEntriesCompanion(
+            id: existingTile == null
+                ? const drift.Value.absent()
+                : drift.Value(existingTile.id),
+            styleHash: drift.Value(styleHash),
+            z: drift.Value(z),
+            x: drift.Value(x),
+            y: drift.Value(y),
+            relativePath: drift.Value(relativePath),
+            contentType: drift.Value(contentType),
+            sizeBytes: drift.Value(sizeBytes),
+            cachedAt: drift.Value(DateTime.now()),
+          ),
+        );
     _tileLocationCache['$styleHash/${_tileKey(z, x, y)}'] = _CachedTileLocation(
       relativePath: relativePath,
       contentType: contentType,
     );
 
-    await _db.into(_db.offlineTileStyles).insertOnConflictUpdate(
-      OfflineTileStylesCompanion(
-        styleHash: drift.Value(styleHash),
-        displayName: drift.Value(existingStyle?.displayName ?? styleHash),
-        urlTemplate: drift.Value(existingStyle?.urlTemplate ?? ''),
-        regionJson: drift.Value(existingStyle?.regionJson),
-        tileCount: drift.Value((existingStyle?.tileCount ?? 0) + tileCountDelta),
-        sizeBytes: drift.Value((existingStyle?.sizeBytes ?? 0) + sizeDelta),
-        updatedAt: drift.Value(DateTime.now()),
-      ),
-    );
+    await _db
+        .into(_db.offlineTileStyles)
+        .insertOnConflictUpdate(
+          OfflineTileStylesCompanion(
+            styleHash: drift.Value(styleHash),
+            displayName: drift.Value(existingStyle?.displayName ?? styleHash),
+            urlTemplate: drift.Value(existingStyle?.urlTemplate ?? ''),
+            regionJson: drift.Value(existingStyle?.regionJson),
+            tileCount: drift.Value(
+              (existingStyle?.tileCount ?? 0) + tileCountDelta,
+            ),
+            sizeBytes: drift.Value((existingStyle?.sizeBytes ?? 0) + sizeDelta),
+            updatedAt: drift.Value(DateTime.now()),
+          ),
+        );
   }
 
   Future<void> _deleteTileEntry(String styleHash, int z, int x, int y) async {
-    final existingTile = await ((_db.select(_db.offlineTileEntries)
-          ..where(
-            (t) =>
-                t.styleHash.equals(styleHash) &
-                t.z.equals(z) &
-                t.x.equals(x) &
-                t.y.equals(y),
-          ))
-        .getSingleOrNull());
+    final existingTile =
+        await ((_db.select(_db.offlineTileEntries)..where(
+              (t) =>
+                  t.styleHash.equals(styleHash) &
+                  t.z.equals(z) &
+                  t.x.equals(x) &
+                  t.y.equals(y),
+            ))
+            .getSingleOrNull());
     if (existingTile == null) return;
 
-    await (_db.delete(_db.offlineTileEntries)..where((t) => t.id.equals(existingTile.id))).go();
+    await (_db.delete(
+      _db.offlineTileEntries,
+    )..where((t) => t.id.equals(existingTile.id))).go();
 
-    final existingStyle = await ((_db.select(_db.offlineTileStyles)
-          ..where((t) => t.styleHash.equals(styleHash)))
-        .getSingleOrNull());
+    final existingStyle = await ((_db.select(
+      _db.offlineTileStyles,
+    )..where((t) => t.styleHash.equals(styleHash))).getSingleOrNull());
     if (existingStyle != null) {
-      await _db.into(_db.offlineTileStyles).insertOnConflictUpdate(
-        OfflineTileStylesCompanion(
-          styleHash: drift.Value(styleHash),
-          displayName: drift.Value(existingStyle.displayName),
-          urlTemplate: drift.Value(existingStyle.urlTemplate),
-          regionJson: drift.Value(existingStyle.regionJson),
-          tileCount: drift.Value((existingStyle.tileCount - 1).clamp(0, existingStyle.tileCount)),
-          sizeBytes: drift.Value((existingStyle.sizeBytes - existingTile.sizeBytes).clamp(0, existingStyle.sizeBytes)),
-          updatedAt: drift.Value(DateTime.now()),
-        ),
-      );
+      await _db
+          .into(_db.offlineTileStyles)
+          .insertOnConflictUpdate(
+            OfflineTileStylesCompanion(
+              styleHash: drift.Value(styleHash),
+              displayName: drift.Value(existingStyle.displayName),
+              urlTemplate: drift.Value(existingStyle.urlTemplate),
+              regionJson: drift.Value(existingStyle.regionJson),
+              tileCount: drift.Value(
+                (existingStyle.tileCount - 1).clamp(0, existingStyle.tileCount),
+              ),
+              sizeBytes: drift.Value(
+                (existingStyle.sizeBytes - existingTile.sizeBytes).clamp(
+                  0,
+                  existingStyle.sizeBytes,
+                ),
+              ),
+              updatedAt: drift.Value(DateTime.now()),
+            ),
+          );
     }
 
     _manifests[styleHash]?.remove(_tileKey(z, x, y));
@@ -705,10 +750,8 @@ class OfflineTileCacheService {
   ) async {
     final dir = Directory('$base/$styleHash');
     if (!await dir.exists()) await dir.create(recursive: true);
-    await File(_manifestPath(base, styleHash)).writeAsString(
-      manifest.join('\n'),
-      flush: true,
-    );
+    await File(_manifestPath(base, styleHash))
+        .writeAsString(manifest.join('\n'), flush: true);
   }
 
   void _rememberTile(String key, CachedTileData data) {
@@ -719,7 +762,8 @@ class OfflineTileCacheService {
     _tileMemoryCache[key] = data;
     _tileMemoryBytes += data.bytes.length;
 
-    while (_tileMemoryCache.length > _memoryCacheMaxEntries || _tileMemoryBytes > _memoryCacheMaxBytes) {
+    while (_tileMemoryCache.length > _memoryCacheMaxEntries ||
+        _tileMemoryBytes > _memoryCacheMaxBytes) {
       final firstKey = _tileMemoryCache.keys.first;
       final removed = _tileMemoryCache.remove(firstKey);
       if (removed != null) {
@@ -731,7 +775,9 @@ class OfflineTileCacheService {
   void _removeStyleFromMemory(String styleHash) {
     final prefix = '$styleHash/';
     _tileLocationCache.removeWhere((key, _) => key.startsWith(prefix));
-    final keys = _tileMemoryCache.keys.where((key) => key.startsWith(prefix)).toList();
+    final keys = _tileMemoryCache.keys
+        .where((key) => key.startsWith(prefix))
+        .toList();
     for (final key in keys) {
       final removed = _tileMemoryCache.remove(key);
       if (removed != null) {
@@ -763,8 +809,13 @@ class OfflineTileCacheService {
     }
 
     final uri = sourceUrl == null ? null : Uri.tryParse(sourceUrl);
-    final segment = uri?.pathSegments.isNotEmpty == true ? uri!.pathSegments.last : '';
-    final match = RegExp(r'\.(png|jpg|jpeg|webp|avif)$', caseSensitive: false).firstMatch(segment);
+    final segment = uri?.pathSegments.isNotEmpty == true
+        ? uri!.pathSegments.last
+        : '';
+    final match = RegExp(
+      r'\.(png|jpg|jpeg|webp|avif)$',
+      caseSensitive: false,
+    ).firstMatch(segment);
     final extension = match?.group(1)?.toLowerCase();
     if (extension == 'jpeg') return 'jpg';
     return extension ?? 'tile';
@@ -772,33 +823,40 @@ class OfflineTileCacheService {
 
   String? _contentTypeFromPath(String relativePath) {
     if (relativePath.endsWith('.png')) return 'image/png';
-    if (relativePath.endsWith('.jpg') || relativePath.endsWith('.jpeg')) return 'image/jpeg';
+    if (relativePath.endsWith('.jpg') || relativePath.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
     if (relativePath.endsWith('.webp')) return 'image/webp';
     if (relativePath.endsWith('.avif')) return 'image/avif';
     return null;
   }
 
-  Future<DbOfflineTileEntry?> _loadTileRow(String styleHash, int z, int x, int y) async {
-    var row = await ((_db.select(_db.offlineTileEntries)
-          ..where(
-            (t) =>
-                t.styleHash.equals(styleHash) &
-                t.z.equals(z) &
-                t.x.equals(x) &
-                t.y.equals(y),
-          ))
-        .getSingleOrNull());
-    if (row == null) {
-      await _hydrateStyleFromDisk(styleHash);
-      row = await ((_db.select(_db.offlineTileEntries)
-            ..where(
+  Future<DbOfflineTileEntry?> _loadTileRow(
+    String styleHash,
+    int z,
+    int x,
+    int y,
+  ) async {
+    var row =
+        await ((_db.select(_db.offlineTileEntries)..where(
               (t) =>
                   t.styleHash.equals(styleHash) &
                   t.z.equals(z) &
                   t.x.equals(x) &
                   t.y.equals(y),
             ))
-          .getSingleOrNull());
+            .getSingleOrNull());
+    if (row == null) {
+      await _hydrateStyleFromDisk(styleHash);
+      row =
+          await ((_db.select(_db.offlineTileEntries)..where(
+                (t) =>
+                    t.styleHash.equals(styleHash) &
+                    t.z.equals(z) &
+                    t.x.equals(x) &
+                    t.y.equals(y),
+              ))
+              .getSingleOrNull());
     }
     return row;
   }

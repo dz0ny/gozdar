@@ -1,1 +1,3 @@
-const bool isPlayDistribution = bool.fromEnvironment('GOZDAR_PLAY_DISTRIBUTION');
+const bool isPlayDistribution = bool.fromEnvironment(
+  'GOZDAR_PLAY_DISTRIBUTION',
+);

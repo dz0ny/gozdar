@@ -157,8 +157,11 @@ class TileDownloadService {
       region: region,
     );
 
-    final allTiles =
-        TileMathService.getTilesForPolygons(polygons, minZoom, maxZoom);
+    final allTiles = TileMathService.getTilesForPolygons(
+      polygons,
+      minZoom,
+      maxZoom,
+    );
     final manifest = await _cache.loadManifest(styleHash);
     final tilesToDownload = <TileCoord>[];
     var skipped = 0;

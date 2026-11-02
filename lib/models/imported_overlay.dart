@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -23,8 +24,8 @@ class ImportedOverlay {
     int? colorValue,
     this.visible = true,
     DateTime? createdAt,
-  })  : colorValue = colorValue ?? Colors.blue.toARGB32(),
-        createdAt = createdAt ?? DateTime.now();
+  }) : colorValue = colorValue ?? Colors.blue.toARGB32(),
+       createdAt = createdAt ?? DateTime.now();
 
   List<List<LatLng>> get geometry {
     if (geometryJson.isEmpty) return [];
@@ -36,9 +37,11 @@ class ImportedOverlay {
       return [coords];
     } else if (geometryType == 'MultiLineString') {
       return decoded
-          .map((line) => (line as List)
-              .map((point) => LatLng(point[0] as double, point[1] as double))
-              .toList())
+          .map(
+            (line) => (line as List)
+                .map((point) => LatLng(point[0] as double, point[1] as double))
+                .toList(),
+          )
           .toList();
     }
     return [];
@@ -50,10 +53,15 @@ class ImportedOverlay {
       return;
     }
     if (geometryType == 'LineString' || geometryType == 'Polygon') {
-      geometryJson = jsonEncode(value.first.map((p) => [p.latitude, p.longitude]).toList());
+      geometryJson = jsonEncode(
+        value.first.map((p) => [p.latitude, p.longitude]).toList(),
+      );
     } else if (geometryType == 'MultiLineString') {
       geometryJson = jsonEncode(
-          value.map((line) => line.map((p) => [p.latitude, p.longitude]).toList()).toList());
+        value
+            .map((line) => line.map((p) => [p.latitude, p.longitude]).toList())
+            .toList(),
+      );
     }
   }
 
@@ -70,26 +78,26 @@ class ImportedOverlay {
   }
 
   Map<String, dynamic> toMap() => {
-        'id': id == 0 ? null : id,
-        'name': name,
-        'layer_name': layerName,
-        'geometry_type': geometryType,
-        'geometry_json': geometryJson,
-        'properties': properties,
-        'color_value': colorValue,
-        'visible': visible ? 1 : 0,
-        'created_at': createdAt.millisecondsSinceEpoch,
-      };
+    'id': id == 0 ? null : id,
+    'name': name,
+    'layer_name': layerName,
+    'geometry_type': geometryType,
+    'geometry_json': geometryJson,
+    'properties': properties,
+    'color_value': colorValue,
+    'visible': visible ? 1 : 0,
+    'created_at': createdAt.millisecondsSinceEpoch,
+  };
 
   factory ImportedOverlay.fromMap(Map<String, dynamic> map) => ImportedOverlay(
-        id: map['id'] as int,
-        name: map['name'] as String,
-        layerName: map['layer_name'] as String,
-        geometryType: map['geometry_type'] as String,
-        geometryJson: map['geometry_json'] as String,
-        properties: map['properties'] as String?,
-        colorValue: map['color_value'] as int,
-        visible: (map['visible'] as int) == 1,
-        createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
-      );
+    id: map['id'] as int,
+    name: map['name'] as String,
+    layerName: map['layer_name'] as String,
+    geometryType: map['geometry_type'] as String,
+    geometryJson: map['geometry_json'] as String,
+    properties: map['properties'] as String?,
+    colorValue: map['color_value'] as int,
+    visible: (map['visible'] as int) == 1,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
+  );
 }

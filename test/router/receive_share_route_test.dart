@@ -33,40 +33,58 @@ class FakeShareService extends SecnjaShareService {
 }
 
 GoRouter router(String initial) => GoRouter(
-      initialLocation: initial,
-      routes: [
-        ...receiveShareRoutes(),
-        GoRoute(path: '/map', builder: (_, _) => const Scaffold(body: Text('MAP'))),
-        GoRoute(path: '/forest', builder: (_, _) => const Scaffold(body: Text('FOREST'))),
-        GoRoute(path: '/onboarding', builder: (_, _) => const Scaffold(body: Text('ONBOARDING'))),
-      ],
-    );
+  initialLocation: initial,
+  routes: [
+    ...receiveShareRoutes(),
+    GoRoute(
+      path: '/map',
+      builder: (_, _) => const Scaffold(body: Text('MAP')),
+    ),
+    GoRoute(
+      path: '/forest',
+      builder: (_, _) => const Scaffold(body: Text('FOREST')),
+    ),
+    GoRoute(
+      path: '/onboarding',
+      builder: (_, _) => const Scaffold(body: Text('ONBOARDING')),
+    ),
+  ],
+);
 
 Widget app(GoRouter r) => MaterialApp.router(
-      routerConfig: r,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('sl'),
-    );
+  routerConfig: r,
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  locale: const Locale('sl'),
+);
 
 void main() {
   setUp(() async {
-    SharedPreferences.setMockInitialValues({'onboarding_version': OnboardingService.currentVersion});
+    SharedPreferences.setMockInitialValues({
+      'onboarding_version': OnboardingService.currentVersion,
+    });
     await OnboardingService.initialize();
   });
 
-  testWidgets('cold start on /o/:id calls receive with the id and lands on the map',
-      (tester) async {
-    final fake = FakeShareService(ReceiveOutcome.imported);
-    SecnjaShareService.instance = fake;
-    await tester.pumpWidget(app(router('/o/abc123')));
-    await tester.pumpAndSettle();
-    expect(fake.received, ['abc123']);
-    expect(find.text('MAP'), findsOneWidget);
-    expect(find.textContaining('Prejeta sečnja: parcela 1234/5'), findsOneWidget);
-  });
+  testWidgets(
+    'cold start on /o/:id calls receive with the id and lands on the map',
+    (tester) async {
+      final fake = FakeShareService(ReceiveOutcome.imported);
+      SecnjaShareService.instance = fake;
+      await tester.pumpWidget(app(router('/o/abc123')));
+      await tester.pumpAndSettle();
+      expect(fake.received, ['abc123']);
+      expect(find.text('MAP'), findsOneWidget);
+      expect(
+        find.textContaining('Prejeta sečnja: parcela 1234/5'),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('warm start: go(/o/xyz) from another screen calls receive', (tester) async {
+  testWidgets('warm start: go(/o/xyz) from another screen calls receive', (
+    tester,
+  ) async {
     final fake = FakeShareService(ReceiveOutcome.imported);
     SecnjaShareService.instance = fake;
     final r = router('/forest');
@@ -83,10 +101,15 @@ void main() {
     SecnjaShareService.instance = FakeShareService(ReceiveOutcome.expired);
     await tester.pumpWidget(app(router('/s/old')));
     await tester.pumpAndSettle();
-    expect(find.text('Povezava je potekla ali bila preklicana'), findsOneWidget);
+    expect(
+      find.text('Povezava je potekla ali bila preklicana'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('an error while receiving still leaves the loading screen', (tester) async {
+  testWidgets('an error while receiving still leaves the loading screen', (
+    tester,
+  ) async {
     SecnjaShareService.instance = FakeShareService(ReceiveOutcome.invalid);
     await tester.pumpWidget(app(router('/s/broken')));
     await tester.pumpAndSettle();

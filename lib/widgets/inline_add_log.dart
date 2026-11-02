@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
 import '../models/log_entry.dart';
 import '../services/log_input_prefs_service.dart';
@@ -93,21 +94,28 @@ class _InlineAddLogState extends State<InlineAddLog> {
     final diameter = parseDecimal(_diameterController.text);
     final length = parseDecimal(_lengthController.text);
     // Zero counts as "still typing" (e.g. "0.5"), not as out of range.
-    final diameterBad = diameter != null &&
+    final diameterBad =
+        diameter != null &&
         diameter > 0 &&
         (diameter < _minDiameter || diameter > _maxDiameter);
-    final lengthBad = length != null &&
+    final lengthBad =
+        length != null &&
         length > 0 &&
         (length < _minLength || length > _maxLength);
     setState(() {
       _rangeError = diameterBad
           ? context.l10n.logsInlineDiameterRange(
-              Fmt.num(_minDiameter, 0), Fmt.num(_maxDiameter, 0))
+              Fmt.num(_minDiameter, 0),
+              Fmt.num(_maxDiameter, 0),
+            )
           : lengthBad
-              ? context.l10n.logsInlineLengthRange(
-                  Fmt.num(_minLength, 1), Fmt.num(_maxLength, 0))
-              : null;
-      _calculatedVolume = (diameter != null &&
+          ? context.l10n.logsInlineLengthRange(
+              Fmt.num(_minLength, 1),
+              Fmt.num(_maxLength, 0),
+            )
+          : null;
+      _calculatedVolume =
+          (diameter != null &&
               length != null &&
               diameter > 0 &&
               length > 0 &&
@@ -276,21 +284,21 @@ class _InlineAddLogState extends State<InlineAddLog> {
                     // keyboard open for the next log.
                     TextFieldTapRegion(
                       child: SizedBox(
-                      width: 76,
-                      height: 76,
-                      child: FilledButton(
-                        onPressed: canAdd ? _saveAndContinue : null,
-                        style: FilledButton.styleFrom(
-                          shape: const CircleBorder(),
-                          padding: EdgeInsets.zero,
-                          backgroundColor: Colors.green[700],
-                          foregroundColor: Colors.white,
+                        width: 76,
+                        height: 76,
+                        child: FilledButton(
+                          onPressed: canAdd ? _saveAndContinue : null,
+                          style: FilledButton.styleFrom(
+                            shape: const CircleBorder(),
+                            padding: EdgeInsets.zero,
+                            backgroundColor: Colors.green[700],
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Tooltip(
+                            message: context.l10n.commonAdd,
+                            child: Icon(Icons.add, size: 44),
+                          ),
                         ),
-                        child: Tooltip(
-                          message: context.l10n.commonAdd,
-                          child: Icon(Icons.add, size: 44),
-                        ),
-                      ),
                       ),
                     ),
                   ],

@@ -1,15 +1,12 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+
 import '../l10n/l10n.dart';
 
 /// Network error types for categorization
-enum NetworkErrorType {
-  timeout,
-  noConnection,
-  serverError,
-  unknown,
-}
+enum NetworkErrorType { timeout, noConnection, serverError, unknown }
 
 /// Result of a network operation with retry support
 class NetworkResult<T> {
@@ -32,12 +29,11 @@ class NetworkResult<T> {
     NetworkErrorType type,
     String message,
     int attempts,
-  ) =>
-      NetworkResult._(
-        errorType: type,
-        errorMessage: message,
-        attemptsMade: attempts,
-      );
+  ) => NetworkResult._(
+    errorType: type,
+    errorMessage: message,
+    attemptsMade: attempts,
+  );
 
   bool get isSuccess => data != null;
   bool get isFailure => !isSuccess;
@@ -143,7 +139,9 @@ class NetworkRetry {
 
       // Wait before next attempt with exponential backoff
       if (attempt < maxAttempts) {
-        debugPrint('NetworkRetry: Attempt $attempt failed, retrying in ${delay.inSeconds}s');
+        debugPrint(
+          'NetworkRetry: Attempt $attempt failed, retrying in ${delay.inSeconds}s',
+        );
         await Future.delayed(delay);
         delay *= 2; // Exponential backoff
       }

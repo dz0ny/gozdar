@@ -55,21 +55,24 @@ void main() {
     expect((await service.getAllLogBatches()).map((b) => b.id), [otherId]);
   });
 
-  test('repairOrphanedLogs recovers logs hidden by older batch deletes', () async {
-    final batchId = await addBatch();
-    final keptId = await addBatch();
-    await addLog(batchId: batchId);
-    await addLog(batchId: keptId);
-    // Simulate the old deleteLogBatch, which removed only the batch row.
-    await (db.delete(db.logBatches)..where((t) => t.id.equals(batchId))).go();
-    expect(await service.getUnassignedLogs(), isEmpty);
+  test(
+    'repairOrphanedLogs recovers logs hidden by older batch deletes',
+    () async {
+      final batchId = await addBatch();
+      final keptId = await addBatch();
+      await addLog(batchId: batchId);
+      await addLog(batchId: keptId);
+      // Simulate the old deleteLogBatch, which removed only the batch row.
+      await (db.delete(db.logBatches)..where((t) => t.id.equals(batchId))).go();
+      expect(await service.getUnassignedLogs(), isEmpty);
 
-    final repaired = await db.repairOrphanedLogs();
+      final repaired = await db.repairOrphanedLogs();
 
-    expect(repaired, 1);
-    expect(await service.getUnassignedLogs(), hasLength(1));
-    expect(await service.getLogsByBatch(keptId), hasLength(1));
-  });
+      expect(repaired, 1);
+      expect(await service.getUnassignedLogs(), hasLength(1));
+      expect(await service.getLogsByBatch(keptId), hasLength(1));
+    },
+  );
 
   test('upgrading from schema v3 returns orphaned logs to the list', () async {
     final dir = await Directory.systemTemp.createTemp('gozdar-migration-');
@@ -78,11 +81,23 @@ void main() {
 
     // A v3 database where the old deleteLogBatch left a log orphaned.
     final old = AppDatabase(NativeDatabase(file));
-    final batchId = await old.into(old.logBatches).insert(
-          LogBatchesCompanion.insert(totalVolume: 1, logCount: 1, createdAt: DateTime.now()),
+    final batchId = await old
+        .into(old.logBatches)
+        .insert(
+          LogBatchesCompanion.insert(
+            totalVolume: 1,
+            logCount: 1,
+            createdAt: DateTime.now(),
+          ),
         );
-    await old.into(old.logEntries).insert(
-          LogEntriesCompanion.insert(volume: 1, createdAt: DateTime.now(), batchId: Value(batchId)),
+    await old
+        .into(old.logEntries)
+        .insert(
+          LogEntriesCompanion.insert(
+            volume: 1,
+            createdAt: DateTime.now(),
+            batchId: Value(batchId),
+          ),
         );
     await (old.delete(old.logBatches)..where((t) => t.id.equals(batchId))).go();
     await old.customStatement('PRAGMA user_version = 3');

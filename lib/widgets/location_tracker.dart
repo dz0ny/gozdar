@@ -1,7 +1,9 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
+
 import '../services/location_settings.dart';
 
 /// Manages user location tracking and compass functionality
@@ -35,7 +37,9 @@ class LocationTracker {
 
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      debugPrint('Location permission denied (permanently: ${permission == LocationPermission.deniedForever})');
+      debugPrint(
+        'Location permission denied (permanently: ${permission == LocationPermission.deniedForever})',
+      );
       return;
     }
 

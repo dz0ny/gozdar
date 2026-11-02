@@ -31,8 +31,10 @@ void main() {
   });
 
   test('degenerate polygon yields no waypoints', () {
-    expect(svc.planGrid(const [LatLng(46, 14)], const DroneMissionOptions()),
-        isEmpty);
+    expect(
+      svc.planGrid(const [LatLng(46, 14)], const DroneMissionOptions()),
+      isEmpty,
+    );
   });
 
   test('kmz contains wpml files', () {

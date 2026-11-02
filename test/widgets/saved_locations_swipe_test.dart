@@ -5,7 +5,10 @@ import 'package:gozdar/models/map_location.dart';
 import 'package:gozdar/widgets/saved_locations_sheet.dart';
 
 void main() {
-  Future<List<String>> pump(WidgetTester tester, {bool deleteSucceeds = true}) async {
+  Future<List<String>> pump(
+    WidgetTester tester, {
+    bool deleteSucceeds = true,
+  }) async {
     final deleted = <String>[];
     await tester.pumpWidget(
       MaterialApp(

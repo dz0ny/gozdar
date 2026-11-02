@@ -23,4 +23,3 @@ void main() {
     expect(pointer.size, lessThan(40));
   });
 }
-
