@@ -44,6 +44,7 @@ import '../widgets/tile_download_dialog.dart';
 import '../widgets/map_long_press_menu.dart';
 import '../widgets/secnja_marking_panel.dart';
 import '../widgets/species_management_sheet.dart';
+import '../services/secnja_marking.dart';
 import '../services/secnja_marking_prefs.dart';
 import '../services/secnja_share_flow.dart';
 import '../services/species_service.dart';
@@ -372,7 +373,6 @@ class MapTabState extends State<MapTab> {
   String? _secnjaSpecies;
   // Marks made in this session, newest last, for undo and the share prompt.
   final List<MapLocation> _secnjaSession = [];
-  int? _secnjaParcelId;
   String _secnjaTitle = '';
   int _secnjaCount = 0;
   _DistanceUnit _distanceUnit = _DistanceUnit.meters;
@@ -720,7 +720,6 @@ class MapTabState extends State<MapTab> {
     final parcel = parcelId == null ? null : await db.getParcel(parcelId);
     if (!mounted || !_secnjaMarking) return;
     setState(() {
-      _secnjaParcelId = parcelId;
       _secnjaCount = count;
       _secnjaTitle = parcel == null
           ? L10n.current.secnjaOutsideParcel
@@ -731,20 +730,13 @@ class MapTabState extends State<MapTab> {
   /// Marks the tree under the crosshair.
   Future<void> _markSecnjaAtCrosshair() async {
     HapticFeedback.mediumImpact();
-    final center = _mapController.camera.center;
-    final location = MapLocation(
-      name: nextSecnjaName(
-        species: _secnjaSpecies,
-        existing: _secnjaCount,
-        l10n: L10n.current,
-      ),
-      latitude: center.latitude,
-      longitude: center.longitude,
-      type: LocationType.secnja,
-      parcelId: _secnjaParcelId,
-    );
+    final MapLocation mark;
     try {
-      location.id = await DatabaseService().insertLocation(location);
+      mark = await markSecnjaAt(
+        _mapController.camera.center,
+        species: _secnjaSpecies,
+        l10n: L10n.current,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -753,10 +745,10 @@ class MapTabState extends State<MapTab> {
       }
       return;
     }
-    _secnjaSession.add(location);
+    _secnjaSession.add(mark);
     if (!mounted) return;
-    setState(() => _secnjaCount++);
     unawaited(context.read<MapProvider>().loadLocations());
+    await _refreshSecnjaHeader();
   }
 
   /// Removes the last mark of this session.
@@ -1106,6 +1098,8 @@ class MapTabState extends State<MapTab> {
     _maybePromptRegionDownload(camera.center);
     // A region downloaded since adds auction outlines.
     AuctionService.instance.refreshOutlines();
+    // Flings and the app's own moves end here, not in MapEventMoveEnd.
+    unawaited(_refreshSecnjaHeader());
   }
 
   /// Handle a mid-gesture zoom change. The overlay/label visibility flips at the

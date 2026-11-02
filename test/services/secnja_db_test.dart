@@ -6,6 +6,9 @@ import 'package:gozdar/models/map_location.dart';
 import 'package:gozdar/models/parcel.dart';
 import 'package:gozdar/models/received_share.dart';
 import 'package:gozdar/services/database_service.dart';
+import 'package:gozdar/services/secnja_marking.dart';
+import 'package:gozdar/l10n/l10n.dart';
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:latlong2/latlong.dart';
 
 /// Square parcel with its south-west corner at ([lat], [lng]) and [size]
@@ -32,6 +35,7 @@ ReceivedShare received(String id, {String json = '{}', int days = 10}) => Receiv
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  group('marking', markingTests);
 
   late AppDatabase db;
   final service = DatabaseService();
@@ -155,5 +159,31 @@ void main() {
     expect(await service.purgeExpiredReceivedShares(), 1);
     await service.deleteReceivedShare('new');
     expect(await db.select(db.receivedShares).get(), isEmpty);
+  });
+}
+
+void markingTests() {
+  final l10n = lookupAppLocalizations(const Locale('sl'));
+  late AppDatabase db;
+  final service = DatabaseService();
+
+  setUp(() {
+    db = AppDatabase(NativeDatabase.memory());
+    service.setDatabaseForTesting(db);
+  });
+
+  tearDown(() => service.resetForTesting());
+
+  test('markSecnjaAt uses the parcel under the point at mark time', () async {
+    final a = await service.insertParcel(square('A', 46, 14, 0.01));
+    final b = await service.insertParcel(square('B', 47, 14, 0.01));
+
+    final first = await markSecnjaAt(const LatLng(46.005, 14.005), species: 'Smreka', l10n: l10n);
+    final second = await markSecnjaAt(const LatLng(47.005, 14.005), l10n: l10n);
+    final third = await markSecnjaAt(const LatLng(46.006, 14.006), species: 'Smreka', l10n: l10n);
+
+    expect([first.parcelId, second.parcelId, third.parcelId], [a, b, a]);
+    expect([first.name, second.name, third.name], ['Smreka 1', 'Drevo 1', 'Smreka 2']);
+    expect(first.id, isNot(0));
   });
 }
