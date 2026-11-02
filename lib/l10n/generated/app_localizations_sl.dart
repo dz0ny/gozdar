@@ -2990,25 +2990,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get secnjaNoConnection => 'Ni povezave — poskusi znova';
 
   @override
-  String get receivedSectionTitle => 'PREJETO';
-
-  @override
-  String secnjaReceivedRow(String parcel, String who, int days) {
-    String _temp0 = intl.Intl.pluralLogic(
-      days,
-      locale: localeName,
-      other: 'Sečnja $parcel · $who · še $days dni',
-      few: 'Sečnja $parcel · $who · še $days dni',
-      two: 'Sečnja $parcel · $who · še $days dneva',
-      one: 'Sečnja $parcel · $who · še $days dan',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get receivedDeleteConfirm => 'Odstranim prejeto sečnjo?';
-
-  @override
   String get receivedLoading => 'Nalagam sečnjo…';
 
   @override
@@ -3016,12 +2997,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get introSecnjaTitle => 'Sečnja za sekača';
-
-  @override
-  String get introSecnjaYours => 'Tvoje oznake';
-
-  @override
-  String get introSecnjaReceived => 'Prejete';
 
   @override
   String get introSecnjaMarkTitle => 'Označi drevesa';
@@ -3038,9 +3013,9 @@ class AppLocalizationsSl extends AppLocalizations {
       'V parceli tapni Deli sekaču in pošlji povezavo. Velja 30 dni; ob novih oznakah jo posodobiš.';
 
   @override
-  String get introSecnjaLoggerTitle => 'Sekač vidi drevesa';
+  String get introSecnjaLoggerTitle => 'Sekač dobi parcelo';
 
   @override
   String get introSecnjaLoggerDesc =>
-      'Povezava se odpre v Gozdarju. Drevesa so oštevilčena na karti, vklopiš jih v Sloji → Prejeto, delujejo tudi brez signala.';
+      'Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej.';
 }

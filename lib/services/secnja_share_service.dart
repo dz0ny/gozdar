@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/parcel.dart';
-import '../models/received_share.dart';
+import '../models/map_location.dart';
 import '../models/secnja_share.dart';
 import 'database_service.dart';
 
@@ -29,8 +29,15 @@ class ShareException implements Exception {
 
 enum ReceiveOutcome { imported, expired, offline, invalid }
 
-/// What [SecnjaShareService.receive] did, with the payload when it imported.
-typedef ReceiveResult = ({ReceiveOutcome outcome, SecnjaSharePayload? payload});
+/// What [SecnjaShareService.receive] did. On import it has the payload and
+/// the id of the parcel that now holds the trees.
+typedef ReceiveResult = ({
+  ReceiveOutcome outcome,
+  SecnjaSharePayload? payload,
+  int? parcelId,
+});
+
+const ReceiveResult _offline = (outcome: ReceiveOutcome.offline, payload: null, parcelId: null);
 
 /// Uploads sečnja shares to the worker and downloads shares from others.
 class SecnjaShareService {
@@ -135,48 +142,70 @@ class SecnjaShareService {
     }
   }
 
-  /// Downloads the share [shareId] and stores it on this phone.
+  /// Downloads the share [shareId] and imports it: the parcel joins Moj gozd
+  /// (or the matching saved parcel is used) and its trees become sečnja marks.
+  /// The logger can then share the parcel on, like any own parcel.
   Future<ReceiveResult> receive(String shareId) async {
     final http.Response res;
     try {
       res = await _send(_client.get(_api(shareId)));
     } on ShareException {
-      return (outcome: ReceiveOutcome.offline, payload: null);
+      return _offline;
     }
     if (res.statusCode == 404 || res.statusCode == 410) {
-      await _db.deleteReceivedShare(shareId);
-      return (outcome: ReceiveOutcome.expired, payload: null);
+      return (outcome: ReceiveOutcome.expired, payload: null, parcelId: null);
     }
-    if (res.statusCode != 200) return (outcome: ReceiveOutcome.offline, payload: null);
+    if (res.statusCode != 200) return _offline;
 
-    final String text;
     final SecnjaSharePayload payload;
     try {
-      text = utf8.decode(res.bodyBytes);
-      payload = SecnjaSharePayload.fromJson(jsonDecode(text) as Map<String, dynamic>);
+      payload = SecnjaSharePayload.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>,
+      );
     } catch (_) {
       // A login page of a public Wi-Fi, or a share from a newer app.
-      return (outcome: ReceiveOutcome.invalid, payload: null);
+      return (outcome: ReceiveOutcome.invalid, payload: null, parcelId: null);
     }
-    await _db.upsertReceivedShare(ReceivedShare(
-      shareId: shareId,
-      payloadJson: text,
-      fetchedAt: DateTime.now(),
-      expiresAt: payload.expiresAt ?? DateTime.now().add(const Duration(days: 30)),
-    ));
-    return (outcome: ReceiveOutcome.imported, payload: payload);
+    final parcelId = await _import(shareId, payload);
+    return (outcome: ReceiveOutcome.imported, payload: payload, parcelId: parcelId);
   }
 
-  /// Removes expired shares, then downloads the others again.
-  /// Without network, only the removal happens.
-  Future<void> refreshReceived() async {
-    await _db.purgeExpiredReceivedShares();
-    for (final share in await _db.getReceivedShares()) {
-      try {
-        await receive(share.shareId);
-      } catch (e) {
-        debugPrint('Refreshing share ${share.shareId} failed: $e');
-      }
+  /// Stores [payload] and returns the id of its parcel.
+  Future<int> _import(String shareId, SecnjaSharePayload payload) async {
+    final existing = payload.koNumber != null
+        ? await _db.findParcelByKoAndNumber(payload.koNumber, payload.parcelNumber)
+        : await _db.findParcelByName(payload.parcelNumber);
+    // The owner opened their own link: the marks are already here.
+    if (existing != null && existing.shareId == shareId) return existing.id;
+
+    final parcelId = existing?.id ??
+        await _db.insertParcel(Parcel(
+          name: payload.koName != null
+              ? '${payload.koName} - ${payload.parcelNumber}'
+              : payload.parcelNumber,
+          polygon: payload.polygon,
+          cadastralMunicipality: payload.koNumber,
+          parcelNumber: payload.koNumber != null ? payload.parcelNumber : null,
+          owner: payload.owner,
+        ));
+
+    // An updated link replaces the trees it brought before.
+    await _db.deleteSecnjaFromShare(shareId);
+    final have = await _db.getSecnjaByParcel(parcelId);
+    for (final p in payload.points) {
+      // A forwarded link can bring trees this phone already has.
+      final known = have.any((m) =>
+          (m.latitude - p.lat).abs() < 1e-6 && (m.longitude - p.lng).abs() < 1e-6);
+      if (known) continue;
+      await _db.insertLocation(MapLocation(
+        name: p.name,
+        latitude: p.lat,
+        longitude: p.lng,
+        type: LocationType.secnja,
+        parcelId: parcelId,
+        sourceShareId: shareId,
+      ));
     }
+    return parcelId;
   }
 }

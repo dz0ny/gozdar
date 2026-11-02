@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gozdar/db/app_database.dart';
+import 'package:gozdar/models/map_location.dart';
 import 'package:gozdar/models/parcel.dart';
-import 'package:gozdar/models/received_share.dart';
 import 'package:gozdar/models/secnja_share.dart';
 import 'package:gozdar/services/database_service.dart';
 import 'package:gozdar/services/secnja_share_service.dart';
@@ -137,89 +137,6 @@ void main() {
     expect((await dbService.getParcel(parcel.id))!.isShared, isFalse);
   });
 
-  test('receive imports; receiving again replaces payload, one row', () async {
-    var name = 'Smreka 1';
-    final service = serviceWith((_) async => http.Response.bytes(utf8.encode(serverJson(name: name)), 200));
-
-    expect((await service.receive('abc123')).outcome, ReceiveOutcome.imported);
-    name = 'Bukev 9';
-    final second = await service.receive('abc123');
-    expect(second.outcome, ReceiveOutcome.imported);
-    expect(second.payload?.points.single.name, 'Bukev 9');
-
-    final all = await dbService.getReceivedShares();
-    expect(all, hasLength(1));
-    expect(all.single.payload.points.single.name, 'Bukev 9');
-    expect(all.single.expiresAt.toUtc(), DateTime.utc(2026, 12, 2, 10));
-  });
-
-  test('receive 404 deletes the local row and returns expired', () async {
-    await dbService.upsertReceivedShare(ReceivedShare(
-      shareId: 'abc123',
-      payloadJson: serverJson(),
-      fetchedAt: DateTime.now(),
-      expiresAt: DateTime.now().add(const Duration(days: 3)),
-    ));
-    final service = serviceWith((_) async => http.Response('', 404));
-    expect((await service.receive('abc123')).outcome, ReceiveOutcome.expired);
-    expect(await dbService.getReceivedShares(), isEmpty);
-  });
-
-  test('receive on SocketException returns offline and stores nothing', () async {
-    final service = serviceWith((_) async => throw const SocketException('offline'));
-    expect((await service.receive('abc123')).outcome, ReceiveOutcome.offline);
-    expect(await dbService.getReceivedShares(), isEmpty);
-  });
-
-  test('refreshReceived purges expired rows even when every request fails', () async {
-    await dbService.upsertReceivedShare(ReceivedShare(
-      shareId: 'old',
-      payloadJson: serverJson(),
-      fetchedAt: DateTime(2026),
-      expiresAt: DateTime.now().subtract(const Duration(days: 1)),
-    ));
-    await dbService.upsertReceivedShare(ReceivedShare(
-      shareId: 'live',
-      payloadJson: serverJson(),
-      fetchedAt: DateTime.now(),
-      expiresAt: DateTime.now().add(const Duration(days: 3)),
-    ));
-    final service = serviceWith((_) async => throw const SocketException('offline'));
-
-    await service.refreshReceived();
-
-    expect(requests.map((r) => r.url.path), ['/api/s/live']);
-    expect(await db.select(db.receivedShares).get(), hasLength(1));
-  });
-
-  test('receive of an unreadable share returns invalid and stores nothing', () async {
-    for (final body in ['<html>wifi login</html>', '{"parcel":null,"points":[]}', '{"v":2}']) {
-      final service = serviceWith((_) async => http.Response(body, 200));
-      expect((await service.receive('bad')).outcome, ReceiveOutcome.invalid);
-    }
-    expect(await dbService.getReceivedShares(), isEmpty);
-  });
-
-  test('refreshReceived keeps going after an unreadable share', () async {
-    for (final id in ['bad', 'good']) {
-      await dbService.upsertReceivedShare(ReceivedShare(
-        shareId: id,
-        payloadJson: serverJson(),
-        fetchedAt: DateTime(2026),
-        expiresAt: DateTime.now().add(const Duration(days: 3)),
-      ));
-    }
-    final service = serviceWith((r) async => r.url.path.endsWith('/bad')
-        ? http.Response('<html>', 200)
-        : http.Response.bytes(utf8.encode(serverJson(name: 'Fresh 1')), 200));
-
-    await service.refreshReceived();
-
-    expect(requests.map((r) => r.url.path).toSet(), {'/api/s/bad', '/api/s/good'});
-    final good = (await dbService.getReceivedShares()).firstWhere((s) => s.shareId == 'good');
-    expect(good.payload.points.single.name, 'Fresh 1');
-  });
-
   test('revokeQuietly DELETEs a shared parcel and never throws', () async {
     final parcel = await savedParcel();
     await dbService.saveParcelShare(parcel.id,
@@ -235,5 +152,136 @@ void main() {
   test('revokeQuietly does nothing for a parcel that is not shared', () async {
     await serviceWith((_) async => http.Response('', 204)).revokeQuietly(await savedParcel());
     expect(requests, isEmpty);
+  });
+
+  // ---- Receiving imports the parcel and its trees ----
+
+  String sharedJson({
+    String number = '1234/5',
+    int? ko = 1722,
+    List<Map<String, Object>> points = const [
+      {'name': 'Smreka 1', 'lat': 46.005, 'lng': 14.005, 'species': 'Smreka'},
+      {'name': 'Drevo 2', 'lat': 46.006, 'lng': 14.006},
+    ],
+  }) =>
+      jsonEncode({
+        'v': 1,
+        'parcel': {
+          'number': number,
+          'koNumber': ?ko,
+          'koName': 'Testna vas',
+          'owner': 'Janez N.',
+          'polygon': [
+            [46.0, 14.0],
+            [46.01, 14.0],
+            [46.01, 14.01],
+            [46.0, 14.01],
+          ],
+        },
+        'points': points,
+        'createdAt': '2026-11-02T10:00:00.000Z',
+        'expiresAt': '2026-12-02T10:00:00.000Z',
+      });
+
+  SecnjaShareService serving(String Function() body) =>
+      serviceWith((_) async => http.Response.bytes(utf8.encode(body()), 200));
+
+  Future<List<String>> markNames(int parcelId) async =>
+      (await dbService.getSecnjaByParcel(parcelId)).map((m) => m.name).toList();
+
+  test('receive creates the parcel with its trees', () async {
+    final result = await serving(sharedJson).receive('abc123');
+
+    expect(result.outcome, ReceiveOutcome.imported);
+    final parcel = (await dbService.getAllParcels()).single;
+    expect(result.parcelId, parcel.id);
+    expect(parcel.cadastralMunicipality, 1722);
+    expect(parcel.parcelNumber, '1234/5');
+    expect(parcel.name, 'Testna vas - 1234/5');
+    expect(parcel.owner, 'Janez N.');
+    expect(parcel.polygon, hasLength(4));
+    expect(parcel.isShared, isFalse);
+    expect(await markNames(parcel.id), ['Smreka 1', 'Drevo 2']);
+  });
+
+  test('receive adds the trees to a parcel the logger already has', () async {
+    final id = await dbService.insertParcel(
+      Parcel(name: 'Moja', cadastralMunicipality: 1722, parcelNumber: '1234/5'),
+    );
+    await serving(sharedJson).receive('abc123');
+
+    expect(await dbService.getAllParcels(), hasLength(1));
+    expect((await dbService.getParcel(id))!.name, 'Moja');
+    expect(await markNames(id), ['Smreka 1', 'Drevo 2']);
+  });
+
+  test('an updated link replaces its own trees and keeps the logger\'s', () async {
+    var points = <Map<String, Object>>[
+      {'name': 'Smreka 1', 'lat': 46.005, 'lng': 14.005},
+      {'name': 'Drevo 2', 'lat': 46.006, 'lng': 14.006},
+    ];
+    final service = serving(() => sharedJson(points: points));
+    final first = await service.receive('abc123');
+    await dbService.insertLocation(MapLocation(
+      name: 'Moje 1', latitude: 46.002, longitude: 14.002, type: LocationType.secnja,
+    ));
+
+    points = [
+      {'name': 'Smreka 1', 'lat': 46.005, 'lng': 14.005},
+      {'name': 'Bukev 3', 'lat': 46.007, 'lng': 14.007},
+    ];
+    await service.receive('abc123');
+
+    expect(
+      (await markNames(first.parcelId!))..sort(),
+      ['Bukev 3', 'Moje 1', 'Smreka 1'],
+    );
+  });
+
+  test('trees already marked at the same spot are not added twice', () async {
+    await serving(sharedJson).receive('first1');
+    final parcelId = (await dbService.getAllParcels()).single.id;
+    // The same trees arrive again through a forwarded link.
+    await serving(sharedJson).receive('second');
+    expect(await markNames(parcelId), ['Smreka 1', 'Drevo 2']);
+  });
+
+  test('opening your own link changes nothing', () async {
+    final id = await dbService.insertParcel(
+      Parcel(name: 'Moja', cadastralMunicipality: 1722, parcelNumber: '1234/5'),
+    );
+    await dbService.saveParcelShare(id,
+        shareId: 'mine00', editToken: 't', hash: 'h', sharedAt: DateTime(2026), expiresAt: DateTime(2026, 12));
+    final result = await serving(sharedJson).receive('mine00');
+    expect(result.outcome, ReceiveOutcome.imported);
+    expect(result.parcelId, id);
+    expect(await markNames(id), isEmpty);
+  });
+
+  test('a parcel without a k.o. is matched by name', () async {
+    final id = await dbService.insertParcel(Parcel(name: 'Za hišo'));
+    await serving(() => sharedJson(number: 'Za hišo', ko: null)).receive('abc123');
+    expect(await dbService.getAllParcels(), hasLength(1));
+    expect(await markNames(id), hasLength(2));
+  });
+
+  test('receive 404 returns expired and stores nothing', () async {
+    final result = await serviceWith((_) async => http.Response('', 404)).receive('abc123');
+    expect(result.outcome, ReceiveOutcome.expired);
+    expect(await dbService.getAllParcels(), isEmpty);
+  });
+
+  test('receive on SocketException returns offline and stores nothing', () async {
+    final result = await serviceWith((_) async => throw const SocketException('x')).receive('abc');
+    expect(result.outcome, ReceiveOutcome.offline);
+    expect(await dbService.getAllParcels(), isEmpty);
+  });
+
+  test('receive of an unreadable share returns invalid and stores nothing', () async {
+    for (final body in ['<html>wifi login</html>', '{"parcel":null,"points":[]}', '{"v":2}']) {
+      final service = serviceWith((_) async => http.Response(body, 200));
+      expect((await service.receive('bad')).outcome, ReceiveOutcome.invalid);
+    }
+    expect(await dbService.getAllParcels(), isEmpty);
   });
 }

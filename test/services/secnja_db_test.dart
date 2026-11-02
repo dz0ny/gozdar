@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gozdar/db/app_database.dart';
 import 'package:gozdar/models/map_location.dart';
 import 'package:gozdar/models/parcel.dart';
-import 'package:gozdar/models/received_share.dart';
 import 'package:gozdar/services/database_service.dart';
 import 'package:gozdar/services/secnja_marking.dart';
 import 'package:gozdar/l10n/l10n.dart';
@@ -25,13 +24,6 @@ Parcel square(String name, double lat, double lng, double size) => Parcel(
 
 MapLocation mark(double lat, double lng, {LocationType type = LocationType.secnja}) =>
     MapLocation(name: 'Drevo', latitude: lat, longitude: lng, type: type);
-
-ReceivedShare received(String id, {String json = '{}', int days = 10}) => ReceivedShare(
-      shareId: id,
-      payloadJson: json,
-      fetchedAt: DateTime.now(),
-      expiresAt: DateTime.now().add(Duration(days: days)),
-    );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -153,29 +145,6 @@ void main() {
     expect(p.shareEditToken, isNull);
   });
 
-  test('upsertReceivedShare twice keeps one row, latest payload, visibility kept', () async {
-    await service.upsertReceivedShare(received('abc', json: '{"a":1}'));
-    await service.setReceivedShareVisible('abc', false);
-    await service.upsertReceivedShare(received('abc', json: '{"a":2}'));
-    final all = await service.getReceivedShares();
-    expect(all, hasLength(1));
-    expect(all.single.payloadJson, '{"a":2}');
-    expect(all.single.visible, isFalse);
-  });
-
-  test('getReceivedShares hides expired shares without network', () async {
-    await service.upsertReceivedShare(received('old', days: -1));
-    await service.upsertReceivedShare(received('new'));
-    expect((await service.getReceivedShares()).map((s) => s.shareId), ['new']);
-  });
-
-  test('purgeExpiredReceivedShares deletes them', () async {
-    await service.upsertReceivedShare(received('old', days: -1));
-    await service.upsertReceivedShare(received('new'));
-    expect(await service.purgeExpiredReceivedShares(), 1);
-    await service.deleteReceivedShare('new');
-    expect(await db.select(db.receivedShares).get(), isEmpty);
-  });
 }
 
 void markingTests() {

@@ -2115,31 +2115,13 @@
   },
   "secnjaLinkExpired": "Povezava je potekla ali bila preklicana",
   "secnjaNoConnection": "Ni povezave — poskusi znova",
-  "receivedSectionTitle": "PREJETO",
-  "secnjaReceivedRow": "{days, plural, one{Sečnja {parcel} · {who} · še {days} dan} two{Sečnja {parcel} · {who} · še {days} dneva} few{Sečnja {parcel} · {who} · še {days} dni} other{Sečnja {parcel} · {who} · še {days} dni}}",
-  "@secnjaReceivedRow": {
-    "placeholders": {
-      "parcel": {
-        "type": "String"
-      },
-      "who": {
-        "type": "String"
-      },
-      "days": {
-        "type": "int"
-      }
-    }
-  },
-  "receivedDeleteConfirm": "Odstranim prejeto sečnjo?",
   "receivedLoading": "Nalagam sečnjo…",
   "secnjaLinkInvalid": "Povezave ni mogoče prebrati",
   "introSecnjaTitle": "Sečnja za sekača",
-  "introSecnjaYours": "Tvoje oznake",
-  "introSecnjaReceived": "Prejete",
   "introSecnjaMarkTitle": "Označi drevesa",
   "introSecnjaMarkDesc": "Dolgo pritisni karto → Dodaj → Sečnja. Nameri križec na drevo in tapni Označi. Vrsto izbereš enkrat.",
   "introSecnjaShareTitle": "Deli sekaču",
   "introSecnjaShareDesc": "V parceli tapni Deli sekaču in pošlji povezavo. Velja 30 dni; ob novih oznakah jo posodobiš.",
-  "introSecnjaLoggerTitle": "Sekač vidi drevesa",
-  "introSecnjaLoggerDesc": "Povezava se odpre v Gozdarju. Drevesa so oštevilčena na karti, vklopiš jih v Sloji → Prejeto, delujejo tudi brez signala."
+  "introSecnjaLoggerTitle": "Sekač dobi parcelo",
+  "introSecnjaLoggerDesc": "Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej."
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'map_dialogs.dart';
-import '../models/received_share.dart';
 import 'package:latlong2/latlong.dart';
 import '../l10n/l10n.dart';
 import '../models/map_location.dart';
@@ -14,7 +13,6 @@ class SavedLocationsSheet extends StatelessWidget {
   final List<MapLocation> locations;
   final List<LogEntry> logs;
   final List<Parcel> parcels;
-  final List<ReceivedShare> receivedShares;
   final void Function(NavigationTarget target) onNavigate;
   final void Function(MapLocation location) onEdit;
   final void Function(MapLocation location) onDelete;
@@ -29,7 +27,6 @@ class SavedLocationsSheet extends StatelessWidget {
     required this.locations,
     this.logs = const [],
     this.parcels = const [],
-    this.receivedShares = const [],
     required this.onNavigate,
     required this.onEdit,
     required this.onDelete,
@@ -43,7 +40,6 @@ class SavedLocationsSheet extends StatelessWidget {
     required List<MapLocation> locations,
     List<LogEntry> logs = const [],
     List<Parcel> parcels = const [],
-    List<ReceivedShare> receivedShares = const [],
     required void Function(NavigationTarget target) onNavigate,
     required void Function(MapLocation location) onEdit,
     required void Function(MapLocation location) onDelete,
@@ -68,7 +64,6 @@ class SavedLocationsSheet extends StatelessWidget {
             locations: locations,
             logs: logs,
             parcels: parcels,
-            receivedShares: receivedShares,
             onNavigate: onNavigate,
             onEdit: onEdit,
             onDelete: onDelete,
@@ -87,7 +82,6 @@ class SavedLocationsSheet extends StatelessWidget {
       locations: locations,
       logs: logs,
       parcels: parcels,
-      receivedShares: receivedShares,
       onNavigate: onNavigate,
       onEdit: onEdit,
       onDelete: onDelete,
@@ -104,7 +98,6 @@ class _SwipeableContent extends StatefulWidget {
   final List<MapLocation> locations;
   final List<LogEntry> logs;
   final List<Parcel> parcels;
-  final List<ReceivedShare> receivedShares;
   final void Function(NavigationTarget target) onNavigate;
   final void Function(MapLocation location) onEdit;
   final void Function(MapLocation location) onDelete;
@@ -116,7 +109,6 @@ class _SwipeableContent extends StatefulWidget {
     required this.locations,
     required this.logs,
     required this.parcels,
-    this.receivedShares = const [],
     required this.onNavigate,
     required this.onEdit,
     required this.onDelete,
@@ -139,7 +131,6 @@ class _SwipeableContentState extends State<_SwipeableContent> {
       locations: widget.locations.where((l) => !_removed.contains(l.id)).toList(),
       logs: widget.logs,
       parcels: widget.parcels,
-      receivedShares: widget.receivedShares,
       onNavigate: widget.onNavigate,
       onEdit: widget.onEdit,
       onDelete: widget.onDelete,
@@ -164,7 +155,6 @@ class _ContentWidget extends StatelessWidget {
   final List<MapLocation> locations;
   final List<LogEntry> logs;
   final List<Parcel> parcels;
-  final List<ReceivedShare> receivedShares;
   final void Function(NavigationTarget target) onNavigate;
   final void Function(MapLocation location) onEdit;
   final void Function(MapLocation location) onDelete;
@@ -180,7 +170,6 @@ class _ContentWidget extends StatelessWidget {
     required this.locations,
     required this.logs,
     required this.parcels,
-    this.receivedShares = const [],
     required this.onNavigate,
     required this.onEdit,
     required this.onDelete,
@@ -222,10 +211,7 @@ class _ContentWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     // Filter logs with location
     final geolocatedLogs = logs.where((log) => log.hasLocation).toList();
-    final visibleShares = receivedShares.where((s) => s.visible).toList();
-    final totalCount = locations.length +
-        geolocatedLogs.length +
-        visibleShares.fold<int>(0, (n, s) => n + s.payload.points.length);
+    final totalCount = locations.length + geolocatedLogs.length;
 
     return Column(
         children: [
@@ -327,32 +313,6 @@ class _ContentWidget extends StatelessWidget {
                       ),
                     );
                   }),
-                ],
-                // Received sečnja, one section per share
-                for (final share in visibleShares) ...[
-                  _SectionHeader(
-                    icon: Icons.carpenter,
-                    color: Colors.blue,
-                    title: '🪓 ${share.payload.parcelNumber}',
-                    count: share.payload.points.length,
-                  ),
-                  for (final (i, p) in share.payload.points.indexed)
-                    ListTile(
-                      leading: CircleAvatar(
-                        radius: 14,
-                        backgroundColor: Colors.blue,
-                        child: Text(
-                          '${i + 1}',
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
-                        ),
-                      ),
-                      title: Text(p.name),
-                      trailing: const Icon(Icons.navigation, color: Colors.blue),
-                      onTap: () {
-                        Navigator.pop(context);
-                        onNavigate(NavigationTarget(location: p.position, name: p.name));
-                      },
-                    ),
                 ],
                 // Logs section
                 if (geolocatedLogs.isNotEmpty) ...[

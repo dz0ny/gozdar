@@ -81,17 +81,8 @@ class MapLocations extends Table {
   DateTimeColumn get createdAt => dateTime()();
   // Parcel that a sečnja mark belongs to.
   IntColumn get parcelId => integer().nullable().references(Parcels, #id)();
-}
-
-/// Sečnja that another owner shared with this phone.
-@DataClassName('DbReceivedShare')
-class ReceivedShares extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get shareId => text().unique()();
-  TextColumn get payloadJson => text()();
-  DateTimeColumn get fetchedAt => dateTime()();
-  DateTimeColumn get expiresAt => dateTime()();
-  BoolColumn get visible => boolean().withDefault(const Constant(true))();
+  // Share link a sečnja mark came from; null for marks made on this phone.
+  TextColumn get sourceShareId => text().nullable()();
 }
 
 @DataClassName('DbImportedOverlay')
@@ -163,14 +154,13 @@ class OfflineTileEntries extends Table {
     HttpCache,
     OfflineTileStyles,
     OfflineTileEntries,
-    ReceivedShares,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -198,12 +188,12 @@ class AppDatabase extends _$AppDatabase {
         await _addColumnIfMissing(m, parcels, parcels.shareHash);
         await _addColumnIfMissing(m, parcels, parcels.sharedAt);
         await _addColumnIfMissing(m, parcels, parcels.shareExpiresAt);
-        final hasShares = await customSelect(
-          "SELECT 1 FROM sqlite_master WHERE type = 'table' "
-          "AND name = 'received_shares'",
-        ).get();
-        if (hasShares.isEmpty) await m.createTable(receivedShares);
         await backfillSecnjaParcels();
+      }
+      if (from < 6) {
+        // Received shares now import as parcels; the list of them is gone.
+        await _addColumnIfMissing(m, mapLocations, mapLocations.sourceShareId);
+        await customStatement('DROP TABLE IF EXISTS received_shares');
       }
     },
   );

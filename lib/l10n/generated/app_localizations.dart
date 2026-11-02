@@ -5046,24 +5046,6 @@ abstract class AppLocalizations {
   /// **'Ni povezave — poskusi znova'**
   String get secnjaNoConnection;
 
-  /// No description provided for @receivedSectionTitle.
-  ///
-  /// In sl, this message translates to:
-  /// **'PREJETO'**
-  String get receivedSectionTitle;
-
-  /// No description provided for @secnjaReceivedRow.
-  ///
-  /// In sl, this message translates to:
-  /// **'{days, plural, one{Sečnja {parcel} · {who} · še {days} dan} two{Sečnja {parcel} · {who} · še {days} dneva} few{Sečnja {parcel} · {who} · še {days} dni} other{Sečnja {parcel} · {who} · še {days} dni}}'**
-  String secnjaReceivedRow(String parcel, String who, int days);
-
-  /// No description provided for @receivedDeleteConfirm.
-  ///
-  /// In sl, this message translates to:
-  /// **'Odstranim prejeto sečnjo?'**
-  String get receivedDeleteConfirm;
-
   /// No description provided for @receivedLoading.
   ///
   /// In sl, this message translates to:
@@ -5081,18 +5063,6 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Sečnja za sekača'**
   String get introSecnjaTitle;
-
-  /// No description provided for @introSecnjaYours.
-  ///
-  /// In sl, this message translates to:
-  /// **'Tvoje oznake'**
-  String get introSecnjaYours;
-
-  /// No description provided for @introSecnjaReceived.
-  ///
-  /// In sl, this message translates to:
-  /// **'Prejete'**
-  String get introSecnjaReceived;
 
   /// No description provided for @introSecnjaMarkTitle.
   ///
@@ -5121,13 +5091,13 @@ abstract class AppLocalizations {
   /// No description provided for @introSecnjaLoggerTitle.
   ///
   /// In sl, this message translates to:
-  /// **'Sekač vidi drevesa'**
+  /// **'Sekač dobi parcelo'**
   String get introSecnjaLoggerTitle;
 
   /// No description provided for @introSecnjaLoggerDesc.
   ///
   /// In sl, this message translates to:
-  /// **'Povezava se odpre v Gozdarju. Drevesa so oštevilčena na karti, vklopiš jih v Sloji → Prejeto, delujejo tudi brez signala.'**
+  /// **'Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej.'**
   String get introSecnjaLoggerDesc;
 }
 

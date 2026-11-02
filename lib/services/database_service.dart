@@ -7,7 +7,6 @@ import '../models/log_entry.dart';
 import '../models/map_location.dart';
 import '../models/parcel.dart';
 import '../models/imported_overlay.dart';
-import '../models/received_share.dart';
 
 // ---------------------------------------------------------------------------
 // Conversion helpers: drift row → app model
@@ -66,15 +65,7 @@ MapLocation _locationFromDb(DbMapLocation r) => MapLocation(
       type: LocationType.values[r.typeIndex],
       createdAt: r.createdAt,
       parcelId: r.parcelId,
-    );
-
-ReceivedShare _receivedFromDb(DbReceivedShare r) => ReceivedShare(
-      id: r.id,
-      shareId: r.shareId,
-      payloadJson: r.payloadJson,
-      fetchedAt: r.fetchedAt,
-      expiresAt: r.expiresAt,
-      visible: r.visible,
+      sourceShareId: r.sourceShareId,
     );
 
 ImportedOverlay _overlayFromDb(DbImportedOverlay r) => ImportedOverlay(
@@ -146,6 +137,7 @@ MapLocationsCompanion _locationToCompanion(MapLocation l) => MapLocationsCompani
       typeIndex: Value(l.typeIndex),
       createdAt: Value(l.createdAt),
       parcelId: Value(l.parcelId),
+      sourceShareId: Value(l.sourceShareId),
     );
 
 ImportedOverlaysCompanion _overlayToCompanion(ImportedOverlay o) => ImportedOverlaysCompanion(
@@ -400,59 +392,19 @@ class DatabaseService {
 
   // ==================== RECEIVED SHARES ====================
 
-  /// Saves a received share. Replaces the payload of a share with the same
-  /// id and keeps its visibility.
-  Future<void> upsertReceivedShare(ReceivedShare share) async {
-    final existing = await (db.select(db.receivedShares)
-          ..where((t) => t.shareId.equals(share.shareId)))
+  /// Deletes the sečnja marks that came from the share link [shareId].
+  Future<int> deleteSecnjaFromShare(String shareId) {
+    return (db.delete(db.mapLocations)..where((t) => t.sourceShareId.equals(shareId)))
+        .go();
+  }
+
+  /// A saved parcel without a k.o. whose name is [name].
+  Future<Parcel?> findParcelByName(String name) async {
+    final row = await (db.select(db.parcels)
+          ..where((t) => t.name.equals(name) & t.cadastralMunicipality.isNull())
+          ..limit(1))
         .getSingleOrNull();
-    if (existing == null) {
-      await db.into(db.receivedShares).insert(
-            ReceivedSharesCompanion.insert(
-              shareId: share.shareId,
-              payloadJson: share.payloadJson,
-              fetchedAt: share.fetchedAt,
-              expiresAt: share.expiresAt,
-              visible: Value(share.visible),
-            ),
-          );
-      return;
-    }
-    await (db.update(db.receivedShares)..where((t) => t.id.equals(existing.id)))
-        .write(
-      ReceivedSharesCompanion(
-        payloadJson: Value(share.payloadJson),
-        fetchedAt: Value(share.fetchedAt),
-        expiresAt: Value(share.expiresAt),
-      ),
-    );
-  }
-
-  /// Received shares that have not expired yet, newest first.
-  Future<List<ReceivedShare>> getReceivedShares() async {
-    final rows = await (db.select(db.receivedShares)
-          ..where((t) => t.expiresAt.isBiggerThanValue(DateTime.now()))
-          ..orderBy([
-            (t) => OrderingTerm(expression: t.fetchedAt, mode: OrderingMode.desc),
-          ]))
-        .get();
-    return rows.map(_receivedFromDb).toList();
-  }
-
-  Future<int> purgeExpiredReceivedShares() {
-    return (db.delete(db.receivedShares)
-          ..where((t) => t.expiresAt.isSmallerOrEqualValue(DateTime.now())))
-        .go();
-  }
-
-  Future<void> setReceivedShareVisible(String shareId, bool visible) async {
-    await (db.update(db.receivedShares)..where((t) => t.shareId.equals(shareId)))
-        .write(ReceivedSharesCompanion(visible: Value(visible)));
-  }
-
-  Future<void> deleteReceivedShare(String shareId) async {
-    await (db.delete(db.receivedShares)..where((t) => t.shareId.equals(shareId)))
-        .go();
+    return row == null ? null : _parcelFromDb(row);
   }
 
   // ==================== PARCEL OPERATIONS ====================

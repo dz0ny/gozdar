@@ -38,11 +38,11 @@ class _ReceiveShareScreenState extends State<ReceiveShareScreen> {
       switch (result.outcome) {
         case ReceiveOutcome.imported:
           message = l10n.secnjaReceived(payload!.parcelNumber, payload.points.length);
-          await mapProvider?.loadReceivedShares();
+          await mapProvider?.loadParcels();
+          await mapProvider?.loadLocations();
           mapProvider?.focusOn(payload);
         case ReceiveOutcome.expired:
           message = l10n.secnjaLinkExpired;
-          await mapProvider?.loadReceivedShares();
         case ReceiveOutcome.offline:
           message = l10n.secnjaNoConnection;
         case ReceiveOutcome.invalid:

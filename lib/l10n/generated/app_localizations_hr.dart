@@ -2986,24 +2986,6 @@ class AppLocalizationsHr extends AppLocalizations {
   String get secnjaNoConnection => 'Nema veze — pokušaj ponovno';
 
   @override
-  String get receivedSectionTitle => 'PRIMLJENO';
-
-  @override
-  String secnjaReceivedRow(String parcel, String who, int days) {
-    String _temp0 = intl.Intl.pluralLogic(
-      days,
-      locale: localeName,
-      other: 'Sječa $parcel · $who · još $days dana',
-      few: 'Sječa $parcel · $who · još $days dana',
-      one: 'Sječa $parcel · $who · još $days dan',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get receivedDeleteConfirm => 'Ukloniti primljenu sječu?';
-
-  @override
   String get receivedLoading => 'Učitavam sječu…';
 
   @override
@@ -3011,12 +2993,6 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get introSecnjaTitle => 'Sječa za sjekača';
-
-  @override
-  String get introSecnjaYours => 'Tvoje oznake';
-
-  @override
-  String get introSecnjaReceived => 'Primljene';
 
   @override
   String get introSecnjaMarkTitle => 'Označi stabla';
@@ -3033,9 +3009,9 @@ class AppLocalizationsHr extends AppLocalizations {
       'U čestici dodirni Podijeli sjekaču i pošalji poveznicu. Vrijedi 30 dana; nakon novih oznaka je ažuriraš.';
 
   @override
-  String get introSecnjaLoggerTitle => 'Sjekač vidi stabla';
+  String get introSecnjaLoggerTitle => 'Sjekač dobiva česticu';
 
   @override
   String get introSecnjaLoggerDesc =>
-      'Poveznica se otvara u Gozdaru. Stabla su numerirana na karti, uključuješ ih u Slojevi → Primljeno, rade i bez signala.';
+      'Poveznica se otvara u Gozdaru i dodaje česticu sa stablima u Moju šumu. Radi bez signala, sjekač je može podijeliti dalje.';
 }

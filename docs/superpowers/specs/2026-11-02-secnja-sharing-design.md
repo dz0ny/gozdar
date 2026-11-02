@@ -227,23 +227,18 @@ passed or that come back 404/410. Nothing happens offline.
 
 ### Showing it
 
-Map: for each visible received share, draw the parcel outline (thin, same
-blue) and the points as numbered pins in blue (`Colors.blue`), numbered by
-their order in the payload. Own sečnja pins stay orange. Tapping a pin
-opens the existing navigate sheet (`NavigateToSheet`) with the tree's
-name as the destination name. Pins show at the same zoom thresholds as
-other markers.
+Changed 2026-11-02 at the owner's request: there is no separate layer.
+Opening a link imports the share as an ordinary parcel:
 
-Layer selector (`MapLayerSelector`): a new section **PREJETO** below the
-existing categories, shown only when at least one received share exists.
-One switch row per share:
-`🪓 Sečnja <parcel> · <owner or k.o.> · še <n> dni`, with a trailing
-delete icon that removes the share locally (confirm dialog). Toggling
-sets `visible`.
-
-Saved-points sheet (bottom-left button): a section per visible received
-share listing its trees with the existing navigate action. The badge count
-on the button includes received trees.
+- The parcel is matched by k.o. and parcel number (by name when there is
+  no k.o.), or created with the outline and owner from the share.
+- The trees become ordinary sečnja marks on it. Each mark records the link
+  it came from (`MapLocation.sourceShareId`, schema 6).
+- Opening an updated link replaces only that link's marks; the logger's own
+  marks stay. Trees already marked at the same spot are skipped, and
+  opening your own link changes nothing, so forwarding never duplicates.
+- The logger can share the parcel on with Deli sekaču, which makes their
+  own link. The imported parcel stays after the link expires.
 
 ## Server
 

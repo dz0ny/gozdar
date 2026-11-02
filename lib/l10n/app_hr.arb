@@ -823,18 +823,13 @@
   "secnjaReceived": "{count, plural, one{Primljena sječa: čestica {parcel} · {count} stablo} few{Primljena sječa: čestica {parcel} · {count} stabla} other{Primljena sječa: čestica {parcel} · {count} stabala}}",
   "secnjaLinkExpired": "Poveznica je istekla ili je opozvana",
   "secnjaNoConnection": "Nema veze — pokušaj ponovno",
-  "receivedSectionTitle": "PRIMLJENO",
-  "secnjaReceivedRow": "{days, plural, one{Sječa {parcel} · {who} · još {days} dan} few{Sječa {parcel} · {who} · još {days} dana} other{Sječa {parcel} · {who} · još {days} dana}}",
-  "receivedDeleteConfirm": "Ukloniti primljenu sječu?",
   "receivedLoading": "Učitavam sječu…",
   "secnjaLinkInvalid": "Poveznicu nije moguće pročitati",
   "introSecnjaTitle": "Sječa za sjekača",
-  "introSecnjaYours": "Tvoje oznake",
-  "introSecnjaReceived": "Primljene",
   "introSecnjaMarkTitle": "Označi stabla",
   "introSecnjaMarkDesc": "Dugo pritisni kartu → Dodaj → Sječa. Usmjeri križić na stablo i dodirni Označi. Vrstu biraš jednom.",
   "introSecnjaShareTitle": "Podijeli sjekaču",
   "introSecnjaShareDesc": "U čestici dodirni Podijeli sjekaču i pošalji poveznicu. Vrijedi 30 dana; nakon novih oznaka je ažuriraš.",
-  "introSecnjaLoggerTitle": "Sjekač vidi stabla",
-  "introSecnjaLoggerDesc": "Poveznica se otvara u Gozdaru. Stabla su numerirana na karti, uključuješ ih u Slojevi → Primljeno, rade i bez signala."
+  "introSecnjaLoggerTitle": "Sjekač dobiva česticu",
+  "introSecnjaLoggerDesc": "Poveznica se otvara u Gozdaru i dodaje česticu sa stablima u Moju šumu. Radi bez signala, sjekač je može podijeliti dalje."
 }

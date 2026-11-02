@@ -2226,6 +2226,17 @@ class $MapLocationsTable extends MapLocations
       'REFERENCES parcels (id)',
     ),
   );
+  static const VerificationMeta _sourceShareIdMeta = const VerificationMeta(
+    'sourceShareId',
+  );
+  @override
+  late final GeneratedColumn<String> sourceShareId = GeneratedColumn<String>(
+    'source_share_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2235,6 +2246,7 @@ class $MapLocationsTable extends MapLocations
     typeIndex,
     createdAt,
     parcelId,
+    sourceShareId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2295,6 +2307,15 @@ class $MapLocationsTable extends MapLocations
         parcelId.isAcceptableOrUnknown(data['parcel_id']!, _parcelIdMeta),
       );
     }
+    if (data.containsKey('source_share_id')) {
+      context.handle(
+        _sourceShareIdMeta,
+        sourceShareId.isAcceptableOrUnknown(
+          data['source_share_id']!,
+          _sourceShareIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2332,6 +2353,10 @@ class $MapLocationsTable extends MapLocations
         DriftSqlType.int,
         data['${effectivePrefix}parcel_id'],
       ),
+      sourceShareId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_share_id'],
+      ),
     );
   }
 
@@ -2349,6 +2374,7 @@ class DbMapLocation extends DataClass implements Insertable<DbMapLocation> {
   final int typeIndex;
   final DateTime createdAt;
   final int? parcelId;
+  final String? sourceShareId;
   const DbMapLocation({
     required this.id,
     required this.name,
@@ -2357,6 +2383,7 @@ class DbMapLocation extends DataClass implements Insertable<DbMapLocation> {
     required this.typeIndex,
     required this.createdAt,
     this.parcelId,
+    this.sourceShareId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2369,6 +2396,9 @@ class DbMapLocation extends DataClass implements Insertable<DbMapLocation> {
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || parcelId != null) {
       map['parcel_id'] = Variable<int>(parcelId);
+    }
+    if (!nullToAbsent || sourceShareId != null) {
+      map['source_share_id'] = Variable<String>(sourceShareId);
     }
     return map;
   }
@@ -2384,6 +2414,9 @@ class DbMapLocation extends DataClass implements Insertable<DbMapLocation> {
       parcelId: parcelId == null && nullToAbsent
           ? const Value.absent()
           : Value(parcelId),
+      sourceShareId: sourceShareId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceShareId),
     );
   }
 
@@ -2400,6 +2433,7 @@ class DbMapLocation extends DataClass implements Insertable<DbMapLocation> {
       typeIndex: serializer.fromJson<int>(json['typeIndex']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       parcelId: serializer.fromJson<int?>(json['parcelId']),
+      sourceShareId: serializer.fromJson<String?>(json['sourceShareId']),
     );
   }
   @override
@@ -2413,6 +2447,7 @@ class DbMapLocation extends DataClass implements Insertable<DbMapLocation> {
       'typeIndex': serializer.toJson<int>(typeIndex),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'parcelId': serializer.toJson<int?>(parcelId),
+      'sourceShareId': serializer.toJson<String?>(sourceShareId),
     };
   }
 
@@ -2424,6 +2459,7 @@ class DbMapLocation extends DataClass implements Insertable<DbMapLocation> {
     int? typeIndex,
     DateTime? createdAt,
     Value<int?> parcelId = const Value.absent(),
+    Value<String?> sourceShareId = const Value.absent(),
   }) => DbMapLocation(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -2432,6 +2468,9 @@ class DbMapLocation extends DataClass implements Insertable<DbMapLocation> {
     typeIndex: typeIndex ?? this.typeIndex,
     createdAt: createdAt ?? this.createdAt,
     parcelId: parcelId.present ? parcelId.value : this.parcelId,
+    sourceShareId: sourceShareId.present
+        ? sourceShareId.value
+        : this.sourceShareId,
   );
   DbMapLocation copyWithCompanion(MapLocationsCompanion data) {
     return DbMapLocation(
@@ -2442,6 +2481,9 @@ class DbMapLocation extends DataClass implements Insertable<DbMapLocation> {
       typeIndex: data.typeIndex.present ? data.typeIndex.value : this.typeIndex,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       parcelId: data.parcelId.present ? data.parcelId.value : this.parcelId,
+      sourceShareId: data.sourceShareId.present
+          ? data.sourceShareId.value
+          : this.sourceShareId,
     );
   }
 
@@ -2454,7 +2496,8 @@ class DbMapLocation extends DataClass implements Insertable<DbMapLocation> {
           ..write('longitude: $longitude, ')
           ..write('typeIndex: $typeIndex, ')
           ..write('createdAt: $createdAt, ')
-          ..write('parcelId: $parcelId')
+          ..write('parcelId: $parcelId, ')
+          ..write('sourceShareId: $sourceShareId')
           ..write(')'))
         .toString();
   }
@@ -2468,6 +2511,7 @@ class DbMapLocation extends DataClass implements Insertable<DbMapLocation> {
     typeIndex,
     createdAt,
     parcelId,
+    sourceShareId,
   );
   @override
   bool operator ==(Object other) =>
@@ -2479,7 +2523,8 @@ class DbMapLocation extends DataClass implements Insertable<DbMapLocation> {
           other.longitude == this.longitude &&
           other.typeIndex == this.typeIndex &&
           other.createdAt == this.createdAt &&
-          other.parcelId == this.parcelId);
+          other.parcelId == this.parcelId &&
+          other.sourceShareId == this.sourceShareId);
 }
 
 class MapLocationsCompanion extends UpdateCompanion<DbMapLocation> {
@@ -2490,6 +2535,7 @@ class MapLocationsCompanion extends UpdateCompanion<DbMapLocation> {
   final Value<int> typeIndex;
   final Value<DateTime> createdAt;
   final Value<int?> parcelId;
+  final Value<String?> sourceShareId;
   const MapLocationsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -2498,6 +2544,7 @@ class MapLocationsCompanion extends UpdateCompanion<DbMapLocation> {
     this.typeIndex = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.parcelId = const Value.absent(),
+    this.sourceShareId = const Value.absent(),
   });
   MapLocationsCompanion.insert({
     this.id = const Value.absent(),
@@ -2507,6 +2554,7 @@ class MapLocationsCompanion extends UpdateCompanion<DbMapLocation> {
     this.typeIndex = const Value.absent(),
     required DateTime createdAt,
     this.parcelId = const Value.absent(),
+    this.sourceShareId = const Value.absent(),
   }) : name = Value(name),
        latitude = Value(latitude),
        longitude = Value(longitude),
@@ -2519,6 +2567,7 @@ class MapLocationsCompanion extends UpdateCompanion<DbMapLocation> {
     Expression<int>? typeIndex,
     Expression<DateTime>? createdAt,
     Expression<int>? parcelId,
+    Expression<String>? sourceShareId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2528,6 +2577,7 @@ class MapLocationsCompanion extends UpdateCompanion<DbMapLocation> {
       if (typeIndex != null) 'type_index': typeIndex,
       if (createdAt != null) 'created_at': createdAt,
       if (parcelId != null) 'parcel_id': parcelId,
+      if (sourceShareId != null) 'source_share_id': sourceShareId,
     });
   }
 
@@ -2539,6 +2589,7 @@ class MapLocationsCompanion extends UpdateCompanion<DbMapLocation> {
     Value<int>? typeIndex,
     Value<DateTime>? createdAt,
     Value<int?>? parcelId,
+    Value<String?>? sourceShareId,
   }) {
     return MapLocationsCompanion(
       id: id ?? this.id,
@@ -2548,6 +2599,7 @@ class MapLocationsCompanion extends UpdateCompanion<DbMapLocation> {
       typeIndex: typeIndex ?? this.typeIndex,
       createdAt: createdAt ?? this.createdAt,
       parcelId: parcelId ?? this.parcelId,
+      sourceShareId: sourceShareId ?? this.sourceShareId,
     );
   }
 
@@ -2575,6 +2627,9 @@ class MapLocationsCompanion extends UpdateCompanion<DbMapLocation> {
     if (parcelId.present) {
       map['parcel_id'] = Variable<int>(parcelId.value);
     }
+    if (sourceShareId.present) {
+      map['source_share_id'] = Variable<String>(sourceShareId.value);
+    }
     return map;
   }
 
@@ -2587,7 +2642,8 @@ class MapLocationsCompanion extends UpdateCompanion<DbMapLocation> {
           ..write('longitude: $longitude, ')
           ..write('typeIndex: $typeIndex, ')
           ..write('createdAt: $createdAt, ')
-          ..write('parcelId: $parcelId')
+          ..write('parcelId: $parcelId, ')
+          ..write('sourceShareId: $sourceShareId')
           ..write(')'))
         .toString();
   }
@@ -4599,413 +4655,6 @@ class OfflineTileEntriesCompanion extends UpdateCompanion<DbOfflineTileEntry> {
   }
 }
 
-class $ReceivedSharesTable extends ReceivedShares
-    with TableInfo<$ReceivedSharesTable, DbReceivedShare> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $ReceivedSharesTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _shareIdMeta = const VerificationMeta(
-    'shareId',
-  );
-  @override
-  late final GeneratedColumn<String> shareId = GeneratedColumn<String>(
-    'share_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
-  );
-  static const VerificationMeta _payloadJsonMeta = const VerificationMeta(
-    'payloadJson',
-  );
-  @override
-  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
-    'payload_json',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _fetchedAtMeta = const VerificationMeta(
-    'fetchedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
-    'fetched_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _expiresAtMeta = const VerificationMeta(
-    'expiresAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> expiresAt = GeneratedColumn<DateTime>(
-    'expires_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _visibleMeta = const VerificationMeta(
-    'visible',
-  );
-  @override
-  late final GeneratedColumn<bool> visible = GeneratedColumn<bool>(
-    'visible',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("visible" IN (0, 1))',
-    ),
-    defaultValue: const Constant(true),
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    shareId,
-    payloadJson,
-    fetchedAt,
-    expiresAt,
-    visible,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'received_shares';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<DbReceivedShare> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('share_id')) {
-      context.handle(
-        _shareIdMeta,
-        shareId.isAcceptableOrUnknown(data['share_id']!, _shareIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_shareIdMeta);
-    }
-    if (data.containsKey('payload_json')) {
-      context.handle(
-        _payloadJsonMeta,
-        payloadJson.isAcceptableOrUnknown(
-          data['payload_json']!,
-          _payloadJsonMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_payloadJsonMeta);
-    }
-    if (data.containsKey('fetched_at')) {
-      context.handle(
-        _fetchedAtMeta,
-        fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_fetchedAtMeta);
-    }
-    if (data.containsKey('expires_at')) {
-      context.handle(
-        _expiresAtMeta,
-        expiresAt.isAcceptableOrUnknown(data['expires_at']!, _expiresAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_expiresAtMeta);
-    }
-    if (data.containsKey('visible')) {
-      context.handle(
-        _visibleMeta,
-        visible.isAcceptableOrUnknown(data['visible']!, _visibleMeta),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  DbReceivedShare map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return DbReceivedShare(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      shareId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}share_id'],
-      )!,
-      payloadJson: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}payload_json'],
-      )!,
-      fetchedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}fetched_at'],
-      )!,
-      expiresAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}expires_at'],
-      )!,
-      visible: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}visible'],
-      )!,
-    );
-  }
-
-  @override
-  $ReceivedSharesTable createAlias(String alias) {
-    return $ReceivedSharesTable(attachedDatabase, alias);
-  }
-}
-
-class DbReceivedShare extends DataClass implements Insertable<DbReceivedShare> {
-  final int id;
-  final String shareId;
-  final String payloadJson;
-  final DateTime fetchedAt;
-  final DateTime expiresAt;
-  final bool visible;
-  const DbReceivedShare({
-    required this.id,
-    required this.shareId,
-    required this.payloadJson,
-    required this.fetchedAt,
-    required this.expiresAt,
-    required this.visible,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['share_id'] = Variable<String>(shareId);
-    map['payload_json'] = Variable<String>(payloadJson);
-    map['fetched_at'] = Variable<DateTime>(fetchedAt);
-    map['expires_at'] = Variable<DateTime>(expiresAt);
-    map['visible'] = Variable<bool>(visible);
-    return map;
-  }
-
-  ReceivedSharesCompanion toCompanion(bool nullToAbsent) {
-    return ReceivedSharesCompanion(
-      id: Value(id),
-      shareId: Value(shareId),
-      payloadJson: Value(payloadJson),
-      fetchedAt: Value(fetchedAt),
-      expiresAt: Value(expiresAt),
-      visible: Value(visible),
-    );
-  }
-
-  factory DbReceivedShare.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return DbReceivedShare(
-      id: serializer.fromJson<int>(json['id']),
-      shareId: serializer.fromJson<String>(json['shareId']),
-      payloadJson: serializer.fromJson<String>(json['payloadJson']),
-      fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
-      expiresAt: serializer.fromJson<DateTime>(json['expiresAt']),
-      visible: serializer.fromJson<bool>(json['visible']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'shareId': serializer.toJson<String>(shareId),
-      'payloadJson': serializer.toJson<String>(payloadJson),
-      'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
-      'expiresAt': serializer.toJson<DateTime>(expiresAt),
-      'visible': serializer.toJson<bool>(visible),
-    };
-  }
-
-  DbReceivedShare copyWith({
-    int? id,
-    String? shareId,
-    String? payloadJson,
-    DateTime? fetchedAt,
-    DateTime? expiresAt,
-    bool? visible,
-  }) => DbReceivedShare(
-    id: id ?? this.id,
-    shareId: shareId ?? this.shareId,
-    payloadJson: payloadJson ?? this.payloadJson,
-    fetchedAt: fetchedAt ?? this.fetchedAt,
-    expiresAt: expiresAt ?? this.expiresAt,
-    visible: visible ?? this.visible,
-  );
-  DbReceivedShare copyWithCompanion(ReceivedSharesCompanion data) {
-    return DbReceivedShare(
-      id: data.id.present ? data.id.value : this.id,
-      shareId: data.shareId.present ? data.shareId.value : this.shareId,
-      payloadJson: data.payloadJson.present
-          ? data.payloadJson.value
-          : this.payloadJson,
-      fetchedAt: data.fetchedAt.present ? data.fetchedAt.value : this.fetchedAt,
-      expiresAt: data.expiresAt.present ? data.expiresAt.value : this.expiresAt,
-      visible: data.visible.present ? data.visible.value : this.visible,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('DbReceivedShare(')
-          ..write('id: $id, ')
-          ..write('shareId: $shareId, ')
-          ..write('payloadJson: $payloadJson, ')
-          ..write('fetchedAt: $fetchedAt, ')
-          ..write('expiresAt: $expiresAt, ')
-          ..write('visible: $visible')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode =>
-      Object.hash(id, shareId, payloadJson, fetchedAt, expiresAt, visible);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is DbReceivedShare &&
-          other.id == this.id &&
-          other.shareId == this.shareId &&
-          other.payloadJson == this.payloadJson &&
-          other.fetchedAt == this.fetchedAt &&
-          other.expiresAt == this.expiresAt &&
-          other.visible == this.visible);
-}
-
-class ReceivedSharesCompanion extends UpdateCompanion<DbReceivedShare> {
-  final Value<int> id;
-  final Value<String> shareId;
-  final Value<String> payloadJson;
-  final Value<DateTime> fetchedAt;
-  final Value<DateTime> expiresAt;
-  final Value<bool> visible;
-  const ReceivedSharesCompanion({
-    this.id = const Value.absent(),
-    this.shareId = const Value.absent(),
-    this.payloadJson = const Value.absent(),
-    this.fetchedAt = const Value.absent(),
-    this.expiresAt = const Value.absent(),
-    this.visible = const Value.absent(),
-  });
-  ReceivedSharesCompanion.insert({
-    this.id = const Value.absent(),
-    required String shareId,
-    required String payloadJson,
-    required DateTime fetchedAt,
-    required DateTime expiresAt,
-    this.visible = const Value.absent(),
-  }) : shareId = Value(shareId),
-       payloadJson = Value(payloadJson),
-       fetchedAt = Value(fetchedAt),
-       expiresAt = Value(expiresAt);
-  static Insertable<DbReceivedShare> custom({
-    Expression<int>? id,
-    Expression<String>? shareId,
-    Expression<String>? payloadJson,
-    Expression<DateTime>? fetchedAt,
-    Expression<DateTime>? expiresAt,
-    Expression<bool>? visible,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (shareId != null) 'share_id': shareId,
-      if (payloadJson != null) 'payload_json': payloadJson,
-      if (fetchedAt != null) 'fetched_at': fetchedAt,
-      if (expiresAt != null) 'expires_at': expiresAt,
-      if (visible != null) 'visible': visible,
-    });
-  }
-
-  ReceivedSharesCompanion copyWith({
-    Value<int>? id,
-    Value<String>? shareId,
-    Value<String>? payloadJson,
-    Value<DateTime>? fetchedAt,
-    Value<DateTime>? expiresAt,
-    Value<bool>? visible,
-  }) {
-    return ReceivedSharesCompanion(
-      id: id ?? this.id,
-      shareId: shareId ?? this.shareId,
-      payloadJson: payloadJson ?? this.payloadJson,
-      fetchedAt: fetchedAt ?? this.fetchedAt,
-      expiresAt: expiresAt ?? this.expiresAt,
-      visible: visible ?? this.visible,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (shareId.present) {
-      map['share_id'] = Variable<String>(shareId.value);
-    }
-    if (payloadJson.present) {
-      map['payload_json'] = Variable<String>(payloadJson.value);
-    }
-    if (fetchedAt.present) {
-      map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
-    }
-    if (expiresAt.present) {
-      map['expires_at'] = Variable<DateTime>(expiresAt.value);
-    }
-    if (visible.present) {
-      map['visible'] = Variable<bool>(visible.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('ReceivedSharesCompanion(')
-          ..write('id: $id, ')
-          ..write('shareId: $shareId, ')
-          ..write('payloadJson: $payloadJson, ')
-          ..write('fetchedAt: $fetchedAt, ')
-          ..write('expiresAt: $expiresAt, ')
-          ..write('visible: $visible')
-          ..write(')'))
-        .toString();
-  }
-}
-
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5021,7 +4670,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $OfflineTileStylesTable(this);
   late final $OfflineTileEntriesTable offlineTileEntries =
       $OfflineTileEntriesTable(this);
-  late final $ReceivedSharesTable receivedShares = $ReceivedSharesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5035,7 +4683,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     httpCache,
     offlineTileStyles,
     offlineTileEntries,
-    receivedShares,
   ];
 }
 
@@ -6534,6 +6181,7 @@ typedef $$MapLocationsTableCreateCompanionBuilder =
       Value<int> typeIndex,
       required DateTime createdAt,
       Value<int?> parcelId,
+      Value<String?> sourceShareId,
     });
 typedef $$MapLocationsTableUpdateCompanionBuilder =
     MapLocationsCompanion Function({
@@ -6544,6 +6192,7 @@ typedef $$MapLocationsTableUpdateCompanionBuilder =
       Value<int> typeIndex,
       Value<DateTime> createdAt,
       Value<int?> parcelId,
+      Value<String?> sourceShareId,
     });
 
 final class $$MapLocationsTableReferences
@@ -6604,6 +6253,11 @@ class $$MapLocationsTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceShareId => $composableBuilder(
+    column: $table.sourceShareId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6670,6 +6324,11 @@ class $$MapLocationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get sourceShareId => $composableBuilder(
+    column: $table.sourceShareId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$ParcelsTableOrderingComposer get parcelId {
     final $$ParcelsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -6720,6 +6379,11 @@ class $$MapLocationsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceShareId => $composableBuilder(
+    column: $table.sourceShareId,
+    builder: (column) => column,
+  );
 
   $$ParcelsTableAnnotationComposer get parcelId {
     final $$ParcelsTableAnnotationComposer composer = $composerBuilder(
@@ -6780,6 +6444,7 @@ class $$MapLocationsTableTableManager
                 Value<int> typeIndex = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int?> parcelId = const Value.absent(),
+                Value<String?> sourceShareId = const Value.absent(),
               }) => MapLocationsCompanion(
                 id: id,
                 name: name,
@@ -6788,6 +6453,7 @@ class $$MapLocationsTableTableManager
                 typeIndex: typeIndex,
                 createdAt: createdAt,
                 parcelId: parcelId,
+                sourceShareId: sourceShareId,
               ),
           createCompanionCallback:
               ({
@@ -6798,6 +6464,7 @@ class $$MapLocationsTableTableManager
                 Value<int> typeIndex = const Value.absent(),
                 required DateTime createdAt,
                 Value<int?> parcelId = const Value.absent(),
+                Value<String?> sourceShareId = const Value.absent(),
               }) => MapLocationsCompanion.insert(
                 id: id,
                 name: name,
@@ -6806,6 +6473,7 @@ class $$MapLocationsTableTableManager
                 typeIndex: typeIndex,
                 createdAt: createdAt,
                 parcelId: parcelId,
+                sourceShareId: sourceShareId,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -8175,236 +7843,6 @@ typedef $$OfflineTileEntriesTableProcessedTableManager =
       DbOfflineTileEntry,
       PrefetchHooks Function({bool styleHash})
     >;
-typedef $$ReceivedSharesTableCreateCompanionBuilder =
-    ReceivedSharesCompanion Function({
-      Value<int> id,
-      required String shareId,
-      required String payloadJson,
-      required DateTime fetchedAt,
-      required DateTime expiresAt,
-      Value<bool> visible,
-    });
-typedef $$ReceivedSharesTableUpdateCompanionBuilder =
-    ReceivedSharesCompanion Function({
-      Value<int> id,
-      Value<String> shareId,
-      Value<String> payloadJson,
-      Value<DateTime> fetchedAt,
-      Value<DateTime> expiresAt,
-      Value<bool> visible,
-    });
-
-class $$ReceivedSharesTableFilterComposer
-    extends Composer<_$AppDatabase, $ReceivedSharesTable> {
-  $$ReceivedSharesTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get shareId => $composableBuilder(
-    column: $table.shareId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get payloadJson => $composableBuilder(
-    column: $table.payloadJson,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get fetchedAt => $composableBuilder(
-    column: $table.fetchedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get expiresAt => $composableBuilder(
-    column: $table.expiresAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get visible => $composableBuilder(
-    column: $table.visible,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$ReceivedSharesTableOrderingComposer
-    extends Composer<_$AppDatabase, $ReceivedSharesTable> {
-  $$ReceivedSharesTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get shareId => $composableBuilder(
-    column: $table.shareId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get payloadJson => $composableBuilder(
-    column: $table.payloadJson,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get fetchedAt => $composableBuilder(
-    column: $table.fetchedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get expiresAt => $composableBuilder(
-    column: $table.expiresAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get visible => $composableBuilder(
-    column: $table.visible,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$ReceivedSharesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $ReceivedSharesTable> {
-  $$ReceivedSharesTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get shareId =>
-      $composableBuilder(column: $table.shareId, builder: (column) => column);
-
-  GeneratedColumn<String> get payloadJson => $composableBuilder(
-    column: $table.payloadJson,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get fetchedAt =>
-      $composableBuilder(column: $table.fetchedAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get expiresAt =>
-      $composableBuilder(column: $table.expiresAt, builder: (column) => column);
-
-  GeneratedColumn<bool> get visible =>
-      $composableBuilder(column: $table.visible, builder: (column) => column);
-}
-
-class $$ReceivedSharesTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $ReceivedSharesTable,
-          DbReceivedShare,
-          $$ReceivedSharesTableFilterComposer,
-          $$ReceivedSharesTableOrderingComposer,
-          $$ReceivedSharesTableAnnotationComposer,
-          $$ReceivedSharesTableCreateCompanionBuilder,
-          $$ReceivedSharesTableUpdateCompanionBuilder,
-          (
-            DbReceivedShare,
-            BaseReferences<
-              _$AppDatabase,
-              $ReceivedSharesTable,
-              DbReceivedShare
-            >,
-          ),
-          DbReceivedShare,
-          PrefetchHooks Function()
-        > {
-  $$ReceivedSharesTableTableManager(
-    _$AppDatabase db,
-    $ReceivedSharesTable table,
-  ) : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$ReceivedSharesTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$ReceivedSharesTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$ReceivedSharesTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<String> shareId = const Value.absent(),
-                Value<String> payloadJson = const Value.absent(),
-                Value<DateTime> fetchedAt = const Value.absent(),
-                Value<DateTime> expiresAt = const Value.absent(),
-                Value<bool> visible = const Value.absent(),
-              }) => ReceivedSharesCompanion(
-                id: id,
-                shareId: shareId,
-                payloadJson: payloadJson,
-                fetchedAt: fetchedAt,
-                expiresAt: expiresAt,
-                visible: visible,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required String shareId,
-                required String payloadJson,
-                required DateTime fetchedAt,
-                required DateTime expiresAt,
-                Value<bool> visible = const Value.absent(),
-              }) => ReceivedSharesCompanion.insert(
-                id: id,
-                shareId: shareId,
-                payloadJson: payloadJson,
-                fetchedAt: fetchedAt,
-                expiresAt: expiresAt,
-                visible: visible,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$ReceivedSharesTable, DbReceivedShare>(table),
-                  BaseReferences<
-                    _$AppDatabase,
-                    $ReceivedSharesTable,
-                    DbReceivedShare
-                  >(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$ReceivedSharesTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $ReceivedSharesTable,
-      DbReceivedShare,
-      $$ReceivedSharesTableFilterComposer,
-      $$ReceivedSharesTableOrderingComposer,
-      $$ReceivedSharesTableAnnotationComposer,
-      $$ReceivedSharesTableCreateCompanionBuilder,
-      $$ReceivedSharesTableUpdateCompanionBuilder,
-      (
-        DbReceivedShare,
-        BaseReferences<_$AppDatabase, $ReceivedSharesTable, DbReceivedShare>,
-      ),
-      DbReceivedShare,
-      PrefetchHooks Function()
-    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8425,6 +7863,4 @@ class $AppDatabaseManager {
       $$OfflineTileStylesTableTableManager(_db, _db.offlineTileStyles);
   $$OfflineTileEntriesTableTableManager get offlineTileEntries =>
       $$OfflineTileEntriesTableTableManager(_db, _db.offlineTileEntries);
-  $$ReceivedSharesTableTableManager get receivedShares =>
-      $$ReceivedSharesTableTableManager(_db, _db.receivedShares);
 }

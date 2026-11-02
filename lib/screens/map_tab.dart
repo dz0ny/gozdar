@@ -1800,9 +1800,6 @@ class MapTabState extends State<MapTab> {
         // The tint follows through _onAuctionsChanged once the list loads.
         if (visible) unawaited(AuctionService.instance.ensureLoaded());
       },
-      receivedShares: mapProvider.receivedShares,
-      onReceivedShareToggled: mapProvider.setReceivedShareVisible,
-      onReceivedShareDeleted: mapProvider.deleteReceivedShare,
       publicParcelsAvailable: ParcelLookupService.instance.isAvailable,
       onPublicParcelsChanged: () {
         // A category toggle changes which parcels are tinted. When the
@@ -2341,7 +2338,6 @@ class MapTabState extends State<MapTab> {
         zoomIn: false,
       ),
       onLocationLongPress: _dialogManager.showDeleteLocationDialog,
-      receivedShares: mapProvider.receivedShares,
       onLogTap: (point, name) => setNavigationTarget(
         NavigationTarget(location: point, name: name),
         zoomIn: false,
@@ -2655,20 +2651,6 @@ class MapTabState extends State<MapTab> {
                       );
                     },
                   ),
-                // Parcels of received sečnja shares
-                if (mapProvider.receivedShares.any((s) => s.visible))
-                  PolygonLayer(
-                    polygons: [
-                      for (final share in mapProvider.receivedShares)
-                        if (share.visible && share.payload.polygon.length >= 3)
-                          Polygon(
-                            points: share.payload.polygon,
-                            color: Colors.blue.withValues(alpha: 0.08),
-                            borderColor: Colors.blue,
-                            borderStrokeWidth: 2,
-                          ),
-                    ],
-                  ),
                 // All markers using the unified renderer
                 MarkerLayer(markers: markerRenderer.getAllMarkers()),
                 if (_measurement.points.isNotEmpty)
@@ -2835,13 +2817,11 @@ class MapTabState extends State<MapTab> {
       floatingActionButton: MapControls(
         mapController: _mapController,
         currentBaseLayer: mapProvider.currentBaseLayer,
-        locationsCount:
-            mapProvider.locations.length + mapProvider.receivedPointCount,
+        locationsCount: mapProvider.locations.length,
         onLayerSelectorPressed: _showLayerSelector,
         onSearchPressed: showParcelSearchDialog,
         onGpsPressed: _centerOnGpsLocation,
-        onLocationsPressed: mapProvider.locations.isNotEmpty ||
-                mapProvider.receivedPointCount > 0
+        onLocationsPressed: mapProvider.locations.isNotEmpty
             ? _showLocationsSheet
             : null,
         // The found-parcel sheet (open while _searchedParcel is set) would
@@ -3018,7 +2998,6 @@ class MapTabState extends State<MapTab> {
       locations: mapProvider.locations,
       logs: mapProvider.geolocatedLogs,
       parcels: mapProvider.parcels,
-      receivedShares: mapProvider.receivedShares,
       onNavigate: (target) {
         setNavigationTarget(target, zoomIn: true);
       },

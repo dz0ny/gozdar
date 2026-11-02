@@ -12,6 +12,9 @@ class MapLocation {
   /// outside every saved parcel.
   int? parcelId;
 
+  /// Share link this mark came from. Null for marks made on this phone.
+  String? sourceShareId;
+
   LocationType get type => LocationType.values[typeIndex];
   set type(LocationType value) => typeIndex = value.index;
 
@@ -23,6 +26,7 @@ class MapLocation {
     LocationType type = LocationType.point,
     DateTime? createdAt,
     this.parcelId,
+    this.sourceShareId,
   })  : typeIndex = type.index,
         createdAt = createdAt ?? DateTime.now();
 
@@ -45,6 +49,7 @@ class MapLocation {
         type: type ?? this.type,
         createdAt: createdAt ?? this.createdAt,
         parcelId: parcelId ?? this.parcelId,
+        sourceShareId: sourceShareId,
       );
 
   Map<String, dynamic> toMap() => {
@@ -55,6 +60,7 @@ class MapLocation {
         'type_index': typeIndex,
         'created_at': createdAt.millisecondsSinceEpoch,
         'parcel_id': parcelId,
+        'source_share_id': sourceShareId,
       };
 
   factory MapLocation.fromMap(Map<String, dynamic> map) => MapLocation(
@@ -65,5 +71,6 @@ class MapLocation {
         type: LocationType.values[map['type_index'] as int],
         createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
         parcelId: map['parcel_id'] as int?,
+        sourceShareId: map['source_share_id'] as String?,
       );
 }

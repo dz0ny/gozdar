@@ -27,6 +27,7 @@ class FakeShareService extends SecnjaShareService {
               createdAt: DateTime.utc(2026, 11, 2),
             )
           : null,
+      parcelId: null,
     );
   }
 }

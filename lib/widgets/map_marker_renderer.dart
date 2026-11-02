@@ -5,7 +5,6 @@ import '../models/map_location.dart';
 import '../utils/formats.dart';
 import '../models/parcel.dart';
 import '../models/log_entry.dart';
-import '../models/received_share.dart';
 import '../widgets/location_pointer.dart';
 
 /// Handles rendering of various map markers
@@ -22,9 +21,6 @@ class MapMarkerRenderer {
   final Function(LatLng point, String name)? onLogTap;
   final Function(LatLng point, String name)? onParcelVertexTap;
 
-  /// Sečnja from other owners. Only visible shares get markers.
-  final List<ReceivedShare> receivedShares;
-
   const MapMarkerRenderer({
     required this.currentZoom,
     required this.locations,
@@ -37,7 +33,6 @@ class MapMarkerRenderer {
     this.onLocationLongPress,
     this.onLogTap,
     this.onParcelVertexTap,
-    this.receivedShares = const [],
   });
 
   /// Check if markers should be visible at current zoom
@@ -96,56 +91,6 @@ class MapMarkerRenderer {
         ),
       );
     }).toList();
-  }
-
-  /// Blue numbered pins for the trees of visible received shares, in the
-  /// order the owner marked them. A tap goes to [onLocationTap].
-  List<Marker> buildReceivedShareMarkers() {
-    if (!showMarkers) return [];
-    final markers = <Marker>[];
-    final size = getMarkerSize(30);
-    for (final share in receivedShares.where((s) => s.visible)) {
-      final points = share.payload.points;
-      for (var i = 0; i < points.length; i++) {
-        final p = points[i];
-        markers.add(
-          Marker(
-            point: p.position,
-            width: size,
-            height: size,
-            child: GestureDetector(
-              onTap: onLocationTap != null
-                  ? () => onLocationTap!(p.position, p.name)
-                  : null,
-              child: Container(
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  '${i + 1}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: size * 0.4,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      }
-    }
-    return markers;
   }
 
   /// Build markers for parcel vertices (boundary points)
@@ -275,9 +220,6 @@ class MapMarkerRenderer {
 
     // Location markers
     markers.addAll(buildLocationMarkers());
-
-    // Trees from received sečnja shares
-    markers.addAll(buildReceivedShareMarkers());
 
     // Parcel vertex markers
     markers.addAll(buildParcelVertexMarkers());
