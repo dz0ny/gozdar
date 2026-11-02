@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { ICON_PNG } from './icon.js';
 
 // Sečnja share links. The owner uploads the marked trees of one parcel.
 // The logger gets https://gozdar.dz0ny.dev/o/<id>, and the link opens Gozdar.
@@ -143,6 +144,13 @@ shares.get('/api/s/:id', async (c) => {
 shares.get('/o/:id', landing);
 shares.get('/o/:id/preview.jpg', previewImage);
 shares.get('/s/:id', landing);
+
+shares.get('/icon.png', (c) =>
+  c.body(Uint8Array.from(atob(ICON_PNG), (ch) => ch.charCodeAt(0)), 200, {
+    'Content-Type': 'image/png',
+    'Cache-Control': 'public, max-age=604800',
+  }),
+);
 
 shares.get('/.well-known/assetlinks.json', (c) =>
   c.json([
@@ -339,12 +347,16 @@ function page(body, head = '') {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sečnja · Gozdar</title>
+<link rel="icon" href="/icon.png">
+<link rel="apple-touch-icon" href="/icon.png">
 ${head}
 <style>
   body { margin: 0; min-height: 100vh; display: flex; justify-content: center;
          font-family: -apple-system, system-ui, sans-serif; background: #1c2a1f; color: #eee; }
   main { width: 100%; max-width: 480px; padding: 24px 16px; box-sizing: border-box; }
-  h1 { color: #d4a574; margin: 0 0 8px; font-size: 22px; }
+  header { text-align: center; margin-bottom: 8px; }
+  header img { display: block; margin: 0 auto 8px; border-radius: 16px; }
+  h1 { color: #d4a574; margin: 0; font-size: 22px; }
   .lead { font-size: 17px; }
   .card { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 12px;
           background: #2d3b2f; margin: 16px 0; }
@@ -368,7 +380,7 @@ ${head}
 </head>
 <body>
 <main>
-  <h1>🌲 Gozdar</h1>
+  <header><img src="/icon.png" alt="" width="72" height="72"><h1>Gozdar</h1></header>
 ${body}
 </main>
 </body>

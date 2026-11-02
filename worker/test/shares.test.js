@@ -264,3 +264,19 @@ test('landing page shows the k.o. number and name', async () => {
   const html = await (await call(env, 'GET', `/o/${body.id}`)).text();
   assert.ok(html.includes('Parcela 1234/5, k.o. 1234 PREZID'));
 });
+
+test('icon is the app icon as png', async () => {
+  const res = await call({ SHARES: fakeKv() }, 'GET', '/icon.png');
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), 'image/png');
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  assert.deepEqual([...bytes.slice(1, 4)], [0x50, 0x4e, 0x47]);
+});
+
+test('landing page shows the app icon in the header', async () => {
+  const env = { SHARES: fakeKv() };
+  const { body } = await create(env);
+  const html = await (await call(env, 'GET', `/o/${body.id}`)).text();
+  assert.ok(html.includes('<header><img src="/icon.png"'));
+  assert.ok(!html.includes('🌲'));
+});
