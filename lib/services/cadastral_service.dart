@@ -1,14 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:proj4dart/proj4dart.dart' as proj4;
 
 import '../l10n/l10n.dart';
 import 'hr_owner_service.dart';
 import 'http_cache_service.dart';
+import 'lookup_cache_store.dart';
 import 'parcel_lookup_service.dart';
 
 /// A fetched parcel plus its bounding box, kept in the spatial cache.
@@ -41,37 +41,33 @@ class CadastralService {
   // Persistent spatial cache of parcels already fetched. A tap inside a cached
   // parcel's shape is served without a network request, even after restart.
   static const int _maxCachedParcels = 300;
-  static const String _cacheFileName = 'parcel_spatial_cache.json';
   final List<_CachedParcel> _parcelCache = [];
-  bool _cacheLoaded = false;
-  File? _cacheFile;
+  Future<void>? _cacheLoading;
+
+  /// Rows hold [CadastralParcel.toJson], keyed by parcel id. Bump the
+  /// version when that JSON changes shape.
+  static final _store = LookupCacheStore(
+    'parcel_shapes',
+    version: 1,
+    legacyFiles: const ['parcel_spatial_cache.json'],
+  );
 
   // Singleton instance
   static final CadastralService _instance = CadastralService._internal();
   factory CadastralService() => _instance;
   CadastralService._internal();
 
-  /// Load the persisted cache from disk once.
-  Future<void> _ensureCacheLoaded() async {
-    if (_cacheLoaded) return;
-    _cacheLoaded = true;
+  /// Load the stored parcels once, oldest first like the list keeps them.
+  Future<void> _ensureCacheLoaded() => _cacheLoading ??= () async {
     try {
-      final dir = await getApplicationSupportDirectory();
-      _cacheFile = File('${dir.path}/$_cacheFileName');
-      if (await _cacheFile!.exists()) {
-        final data = jsonDecode(await _cacheFile!.readAsString()) as List;
-        for (final entry in data) {
-          final parcel = CadastralParcel.fromJson(
-            entry as Map<String, dynamic>,
-          );
-          _addToCache(parcel, persist: false);
-        }
-        debugPrint('Loaded ${_parcelCache.length} cached parcels');
+      for (final row in await _store.all()) {
+        _addToCache(CadastralParcel.fromJson(row.payload), persist: false);
       }
+      debugPrint('Loaded ${_parcelCache.length} cached parcels');
     } catch (e) {
       debugPrint('Error loading parcel cache: $e');
     }
-  }
+  }();
 
   /// Return a previously-fetched parcel whose shape contains [point], using the
   /// bounding box as a fast pre-filter before the precise polygon test.
@@ -105,21 +101,13 @@ class CadastralService {
     if (_parcelCache.length > _maxCachedParcels) {
       _parcelCache.removeAt(0);
     }
-    if (persist) _persistCache();
+    if (persist) unawaited(_persist(parcel));
   }
 
-  /// Write the cache to disk (fire-and-forget).
-  Future<void> _persistCache() async {
-    final file = _cacheFile;
-    if (file == null) return;
-    try {
-      final data = _parcelCache
-          .map((c) => c.parcel.toJson())
-          .toList(growable: false);
-      await file.writeAsString(jsonEncode(data));
-    } catch (e) {
-      debugPrint('Error saving parcel cache: $e');
-    }
+  /// Stores [parcel] and trims the table to the cache size.
+  Future<void> _persist(CadastralParcel parcel) async {
+    await _store.write(parcel.id, parcel.toJson());
+    await _store.keepNewest(_maxCachedParcels);
   }
 
   // EPSG:3794 projection for Slovenia

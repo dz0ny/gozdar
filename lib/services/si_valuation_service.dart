@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 
 import 'cache_settings.dart';
+import 'lookup_cache_store.dart';
 import 'hr_owner_service.dart';
 
 /// One valuation model on a parcel (forest, farmland, …) and its part of
@@ -105,14 +104,16 @@ class SiValuationService {
   static const _base = 'https://vrednotenje.gov.si/EV_Javni_Server';
   static const _timeout = Duration(seconds: 20);
 
-  static const _cacheFile = 'si_valuation_cache.json';
+  /// Rows hold the raw register answer (`parcel`, `values`, `modelDates`),
+  /// keyed `sifko/parcela`. Bump the version to drop them all.
+  static final _store = LookupCacheStore(
+    'si_valuation',
+    version: 1,
+    legacyFiles: const ['si_valuation_cache.json'],
+  );
 
   /// Lookups in flight or answered this session.
   final _cache = <String, Future<ParcelValuation?>>{};
-
-  /// Answers kept on disk, keyed like [_cache]; loaded on first use.
-  Map<String, dynamic>? _stored;
-  Future<Map<String, dynamic>>? _loading;
 
   /// Model dates by model version, fetched once per session.
   Future<Map<String, dynamic>?>? _modelDates;
@@ -143,49 +144,15 @@ class SiValuationService {
   ) async {
     // The HTTP cache switch in About covers this cache too.
     final useCache = CacheSettings.instance.httpEnabled;
-    final stored = await _load();
-    final hit = useCache ? stored[key] : null;
-    if (hit is Map<String, dynamic>) {
-      final cached = _fromJson(hit);
+    if (useCache) {
+      final hit = await _store.read(key);
+      final cached = hit == null ? null : _fromJson(hit);
       if (cached != null) return cached;
     }
     final raw = await _fetch(sifko, parcela);
     if (raw == null) return null;
-    if (useCache) {
-      stored[key] = raw;
-      unawaited(_save(stored));
-    }
+    if (useCache) unawaited(_store.write(key, raw));
     return _fromJson(raw);
-  }
-
-  Future<File> _file() async =>
-      File('${(await getApplicationSupportDirectory()).path}/$_cacheFile');
-
-  Future<Map<String, dynamic>> _load() {
-    final stored = _stored;
-    if (stored != null) return Future.value(stored);
-    return _loading ??= () async {
-      Map<String, dynamic> map = {};
-      try {
-        final file = await _file();
-        if (file.existsSync()) {
-          map = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-        }
-      } catch (e) {
-        debugPrint('SiValuationService cache read failed: $e');
-      }
-      return _stored = map;
-    }();
-  }
-
-  Future<void> _save(Map<String, dynamic> stored) async {
-    try {
-      final file = await _file();
-      await file.parent.create(recursive: true);
-      await file.writeAsString(jsonEncode(stored));
-    } catch (e) {
-      debugPrint('SiValuationService cache write failed: $e');
-    }
   }
 
   static ParcelValuation? _fromJson(Map<String, dynamic> j) {

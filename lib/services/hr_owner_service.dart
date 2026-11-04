@@ -1,13 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 
 import 'cache_settings.dart';
 import 'ko_locator.dart';
+import 'lookup_cache_store.dart';
 import 'owner_lookup_service.dart';
 
 /// A cached Croatian parcel whose holders matched [HrOwnerService.searchCached].
@@ -19,9 +18,12 @@ class HrOwnerHit {
   final OwnerInfo info;
 }
 
-/// Holders (posjednici) of a Croatian parcel, fetched from the public DGU
-/// cadastre (oss.uredjenazemlja.hr). Every answer is kept on disk with no
-/// expiry, so a parcel is asked about once; misses are not cached.
+/// Owners of a Croatian parcel, fetched from the public DGU portal
+/// (oss.uredjenazemlja.hr). The land registry (zemljišna knjiga, sheet B)
+/// is the legal record of ownership, so its owners come first; the cadastre
+/// holders (posjednici) are used only when the parcel has no ZK unit or the
+/// ZK request fails. Every answer is kept on disk with no expiry, so a parcel
+/// is asked about once; misses are not cached.
 class HrOwnerService {
   HrOwnerService._();
   static final HrOwnerService instance = HrOwnerService._();
@@ -52,14 +54,21 @@ class HrOwnerService {
   /// unknown; not worth showing.
   static const _unknownAddress = 'NEPOZNATO BORAVIŠTE';
 
-  static const _cacheFile = 'hr_owners_cache.json';
+  /// Rows hold [_toJson] answers keyed `sifko/parcela`, searchable by
+  /// [_searchText]. Bump the version to drop them all. 2: owners from the
+  /// ZK; answers before it were cadastre holders only, often not the owner.
+  static final _store = LookupCacheStore(
+    'hr_owners',
+    version: 2,
+    legacyFiles: const ['hr_owners_cache.json'],
+  );
+
+  /// A parcel split across several ZK parcels links to as many units; past
+  /// this many the lookup would be too slow to wait for.
+  static const _maxLrUnits = 4;
 
   /// Lookups in flight or answered this session.
   final _cache = <String, Future<OwnerInfo?>>{};
-
-  /// Answers kept on disk, keyed like [_cache]; loaded on first use.
-  Map<String, dynamic>? _stored;
-  Future<Map<String, dynamic>>? _loading;
 
   /// Croatian KO matični brojevi are six digits; Slovenian šifre KO stay
   /// below 10000, so the number alone tells the countries apart.
@@ -89,20 +98,40 @@ class HrOwnerService {
   ) async {
     // The HTTP cache switch in About covers this cache too.
     final useCache = CacheSettings.instance.httpEnabled;
-    final stored = await _load();
-    final hit = useCache ? stored[key] : null;
-    if (hit is Map<String, dynamic>) return _fromJson(hit);
-    final info = await _fetch(sifko, parcela, parcelId);
-    if (info != null && useCache) {
-      stored[key] = _toJson(info);
-      unawaited(_save(stored));
+    if (useCache) {
+      final hit = await _read(key);
+      if (hit != null) return hit;
     }
+    final info = await _fetch(sifko, parcela, parcelId);
+    if (info != null && useCache) unawaited(_write(key, info));
     return info;
   }
 
-  /// Replaces the on-disk cache for tests, as raw `sifko/parcela` entries.
+  Future<OwnerInfo?> _read(String key) async {
+    final hit = await _store.read(key);
+    return hit == null ? null : _fromJson(hit);
+  }
+
+  Future<void> _write(String key, OwnerInfo info) =>
+      _store.write(key, _toJson(info), search: _searchText(info));
+
+  /// Folded holder names, addresses and KO name, as [searchCached] matches.
+  static String _searchText(OwnerInfo info) => KoLocator.fold(
+    [
+      ...info.owners,
+      for (final h in info.holders) h.address ?? '',
+      info.koName ?? '',
+    ].join(' '),
+  );
+
+  /// Stores [entries] (raw `sifko/parcela` → answer JSON) as cached answers,
+  /// for tests.
   @visibleForTesting
-  void debugSetStored(Map<String, dynamic> entries) => _stored = entries;
+  Future<void> debugStore(Map<String, Map<String, dynamic>> entries) async {
+    for (final e in entries.entries) {
+      await _write(e.key, _fromJson(e.value));
+    }
+  }
 
   /// Cached parcels whose holder names, addresses or KO name contain every
   /// word of [words] (any order, ignoring case and diacritics). DGU has no
@@ -119,60 +148,23 @@ class HrOwnerService {
         if (w.trim().length >= 3) KoLocator.fold(w.trim()),
     ];
     if (terms.isEmpty) return const [];
-    final stored = await _load();
+    final rows = await _store.search(
+      terms,
+      keyPrefix: onlySifko == null ? null : '$onlySifko/',
+      limit: limit,
+    );
     final hits = <HrOwnerHit>[];
-    for (final entry in stored.entries) {
-      final value = entry.value;
-      if (value is! Map<String, dynamic>) continue;
+    for (final row in rows) {
       // Keys are "sifko/parcela", as in [lookup].
-      final slash = entry.key.indexOf('/');
+      final slash = row.key.indexOf('/');
       if (slash <= 0) continue;
-      final sifko = int.tryParse(entry.key.substring(0, slash));
+      final sifko = int.tryParse(row.key.substring(0, slash));
       if (sifko == null) continue;
-      if (onlySifko != null && sifko != onlySifko) continue;
-      final info = _fromJson(value);
-      final hay = KoLocator.fold(
-        [
-          ...info.owners,
-          for (final h in info.holders) h.address ?? '',
-          info.koName ?? '',
-        ].join(' '),
+      hits.add(
+        HrOwnerHit(sifko, row.key.substring(slash + 1), _fromJson(row.payload)),
       );
-      if (!terms.every(hay.contains)) continue;
-      hits.add(HrOwnerHit(sifko, entry.key.substring(slash + 1), info));
-      if (hits.length >= limit) break;
     }
     return hits;
-  }
-
-  Future<File> _file() async =>
-      File('${(await getApplicationSupportDirectory()).path}/$_cacheFile');
-
-  Future<Map<String, dynamic>> _load() {
-    final stored = _stored;
-    if (stored != null) return Future.value(stored);
-    return _loading ??= () async {
-      Map<String, dynamic> map = {};
-      try {
-        final file = await _file();
-        if (file.existsSync()) {
-          map = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-        }
-      } catch (e) {
-        debugPrint('HrOwnerService cache read failed: $e');
-      }
-      return _stored = map;
-    }();
-  }
-
-  Future<void> _save(Map<String, dynamic> stored) async {
-    try {
-      final file = await _file();
-      await file.parent.create(recursive: true);
-      await file.writeAsString(jsonEncode(stored));
-    } catch (e) {
-      debugPrint('HrOwnerService cache write failed: $e');
-    }
   }
 
   static Map<String, dynamic> _toJson(OwnerInfo info) => {
@@ -208,23 +200,66 @@ class HrOwnerService {
 
   Future<OwnerInfo?> _fetch(int sifko, String parcela, String? parcelId) async {
     try {
+      Map<String, dynamic>? json;
       if (parcelId != null && int.tryParse(parcelId) != null) {
-        final json = await _parcelInfo(parcelId);
+        final byId = await _parcelInfo(parcelId);
         // Trust a passed-in id only when it really is this parcel.
-        if (json != null &&
-            json['cadMunicipalityRegNum']?.toString() == '$sifko' &&
-            json['parcelNumber']?.toString().trim() == parcela) {
-          return parseParcelInfo(json);
+        if (byId != null &&
+            byId['cadMunicipalityRegNum']?.toString() == '$sifko' &&
+            byId['parcelNumber']?.toString().trim() == parcela) {
+          json = byId;
         }
       }
-      final id = await _parcelId(sifko, parcela);
-      if (id == null) return null;
-      final json = await _parcelInfo(id);
-      return json == null ? null : parseParcelInfo(json);
+      if (json == null) {
+        final id = await _parcelId(sifko, parcela);
+        if (id == null) return null;
+        json = await _parcelInfo(id);
+      }
+      if (json == null) return null;
+      return await _landRegistryOwners(json) ?? parseParcelInfo(json);
     } catch (e) {
       debugPrint('HrOwnerService.lookup($sifko, $parcela) failed: $e');
       return null;
     }
+  }
+
+  /// Owners from the ZK units [parcelInfo] links to, or null when it links
+  /// to none or none of them could be read.
+  Future<OwnerInfo?> _landRegistryOwners(
+    Map<String, dynamic> parcelInfo,
+  ) async {
+    final units = lrUnitsOf(parcelInfo).take(_maxLrUnits).toList();
+    if (units.isEmpty) return null;
+    final answers = await Future.wait([
+      for (final u in units)
+        _lrUnit(u.mainBookId, u.lrUnitNumber).catchError((Object e) {
+          debugPrint('HrOwnerService ZK ${u.mainBookId}/${u.lrUnitNumber}: $e');
+          return null;
+        }),
+    ]);
+    final read = [for (final a in answers) ?a];
+    if (read.isEmpty) return null;
+    return parseLrUnits(read, parcelInfo);
+  }
+
+  /// The ZK unit (zemljišnoknjižni uložak) as the portal's "Pregled ZK
+  /// uloška" page asks for it. The answer is a list holding the unit.
+  Future<Map<String, dynamic>?> _lrUnit(int mainBookId, String number) async {
+    final uri = Uri.parse('$_base/lr/lr-unit').replace(
+      queryParameters: {
+        'mainBookId': '$mainBookId',
+        'lrUnitNumber': number,
+        'historicalOverview': 'false',
+      },
+    );
+    final res = await _client.get(uri, headers: _headers).timeout(_timeout);
+    if (res.statusCode != 200) return null;
+    final body = jsonDecode(utf8.decode(res.bodyBytes));
+    if (body is Map<String, dynamic>) return body;
+    if (body is List && body.isNotEmpty && body.first is Map<String, dynamic>) {
+      return body.first as Map<String, dynamic>;
+    }
+    return null;
   }
 
   Future<Map<String, dynamic>?> _parcelInfo(String parcelId) async {
@@ -255,6 +290,121 @@ class HrOwnerService {
     return null;
   }
 
+  /// The distinct ZK units a `/cad/parcel-info` response links to, from
+  /// `lrUnitsFromParcelLinks` and each `parcelLinks[].lrUnit`. Units not
+  /// active (status other than 0) are left out.
+  @visibleForTesting
+  static List<({int mainBookId, String lrUnitNumber})> lrUnitsOf(
+    Map<String, dynamic> parcelInfo,
+  ) {
+    final units = <({int mainBookId, String lrUnitNumber})>[];
+    void add(Object? raw) {
+      if (raw is! Map<String, dynamic>) return;
+      final status = raw['status']?.toString();
+      if (status != null && status != '0') return;
+      final book = int.tryParse('${raw['mainBookId']}');
+      final number = raw['lrUnitNumber']?.toString().trim() ?? '';
+      if (book == null || number.isEmpty) return;
+      final unit = (mainBookId: book, lrUnitNumber: number);
+      if (!units.contains(unit)) units.add(unit);
+    }
+
+    add(parcelInfo['lrUnit']);
+    for (final u in parcelInfo['lrUnitsFromParcelLinks'] as List? ?? []) {
+      add(u);
+    }
+    for (final link in parcelInfo['parcelLinks'] as List? ?? []) {
+      if (link is Map<String, dynamic>) add(link['lrUnit']);
+    }
+    return units;
+  }
+
+  static final _shareRe = RegExp(r'dio(?:\s+etaže)?:\s*(\d+(?:,\d+)?/\d+)');
+
+  /// The share in a ZK share description: "1. Vlasnički dio: 1/2" → "1/2",
+  /// "2.3. Suvlasnički dio etaže: 1/2" → "1/2". Null when the share has no
+  /// fraction ("Suvlasnički dio s neodređenim omjerom ...").
+  @visibleForTesting
+  static String? shareOf(String? description) =>
+      _shareRe.firstMatch(description ?? '')?.group(1);
+
+  /// Owner info from ZK units (`/lr/lr-unit` answers): every owner on sheet B
+  /// (vlasnički list) with their share. Deleted shares (status other than 0)
+  /// are skipped; owners of a sub-share get the sub-share's fraction. An
+  /// owner the ZK gives no address for takes the address of the cadastre
+  /// holder of the same name in [parcelInfo]. Null when no unit has owners.
+  @visibleForTesting
+  static OwnerInfo? parseLrUnits(
+    List<Map<String, dynamic>> units,
+    Map<String, dynamic> parcelInfo,
+  ) {
+    final cadastre = parseParcelInfo(parcelInfo);
+    final cadastreAddress = <String, String>{
+      for (final h in cadastre?.holders ?? const <OwnerHolder>[])
+        if (h.address != null) KoLocator.fold(h.name): h.address!,
+    };
+    final names = <String>[];
+    final shares = <String, List<String>>{};
+    final addresses = <String, String?>{};
+
+    void walk(List<dynamic>? list, String? parentShare) {
+      for (final raw in list ?? const []) {
+        if (raw is! Map<String, dynamic>) continue;
+        final status = raw['status'];
+        // Entries (zabilježbe) under a share carry no status and no owners.
+        if (status != null && status.toString() != '0') continue;
+        final share = shareOf(raw['description'] as String?) ?? parentShare;
+        for (final o in raw['lrOwners'] as List? ?? const []) {
+          if (o is! Map<String, dynamic>) continue;
+          final name = (o['name'] as String?)?.trim();
+          if (name == null || name.isEmpty) continue;
+          if (!names.contains(name)) {
+            names.add(name);
+            shares[name] = [];
+            addresses[name] =
+                _cleanAddress(o['address'] as String?) ??
+                cadastreAddress[KoLocator.fold(name)];
+          }
+          if (share != null && !shares[name]!.contains(share)) {
+            shares[name]!.add(share);
+          }
+        }
+        walk(raw['subSharesAndEntries'] as List?, share);
+      }
+    }
+
+    for (final unit in units) {
+      final sheet = unit['ownershipSheetB'];
+      if (sheet is Map<String, dynamic>) {
+        walk(sheet['lrUnitShares'] as List?, null);
+      }
+    }
+    if (names.isEmpty) return null;
+    final holders = [
+      for (final n in names)
+        OwnerHolder(
+          n,
+          share: shares[n]!.isEmpty ? null : shares[n]!.join(' + '),
+          address: addresses[n],
+        ),
+    ];
+    final ko = (parcelInfo['cadMunicipalityName'] as String?)?.trim();
+    return OwnerInfo(
+      owners: names,
+      holders: holders,
+      address: holders.map((h) => h.address).nonNulls.firstOrNull,
+      koName: (ko == null || ko.isEmpty) ? null : ko,
+    );
+  }
+
+  static String? _cleanAddress(String? raw) {
+    final a = raw?.trim();
+    if (a == null || a.isEmpty || a.toUpperCase() == _unknownAddress) {
+      return null;
+    }
+    return a;
+  }
+
   /// Owner info from a `/cad/parcel-info` response: every holder on the
   /// parcel's possession sheets, the first known address and the KO name.
   @visibleForTesting
@@ -269,13 +419,7 @@ class HrOwnerService {
         final name = (p['name'] as String?)?.trim();
         if (name == null || name.isEmpty) continue;
         if (owners.contains(name)) continue;
-        final rawAddr = (p['address'] as String?)?.trim();
-        final addr =
-            (rawAddr == null ||
-                rawAddr.isEmpty ||
-                rawAddr.toUpperCase() == _unknownAddress)
-            ? null
-            : rawAddr;
+        final addr = _cleanAddress(p['address'] as String?);
         final share = (p['ownership'] as String?)?.trim();
         owners.add(name);
         holders.add(

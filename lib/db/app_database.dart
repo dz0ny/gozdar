@@ -108,6 +108,22 @@ class HttpCache extends Table {
   DateTimeColumn get cachedAt => dateTime()();
 }
 
+/// Answers of online lookups kept on the device, one row per answer.
+/// [kind] names the source and its cache version (e.g. `hr_owners.v2`), so
+/// bumping the version leaves the old rows to be deleted. [search] is folded
+/// text (lowercase, no diacritics) to find answers by, e.g. owner names.
+@DataClassName('DbLookupCacheEntry')
+class LookupCache extends Table {
+  TextColumn get kind => text()();
+  TextColumn get cacheKey => text()();
+  TextColumn get payload => text()();
+  TextColumn get search => text().withDefault(const Constant(''))();
+  DateTimeColumn get cachedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {kind, cacheKey};
+}
+
 @DataClassName('DbOfflineTileStyle')
 class OfflineTileStyles extends Table {
   TextColumn get styleHash => text()();
@@ -155,13 +171,14 @@ class OfflineTileEntries extends Table {
     HttpCache,
     OfflineTileStyles,
     OfflineTileEntries,
+    LookupCache,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -195,6 +212,10 @@ class AppDatabase extends _$AppDatabase {
         // Received shares now import as parcels; the list of them is gone.
         await _addColumnIfMissing(m, mapLocations, mapLocations.sourceShareId);
         await customStatement('DROP TABLE IF EXISTS received_shares');
+      }
+      if (from < 7) {
+        // Lookup caches move here from JSON files.
+        await m.createTable(lookupCache);
       }
     },
   );

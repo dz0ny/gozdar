@@ -4655,6 +4655,368 @@ class OfflineTileEntriesCompanion extends UpdateCompanion<DbOfflineTileEntry> {
   }
 }
 
+class $LookupCacheTable extends LookupCache
+    with TableInfo<$LookupCacheTable, DbLookupCacheEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LookupCacheTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cacheKeyMeta = const VerificationMeta(
+    'cacheKey',
+  );
+  @override
+  late final GeneratedColumn<String> cacheKey = GeneratedColumn<String>(
+    'cache_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _searchMeta = const VerificationMeta('search');
+  @override
+  late final GeneratedColumn<String> search = GeneratedColumn<String>(
+    'search',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    kind,
+    cacheKey,
+    payload,
+    search,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'lookup_cache';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DbLookupCacheEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('cache_key')) {
+      context.handle(
+        _cacheKeyMeta,
+        cacheKey.isAcceptableOrUnknown(data['cache_key']!, _cacheKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cacheKeyMeta);
+    }
+    if (data.containsKey('payload')) {
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    if (data.containsKey('search')) {
+      context.handle(
+        _searchMeta,
+        search.isAcceptableOrUnknown(data['search']!, _searchMeta),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {kind, cacheKey};
+  @override
+  DbLookupCacheEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DbLookupCacheEntry(
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      cacheKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cache_key'],
+      )!,
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload'],
+      )!,
+      search: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}search'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LookupCacheTable createAlias(String alias) {
+    return $LookupCacheTable(attachedDatabase, alias);
+  }
+}
+
+class DbLookupCacheEntry extends DataClass
+    implements Insertable<DbLookupCacheEntry> {
+  final String kind;
+  final String cacheKey;
+  final String payload;
+  final String search;
+  final DateTime cachedAt;
+  const DbLookupCacheEntry({
+    required this.kind,
+    required this.cacheKey,
+    required this.payload,
+    required this.search,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['kind'] = Variable<String>(kind);
+    map['cache_key'] = Variable<String>(cacheKey);
+    map['payload'] = Variable<String>(payload);
+    map['search'] = Variable<String>(search);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  LookupCacheCompanion toCompanion(bool nullToAbsent) {
+    return LookupCacheCompanion(
+      kind: Value(kind),
+      cacheKey: Value(cacheKey),
+      payload: Value(payload),
+      search: Value(search),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory DbLookupCacheEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DbLookupCacheEntry(
+      kind: serializer.fromJson<String>(json['kind']),
+      cacheKey: serializer.fromJson<String>(json['cacheKey']),
+      payload: serializer.fromJson<String>(json['payload']),
+      search: serializer.fromJson<String>(json['search']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'kind': serializer.toJson<String>(kind),
+      'cacheKey': serializer.toJson<String>(cacheKey),
+      'payload': serializer.toJson<String>(payload),
+      'search': serializer.toJson<String>(search),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  DbLookupCacheEntry copyWith({
+    String? kind,
+    String? cacheKey,
+    String? payload,
+    String? search,
+    DateTime? cachedAt,
+  }) => DbLookupCacheEntry(
+    kind: kind ?? this.kind,
+    cacheKey: cacheKey ?? this.cacheKey,
+    payload: payload ?? this.payload,
+    search: search ?? this.search,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  DbLookupCacheEntry copyWithCompanion(LookupCacheCompanion data) {
+    return DbLookupCacheEntry(
+      kind: data.kind.present ? data.kind.value : this.kind,
+      cacheKey: data.cacheKey.present ? data.cacheKey.value : this.cacheKey,
+      payload: data.payload.present ? data.payload.value : this.payload,
+      search: data.search.present ? data.search.value : this.search,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DbLookupCacheEntry(')
+          ..write('kind: $kind, ')
+          ..write('cacheKey: $cacheKey, ')
+          ..write('payload: $payload, ')
+          ..write('search: $search, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(kind, cacheKey, payload, search, cachedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DbLookupCacheEntry &&
+          other.kind == this.kind &&
+          other.cacheKey == this.cacheKey &&
+          other.payload == this.payload &&
+          other.search == this.search &&
+          other.cachedAt == this.cachedAt);
+}
+
+class LookupCacheCompanion extends UpdateCompanion<DbLookupCacheEntry> {
+  final Value<String> kind;
+  final Value<String> cacheKey;
+  final Value<String> payload;
+  final Value<String> search;
+  final Value<DateTime> cachedAt;
+  final Value<int> rowid;
+  const LookupCacheCompanion({
+    this.kind = const Value.absent(),
+    this.cacheKey = const Value.absent(),
+    this.payload = const Value.absent(),
+    this.search = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LookupCacheCompanion.insert({
+    required String kind,
+    required String cacheKey,
+    required String payload,
+    this.search = const Value.absent(),
+    required DateTime cachedAt,
+    this.rowid = const Value.absent(),
+  }) : kind = Value(kind),
+       cacheKey = Value(cacheKey),
+       payload = Value(payload),
+       cachedAt = Value(cachedAt);
+  static Insertable<DbLookupCacheEntry> custom({
+    Expression<String>? kind,
+    Expression<String>? cacheKey,
+    Expression<String>? payload,
+    Expression<String>? search,
+    Expression<DateTime>? cachedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (kind != null) 'kind': kind,
+      if (cacheKey != null) 'cache_key': cacheKey,
+      if (payload != null) 'payload': payload,
+      if (search != null) 'search': search,
+      if (cachedAt != null) 'cached_at': cachedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LookupCacheCompanion copyWith({
+    Value<String>? kind,
+    Value<String>? cacheKey,
+    Value<String>? payload,
+    Value<String>? search,
+    Value<DateTime>? cachedAt,
+    Value<int>? rowid,
+  }) {
+    return LookupCacheCompanion(
+      kind: kind ?? this.kind,
+      cacheKey: cacheKey ?? this.cacheKey,
+      payload: payload ?? this.payload,
+      search: search ?? this.search,
+      cachedAt: cachedAt ?? this.cachedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (cacheKey.present) {
+      map['cache_key'] = Variable<String>(cacheKey.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    if (search.present) {
+      map['search'] = Variable<String>(search.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LookupCacheCompanion(')
+          ..write('kind: $kind, ')
+          ..write('cacheKey: $cacheKey, ')
+          ..write('payload: $payload, ')
+          ..write('search: $search, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4670,6 +5032,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $OfflineTileStylesTable(this);
   late final $OfflineTileEntriesTable offlineTileEntries =
       $OfflineTileEntriesTable(this);
+  late final $LookupCacheTable lookupCache = $LookupCacheTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4683,6 +5046,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     httpCache,
     offlineTileStyles,
     offlineTileEntries,
+    lookupCache,
   ];
 }
 
@@ -7843,6 +8207,219 @@ typedef $$OfflineTileEntriesTableProcessedTableManager =
       DbOfflineTileEntry,
       PrefetchHooks Function({bool styleHash})
     >;
+typedef $$LookupCacheTableCreateCompanionBuilder =
+    LookupCacheCompanion Function({
+      required String kind,
+      required String cacheKey,
+      required String payload,
+      Value<String> search,
+      required DateTime cachedAt,
+      Value<int> rowid,
+    });
+typedef $$LookupCacheTableUpdateCompanionBuilder =
+    LookupCacheCompanion Function({
+      Value<String> kind,
+      Value<String> cacheKey,
+      Value<String> payload,
+      Value<String> search,
+      Value<DateTime> cachedAt,
+      Value<int> rowid,
+    });
+
+class $$LookupCacheTableFilterComposer
+    extends Composer<_$AppDatabase, $LookupCacheTable> {
+  $$LookupCacheTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cacheKey => $composableBuilder(
+    column: $table.cacheKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get search => $composableBuilder(
+    column: $table.search,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LookupCacheTableOrderingComposer
+    extends Composer<_$AppDatabase, $LookupCacheTable> {
+  $$LookupCacheTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cacheKey => $composableBuilder(
+    column: $table.cacheKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get search => $composableBuilder(
+    column: $table.search,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LookupCacheTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LookupCacheTable> {
+  $$LookupCacheTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get cacheKey =>
+      $composableBuilder(column: $table.cacheKey, builder: (column) => column);
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+
+  GeneratedColumn<String> get search =>
+      $composableBuilder(column: $table.search, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$LookupCacheTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LookupCacheTable,
+          DbLookupCacheEntry,
+          $$LookupCacheTableFilterComposer,
+          $$LookupCacheTableOrderingComposer,
+          $$LookupCacheTableAnnotationComposer,
+          $$LookupCacheTableCreateCompanionBuilder,
+          $$LookupCacheTableUpdateCompanionBuilder,
+          (
+            DbLookupCacheEntry,
+            BaseReferences<
+              _$AppDatabase,
+              $LookupCacheTable,
+              DbLookupCacheEntry
+            >,
+          ),
+          DbLookupCacheEntry,
+          PrefetchHooks Function()
+        > {
+  $$LookupCacheTableTableManager(_$AppDatabase db, $LookupCacheTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LookupCacheTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LookupCacheTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LookupCacheTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> kind = const Value.absent(),
+                Value<String> cacheKey = const Value.absent(),
+                Value<String> payload = const Value.absent(),
+                Value<String> search = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LookupCacheCompanion(
+                kind: kind,
+                cacheKey: cacheKey,
+                payload: payload,
+                search: search,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String kind,
+                required String cacheKey,
+                required String payload,
+                Value<String> search = const Value.absent(),
+                required DateTime cachedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => LookupCacheCompanion.insert(
+                kind: kind,
+                cacheKey: cacheKey,
+                payload: payload,
+                search: search,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$LookupCacheTable, DbLookupCacheEntry>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $LookupCacheTable,
+                    DbLookupCacheEntry
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LookupCacheTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LookupCacheTable,
+      DbLookupCacheEntry,
+      $$LookupCacheTableFilterComposer,
+      $$LookupCacheTableOrderingComposer,
+      $$LookupCacheTableAnnotationComposer,
+      $$LookupCacheTableCreateCompanionBuilder,
+      $$LookupCacheTableUpdateCompanionBuilder,
+      (
+        DbLookupCacheEntry,
+        BaseReferences<_$AppDatabase, $LookupCacheTable, DbLookupCacheEntry>,
+      ),
+      DbLookupCacheEntry,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7863,4 +8440,6 @@ class $AppDatabaseManager {
       $$OfflineTileStylesTableTableManager(_db, _db.offlineTileStyles);
   $$OfflineTileEntriesTableTableManager get offlineTileEntries =>
       $$OfflineTileEntriesTableTableManager(_db, _db.offlineTileEntries);
+  $$LookupCacheTableTableManager get lookupCache =>
+      $$LookupCacheTableTableManager(_db, _db.lookupCache);
 }

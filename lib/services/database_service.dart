@@ -175,6 +175,9 @@ class DatabaseService {
     return _db!;
   }
 
+  /// Whether [initialize] (or a test database) has opened [db].
+  bool get isInitialized => _db != null;
+
   Future<void> initialize() async {
     if (_db != null) return;
     _db = AppDatabase();
