@@ -44,17 +44,19 @@ keytool -genkey -v -keystore ~/android-keystores/gozdar-release-key.jks \
 ## Architecture
 
 ### Services (Singleton Pattern)
-- `DatabaseService` - ObjectBox: parcels, logs, log_batches, locations
+- `DatabaseService` - SQLite via drift (`lib/db/app_database.dart`, run `dart run build_runner build` after changing tables; bump `schemaVersion` and add an `onUpgrade` step): parcels, logs, log_batches, locations
 - `CadastralService` - WMS queries to prostor.zgs.gov.si (30s timeout)
-- `HttpCacheService` / `TileCacheService` - 1-year cache for govt APIs, ObjectBox tile cache
+- `HttpCacheService` / `TileCacheService` - 1-year cache for govt APIs (drift `http_cache`), drift tile cache
+- `LookupCacheStore` - Per-answer cache of online lookups in the drift `lookup_cache` table (HR owners, SI valuations, parcel shapes). Each source has a `version`; bump it to drop its old rows. Don't add new JSON-file caches
+- `HrOwnerService` - Croatian owners from oss.uredjenazemlja.hr: land registry (ZK sheet B, `/lr/lr-unit`) first, cadastre possessors (`/cad/parcel-info`) only as fallback
 - `MapPreferencesService` - Layer prefs (defaults: Ortofoto + Kataster + Kataster z nazivi)
 - `SpeciesService` - Tree species (SharedPreferences, defaults: Smreka, Bukev, Jelka)
 - `OnboardingService` - First-run wizard (SharedPreferences)
 - `ExportService` - Excel (.xlsx) export
 
-### Data Models (ObjectBox)
-- **Parcel** - Forest polygon: name, polygonJson, cadastralMunicipality, parcelNumber, owner, notes, forestTypeIndex, woodAllowance/Cut, treesCut, createdAt | Relations: ToMany<LogEntry>
-- **LogEntry** - Wood log (V = π × (d/200)² × L): diameter, length, volume, lat/lng, notes, species, createdAt | Relations: ToOne<LogBatch>, ToOne<Parcel> | **NOTE:** batchId/parcelId are @Transient()
+### Data Models (drift tables)
+- **Parcel** - Forest polygon: name, polygonJson, cadastralMunicipality, parcelNumber, owner, notes, forestTypeIndex, woodAllowance/Cut, treesCut, createdAt
+- **LogEntry** - Wood log (V = π × (d/200)² × L): diameter, length, volume, lat/lng, notes, species, createdAt | batchId → LogBatch, parcelId → Parcel (nullable foreign keys)
 - **LogBatch** - Batch summary: name, totalVolume, logCount, prmFactor, nmFactor, createdAt
 - **Location** - GPS point: name, lat/lng, createdAt
 - **MapLayer** - WMS/tile config (40+ Slovenian layers)
