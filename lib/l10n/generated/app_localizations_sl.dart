@@ -3023,4 +3023,30 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get introSecnjaLoggerDesc =>
       'Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej.';
+
+  @override
+  String get ownersSourceTitle => 'Vir';
+
+  @override
+  String get ownersSourceLandRegistry => 'Zemljiška knjiga';
+
+  @override
+  String get ownersSourceCadastre => 'Kataster';
+
+  @override
+  String ownersSourceLrUnit(String unit, String place) {
+    return 'ZK vložek $unit, k.o. $place';
+  }
+
+  @override
+  String ownersSourceLine(String source) {
+    return 'Vir: $source';
+  }
+
+  @override
+  String get ownersSourceCadastreNote =>
+      'Posestniki po katastru, niso nujno lastniki.';
+
+  @override
+  String get ownersSourceOpen => 'Odpri v registru';
 }

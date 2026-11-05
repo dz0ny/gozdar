@@ -3019,4 +3019,30 @@ class AppLocalizationsHr extends AppLocalizations {
   @override
   String get introSecnjaLoggerDesc =>
       'Poveznica se otvara u Gozdaru i dodaje česticu sa stablima u Moju šumu. Radi bez signala, sjekač je može podijeliti dalje.';
+
+  @override
+  String get ownersSourceTitle => 'Izvor';
+
+  @override
+  String get ownersSourceLandRegistry => 'Zemljišna knjiga';
+
+  @override
+  String get ownersSourceCadastre => 'Katastar';
+
+  @override
+  String ownersSourceLrUnit(String unit, String place) {
+    return 'ZK uložak $unit, k.o. $place';
+  }
+
+  @override
+  String ownersSourceLine(String source) {
+    return 'Izvor: $source';
+  }
+
+  @override
+  String get ownersSourceCadastreNote =>
+      'Posjednici prema katastru, nisu nužno vlasnici.';
+
+  @override
+  String get ownersSourceOpen => 'Otvori u registru';
 }

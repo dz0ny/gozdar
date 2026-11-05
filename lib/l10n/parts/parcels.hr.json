@@ -152,5 +152,12 @@
   "notesDiscardTitle": "Odbaciti promjene?",
   "notesDiscardMessage": "Promjene bilješki još nisu spremljene.",
   "notesKeepEditing": "Nastavi uređivanje",
-  "notesDiscard": "Odbaci"
+  "notesDiscard": "Odbaci",
+  "ownersSourceTitle": "Izvor",
+  "ownersSourceLandRegistry": "Zemljišna knjiga",
+  "ownersSourceCadastre": "Katastar",
+  "ownersSourceLrUnit": "ZK uložak {unit}, k.o. {place}",
+  "ownersSourceLine": "Izvor: {source}",
+  "ownersSourceCadastreNote": "Posjednici prema katastru, nisu nužno vlasnici.",
+  "ownersSourceOpen": "Otvori u registru"
 }

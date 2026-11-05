@@ -831,5 +831,12 @@
   "introSecnjaShareTitle": "Podijeli sjekaču",
   "introSecnjaShareDesc": "U čestici dodirni Podijeli sjekaču i pošalji poveznicu. Vrijedi 30 dana; nakon novih oznaka je ažuriraš.",
   "introSecnjaLoggerTitle": "Sjekač dobiva česticu",
-  "introSecnjaLoggerDesc": "Poveznica se otvara u Gozdaru i dodaje česticu sa stablima u Moju šumu. Radi bez signala, sjekač je može podijeliti dalje."
+  "introSecnjaLoggerDesc": "Poveznica se otvara u Gozdaru i dodaje česticu sa stablima u Moju šumu. Radi bez signala, sjekač je može podijeliti dalje.",
+  "ownersSourceTitle": "Izvor",
+  "ownersSourceLandRegistry": "Zemljišna knjiga",
+  "ownersSourceCadastre": "Katastar",
+  "ownersSourceLrUnit": "ZK uložak {unit}, k.o. {place}",
+  "ownersSourceLine": "Izvor: {source}",
+  "ownersSourceCadastreNote": "Posjednici prema katastru, nisu nužno vlasnici.",
+  "ownersSourceOpen": "Otvori u registru"
 }

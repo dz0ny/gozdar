@@ -63,10 +63,11 @@ class ParcelFoundSheet extends StatelessWidget {
     return controller;
   }
 
-  /// First owner and how many more, the address below; tap lists everyone.
+  /// First owner and how many more, the address and source below; tap lists
+  /// everyone with links to the source.
   Widget _ownerText(OwnerInfo info, ThemeData theme) => Builder(
     builder: (context) {
-      final many = info.owners.length > 1;
+      final many = info.hasDetails;
       return InkWell(
         onTap: many
             ? () => OwnersSheet.show(context, owners: info.owners, info: info)
@@ -102,6 +103,7 @@ class ParcelFoundSheet extends StatelessWidget {
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
+            OwnerSourceCaption(info: info),
           ],
         ),
       );

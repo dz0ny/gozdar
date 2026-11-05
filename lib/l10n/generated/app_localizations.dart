@@ -5099,6 +5099,48 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej.'**
   String get introSecnjaLoggerDesc;
+
+  /// No description provided for @ownersSourceTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Vir'**
+  String get ownersSourceTitle;
+
+  /// No description provided for @ownersSourceLandRegistry.
+  ///
+  /// In sl, this message translates to:
+  /// **'Zemljiška knjiga'**
+  String get ownersSourceLandRegistry;
+
+  /// No description provided for @ownersSourceCadastre.
+  ///
+  /// In sl, this message translates to:
+  /// **'Kataster'**
+  String get ownersSourceCadastre;
+
+  /// No description provided for @ownersSourceLrUnit.
+  ///
+  /// In sl, this message translates to:
+  /// **'ZK vložek {unit}, k.o. {place}'**
+  String ownersSourceLrUnit(String unit, String place);
+
+  /// No description provided for @ownersSourceLine.
+  ///
+  /// In sl, this message translates to:
+  /// **'Vir: {source}'**
+  String ownersSourceLine(String source);
+
+  /// No description provided for @ownersSourceCadastreNote.
+  ///
+  /// In sl, this message translates to:
+  /// **'Posestniki po katastru, niso nujno lastniki.'**
+  String get ownersSourceCadastreNote;
+
+  /// No description provided for @ownersSourceOpen.
+  ///
+  /// In sl, this message translates to:
+  /// **'Odpri v registru'**
+  String get ownersSourceOpen;
 }
 
 class _AppLocalizationsDelegate

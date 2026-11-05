@@ -207,6 +207,7 @@ class ParcelOwnerCard extends StatelessWidget {
     final lookedUpOwners = lookedUp?.owners ?? const <String>[];
     final names = manual.isNotEmpty ? manual : lookedUpOwners;
     final fromCadastre = manual.isEmpty && lookedUpOwners.isNotEmpty;
+    final sources = lookedUp?.sources ?? const <OwnerSource>[];
     final hasHolderAddresses =
         lookedUp?.holders.any((h) => h.address != null) ?? false;
     // A parcel-level address (Slovenian owners DB) when there are no
@@ -255,7 +256,11 @@ class ParcelOwnerCard extends StatelessWidget {
                     ),
                   if (address != null && address.isNotEmpty)
                     Text(address, style: muted),
-                  if (fromCadastre || address != null)
+                  // Croatian lookups name their register and link to it;
+                  // the Slovenian owners DB is GURS.
+                  if (sources.isNotEmpty)
+                    for (final src in sources) OwnerSourceTile(source: src)
+                  else if (fromCadastre || address != null)
                     Text(
                       context.l10n.parcelFromCadastre,
                       style: theme.textTheme.bodySmall?.copyWith(

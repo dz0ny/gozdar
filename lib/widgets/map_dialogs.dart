@@ -335,7 +335,7 @@ class MapDialogs {
       ko,
       cadastralParcel.parcelNumber,
     );
-    final manyOwners = owner != null && owner.owners.length > 1;
+    final manyOwners = owner != null && owner.hasDetails;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

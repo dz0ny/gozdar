@@ -28,7 +28,34 @@ class HrOwnerService {
   HrOwnerService._();
   static final HrOwnerService instance = HrOwnerService._();
 
-  static const _base = 'https://oss.uredjenazemlja.hr/oss/public';
+  static const _portal = 'oss.uredjenazemlja.hr';
+  static const _base = 'https://$_portal/oss/public';
+
+  /// The portal's public page of a ZK unit ("Pregled ZK uloška").
+  @visibleForTesting
+  static Uri lrUnitUrl(int mainBookId, String lrUnitNumber) => Uri.https(
+    _portal,
+    '/public-services/review-lr-bdc',
+    {'mainBookId': '$mainBookId', 'lrUnitNumber': lrUnitNumber},
+  );
+
+  /// The portal's map zoomed to the parcel of a `/cad/parcel-info`
+  /// response, with its cadastre and ZK tabs; null without the ids.
+  @visibleForTesting
+  static Uri? parcelMapUrl(Map<String, dynamic> parcelInfo) {
+    final id = parcelInfo['parcelId']?.toString();
+    final number = parcelInfo['parcelNumber']?.toString().trim();
+    final ko = parcelInfo['cadMunicipalityRegNum']?.toString();
+    if (id == null || number == null || number.isEmpty || ko == null) {
+      return null;
+    }
+    return Uri.https(_portal, '/map', {
+      'parcelId': id,
+      'parcelNumber': number,
+      'cadMunicipalityRegNum': ko,
+    });
+  }
+
   // parcel-info routinely takes 15-30 s; a short timeout drops answers
   // that would have arrived.
   static const _timeout = Duration(seconds: 60);
@@ -57,9 +84,10 @@ class HrOwnerService {
   /// Rows hold [_toJson] answers keyed `sifko/parcela`, searchable by
   /// [_searchText]. Bump the version to drop them all. 2: owners from the
   /// ZK; answers before it were cadastre holders only, often not the owner.
+  /// 3: each answer names its source.
   static final _store = LookupCacheStore(
     'hr_owners',
-    version: 2,
+    version: 3,
     legacyFiles: const ['hr_owners_cache.json'],
   );
 
@@ -169,6 +197,7 @@ class HrOwnerService {
 
   static Map<String, dynamic> _toJson(OwnerInfo info) => {
     'koName': info.koName,
+    'sources': [for (final src in info.sources) src.toJson()],
     'address': info.address,
     'holders': [
       for (final name in info.owners)
@@ -195,6 +224,10 @@ class HrOwnerService {
       holders: holders,
       address: j['address'] as String?,
       koName: j['koName'] as String?,
+      sources: [
+        for (final src in j['sources'] as List<dynamic>? ?? const [])
+          ?OwnerSource.fromJson(src),
+      ],
     );
   }
 
@@ -346,6 +379,7 @@ class HrOwnerService {
     final names = <String>[];
     final shares = <String, List<String>>{};
     final addresses = <String, String?>{};
+    var unitHasOwners = false;
 
     void walk(List<dynamic>? list, String? parentShare) {
       for (final raw in list ?? const []) {
@@ -358,6 +392,7 @@ class HrOwnerService {
           if (o is! Map<String, dynamic>) continue;
           final name = (o['name'] as String?)?.trim();
           if (name == null || name.isEmpty) continue;
+          unitHasOwners = true;
           if (!names.contains(name)) {
             names.add(name);
             shares[name] = [];
@@ -373,11 +408,26 @@ class HrOwnerService {
       }
     }
 
+    final sources = <OwnerSource>[];
     for (final unit in units) {
       final sheet = unit['ownershipSheetB'];
-      if (sheet is Map<String, dynamic>) {
-        walk(sheet['lrUnitShares'] as List?, null);
-      }
+      if (sheet is! Map<String, dynamic>) continue;
+      unitHasOwners = false;
+      walk(sheet['lrUnitShares'] as List?, null);
+      if (!unitHasOwners) continue;
+      final book = int.tryParse('${unit['mainBookId']}');
+      final number = unit['lrUnitNumber']?.toString().trim();
+      final place = (unit['mainBookName'] as String?)?.trim();
+      sources.add(
+        OwnerSource(
+          OwnerSourceKind.landRegistry,
+          lrUnitNumber: number,
+          place: (place == null || place.isEmpty) ? null : place,
+          url: book == null || number == null || number.isEmpty
+              ? null
+              : lrUnitUrl(book, number),
+        ),
+      );
     }
     if (names.isEmpty) return null;
     final holders = [
@@ -394,6 +444,7 @@ class HrOwnerService {
       holders: holders,
       address: holders.map((h) => h.address).nonNulls.firstOrNull,
       koName: (ko == null || ko.isEmpty) ? null : ko,
+      sources: sources,
     );
   }
 
@@ -434,11 +485,19 @@ class HrOwnerService {
     }
     if (owners.isEmpty) return null;
     final ko = (json['cadMunicipalityName'] as String?)?.trim();
+    final koName = (ko == null || ko.isEmpty) ? null : ko;
     return OwnerInfo(
       owners: owners,
       holders: holders,
       address: address,
-      koName: (ko == null || ko.isEmpty) ? null : ko,
+      koName: koName,
+      sources: [
+        OwnerSource(
+          OwnerSourceKind.cadastre,
+          place: koName,
+          url: parcelMapUrl(json),
+        ),
+      ],
     );
   }
 }

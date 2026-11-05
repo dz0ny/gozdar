@@ -120,6 +120,9 @@ void main() {
     test('ZK owner replaces the cadastre holder (Prezid 1)', () {
       final info = HrOwnerService.parseLrUnits([
         {
+          'mainBookId': 30978,
+          'lrUnitNumber': '1876',
+          'mainBookName': 'PREZID',
           'ownershipSheetB': {
             'lrUnitShares': [
               {
@@ -155,6 +158,37 @@ void main() {
       expect(info.holders.single.share, '1/1');
       expect(info.holders.single.address, 'ZAGREB');
       expect(info.koName, 'PREZID');
+      final source = info.sources.single;
+      expect(source.kind, OwnerSourceKind.landRegistry);
+      expect(source.lrUnitNumber, '1876');
+      expect(source.place, 'PREZID');
+      expect(
+        source.url.toString(),
+        'https://oss.uredjenazemlja.hr/public-services/review-lr-bdc'
+        '?mainBookId=30978&lrUnitNumber=1876',
+      );
+    });
+
+    test('cadastre holders link to the parcel on the portal map', () {
+      final info = HrOwnerService.parseParcelInfo({
+        ...prezidParcel,
+        'parcelId': 18468951,
+        'parcelNumber': '1',
+        'cadMunicipalityRegNum': '302759',
+      });
+      final source = info!.sources.single;
+      expect(source.kind, OwnerSourceKind.cadastre);
+      expect(source.place, 'PREZID');
+      expect(
+        source.url.toString(),
+        'https://oss.uredjenazemlja.hr/map?parcelId=18468951'
+        '&parcelNumber=1&cadMunicipalityRegNum=302759',
+      );
+      // Without the ids there is still a source, just no link.
+      expect(
+        HrOwnerService.parseParcelInfo(prezidParcel)!.sources.single.url,
+        isNull,
+      );
     });
 
     test('sub-shares, entries and the cadastre address', () {
@@ -256,6 +290,14 @@ void main() {
       await HrOwnerService.instance.debugStore({
         '302759/100/1': {
           'koName': 'PREZID',
+          'sources': [
+            {
+              'kind': 'landRegistry',
+              'lrUnitNumber': '1876',
+              'place': 'PREZID',
+              'url': 'https://oss.uredjenazemlja.hr/x',
+            },
+          ],
           'address': 'PREZID 12, 51303 PLEŠCE',
           'holders': [
             {'name': 'KOVAČIĆ ANTE', 'share': '1/1', 'address': 'PREZID 12'},
@@ -285,6 +327,10 @@ void main() {
         expect(hits, hasLength(1));
         expect(hits.single.sifko, 302759);
         expect(hits.single.parcela, '100/1');
+        final source = hits.single.info.sources.single;
+        expect(source.kind, OwnerSourceKind.landRegistry);
+        expect(source.lrUnitNumber, '1876');
+        expect(source.url, Uri.parse('https://oss.uredjenazemlja.hr/x'));
       },
     );
 

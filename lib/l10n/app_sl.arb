@@ -2143,5 +2143,29 @@
   "introSecnjaShareTitle": "Deli sekaču",
   "introSecnjaShareDesc": "V parceli tapni Deli sekaču in pošlji povezavo. Velja 30 dni; ob novih oznakah jo posodobiš.",
   "introSecnjaLoggerTitle": "Sekač dobi parcelo",
-  "introSecnjaLoggerDesc": "Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej."
+  "introSecnjaLoggerDesc": "Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej.",
+  "ownersSourceTitle": "Vir",
+  "ownersSourceLandRegistry": "Zemljiška knjiga",
+  "ownersSourceCadastre": "Kataster",
+  "ownersSourceLrUnit": "ZK vložek {unit}, k.o. {place}",
+  "@ownersSourceLrUnit": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      },
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "ownersSourceLine": "Vir: {source}",
+  "@ownersSourceLine": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "ownersSourceCadastreNote": "Posestniki po katastru, niso nujno lastniki.",
+  "ownersSourceOpen": "Odpri v registru"
 }

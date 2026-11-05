@@ -13,8 +13,115 @@ String ownerSummary(List<String> owners) {
   return L10n.current.ownerAndMore(owners.first, owners.length - 1);
 }
 
+/// The register a source names, e.g. "Zemljiška knjiga".
+String ownerSourceName(BuildContext context, OwnerSource source) =>
+    switch (source.kind) {
+      OwnerSourceKind.landRegistry => context.l10n.ownersSourceLandRegistry,
+      OwnerSourceKind.cadastre => context.l10n.ownersSourceCadastre,
+    };
+
+/// "Vir: Zemljiška knjiga" under a one-line owner summary, so the register
+/// is never left out; the sheet links to it.
+class OwnerSourceCaption extends StatelessWidget {
+  final OwnerInfo info;
+
+  const OwnerSourceCaption({super.key, required this.info});
+
+  @override
+  Widget build(BuildContext context) {
+    if (info.sources.isEmpty) return const SizedBox.shrink();
+    final names = {for (final s in info.sources) ownerSourceName(context, s)};
+    final theme = Theme.of(context);
+    return Text(
+      context.l10n.ownersSourceLine(names.join(', ')),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        fontStyle: FontStyle.italic,
+      ),
+    );
+  }
+}
+
+/// One source of the owners: the register, the ZK unit when there is one,
+/// and a tap that opens the register's own page.
+class OwnerSourceTile extends StatelessWidget {
+  final OwnerSource source;
+
+  const OwnerSourceTile({super.key, required this.source});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final l10n = context.l10n;
+    final detail = switch (source.kind) {
+      OwnerSourceKind.landRegistry
+          when source.lrUnitNumber != null && source.place != null =>
+        l10n.ownersSourceLrUnit(source.lrUnitNumber!, source.place!),
+      OwnerSourceKind.landRegistry => source.place,
+      OwnerSourceKind.cadastre => l10n.ownersSourceCadastreNote,
+    };
+    final url = source.url;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: url == null
+          ? null
+          : () => launchUrl(url, mode: LaunchMode.externalApplication),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 4, top: 2),
+              child: Icon(
+                source.kind == OwnerSourceKind.landRegistry
+                    ? Icons.menu_book_outlined
+                    : Icons.map_outlined,
+                size: 20,
+                color: cs.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    ownerSourceName(context, source),
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                  if (detail != null)
+                    Text(
+                      detail,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (url != null) ...[
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Tooltip(
+                  message: l10n.ownersSourceOpen,
+                  child: Icon(Icons.open_in_new, size: 20, color: cs.primary),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Every owner of a parcel, one row each with the share and address when the
-/// source has them.
+/// source has them, and below them the sources with links to the register.
 class OwnersSheet extends StatelessWidget {
   final List<String> owners;
   final OwnerInfo? info;
@@ -59,6 +166,23 @@ class OwnersSheet extends StatelessWidget {
       for (final name in owners)
         OwnerTile(holder: info?.holder(name) ?? OwnerHolder(name)),
     ];
+    final sources = info?.sources ?? const <OwnerSource>[];
+    final theme = Theme.of(context);
+    final sourceRows = [
+      if (sources.isNotEmpty) ...[
+        const Divider(height: 16),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 2),
+          child: Text(
+            context.l10n.ownersSourceTitle,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        for (final s in sources) OwnerSourceTile(source: s),
+      ],
+    ];
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 16, 12),
       child: Column(
@@ -78,6 +202,8 @@ class OwnersSheet extends StatelessWidget {
             Expanded(
               child: ListView(controller: scrollController, children: rows),
             ),
+          // Below a long list, not scrolled away with it.
+          ...sourceRows,
         ],
       ),
     );

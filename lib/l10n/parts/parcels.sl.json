@@ -434,5 +434,29 @@
   "notesDiscardTitle": "Zavrzi spremembe?",
   "notesDiscardMessage": "Spremembe zapiskov še niso shranjene.",
   "notesKeepEditing": "Nadaljuj urejanje",
-  "notesDiscard": "Zavrzi"
+  "notesDiscard": "Zavrzi",
+  "ownersSourceTitle": "Vir",
+  "ownersSourceLandRegistry": "Zemljiška knjiga",
+  "ownersSourceCadastre": "Kataster",
+  "ownersSourceLrUnit": "ZK vložek {unit}, k.o. {place}",
+  "@ownersSourceLrUnit": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      },
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "ownersSourceLine": "Vir: {source}",
+  "@ownersSourceLine": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "ownersSourceCadastreNote": "Posestniki po katastru, niso nujno lastniki.",
+  "ownersSourceOpen": "Odpri v registru"
 }

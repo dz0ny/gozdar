@@ -366,7 +366,8 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
     final address = widget.parcelAddress ?? looked?.address;
     final hasOwner = owner != null && owner.isNotEmpty;
     final hasAddress = address != null && address.isNotEmpty;
-    final manyOwners = looked != null && looked.owners.length > 1;
+    // Other owners or the source to check them in: a tap shows them.
+    final manyOwners = looked != null && looked.hasDetails;
     final cat = widget.parcelPublicCategory;
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 2, 4, 8),
@@ -431,11 +432,17 @@ class _MapLongPressMenuState extends State<MapLongPressMenu> {
                     Icon(Icons.person, size: 20, color: cs.primary),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        owner,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyLarge,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            owner,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          if (looked != null) OwnerSourceCaption(info: looked),
+                        ],
                       ),
                     ),
                     if (manyOwners)

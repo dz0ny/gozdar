@@ -32,6 +32,53 @@ class OwnerHolder {
   const OwnerHolder(this.name, {this.share, this.address});
 }
 
+/// Which register a parcel's owners were read from.
+enum OwnerSourceKind {
+  /// Land registry (zemljišna knjiga): the legal owners.
+  landRegistry,
+
+  /// Cadastre: holders on the possession sheet, not always the owners.
+  cadastre,
+}
+
+/// Where owners were read, so the user can check them in the register.
+class OwnerSource {
+  final OwnerSourceKind kind;
+
+  /// ZK unit (uložak) number, for [OwnerSourceKind.landRegistry].
+  final String? lrUnitNumber;
+
+  /// Main book (glavna knjiga) or cadastral municipality name.
+  final String? place;
+
+  /// The register's own page for this source, when it has one.
+  final Uri? url;
+
+  const OwnerSource(this.kind, {this.lrUnitNumber, this.place, this.url});
+
+  Map<String, dynamic> toJson() => {
+    'kind': kind.name,
+    'lrUnitNumber': lrUnitNumber,
+    'place': place,
+    'url': url?.toString(),
+  };
+
+  static OwnerSource? fromJson(Object? j) {
+    if (j is! Map<String, dynamic>) return null;
+    final kind = OwnerSourceKind.values
+        .where((k) => k.name == j['kind'])
+        .firstOrNull;
+    if (kind == null) return null;
+    final url = j['url'] as String?;
+    return OwnerSource(
+      kind,
+      lrUnitNumber: j['lrUnitNumber'] as String?,
+      place: j['place'] as String?,
+      url: url == null ? null : Uri.tryParse(url),
+    );
+  }
+}
+
 class OwnerInfo {
   /// Separator between co-owners in [displayOwners] and in a parcel's stored
   /// `owner` field.
@@ -52,13 +99,22 @@ class OwnerInfo {
   /// Administrative municipality (občina), often null in the source data.
   final String? municipality;
 
+  /// Where the owners were read; empty when the source is not linkable
+  /// (the offline Slovenian owners database).
+  final List<OwnerSource> sources;
+
   const OwnerInfo({
     required this.owners,
     this.holders = const [],
     this.address,
     this.koName,
     this.municipality,
+    this.sources = const [],
   });
+
+  /// Whether a tap has more to show than the summary line: other owners
+  /// or the source to check them in.
+  bool get hasDetails => owners.length > 1 || sources.isNotEmpty;
 
   /// Owner names joined for display, e.g. "NOVAK JANEZ • KOVAC ANA".
   String get displayOwners => owners.join(separator);
