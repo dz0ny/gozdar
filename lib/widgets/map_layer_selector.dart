@@ -277,15 +277,25 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
         MapLayer.esriTopoMap,
       ],
     );
-    // Slovenian maps only cover Slovenia, so Croatian users get the
-    // international ones (ESRI satellite covers Croatia) first.
+    // Each orthophoto is drawn with the other country's (MapLayer.stackFor),
+    // so either list covers both sides of the border.
+    final croatianMaps = _buildBaseLayerSection(context.l10n.mapwCroatianMaps, [
+      MapLayer.hrDof2023,
+      MapLayer.hrDof2021,
+      MapLayer.hrDof2019,
+    ]);
+    // Croatian users get their own maps first, Slovenian ones last.
     final croatian = context.l10n.localeName == 'hr';
+    final sections = croatian
+        ? [croatianMaps, international, slovenian]
+        : [slovenian, croatianMaps, international];
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
-        croatian ? international : slovenian,
-        const SizedBox(height: 16),
-        croatian ? slovenian : international,
+        for (final (i, section) in sections.indexed) ...[
+          if (i > 0) const SizedBox(height: 16),
+          section,
+        ],
         const SizedBox(height: 24),
         // Download tiles button
         if (widget.onDownloadTiles != null)
@@ -923,6 +933,9 @@ class _MapLayerSelectorState extends State<MapLayerSelector>
       case MapLayerType.ortofoto:
       case MapLayerType.ortofoto2023:
       case MapLayerType.ortofoto2022:
+      case MapLayerType.hrDof2023:
+      case MapLayerType.hrDof2021:
+      case MapLayerType.hrDof2019:
         return Icons.image;
       case MapLayerType.dofIr:
         return Icons.gradient;

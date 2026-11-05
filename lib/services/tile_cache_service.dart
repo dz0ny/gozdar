@@ -521,7 +521,7 @@ class TileDownloadRequest {
 
 /// Network tile provider that also fills `{bbox}`: direct WMS layers
 /// ([MapLayer.isDirectWms]) turn each XYZ tile into a GetMap of its EPSG:3857
-/// bounding box. The URL equals [TileDownloadService.tileUrl], so offline
+/// (`{bbox}`) or EPSG:4326 (`{bbox4326}`) bounding box. The URL equals [TileDownloadService.tileUrl], so offline
 /// downloads hit the same cache entries.
 class _WmsAwareTileProvider extends NetworkTileProvider {
   _WmsAwareTileProvider({
@@ -539,6 +539,13 @@ class _WmsAwareTileProvider extends NetworkTileProvider {
     final map = super.generateReplacementMap(urlTemplate, coordinates, options);
     if (urlTemplate.contains('{bbox}')) {
       map['bbox'] = MapLayer.webMercatorTileBbox(
+        coordinates.z,
+        coordinates.x,
+        coordinates.y,
+      );
+    }
+    if (urlTemplate.contains('{bbox4326}')) {
+      map['bbox4326'] = MapLayer.geographicTileBbox(
         coordinates.z,
         coordinates.x,
         coordinates.y,

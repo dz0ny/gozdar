@@ -67,12 +67,16 @@ class TileDownloadService {
   /// there must use exactly this form to be displayed offline.
   static String tileUrl(String urlTemplate, int z, int x, int y) {
     const subdomains = ['a', 'b', 'c'];
-    return urlTemplate
-        .replaceAll('{s}', subdomains[(x + y) % 3])
-        .replaceAll('{z}', '$z')
-        .replaceAll('{x}', '$x')
-        .replaceAll('{y}', '$y')
-        .replaceAll('{bbox}', MapLayer.webMercatorTileBbox(z, x, y));
+    return MapLayer.fillTileBbox(
+      urlTemplate
+          .replaceAll('{s}', subdomains[(x + y) % 3])
+          .replaceAll('{z}', '$z')
+          .replaceAll('{x}', '$x')
+          .replaceAll('{y}', '$y'),
+      z,
+      x,
+      y,
+    );
   }
 
   /// Stores [bytes] in the cache the map reads from, as a long-lived tile.

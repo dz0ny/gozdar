@@ -3049,4 +3049,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get ownersSourceOpen => 'Odpri v registru';
+
+  @override
+  String get mapwCroatianMaps => 'Hrvaške karte';
 }

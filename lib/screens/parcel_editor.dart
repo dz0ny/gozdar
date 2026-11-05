@@ -307,7 +307,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
     );
   }
 
-  Widget _buildTileLayerForLayer(MapLayer layer) {
+  Widget _buildTileLayerForLayer(MapLayer layer, {LatLngBounds? tileBounds}) {
     final urlTemplate = layer.resolveUrlTemplate(_workerUrl);
     if (urlTemplate == null) {
       throw StateError('Layer ${layer.type.name} requires a worker URL');
@@ -317,6 +317,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
       urlTemplate: urlTemplate,
       maxZoom: MapLayer.appMaxZoom,
       maxNativeZoom: layer.nativeMaxZoom,
+      tileBounds: tileBounds,
       tileProvider: _tileCacheService.getGeneralTileProvider(),
       userAgentPackageName: 'dev.dz0ny.gozdar',
       errorTileCallback: (tile, error, stackTrace) {
@@ -553,7 +554,15 @@ class _ParcelEditorState extends State<ParcelEditor> {
                     onTap: (tapPosition, point) => _addPoint(point),
                   ),
                   children: [
-                    _buildTileLayerForLayer(_currentBaseLayer),
+                    // With the neighbouring country's orthophoto, as on the map.
+                    for (final layer in MapLayer.stackFor(_currentBaseLayer))
+                      if (layer == _currentBaseLayer)
+                        _buildTileLayerForLayer(layer)
+                      else if (layer.resolveUrlTemplate(_workerUrl) != null)
+                        _buildTileLayerForLayer(
+                          layer,
+                          tileBounds: layer.orthoCoverage,
+                        ),
                     ..._buildOverlayLayers(),
 
                     // Draw polygon

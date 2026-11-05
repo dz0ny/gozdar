@@ -75,7 +75,8 @@ class ParcelPdfService {
     String workerUrl,
   ) {
     return [
-      baseLayer,
+      // With the neighbouring country's orthophoto, as on the map.
+      ...MapLayer.stackFor(baseLayer),
       ...MapLayer.overlayLayers.where(
         (layer) =>
             activeOverlays.contains(layer.type) &&

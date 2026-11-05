@@ -2167,5 +2167,6 @@
     }
   },
   "ownersSourceCadastreNote": "Posestniki po katastru, niso nujno lastniki.",
-  "ownersSourceOpen": "Odpri v registru"
+  "ownersSourceOpen": "Odpri v registru",
+  "mapwCroatianMaps": "Hrvaške karte"
 }

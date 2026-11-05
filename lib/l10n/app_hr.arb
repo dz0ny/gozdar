@@ -838,5 +838,6 @@
   "ownersSourceLrUnit": "ZK uložak {unit}, k.o. {place}",
   "ownersSourceLine": "Izvor: {source}",
   "ownersSourceCadastreNote": "Posjednici prema katastru, nisu nužno vlasnici.",
-  "ownersSourceOpen": "Otvori u registru"
+  "ownersSourceOpen": "Otvori u registru",
+  "mapwCroatianMaps": "Hrvatske karte"
 }

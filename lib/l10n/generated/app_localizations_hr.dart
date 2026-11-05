@@ -3045,4 +3045,7 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get ownersSourceOpen => 'Otvori u registru';
+
+  @override
+  String get mapwCroatianMaps => 'Hrvatske karte';
 }

@@ -22,8 +22,9 @@ class MapLayerRenderer {
     this.excludeOverlays = const {},
   });
 
-  /// Build tile layer for a given layer
-  TileLayer buildTileLayerForLayer(MapLayer layer) {
+  /// Build tile layer for a given layer; [tileBounds] limits the tiles it
+  /// asks for.
+  TileLayer buildTileLayerForLayer(MapLayer layer, {LatLngBounds? tileBounds}) {
     final tileCacheService = TileCacheService();
     final urlTemplate = layer.resolveUrlTemplate(workerUrl);
     if (urlTemplate == null) {
@@ -35,6 +36,7 @@ class MapLayerRenderer {
       maxZoom: MapLayer.appMaxZoom,
       maxNativeZoom: layer.nativeMaxZoom,
       minZoom: layer.minZoom,
+      tileBounds: tileBounds,
       tileProvider: tileCacheService.getTileProviderFor(layer),
       userAgentPackageName: 'dev.dz0ny.gozdar',
       errorTileCallback: (tile, error, stackTrace) {
@@ -62,10 +64,22 @@ class MapLayerRenderer {
         .toList();
   }
 
+  /// The base layer with its neighbouring-country orthophoto
+  /// ([MapLayer.stackFor]), bottom first. A partner that cannot resolve
+  /// (Slovenian, no worker URL) is left out; the partner only fetches tiles
+  /// over its own country.
+  List<TileLayer> buildBaseTileLayers() => [
+    for (final layer in MapLayer.stackFor(baseLayer))
+      if (layer == baseLayer)
+        buildTileLayerForLayer(layer)
+      else if (layer.resolveUrlTemplate(workerUrl) != null)
+        buildTileLayerForLayer(layer, tileBounds: layer.orthoCoverage),
+  ];
+
   /// Get all tile layers (base + overlays).
   List<TileLayer> getAllTileLayers() {
     final layers = <TileLayer>[];
-    layers.add(buildBaseTileLayer());
+    layers.addAll(buildBaseTileLayers());
     layers.addAll(buildOverlayLayers());
     return layers;
   }

@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 /// Categories for overlay layers
 enum OverlayCategory {
@@ -83,6 +86,11 @@ enum MapLayerType {
   hrKataster,
   hrKatasterNazivi,
   hrKatastarskeOpcine,
+
+  // Croatian orthophoto base layers (DGU, INSPIRE WMS).
+  hrDof2023,
+  hrDof2021,
+  hrDof2019,
 }
 
 class MapLayer {
@@ -107,6 +115,11 @@ class MapLayer {
   final OverlayCategory? category; // Category for overlay layers
   final String? proxySlugOverride;
 
+  /// CRS a [isDirectWms] layer is requested in: EPSG:3857 unless set. DGU's
+  /// INSPIRE orthophotos offer EPSG:4326 but not Web Mercator; over one tile
+  /// the difference is far below a pixel.
+  final String? wmsCrs;
+
   /// Extra HTTP headers the tile source requires (e.g. mapy.cz rejects
   /// requests without a mapy.com Referer with 403).
   final Map<String, String> httpHeaders;
@@ -130,6 +143,7 @@ class MapLayer {
     this.category,
     this.proxySlugOverride,
     this.httpHeaders = const {},
+    this.wmsCrs,
   });
 
   static const _mapyHeaders = {'Referer': 'https://mapy.com/'};
@@ -145,8 +159,11 @@ class MapLayer {
   bool get isSlovenian =>
       isWms && (wmsBaseUrl?.contains('prostor.zgs.gov.si') ?? false);
 
-  /// Croatian DGU layer (cadastre from portal Uređena zemlja).
-  bool get isCroatian => category == OverlayCategory.hrvatska;
+  /// Croatian DGU layer: cadastre from the portal Uređena zemlja or an
+  /// orthophoto from geoportal.dgu.hr.
+  bool get isCroatian =>
+      category == OverlayCategory.hrvatska ||
+      (wmsBaseUrl?.contains('dgu.hr') ?? false);
 
   /// Kebab-case slug used by the worker tile proxy.
   String get proxySlug =>
@@ -173,8 +190,26 @@ class MapLayer {
   bool get isDirectWms => isWms && isCroatian;
 
   /// GetMap template for a [isDirectWms] layer; `{bbox}` is filled per tile
-  /// by [webMercatorTileBbox].
+  /// by [webMercatorTileBbox], `{bbox4326}` by [geographicTileBbox].
   String get _directWmsTemplate {
+    if (wmsCrs == 'EPSG:4326') {
+      final params = {
+        'SERVICE': 'WMS',
+        'VERSION': '1.3.0',
+        'REQUEST': 'GetMap',
+        'LAYERS': wmsLayers!.join(','),
+        'STYLES': wmsStyles ?? '',
+        'FORMAT': wmsFormat ?? 'image/png',
+        'TRANSPARENT': '$isTransparent'.toUpperCase(),
+        'CRS': 'EPSG:4326',
+        'WIDTH': '256',
+        'HEIGHT': '256',
+      };
+      final query = params.entries
+          .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
+          .join('&');
+      return '$wmsBaseUrl$query&BBOX={bbox4326}';
+    }
     final params = {
       'SERVICE': 'WMS',
       'VERSION': '1.1.1',
@@ -205,6 +240,79 @@ class MapLayer {
       minX + size,
       maxY,
     ].map((v) => v.toStringAsFixed(2)).join(',');
+  }
+
+  /// WGS84 bounding box of XYZ tile z/x/y in WMS 1.3.0 EPSG:4326 axis order,
+  /// "minLat,minLon,maxLat,maxLon".
+  static String geographicTileBbox(int z, int x, int y) {
+    final n = 1 << z;
+    double lon(int x) => x / n * 360 - 180;
+    double lat(int y) =>
+        math.atan(_sinh(math.pi * (1 - 2 * y / n))) * 180 / math.pi;
+    return [
+      lat(y + 1),
+      lon(x),
+      lat(y),
+      lon(x + 1),
+    ].map((v) => v.toStringAsFixed(8)).join(',');
+  }
+
+  static double _sinh(double v) => (math.exp(v) - math.exp(-v)) / 2;
+
+  /// Fills a tile's `{bbox}` and `{bbox4326}` in [template].
+  static String fillTileBbox(String template, int z, int x, int y) {
+    var url = template;
+    if (url.contains('{bbox}')) {
+      url = url.replaceAll('{bbox}', webMercatorTileBbox(z, x, y));
+    }
+    if (url.contains('{bbox4326}')) {
+      url = url.replaceAll('{bbox4326}', geographicTileBbox(z, x, y));
+    }
+    return url;
+  }
+
+  /// Orthophotos of the neighbouring country drawn with [base], so the map
+  /// is imagery on both sides of the border. Each country's service draws
+  /// only its own territory: the Slovenian one white elsewhere, so it goes
+  /// underneath; the Croatian one transparent, so it goes on top.
+  ///
+  /// Slovenian orthophotos pair with HR 2019/20: the keyless 2021/22 and
+  /// 2023/24 services stamp "GEOPORTAL" on every tile, even outside Croatia,
+  /// which would cover all of Slovenia.
+  static const _orthoPartners = {
+    MapLayerType.ortofoto: MapLayerType.hrDof2019,
+    MapLayerType.ortofoto2023: MapLayerType.hrDof2019,
+    MapLayerType.ortofoto2022: MapLayerType.hrDof2019,
+    MapLayerType.hrDof2023: MapLayerType.ortofoto,
+    MapLayerType.hrDof2021: MapLayerType.ortofoto2022,
+    MapLayerType.hrDof2019: MapLayerType.ortofoto2022,
+  };
+
+  /// The base layers to draw for [base], bottom first: the orthophoto pair
+  /// for Slovenian and Croatian orthophotos, [base] alone otherwise.
+  static List<MapLayer> stackFor(MapLayer base) {
+    final partnerType = _orthoPartners[base.type];
+    if (partnerType == null) return [base];
+    final partner = baseLayers.firstWhere((l) => l.type == partnerType);
+    return base.isCroatian ? [partner, base] : [base, partner];
+  }
+
+  static final _slovenia = LatLngBounds(
+    const LatLng(45.40, 13.35),
+    const LatLng(46.90, 16.65),
+  );
+  static final _croatia = LatLngBounds(
+    const LatLng(42.35, 13.45),
+    const LatLng(46.60, 19.50),
+  );
+
+  /// Bounding box of the country an orthophoto covers, so a partner layer
+  /// ([stackFor]) asks for no tiles beyond it; null for the rest. Only a
+  /// box: Croatia's still holds most of Slovenia, where its tiles come back
+  /// empty and transparent.
+  LatLngBounds? get orthoCoverage {
+    if (!_orthoPartners.containsKey(type)) return null;
+    return isCroatian ? _croatia : _slovenia;
   }
 
   /// Resolve the layer to an XYZ template.
@@ -306,6 +414,53 @@ class MapLayer {
     wmsBaseUrl: 'https://prostor.zgs.gov.si/geowebcache/service/wms?',
     wmsLayers: ['pregledovalnik:DOF_IR'],
     wmsFormat: 'image/jpeg',
+  );
+
+  /// DGU orthophoto 1:5000 (Croatia), keyless INSPIRE WMS under the open
+  /// licence (data.gov.hr/otvorena-dozvola). PNG so that outside Croatia the
+  /// tile is transparent and the Slovenian orthophoto shows through. The
+  /// keyless 2021/22 and 2023/24 images carry a "GEOPORTAL" stamp.
+  static const hrDof2023 = MapLayer(
+    type: MapLayerType.hrDof2023,
+    name: 'Ortofoto HR 2023/24',
+    attribution: '© DGU',
+    maxZoom: 21,
+    isWms: true,
+    wmsBaseUrl:
+        'https://geoportal.dgu.hr/services/inspire/orthophoto_2023_2024/wms?',
+    wmsLayers: ['OI.OrthoimageCoverage'],
+    wmsFormat: 'image/png',
+    wmsCrs: 'EPSG:4326',
+    isTransparent: true,
+  );
+
+  static const hrDof2021 = MapLayer(
+    type: MapLayerType.hrDof2021,
+    name: 'Ortofoto HR 2021/22',
+    attribution: '© DGU',
+    maxZoom: 21,
+    isWms: true,
+    wmsBaseUrl:
+        'https://geoportal.dgu.hr/services/inspire/orthophoto_2021_2022/wms?',
+    wmsLayers: ['OI.OrthoimageCoverage'],
+    wmsFormat: 'image/png',
+    wmsCrs: 'EPSG:4326',
+    isTransparent: true,
+  );
+
+  /// The newest keyless year without the stamp.
+  static const hrDof2019 = MapLayer(
+    type: MapLayerType.hrDof2019,
+    name: 'Ortofoto HR 2019/20',
+    attribution: '© DGU',
+    maxZoom: 21,
+    isWms: true,
+    wmsBaseUrl:
+        'https://geoportal.dgu.hr/services/inspire/orthophoto_2019_2020/wms?',
+    wmsLayers: ['OI.OrthoimageCoverage'],
+    wmsFormat: 'image/png',
+    wmsCrs: 'EPSG:4326',
+    isTransparent: true,
   );
 
   /// DMR - Digital elevation model (Slovenia)
@@ -1033,6 +1188,9 @@ class MapLayer {
     ortofoto2023,
     ortofoto2022,
     dofIr,
+    hrDof2023,
+    hrDof2021,
+    hrDof2019,
     dmr,
   ];
 

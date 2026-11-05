@@ -5141,6 +5141,12 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Odpri v registru'**
   String get ownersSourceOpen;
+
+  /// No description provided for @mapwCroatianMaps.
+  ///
+  /// In sl, this message translates to:
+  /// **'Hrvaške karte'**
+  String get mapwCroatianMaps;
 }
 
 class _AppLocalizationsDelegate
