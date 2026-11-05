@@ -226,14 +226,19 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         clipBehavior: Clip.antiAlias,
-        child: ConversionSettingsSheet(
-          totalVolume: _totalVolume,
-          prmFactor: provider.conversionFactors.prm,
-          nmFactor: provider.conversionFactors.nm,
-          onChanged: (prm, nm) {
-            provider.setConversionFactors(prm, nm);
-            setState(() {}); // Refresh to show updated conversions
-          },
+        child: Material(
+          // ListTiles paint their background and ink on the nearest
+          // Material; this one sits above the sheet's colour.
+          type: MaterialType.transparency,
+          child: ConversionSettingsSheet(
+            totalVolume: _totalVolume,
+            prmFactor: provider.conversionFactors.prm,
+            nmFactor: provider.conversionFactors.nm,
+            onChanged: (prm, nm) {
+              provider.setConversionFactors(prm, nm);
+              setState(() {}); // Refresh to show updated conversions
+            },
+          ),
         ),
       ),
     );

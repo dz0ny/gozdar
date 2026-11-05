@@ -68,17 +68,22 @@ class SavedLocationsSheet extends StatelessWidget {
             color: Theme.of(context).colorScheme.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: _SwipeableContent(
-            scrollController: scrollController,
-            locations: locations,
-            logs: logs,
-            parcels: parcels,
-            onNavigate: onNavigate,
-            onEdit: onEdit,
-            onDelete: onDelete,
-            onAddByCoordinates: onAddByCoordinates,
-            onSwipeDelete: onSwipeDelete,
-            onOpenParcel: onOpenParcel,
+          child: Material(
+            // ListTiles paint their background and ink on the nearest
+            // Material; this one sits above the sheet's colour.
+            type: MaterialType.transparency,
+            child: _SwipeableContent(
+              scrollController: scrollController,
+              locations: locations,
+              logs: logs,
+              parcels: parcels,
+              onNavigate: onNavigate,
+              onEdit: onEdit,
+              onDelete: onDelete,
+              onAddByCoordinates: onAddByCoordinates,
+              onSwipeDelete: onSwipeDelete,
+              onOpenParcel: onOpenParcel,
+            ),
           ),
         ),
       ),

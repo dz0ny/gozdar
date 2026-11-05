@@ -109,4 +109,55 @@ void main() {
     );
     expect(result.categories, {'e1': PublicOwnerCategory.obcina});
   });
+
+  test('past the limit, on-screen parcels come first', () async {
+    // The screen holds only e2; the padded bounds hold e1 too.
+    final screen = LatLngBounds(
+      const LatLng(45.609, 14.509),
+      const LatLng(45.612, 14.512),
+    );
+    final cut = await MapParcelsWorker.instance.parcelsInBounds(
+      bounds,
+      visible: screen,
+      categories: false,
+      limit: 1,
+    );
+    expect(cut.parcels.map((p) => p.id), ['e2']);
+    expect(cut.truncated, isTrue);
+
+    final all = await MapParcelsWorker.instance.parcelsInBounds(
+      bounds,
+      visible: screen,
+      categories: false,
+    );
+    expect(all.parcels.map((p) => p.id).first, 'e2');
+    expect(all.parcels, hasLength(2));
+    expect(all.truncated, isFalse);
+  });
+
+  test('then the nearest to the screen centre', () async {
+    // Both on screen; the centre is next to e1.
+    final screen = LatLngBounds(
+      const LatLng(45.59, 14.49),
+      const LatLng(45.615, 14.515),
+    );
+    final nearest = await MapParcelsWorker.instance.parcelsInBounds(
+      bounds,
+      visible: LatLngBounds(
+        const LatLng(45.595, 14.495),
+        const LatLng(45.607, 14.507),
+      ),
+      categories: false,
+      limit: 1,
+    );
+    expect(nearest.parcels.map((p) => p.id), ['e1']);
+    final both = await MapParcelsWorker.instance.parcelsInBounds(
+      bounds,
+      visible: screen,
+      categories: false,
+      limit: 2,
+    );
+    expect(both.parcels, hasLength(2));
+    expect(both.truncated, isFalse);
+  });
 }

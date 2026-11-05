@@ -121,13 +121,18 @@ class LogsTab extends StatelessWidget {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         clipBehavior: Clip.antiAlias,
-        child: ConversionSettingsSheet(
-          totalVolume: provider.totalVolume,
-          prmFactor: provider.conversionFactors.prm,
-          nmFactor: provider.conversionFactors.nm,
-          onChanged: (prm, nm) {
-            provider.setConversionFactors(prm, nm);
-          },
+        child: Material(
+          // ListTiles paint their background and ink on the nearest
+          // Material; this one sits above the sheet's colour.
+          type: MaterialType.transparency,
+          child: ConversionSettingsSheet(
+            totalVolume: provider.totalVolume,
+            prmFactor: provider.conversionFactors.prm,
+            nmFactor: provider.conversionFactors.nm,
+            onChanged: (prm, nm) {
+              provider.setConversionFactors(prm, nm);
+            },
+          ),
         ),
       ),
     );

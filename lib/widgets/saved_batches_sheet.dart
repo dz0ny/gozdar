@@ -85,231 +85,238 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
             color: Theme.of(context).colorScheme.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
+          child: Material(
+            // ListTiles paint their background and ink on the nearest
+            // Material; this one sits above the sheet's colour.
+            type: MaterialType.transparency,
+            child: Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.folder,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        context.l10n.logsSavedSheetTitle,
+                        style: Theme.of(context).textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.folder,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      context.l10n.logsSavedSheetTitle,
-                      style: Theme.of(context).textTheme.titleLarge
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Consumer<LogsProvider>(
-                  builder: (context, provider, child) {
-                    if (provider.isBatchesLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+                Expanded(
+                  child: Consumer<LogsProvider>(
+                    builder: (context, provider, child) {
+                      if (provider.isBatchesLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-                    final batches = provider.batches;
+                      final batches = provider.batches;
 
-                    if (batches.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.folder_open,
-                              size: 48,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              context.l10n.logsSavedSheetEmpty,
-                              style: TextStyle(color: Colors.grey[500]),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    final factors = provider.conversionFactors;
-                    return ListView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.all(12),
-                      itemCount: batches.length,
-                      itemBuilder: (context, index) {
-                        final batch = batches[index];
-                        final prmVolume = factors.toPrm(batch.totalVolume);
-                        final nmVolume = factors.toNm(batch.totalVolume);
-                        return Dismissible(
-                          key: Key('batch_${batch.id}'),
-                          direction: DismissDirection.endToStart,
-                          background: Container(
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20),
-                            margin: const EdgeInsets.only(bottom: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.delete,
-                              color: Colors.white,
-                            ),
+                      if (batches.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.folder_open,
+                                size: 48,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                context.l10n.logsSavedSheetEmpty,
+                                style: TextStyle(color: Colors.grey[500]),
+                              ),
+                            ],
                           ),
-                          confirmDismiss: (_) async {
-                            await _deleteBatch(batch);
-                            return false;
-                          },
-                          child: Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: InkWell(
-                              onTap: () => _openBatchDetail(batch),
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Volume summary row
-                                    Row(
-                                      children: [
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              Fmt.m3(batch.totalVolume),
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleLarge
-                                                  ?.copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.green[400],
-                                                  ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              '${Fmt.num(prmVolume, 2)} PRM  •  ${Fmt.num(nmVolume, 2)} NM',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color: Colors.grey[500],
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                        const Spacer(),
-                                        Text(
-                                          context.l10n.logsCountLogs(
-                                            batch.logCount,
-                                          ),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.copyWith(
-                                                color: Colors.grey[500],
+                        );
+                      }
+
+                      final factors = provider.conversionFactors;
+                      return ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(12),
+                        itemCount: batches.length,
+                        itemBuilder: (context, index) {
+                          final batch = batches[index];
+                          final prmVolume = factors.toPrm(batch.totalVolume);
+                          final nmVolume = factors.toNm(batch.totalVolume);
+                          return Dismissible(
+                            key: Key('batch_${batch.id}'),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 20),
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.delete,
+                                color: Colors.white,
+                              ),
+                            ),
+                            confirmDismiss: (_) async {
+                              await _deleteBatch(batch);
+                              return false;
+                            },
+                            child: Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: InkWell(
+                                onTap: () => _openBatchDetail(batch),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Volume summary row
+                                      Row(
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                Fmt.m3(batch.totalVolume),
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleLarge
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.green[400],
+                                                    ),
                                               ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Icon(
-                                          Icons.chevron_right,
-                                          color: Colors.grey[400],
-                                        ),
-                                      ],
-                                    ),
-                                    const Divider(height: 16),
-                                    // Metadata row
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.label_outline,
-                                          size: 14,
-                                          color: Colors.grey[500],
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            batch.name ??
-                                                context
-                                                    .l10n
-                                                    .logsSavedSheetNoName,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontStyle: batch.name == null
-                                                  ? FontStyle.italic
-                                                  : FontStyle.normal,
-                                              color: batch.name == null
-                                                  ? Colors.grey
-                                                  : null,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '${Fmt.num(prmVolume, 2)} PRM  •  ${Fmt.num(nmVolume, 2)} NM',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color: Colors.grey[500],
+                                                    ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                        if (batch.hasLocation) ...[
+                                          const Spacer(),
+                                          Text(
+                                            context.l10n.logsCountLogs(
+                                              batch.logCount,
+                                            ),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.copyWith(
+                                                  color: Colors.grey[500],
+                                                ),
+                                          ),
+                                          const SizedBox(width: 8),
                                           Icon(
-                                            Icons.location_on,
+                                            Icons.chevron_right,
+                                            color: Colors.grey[400],
+                                          ),
+                                        ],
+                                      ),
+                                      const Divider(height: 16),
+                                      // Metadata row
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.label_outline,
                                             size: 14,
                                             color: Colors.grey[500],
                                           ),
                                           const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              batch.name ??
+                                                  context
+                                                      .l10n
+                                                      .logsSavedSheetNoName,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontStyle: batch.name == null
+                                                    ? FontStyle.italic
+                                                    : FontStyle.normal,
+                                                color: batch.name == null
+                                                    ? Colors.grey
+                                                    : null,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          if (batch.hasLocation) ...[
+                                            Icon(
+                                              Icons.location_on,
+                                              size: 14,
+                                              color: Colors.grey[500],
+                                            ),
+                                            const SizedBox(width: 4),
+                                          ],
+                                          Icon(
+                                            Icons.access_time,
+                                            size: 14,
+                                            color: Colors.grey[500],
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            Fmt.dateTime(batch.createdAt),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[400],
+                                            ),
+                                          ),
                                         ],
-                                        Icon(
-                                          Icons.access_time,
-                                          size: 14,
-                                          color: Colors.grey[500],
-                                        ),
-                                        const SizedBox(width: 4),
+                                      ),
+                                      if (batch.notes != null &&
+                                          batch.notes!.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
                                         Text(
-                                          Fmt.dateTime(batch.createdAt),
+                                          batch.notes!,
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: Colors.grey[400],
+                                            color: Colors.grey[500],
                                           ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ],
-                                    ),
-                                    if (batch.notes != null &&
-                                        batch.notes!.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        batch.notes!,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[500],
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
                                     ],
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    );
-                  },
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

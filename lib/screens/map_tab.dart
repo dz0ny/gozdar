@@ -480,9 +480,14 @@ class MapTabState extends State<MapTab> {
           color: Theme.of(ctx).colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: NavigationCompassDialog(
-          targetLocation: navigationTarget.location,
-          targetName: navigationTarget.name,
+        child: Material(
+          // ListTiles paint their background and ink on the nearest
+          // Material; this one sits above the sheet's colour.
+          type: MaterialType.transparency,
+          child: NavigationCompassDialog(
+            targetLocation: navigationTarget.location,
+            targetName: navigationTarget.name,
+          ),
         ),
       ),
     );
@@ -504,10 +509,15 @@ class MapTabState extends State<MapTab> {
           color: Theme.of(ctx).colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: TileDownloadDialog(
-          layers: [mapProvider.currentBaseLayer, ...activeOverlayLayers],
-          bounds: bounds,
-          currentZoom: _currentZoom.toInt(),
+        child: Material(
+          // ListTiles paint their background and ink on the nearest
+          // Material; this one sits above the sheet's colour.
+          type: MaterialType.transparency,
+          child: TileDownloadDialog(
+            layers: [mapProvider.currentBaseLayer, ...activeOverlayLayers],
+            bounds: bounds,
+            currentZoom: _currentZoom.toInt(),
+          ),
         ),
       ),
     );
@@ -1063,7 +1073,9 @@ class MapTabState extends State<MapTab> {
       LatLng(bounds.south - latPad, bounds.west - lonPad),
       LatLng(bounds.north + latPad, bounds.east + lonPad),
     );
-    unawaited(_loadOfflineParcels(padded, labels, anyCategory, generation));
+    unawaited(
+      _loadOfflineParcels(padded, bounds, labels, anyCategory, generation),
+    );
   }
 
   /// Bumped by every [_refreshOfflineParcels], so a slower earlier load can't
@@ -1075,6 +1087,7 @@ class MapTabState extends State<MapTab> {
   /// [anyCategory] so the polygon builder can tint by owner type.
   Future<void> _loadOfflineParcels(
     LatLngBounds padded,
+    LatLngBounds visible,
     bool labels,
     bool anyCategory,
     int generation,
@@ -1083,6 +1096,7 @@ class MapTabState extends State<MapTab> {
     try {
       result = await MapParcelsWorker.instance.parcelsInBounds(
         padded,
+        visible: visible,
         categories: anyCategory,
       );
     } catch (e) {
@@ -1099,7 +1113,10 @@ class MapTabState extends State<MapTab> {
     }
     if (!mounted || generation != _offlineLoadGeneration) return;
 
-    _offlineQueriedBounds = padded;
+    // A dense area holds more parcels than the limit: the worker returns the
+    // screen's first, so the padding is not covered and the next pan must
+    // ask again instead of reusing this result.
+    _offlineQueriedBounds = result.truncated ? null : padded;
     _offlineQueriedLabels = labels;
     _offlineQueriedAnyCategory = anyCategory;
     setState(() {
@@ -1127,9 +1144,11 @@ class MapTabState extends State<MapTab> {
       // Colour the outline by public-owner category when on; otherwise the
       // default red kataster outline.
       final color = _highlightCategory(p)?.color;
+      // No fill colour at all, not a transparent one: flutter_map then skips
+      // the fill path of every parcel on every frame and batches all the
+      // borders into one drawPath.
       return Polygon(
         points: p.polygon,
-        color: const Color(0x00000000),
         borderColor: color ?? const Color(0xFFD50000),
         borderStrokeWidth: 2.5,
         label: labels ? p.parcelNumber : null,
@@ -1399,90 +1418,95 @@ class MapTabState extends State<MapTab> {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.tertiaryContainer,
+          child: Material(
+            // ListTiles paint their background and ink on the nearest
+            // Material; this one sits above the sheet's colour.
+            type: MaterialType.transparency,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.tertiaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.location_searching,
+                        color: colorScheme.tertiary,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            L10n.current.mapTabOwnerOffline,
+                            style: Theme.of(sheetContext).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: colorScheme.tertiary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          Text(
+                            L10n.current.mapTabApproximateOffline,
+                            style: Theme.of(sheetContext).textTheme.bodySmall
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: colorScheme.outline.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: Icon(Icons.person, color: colorScheme.tertiary),
+                    title: Text(
+                      owner,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        details,
+                        style: Theme.of(sheetContext).textTheme.bodyMedium
+                            ?.copyWith(color: colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      Icons.location_searching,
-                      color: colorScheme.tertiary,
-                      size: 28,
-                    ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          L10n.current.mapTabOwnerOffline,
-                          style: Theme.of(sheetContext).textTheme.titleMedium
-                              ?.copyWith(
-                                color: colorScheme.tertiary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        Text(
-                          L10n.current.mapTabApproximateOffline,
-                          style: Theme.of(sheetContext).textTheme.bodySmall
-                              ?.copyWith(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: colorScheme.outline.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
+                  icon: const Icon(Icons.close),
+                  label: Text(L10n.current.commonClose),
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: Icon(Icons.person, color: colorScheme.tertiary),
-                  title: Text(
-                    owner,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      details,
-                      style: Theme.of(sheetContext).textTheme.bodyMedium
-                          ?.copyWith(color: colorScheme.onSurfaceVariant),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => Navigator.of(sheetContext).pop(),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                icon: const Icon(Icons.close),
-                label: Text(L10n.current.commonClose),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -3210,110 +3234,117 @@ class MapTabState extends State<MapTab> {
             color: Theme.of(context).colorScheme.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          child: Column(
-            children: [
-              // Handle
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outline,
-                  borderRadius: BorderRadius.circular(2),
+          child: Material(
+            // ListTiles paint their background and ink on the nearest
+            // Material; this one sits above the sheet's colour.
+            type: MaterialType.transparency,
+            child: Column(
+              children: [
+                // Handle
+                Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.outline,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  L10n.current.mapTabUsageRightsTitle,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
+                Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    // Croatian users see their own source first.
-                    if (L10n.current.localeName == 'hr')
+                  child: Text(
+                    L10n.current.mapTabUsageRightsTitle,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
+                      // Croatian users see their own source first.
+                      if (L10n.current.localeName == 'hr')
+                        _buildUsageRightsSection(
+                          context,
+                          L10n.current.mapTabUsageDguName,
+                          'DGU',
+                          L10n.current.mapTabUsageDguDesc,
+                          'https://oss.uredjenazemlja.hr/',
+                        ),
                       _buildUsageRightsSection(
                         context,
-                        L10n.current.mapTabUsageDguName,
-                        'DGU',
-                        L10n.current.mapTabUsageDguDesc,
-                        'https://oss.uredjenazemlja.hr/',
+                        L10n.current.mapTabUsageGuName,
+                        'prostor.zgs.gov.si',
+                        L10n.current.mapTabUsageGuDesc,
+                        'https://www.gov.si/drzavni-organi/organi-v-sestavi/geodetska-uprava/',
                       ),
-                    _buildUsageRightsSection(
-                      context,
-                      L10n.current.mapTabUsageGuName,
-                      'prostor.zgs.gov.si',
-                      L10n.current.mapTabUsageGuDesc,
-                      'https://www.gov.si/drzavni-organi/organi-v-sestavi/geodetska-uprava/',
-                    ),
-                    _buildUsageRightsSection(
-                      context,
-                      L10n.current.mapTabUsageZgsName,
-                      'ZGS',
-                      L10n.current.mapTabUsageZgsDesc,
-                      'https://www.zgs.si/',
-                    ),
-                    if (L10n.current.localeName != 'hr')
                       _buildUsageRightsSection(
                         context,
-                        L10n.current.mapTabUsageDguName,
-                        'DGU',
-                        L10n.current.mapTabUsageDguDesc,
-                        'https://oss.uredjenazemlja.hr/',
+                        L10n.current.mapTabUsageZgsName,
+                        'ZGS',
+                        L10n.current.mapTabUsageZgsDesc,
+                        'https://www.zgs.si/',
                       ),
-                    _buildUsageRightsSection(
-                      context,
-                      'OpenStreetMap',
-                      'OSM',
-                      L10n.current.mapTabUsageOsmDesc,
-                      'https://www.openstreetmap.org/copyright',
-                    ),
-                    _buildUsageRightsSection(
-                      context,
-                      'ESRI',
-                      'Esri',
-                      L10n.current.mapTabUsageEsriDesc,
-                      'https://www.esri.com/en-us/legal/terms/full-master-agreement',
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.secondaryContainer
-                            .withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(8),
+                      if (L10n.current.localeName != 'hr')
+                        _buildUsageRightsSection(
+                          context,
+                          L10n.current.mapTabUsageDguName,
+                          'DGU',
+                          L10n.current.mapTabUsageDguDesc,
+                          'https://oss.uredjenazemlja.hr/',
+                        ),
+                      _buildUsageRightsSection(
+                        context,
+                        'OpenStreetMap',
+                        'OSM',
+                        L10n.current.mapTabUsageOsmDesc,
+                        'https://www.openstreetmap.org/copyright',
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              L10n.current.mapTabUsageDisclaimer,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                      _buildUsageRightsSection(
+                        context,
+                        'ESRI',
+                        'Esri',
+                        L10n.current.mapTabUsageEsriDesc,
+                        'https://www.esri.com/en-us/legal/terms/full-master-agreement',
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .secondaryContainer
+                              .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                L10n.current.mapTabUsageDisclaimer,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
