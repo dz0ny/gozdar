@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart' show LatLngBounds;
 import 'package:latlong2/latlong.dart';
@@ -49,6 +51,12 @@ class MapProvider extends ChangeNotifier {
   bool _isLoadingParcels = false;
   bool _isLoadingLogs = false;
   bool _isQueryingParcel = false;
+
+  // Database watches. Once a load* call starts one, every write to that
+  // table (from any screen) reaches the map without a manual reload.
+  StreamSubscription<List<MapLocation>>? _locationsSub;
+  StreamSubscription<List<Parcel>>? _parcelsSub;
+  StreamSubscription<List<LogEntry>>? _logsSub;
 
   // Area the map should show next, e.g. a share that just arrived.
   LatLngBounds? _pendingFocus;
@@ -207,6 +215,10 @@ class MapProvider extends ChangeNotifier {
 
   /// Load all saved locations from database
   Future<void> loadLocations() async {
+    _locationsSub ??= _databaseService.watchAllLocations().listen((rows) {
+      _locations = rows;
+      notifyListeners();
+    }, onError: _onWatchError);
     _isLoadingLocations = true;
     notifyListeners();
 
@@ -252,6 +264,10 @@ class MapProvider extends ChangeNotifier {
 
   /// Load all geolocated logs from database (logs with latitude/longitude)
   Future<void> loadGeolocatedLogs() async {
+    _logsSub ??= _databaseService.watchAllLogs().listen((rows) {
+      _geolocatedLogs = rows.where((log) => log.hasLocation).toList();
+      notifyListeners();
+    }, onError: _onWatchError);
     _isLoadingLogs = true;
     notifyListeners();
 
@@ -271,6 +287,10 @@ class MapProvider extends ChangeNotifier {
 
   /// Load all saved parcels from database
   Future<void> loadParcels() async {
+    _parcelsSub ??= _databaseService.watchAllParcels().listen((rows) {
+      _parcels = rows;
+      notifyListeners();
+    }, onError: _onWatchError);
     _isLoadingParcels = true;
     notifyListeners();
 
@@ -388,6 +408,20 @@ class MapProvider extends ChangeNotifier {
   void clearNavigationTarget() {
     _navigationTarget = null;
     notifyListeners();
+  }
+
+  void _onWatchError(Object e, StackTrace s) {
+    debugPrint('MapProvider watch failed: $e\n$s');
+    _error = e.toString();
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_locationsSub?.cancel());
+    unawaited(_parcelsSub?.cancel());
+    unawaited(_logsSub?.cancel());
+    super.dispose();
   }
 
   /// Clear error state

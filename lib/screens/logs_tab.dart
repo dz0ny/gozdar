@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 import '../models/log_batch.dart';
 import '../models/log_entry.dart';
 import '../providers/logs_provider.dart';
-import '../providers/map_provider.dart';
 import '../router/app_router.dart';
 import '../router/route_names.dart';
 import 'batch_detail_screen.dart';
@@ -141,23 +140,16 @@ class LogsTab extends StatelessWidget {
   /// Inline quick-add bar pinned under the list (no popup).
   Widget _buildInlineAdd(BuildContext context) {
     final provider = context.read<LogsProvider>();
-    final mapProvider = context.read<MapProvider>();
     return InlineAddLog(
       species: provider.currentSpecies,
       onAdd: (entry) async {
         await provider.addLogEntry(entry);
-        // Refresh map markers if log has location
-        if (entry.hasLocation) {
-          mapProvider.loadGeolocatedLogs();
-        }
       },
     );
   }
 
   void _editLogEntry(BuildContext context, LogEntry entry) {
     final provider = context.read<LogsProvider>();
-    final mapProvider = context.read<MapProvider>();
-    final hadLocation = entry.hasLocation;
 
     context.push(
       AppRoutes.logEdit(entry.id),
@@ -166,10 +158,6 @@ class LogsTab extends StatelessWidget {
         onSave: (result) async {
           final success = await provider.updateLogEntry(result);
           if (success && context.mounted) {
-            // Refresh map markers if location changed
-            if (hadLocation || result.hasLocation) {
-              mapProvider.loadGeolocatedLogs();
-            }
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(context.l10n.logsEntryUpdated)),
             );
@@ -189,14 +177,9 @@ class LogsTab extends StatelessWidget {
 
   Future<void> _deleteLogEntry(BuildContext context, LogEntry entry) async {
     final provider = context.read<LogsProvider>();
-    final mapProvider = context.read<MapProvider>();
     final success = await provider.deleteLogEntry(entry);
 
     if (success && context.mounted) {
-      // Refresh map markers if log had location
-      if (entry.hasLocation) {
-        mapProvider.loadGeolocatedLogs();
-      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.l10n.logsEntryDeleted),
@@ -204,10 +187,6 @@ class LogsTab extends StatelessWidget {
             label: context.l10n.logsUndo,
             onPressed: () async {
               await provider.restoreLogEntry(entry);
-              // Refresh map markers if log had location
-              if (entry.hasLocation) {
-                mapProvider.loadGeolocatedLogs();
-              }
             },
           ),
         ),

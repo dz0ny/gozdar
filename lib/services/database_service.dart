@@ -217,17 +217,19 @@ class DatabaseService {
     return (db.delete(db.logEntries)..where((t) => t.batchId.isNull())).go();
   }
 
+  SimpleSelectStatement<$LogEntriesTable, DbLogEntry> _allLogsQuery() =>
+      db.select(db.logEntries)..orderBy([
+        (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
+      ]);
+
   Future<List<LogEntry>> getAllLogs() async {
-    final rows =
-        await (db.select(db.logEntries)..orderBy([
-              (t) => OrderingTerm(
-                expression: t.createdAt,
-                mode: OrderingMode.desc,
-              ),
-            ]))
-            .get();
+    final rows = await _allLogsQuery().get();
     return rows.map(_logFromDb).toList();
   }
+
+  /// All logs, newest first, emitted again after every change to them.
+  Stream<List<LogEntry>> watchAllLogs() =>
+      _allLogsQuery().watch().map((rows) => rows.map(_logFromDb).toList());
 
   Future<double> getTotalVolume() async {
     final rows = await (db.select(
@@ -447,17 +449,21 @@ class DatabaseService {
     );
   }
 
+  SimpleSelectStatement<$MapLocationsTable, DbMapLocation>
+  _allLocationsQuery() => db.select(db.mapLocations)
+    ..orderBy([
+      (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
+    ]);
+
   Future<List<MapLocation>> getAllLocations() async {
-    final rows =
-        await (db.select(db.mapLocations)..orderBy([
-              (t) => OrderingTerm(
-                expression: t.createdAt,
-                mode: OrderingMode.desc,
-              ),
-            ]))
-            .get();
+    final rows = await _allLocationsQuery().get();
     return rows.map(_locationFromDb).toList();
   }
+
+  /// All locations, newest first, emitted again after every change to them.
+  Stream<List<MapLocation>> watchAllLocations() => _allLocationsQuery()
+      .watch()
+      .map((rows) => rows.map(_locationFromDb).toList());
 
   // ==================== RECEIVED SHARES ====================
 
@@ -602,17 +608,20 @@ class DatabaseService {
     });
   }
 
+  SimpleSelectStatement<$ParcelsTable, DbParcel> _allParcelsQuery() =>
+      db.select(db.parcels)..orderBy([
+        (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
+      ]);
+
   Future<List<Parcel>> getAllParcels() async {
-    final rows =
-        await (db.select(db.parcels)..orderBy([
-              (t) => OrderingTerm(
-                expression: t.createdAt,
-                mode: OrderingMode.desc,
-              ),
-            ]))
-            .get();
+    final rows = await _allParcelsQuery().get();
     return rows.map(_parcelFromDb).toList();
   }
+
+  /// All parcels, newest first, emitted again after every change to them.
+  Stream<List<Parcel>> watchAllParcels() => _allParcelsQuery().watch().map(
+    (rows) => rows.map(_parcelFromDb).toList(),
+  );
 
   Future<double> getTotalParcelArea() async {
     final parcels = await getAllParcels();

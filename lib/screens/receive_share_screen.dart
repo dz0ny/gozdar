@@ -41,8 +41,6 @@ class _ReceiveShareScreenState extends State<ReceiveShareScreen> {
             payload!.parcelNumber,
             payload.points.length,
           );
-          await mapProvider?.loadParcels();
-          await mapProvider?.loadLocations();
           mapProvider?.focusOn(payload);
         case ReceiveOutcome.expired:
           message = l10n.secnjaLinkExpired;

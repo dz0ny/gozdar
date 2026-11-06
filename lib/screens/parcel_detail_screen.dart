@@ -256,14 +256,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   }
 
   Future<void> _updateParcel(Parcel updatedParcel) async {
-    // Captured before the await: the map must refresh even if this screen
-    // is closed while the write runs.
-    final mapProvider = context.read<MapProvider>();
     setState(() => _isLoading = true);
     try {
       await _databaseService.updateParcel(updatedParcel);
-      // Refresh the map so the Karta tab reflects the edited polygon/name.
-      mapProvider.loadParcels();
       if (!mounted) return;
       setState(() {
         _parcel = updatedParcel;
@@ -1080,13 +1075,6 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
         final deleted = await _databaseService.deleteParcelWithContents(
           _parcel.id,
         );
-        // Notify map provider to refresh parcels, logs, and locations on map
-        if (mounted) {
-          final mapProvider = context.read<MapProvider>();
-          mapProvider.loadParcels();
-          mapProvider.loadGeolocatedLogs();
-          mapProvider.loadLocations();
-        }
         if (mounted) {
           final logsCount = deleted['logs'] ?? 0;
           final locationsCount = deleted['locations'] ?? 0;

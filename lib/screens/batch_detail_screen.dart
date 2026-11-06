@@ -9,7 +9,6 @@ import 'package:provider/provider.dart';
 import '../models/log_batch.dart';
 import '../models/log_entry.dart';
 import '../providers/logs_provider.dart';
-import '../providers/map_provider.dart';
 import '../router/app_router.dart';
 import '../router/route_names.dart';
 import '../services/database_service.dart';
@@ -94,8 +93,6 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
 
   /// Correct a saved log with the same full-screen form as the Hlodi tab.
   void _editLog(LogEntry entry) {
-    final mapProvider = context.read<MapProvider>();
-    final hadLocation = entry.hasLocation;
     context.push(
       AppRoutes.logEdit(entry.id),
       extra: LogEntryFormParams(
@@ -107,9 +104,6 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
               result.copyWith(batchId: _batch.id),
             );
             await _loadLogs();
-            if (hadLocation || result.hasLocation) {
-              mapProvider.loadGeolocatedLogs();
-            }
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(context.l10n.logsEntryUpdated)),

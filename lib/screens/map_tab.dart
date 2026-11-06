@@ -769,7 +769,6 @@ class MapTabState extends State<MapTab> {
     }
     _secnjaSession.add(mark);
     if (!mounted) return;
-    unawaited(context.read<MapProvider>().loadLocations());
     await _refreshSecnjaHeader();
     if (mark.parcelId == null) unawaited(_importSecnjaParcel(mark));
   }
@@ -803,7 +802,6 @@ class MapTabState extends State<MapTab> {
         );
       }
       if (!mounted) return;
-      unawaited(mapProvider.loadLocations());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -828,7 +826,6 @@ class MapTabState extends State<MapTab> {
     final last = _secnjaSession.removeLast();
     await DatabaseService().deleteLocation(last.id);
     if (!mounted) return;
-    unawaited(context.read<MapProvider>().loadLocations());
     await _refreshSecnjaHeader();
   }
 
@@ -934,7 +931,6 @@ class MapTabState extends State<MapTab> {
     try {
       await DatabaseService().insertLog(entry);
       await prefs.saveLastDimensions(entry.diameter!, entry.length!);
-      await mapProvider.loadGeolocatedLogs();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -3196,11 +3192,6 @@ class MapTabState extends State<MapTab> {
 
       await dbService.insertParcel(parcel);
 
-      // Reload parcels in provider
-      if (mounted) {
-        await context.read<MapProvider>().loadParcels();
-      }
-
       // Clear searched parcel
       setState(() {
         _searchedParcel = null;
@@ -3445,10 +3436,8 @@ class MapTabState extends State<MapTab> {
     );
 
     if (newName != null && mounted) {
-      final mapProvider = context.read<MapProvider>();
       final db = DatabaseService();
       await db.updateLocationName(location.id, newName);
-      await mapProvider.loadLocations();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(L10n.current.mapTabLocationRenamed(newName))),

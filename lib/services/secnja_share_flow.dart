@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../l10n/l10n.dart';
 import '../models/parcel.dart';
 import '../models/secnja_share.dart';
-import '../providers/map_provider.dart';
 import 'database_service.dart';
 import 'ko_locator.dart';
 import 'owner_lookup_service.dart';
@@ -27,8 +25,8 @@ SecnjaShareState secnjaShareState(Parcel parcel, String currentHash) {
       : SecnjaShareState.sharedChanged;
 }
 
-/// Checks the imported sečnja links, reloads the map marks after a change
-/// and tells the user what changed. [only] limits the check to some links.
+/// Checks the imported sečnja links and tells the user what changed (the
+/// map follows the database on its own). [only] limits the check to some links.
 /// [messenger] shows the messages when [context] has no ScaffoldMessenger
 /// above it. Returns true when any trees changed.
 Future<bool> refreshImportedSecnja(
@@ -41,7 +39,6 @@ Future<bool> refreshImportedSecnja(
   final l10n = context.l10n;
   final show = messenger ?? ScaffoldMessenger.of(context);
   final changed = results.any((r) => r.outcome == RefreshOutcome.updated);
-  if (changed) await context.read<MapProvider>().loadLocations();
   for (final r in results) {
     show.showSnackBar(
       SnackBar(

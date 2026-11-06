@@ -11,7 +11,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../models/parcel.dart';
-import '../providers/map_provider.dart';
 import '../router/navigation_notifier.dart';
 import '../router/route_names.dart';
 import '../services/secnja_share_service.dart';
@@ -172,13 +171,6 @@ class ForestTabState extends State<ForestTab> {
           parcel.id,
         );
         await _loadData();
-        // Notify map provider to refresh parcels, logs, and locations on map
-        if (mounted) {
-          final mapProvider = context.read<MapProvider>();
-          mapProvider.loadParcels();
-          mapProvider.loadGeolocatedLogs();
-          mapProvider.loadLocations();
-        }
         if (mounted) {
           final logsCount = deleted['logs'] ?? 0;
           final locationsCount = deleted['locations'] ?? 0;
