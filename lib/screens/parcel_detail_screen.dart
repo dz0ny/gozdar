@@ -256,20 +256,22 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   }
 
   Future<void> _updateParcel(Parcel updatedParcel) async {
+    // Captured before the await: the map must refresh even if this screen
+    // is closed while the write runs.
+    final mapProvider = context.read<MapProvider>();
     setState(() => _isLoading = true);
     try {
       await _databaseService.updateParcel(updatedParcel);
+      // Refresh the map so the Karta tab reflects the edited polygon/name.
+      mapProvider.loadParcels();
+      if (!mounted) return;
       setState(() {
         _parcel = updatedParcel;
         _isLoading = false;
       });
-      // Refresh the map so the Karta tab reflects the edited polygon/name.
-      if (mounted) {
-        context.read<MapProvider>().loadParcels();
-      }
     } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.parcelDetailUpdateError('$e'))),
         );

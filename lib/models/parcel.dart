@@ -35,12 +35,34 @@ class Parcel {
   // Populated externally when needed
   List<LogEntry> logs = [];
 
+  // [polygonJson] decoded once and reused until it changes. The map reads
+  // [polygon] for every parcel on every rebuild, several times per vertex, so
+  // decoding it on each access was the map tab's main cost.
+  String? _decodedJson;
+  List<LatLng> _polygon = const [];
+  List<String?> _pointNames = const [];
+  double? _areaM2;
+
+  void _decode() {
+    if (_decodedJson == polygonJson) return;
+    if (polygonJson.isEmpty) {
+      _polygon = const [];
+      _pointNames = const [];
+    } else {
+      final List<dynamic> decoded = jsonDecode(polygonJson);
+      _polygon = List.unmodifiable(
+        decoded.map((p) => LatLng(p['lat'] as double, p['lng'] as double)),
+      );
+      _pointNames = List.unmodifiable(decoded.map((p) => p['name'] as String?));
+    }
+    _areaM2 = null;
+    _decodedJson = polygonJson;
+  }
+
+  /// The corners, read-only: assign [polygon] to change them.
   List<LatLng> get polygon {
-    if (polygonJson.isEmpty) return [];
-    final List<dynamic> decoded = jsonDecode(polygonJson);
-    return decoded
-        .map((p) => LatLng(p['lat'] as double, p['lng'] as double))
-        .toList();
+    _decode();
+    return _polygon;
   }
 
   set polygon(List<LatLng> value) {
@@ -50,10 +72,10 @@ class Parcel {
     polygonJson = jsonEncode(data);
   }
 
+  /// Names of the corners, read-only, null where unnamed.
   List<String?> get pointNames {
-    if (polygonJson.isEmpty) return [];
-    final List<dynamic> decoded = jsonDecode(polygonJson);
-    return decoded.map((p) => p['name'] as String?).toList();
+    _decode();
+    return _pointNames;
   }
 
   ForestType get forestType => ForestType.values[forestTypeIndex];
@@ -130,7 +152,11 @@ class Parcel {
       isCadastral ? '$cadastralMunicipality/$parcelNumber' : null;
 
   double get areaM2 {
-    final poly = polygon;
+    final poly = polygon; // decodes, which resets _areaM2 when the JSON changed
+    return _areaM2 ??= _computeArea(poly);
+  }
+
+  static double _computeArea(List<LatLng> poly) {
     if (poly.length < 3) return 0.0;
     final centerLat =
         poly.map((p) => p.latitude).reduce((a, b) => a + b) / poly.length;

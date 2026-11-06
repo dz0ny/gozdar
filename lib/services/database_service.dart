@@ -572,31 +572,34 @@ class DatabaseService {
     await (db.delete(db.parcels)..where((t) => t.id.equals(id))).go();
   }
 
-  Future<Map<String, int>> deleteParcelWithContents(int id) async {
-    final row = await (db.select(
-      db.parcels,
-    )..where((t) => t.id.equals(id))).getSingleOrNull();
-    if (row == null) return {'logs': 0, 'locations': 0};
-    final parcel = _parcelFromDb(row);
+  /// Deletes the parcel, its logs and the locations on it, all or nothing.
+  Future<Map<String, int>> deleteParcelWithContents(int id) {
+    return db.transaction(() async {
+      final row = await (db.select(
+        db.parcels,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
+      if (row == null) return {'logs': 0, 'locations': 0};
+      final parcel = _parcelFromDb(row);
 
-    final logsDeleted = await (db.delete(
-      db.logEntries,
-    )..where((t) => t.parcelId.equals(id))).go();
+      final logsDeleted = await (db.delete(
+        db.logEntries,
+      )..where((t) => t.parcelId.equals(id))).go();
 
-    final allLocations = await getAllLocations();
-    int locationsDeleted = 0;
-    for (final loc in allLocations) {
-      if (loc.parcelId == id ||
-          parcel.containsPoint(LatLng(loc.latitude, loc.longitude))) {
-        await (db.delete(
-          db.mapLocations,
-        )..where((t) => t.id.equals(loc.id))).go();
-        locationsDeleted++;
-      }
-    }
+      final locationIds = [
+        for (final loc in await getAllLocations())
+          if (loc.parcelId == id ||
+              parcel.containsPoint(LatLng(loc.latitude, loc.longitude)))
+            loc.id,
+      ];
+      final locationsDeleted = locationIds.isEmpty
+          ? 0
+          : await (db.delete(
+              db.mapLocations,
+            )..where((t) => t.id.isIn(locationIds))).go();
 
-    await (db.delete(db.parcels)..where((t) => t.id.equals(id))).go();
-    return {'logs': logsDeleted, 'locations': locationsDeleted};
+      await (db.delete(db.parcels)..where((t) => t.id.equals(id))).go();
+      return {'logs': logsDeleted, 'locations': locationsDeleted};
+    });
   }
 
   Future<List<Parcel>> getAllParcels() async {

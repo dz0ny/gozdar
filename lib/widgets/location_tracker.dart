@@ -25,6 +25,18 @@ class LocationTracker {
 
   LocationTracker({this.onLocationUpdate});
 
+  /// Smallest heading change, in degrees, worth redrawing the map for.
+  static const double headingStepDeg = 2;
+
+  /// Whether the heading went from [from] to [to] by at least
+  /// [headingStepDeg], across north too (359° to 1° is 2°). A heading
+  /// appearing or going away always counts.
+  static bool headingMoved(double? from, double? to) {
+    if (from == null || to == null) return from != to;
+    final diff = (to - from).abs() % 360;
+    return (diff > 180 ? 360 - diff : diff) >= headingStepDeg;
+  }
+
   /// Initialize location tracking
   Future<void> initialize() async {
     if (_isScreenshotRun) return;
@@ -75,6 +87,10 @@ class LocationTracker {
     // Start compass updates
     _compassSubscription = FlutterCompass.events?.listen(
       (CompassEvent event) {
+        // The compass reports many times a second and jitters by fractions
+        // of a degree; each report rebuilds the whole map tab. Only report
+        // turns big enough to see on the heading marker.
+        if (!headingMoved(_userHeading, event.heading)) return;
         _userHeading = event.heading;
         onLocationUpdate?.call(_userPosition, _userHeading);
       },

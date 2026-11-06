@@ -131,7 +131,7 @@ class DroneBundleService {
         ),
       );
     } finally {
-      encoder.close();
+      await encoder.close();
     }
     return File(outPath);
   }
