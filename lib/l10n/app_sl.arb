@@ -921,6 +921,7 @@
   },
   "mapwLocationPermissionDenied": "Dovoljenje za lokacijo zavrnjeno — razdalja ni na voljo",
   "mapwCompass": "Kompas",
+  "mapwEndNavigation": "Končaj navigacijo",
   "mapwDistance": "Razdalja",
   "mapwAzimuth": "Azimut",
   "mapwDirection": "Smer",

@@ -18,10 +18,15 @@ class NavigationCompassDialog extends StatefulWidget {
   final LatLng targetLocation;
   final String targetName;
 
+  /// Clears the target, and with it the line to it on the map. When set,
+  /// the dialog shows an "end navigation" button that calls it and closes.
+  final VoidCallback? onEndNavigation;
+
   const NavigationCompassDialog({
     super.key,
     required this.targetLocation,
     required this.targetName,
+    this.onEndNavigation,
   });
 
   @override
@@ -212,13 +217,7 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
     return directions[index];
   }
 
-  String _formatDistance(double meters) {
-    if (meters < 1000) {
-      return '${meters.round()} m';
-    } else {
-      return '${Fmt.num(meters / 1000, 1)} km';
-    }
-  }
+  String _formatDistance(double meters) => Fmt.distance(meters);
 
   String _formatDMS(double degrees, bool isLatitude) {
     final direction = isLatitude
@@ -359,6 +358,20 @@ class _NavigationCompassDialogState extends State<NavigationCompassDialog> {
 
                 // Target coordinates
                 _buildCoordinatesCard(),
+                if (widget.onEndNavigation != null) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        widget.onEndNavigation!();
+                        Navigator.pop(context);
+                      },
+                      icon: const Icon(Icons.wrong_location_outlined),
+                      label: Text(context.l10n.mapwEndNavigation),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -1279,6 +1279,9 @@ class AppLocalizationsHr extends AppLocalizations {
   String get mapwCompass => 'Kompas';
 
   @override
+  String get mapwEndNavigation => 'Završi navigaciju';
+
+  @override
   String get mapwDistance => 'Udaljenost';
 
   @override

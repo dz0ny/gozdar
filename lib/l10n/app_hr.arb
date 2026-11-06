@@ -343,6 +343,7 @@
   "mapwCompassMediumAccuracy": "Umjerena točnost kompasa (±{degrees}°)",
   "mapwLocationPermissionDenied": "Dopuštenje za lokaciju odbijeno — udaljenost nije dostupna",
   "mapwCompass": "Kompas",
+  "mapwEndNavigation": "Završi navigaciju",
   "mapwDistance": "Udaljenost",
   "mapwAzimuth": "Azimut",
   "mapwDirection": "Smjer",

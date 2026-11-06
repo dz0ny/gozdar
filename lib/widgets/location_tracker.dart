@@ -2,9 +2,28 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 
 import '../services/location_settings.dart';
+
+/// Where the user is and which way they face.
+@immutable
+class UserFix {
+  const UserFix(this.position, this.heading);
+
+  final LatLng position;
+  final double? heading;
+
+  @override
+  bool operator ==(Object other) =>
+      other is UserFix &&
+      other.position == position &&
+      other.heading == heading;
+
+  @override
+  int get hashCode => Object.hash(position, heading);
+}
 
 /// Manages user location tracking and compass functionality
 class LocationTracker {
@@ -24,6 +43,21 @@ class LocationTracker {
   double? get userHeading => _userHeading;
 
   LocationTracker({this.onLocationUpdate});
+
+  /// The latest fix, for widgets that redraw only the user's position, so a
+  /// GPS fix or compass turn doesn't rebuild the whole map.
+  final ValueNotifier<UserFix?> fix = ValueNotifier(null);
+
+  void _report() {
+    final position = _userPosition;
+    if (position != null) {
+      fix.value = UserFix(
+        LatLng(position.latitude, position.longitude),
+        _userHeading,
+      );
+    }
+    onLocationUpdate?.call(_userPosition, _userHeading);
+  }
 
   /// Smallest heading change, in degrees, worth redrawing the map for.
   static const double headingStepDeg = 2;
@@ -61,7 +95,7 @@ class LocationTracker {
         locationSettings: GozdarLocationSettings.currentPosition,
       );
       _userPosition = position;
-      onLocationUpdate?.call(_userPosition, _userHeading);
+      _report();
     } catch (e) {
       debugPrint('Error getting initial position: $e');
     }
@@ -77,7 +111,7 @@ class LocationTracker {
             if (_userHeading == null && position.heading >= 0) {
               _userHeading = position.heading;
             }
-            onLocationUpdate?.call(_userPosition, _userHeading);
+            _report();
           },
           onError: (error) {
             debugPrint('Location stream error: $error');
@@ -92,7 +126,7 @@ class LocationTracker {
         // turns big enough to see on the heading marker.
         if (!headingMoved(_userHeading, event.heading)) return;
         _userHeading = event.heading;
-        onLocationUpdate?.call(_userPosition, _userHeading);
+        _report();
       },
       onError: (error) {
         debugPrint('Compass error: $error');
@@ -104,5 +138,6 @@ class LocationTracker {
   void dispose() {
     _compassSubscription?.cancel();
     _positionSubscription?.cancel();
+    fix.dispose();
   }
 }

@@ -2161,6 +2161,12 @@ abstract class AppLocalizations {
   /// **'Kompas'**
   String get mapwCompass;
 
+  /// No description provided for @mapwEndNavigation.
+  ///
+  /// In sl, this message translates to:
+  /// **'Končaj navigacijo'**
+  String get mapwEndNavigation;
+
   /// No description provided for @mapwDistance.
   ///
   /// In sl, this message translates to:

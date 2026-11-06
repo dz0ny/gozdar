@@ -25,6 +25,10 @@ class Fmt {
   static String area(double m2) =>
       m2 >= 10000 ? '${num(m2 / 10000, 2)} ha' : '${num(m2, 0)} m²';
 
+  /// Distance as m below a kilometre, km above, e.g. "230 m" / "1,4 km".
+  static String distance(double meters) =>
+      meters < 1000 ? '${meters.round()} m' : '${num(meters / 1000, 1)} km';
+
   /// Calendar date, e.g. "31. 10. 2026".
   static String date(DateTime d) => DateFormat('d. M. yyyy', _locale).format(d);
 

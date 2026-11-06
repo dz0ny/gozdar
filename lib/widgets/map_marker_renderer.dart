@@ -27,8 +27,8 @@ class MapMarkerRenderer {
     required this.locations,
     required this.parcels,
     required this.geolocatedLogs,
-    required this.userPosition,
-    required this.userHeading,
+    this.userPosition,
+    this.userHeading,
     required this.primaryColor,
     this.onLocationTap,
     this.onLocationLongPress,
@@ -202,16 +202,26 @@ class MapMarkerRenderer {
   Marker? buildUserLocationMarker() {
     if (userPosition == null) return null;
 
-    final userSize = getMarkerSize(30);
+    return userLocationMarker(
+      position: userPosition!,
+      heading: userHeading,
+      size: getMarkerSize(30),
+      color: primaryColor,
+    );
+  }
+
+  /// The user's position and heading, [size] already scaled to the zoom.
+  static Marker userLocationMarker({
+    required LatLng position,
+    required double? heading,
+    required double size,
+    required Color color,
+  }) {
     return Marker(
-      point: userPosition!,
-      width: userSize,
-      height: userSize,
-      child: LocationPointer(
-        heading: userHeading,
-        color: primaryColor,
-        size: userSize,
-      ),
+      point: position,
+      width: size,
+      height: size,
+      child: LocationPointer(heading: heading, color: color, size: size),
     );
   }
 
@@ -228,11 +238,8 @@ class MapMarkerRenderer {
     // Log markers
     markers.addAll(buildLogMarkers());
 
-    // User location marker
-    final userMarker = buildUserLocationMarker();
-    if (userMarker != null) {
-      markers.add(userMarker);
-    }
+    // The user's own marker is drawn by UserLocationLayer, which redraws on
+    // a GPS fix without rebuilding these.
 
     return markers;
   }

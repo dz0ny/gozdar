@@ -1287,6 +1287,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapwCompass => 'Kompas';
 
   @override
+  String get mapwEndNavigation => 'Končaj navigacijo';
+
+  @override
   String get mapwDistance => 'Razdalja';
 
   @override

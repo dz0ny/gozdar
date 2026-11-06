@@ -59,6 +59,8 @@ import '../widgets/parcel_search_dialog.dart';
 import '../widgets/map_marker_renderer.dart';
 import '../widgets/map_layer_renderer.dart';
 import '../widgets/location_tracker.dart';
+import '../widgets/navigation_chip.dart';
+import '../widgets/user_location_layer.dart';
 import '../widgets/map_dialog_manager.dart';
 import '../widgets/parcel_found_sheet.dart';
 import 'parcel_detail_screen.dart';
@@ -487,6 +489,7 @@ class MapTabState extends State<MapTab> {
           child: NavigationCompassDialog(
             targetLocation: navigationTarget.location,
             targetName: navigationTarget.name,
+            onEndNavigation: clearNavigationTarget,
           ),
         ),
       ),
@@ -530,15 +533,9 @@ class MapTabState extends State<MapTab> {
     if (AuctionService.instance.visible) {
       unawaited(AuctionService.instance.ensureLoaded());
     }
-    _locationTracker = LocationTracker(
-      onLocationUpdate: (position, heading) {
-        if (mounted) {
-          setState(() {
-            // LocationTracker already updated its internal state
-          });
-        }
-      },
-    );
+    // No setState per fix: UserLocationLayer and NavigationLineLayer listen
+    // to the tracker themselves, so GPS and compass don't rebuild this tab.
+    _locationTracker = LocationTracker();
     _dialogManager = MapDialogManager(
       context: context,
       onDeleteLocation: _showDeleteLocationDialog,
@@ -2349,21 +2346,12 @@ class MapTabState extends State<MapTab> {
         if (mounted) _refreshVlake();
       });
     }
-    final activeUserPosition = _locationTracker.userPosition != null
-        ? LatLng(
-            _locationTracker.userPosition!.latitude,
-            _locationTracker.userPosition!.longitude,
-          )
-        : null;
-
     // Create marker renderer using provider data directly
     final markerRenderer = MapMarkerRenderer(
       currentZoom: _currentZoom,
       locations: mapProvider.locations,
       parcels: mapProvider.parcels,
       geolocatedLogs: mapProvider.geolocatedLogs,
-      userPosition: activeUserPosition,
-      userHeading: _locationTracker.userHeading,
       primaryColor: Theme.of(context).colorScheme.primary,
       onLocationTap: (point, name) => setNavigationTarget(
         NavigationTarget(location: point, name: name),
@@ -2687,23 +2675,18 @@ class MapTabState extends State<MapTab> {
                   ),
                 // All markers using the unified renderer
                 MarkerLayer(markers: markerRenderer.getAllMarkers()),
+                UserLocationLayer(
+                  fix: _locationTracker.fix,
+                  size: markerRenderer.getMarkerSize(30),
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 if (_measurement.points.isNotEmpty)
                   MarkerLayer(markers: _measurementMarkers()),
                 // Navigation target line (from user to target)
-                if (mapProvider.navigationTarget != null &&
-                    activeUserPosition != null)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: [
-                          activeUserPosition,
-                          mapProvider.navigationTarget!.location,
-                        ],
-                        color: Colors.orange.withValues(alpha: 0.6),
-                        strokeWidth: 3,
-                        pattern: const StrokePattern.dotted(),
-                      ),
-                    ],
+                if (mapProvider.navigationTarget != null)
+                  NavigationLineLayer(
+                    fix: _locationTracker.fix,
+                    target: mapProvider.navigationTarget!.location,
                   ),
                 // Navigation target marker
                 if (mapProvider.navigationTarget != null)
@@ -2874,7 +2857,15 @@ class MapTabState extends State<MapTab> {
     return ValueListenableBuilder<TileDownloadVisualState>(
       valueListenable: _tileCacheService.downloadVisualStateListenable,
       builder: (context, downloadState, _) {
+        final navigationTarget = mapProvider.navigationTarget;
         final cards = <Widget>[
+          if (navigationTarget != null)
+            NavigationChip(
+              target: navigationTarget,
+              fix: _locationTracker.fix,
+              onOpenCompass: showCompassForTarget,
+              onEnd: clearNavigationTarget,
+            ),
           if (_downloadingRegionName != null) _buildRegionDownloadCard(context),
           if (downloadState.isDownloading)
             _buildTileDownloadCard(context, downloadState),
