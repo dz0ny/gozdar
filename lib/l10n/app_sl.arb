@@ -1435,6 +1435,59 @@
   "valuationSource": "Posplošena tržna vrednost GURS, izračun {date}. Podatki so informativni.",
   "valuationSourceUndated": "Posplošena tržna vrednost GURS. Podatki so informativni.",
   "valuationOpenGurs": "Odpri v evidenci vrednotenja",
+  "valuationBuildings": "Stavbe",
+  "valuationBuilding": "Stavba",
+  "valuationBuildingNumber": "stavba {number}",
+  "@valuationBuildingNumber": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "valuationBuildingYear": "zgrajena {year}",
+  "@valuationBuildingYear": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "valuationBuildingParts": "{count, plural, one{{count} del} two{{count} dela} few{{count} deli} other{{count} delov}}",
+  "@valuationBuildingParts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "valuationBuildingSpans": "Stoji tudi na sosednji parceli; vrednost je za celo stavbo.",
+  "valuationBuildingNoValue": "Vrednost v evidenci GURS",
+  "valuationLandAndBuildings": "zemljišče {land} € · stavbe {buildings} €",
+  "@valuationLandAndBuildings": {
+    "placeholders": {
+      "land": {
+        "type": "String"
+      },
+      "buildings": {
+        "type": "String"
+      }
+    }
+  },
+  "valuationBuildingLandNote": "Vrednost stavbe vključuje zemljišče pod njo.",
+  "valuationBuildingModelHIS": "Hiša",
+  "valuationBuildingModelSTA": "Stanovanje",
+  "valuationBuildingModelGAR": "Garaža",
+  "valuationBuildingModelPPL": "Lokal",
+  "valuationBuildingModelPPP": "Pisarna",
+  "valuationBuildingModelTUR": "Stavba za turizem",
+  "valuationBuildingModelIND": "Industrijska stavba",
+  "valuationBuildingModelINP": "Industrijska stavba",
+  "valuationBuildingModelSDP": "Javna stavba",
+  "valuationBuildingModelKDS": "Kmetijska ali druga stavba",
+  "valuationBuildingModelPNE": "Elektrarna",
+  "valuationBuildingModelPNP": "Marina ali pristanišče",
+  "valuationBuildingModelPNB": "Bencinski servis",
   "valuationModelGOZ": "Gozd",
   "valuationModelKME": "Kmetijsko zemljišče",
   "valuationModelSTZ": "Stavbno zemljišče",

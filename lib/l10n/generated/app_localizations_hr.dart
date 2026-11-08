@@ -1939,6 +1939,89 @@ class AppLocalizationsHr extends AppLocalizations {
   String get valuationOpenGurs => 'Otvori u evidenciji vrednovanja';
 
   @override
+  String get valuationBuildings => 'Zgrade';
+
+  @override
+  String get valuationBuilding => 'Zgrada';
+
+  @override
+  String valuationBuildingNumber(String number) {
+    return 'zgrada $number';
+  }
+
+  @override
+  String valuationBuildingYear(String year) {
+    return 'izgrađena $year';
+  }
+
+  @override
+  String valuationBuildingParts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dijelova',
+      few: '$count dijela',
+      one: '$count dio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get valuationBuildingSpans =>
+      'Stoji i na susjednoj čestici; vrijednost je za cijelu zgradu.';
+
+  @override
+  String get valuationBuildingNoValue => 'Vrijednost u evidenciji GURS-a';
+
+  @override
+  String valuationLandAndBuildings(String land, String buildings) {
+    return 'zemljište $land € · zgrade $buildings €';
+  }
+
+  @override
+  String get valuationBuildingLandNote =>
+      'Vrijednost zgrade uključuje zemljište pod njom.';
+
+  @override
+  String get valuationBuildingModelHIS => 'Kuća';
+
+  @override
+  String get valuationBuildingModelSTA => 'Stan';
+
+  @override
+  String get valuationBuildingModelGAR => 'Garaža';
+
+  @override
+  String get valuationBuildingModelPPL => 'Lokal';
+
+  @override
+  String get valuationBuildingModelPPP => 'Ured';
+
+  @override
+  String get valuationBuildingModelTUR => 'Zgrada za turizam';
+
+  @override
+  String get valuationBuildingModelIND => 'Industrijska zgrada';
+
+  @override
+  String get valuationBuildingModelINP => 'Industrijska zgrada';
+
+  @override
+  String get valuationBuildingModelSDP => 'Javna zgrada';
+
+  @override
+  String get valuationBuildingModelKDS => 'Poljoprivredna ili druga zgrada';
+
+  @override
+  String get valuationBuildingModelPNE => 'Elektrana';
+
+  @override
+  String get valuationBuildingModelPNP => 'Marina ili luka';
+
+  @override
+  String get valuationBuildingModelPNB => 'Benzinska postaja';
+
+  @override
   String get valuationModelGOZ => 'Šuma';
 
   @override

@@ -3265,6 +3265,138 @@ abstract class AppLocalizations {
   /// **'Odpri v evidenci vrednotenja'**
   String get valuationOpenGurs;
 
+  /// No description provided for @valuationBuildings.
+  ///
+  /// In sl, this message translates to:
+  /// **'Stavbe'**
+  String get valuationBuildings;
+
+  /// No description provided for @valuationBuilding.
+  ///
+  /// In sl, this message translates to:
+  /// **'Stavba'**
+  String get valuationBuilding;
+
+  /// No description provided for @valuationBuildingNumber.
+  ///
+  /// In sl, this message translates to:
+  /// **'stavba {number}'**
+  String valuationBuildingNumber(String number);
+
+  /// No description provided for @valuationBuildingYear.
+  ///
+  /// In sl, this message translates to:
+  /// **'zgrajena {year}'**
+  String valuationBuildingYear(String year);
+
+  /// No description provided for @valuationBuildingParts.
+  ///
+  /// In sl, this message translates to:
+  /// **'{count, plural, one{{count} del} two{{count} dela} few{{count} deli} other{{count} delov}}'**
+  String valuationBuildingParts(int count);
+
+  /// No description provided for @valuationBuildingSpans.
+  ///
+  /// In sl, this message translates to:
+  /// **'Stoji tudi na sosednji parceli; vrednost je za celo stavbo.'**
+  String get valuationBuildingSpans;
+
+  /// No description provided for @valuationBuildingNoValue.
+  ///
+  /// In sl, this message translates to:
+  /// **'Vrednost v evidenci GURS'**
+  String get valuationBuildingNoValue;
+
+  /// No description provided for @valuationLandAndBuildings.
+  ///
+  /// In sl, this message translates to:
+  /// **'zemljišče {land} € · stavbe {buildings} €'**
+  String valuationLandAndBuildings(String land, String buildings);
+
+  /// No description provided for @valuationBuildingLandNote.
+  ///
+  /// In sl, this message translates to:
+  /// **'Vrednost stavbe vključuje zemljišče pod njo.'**
+  String get valuationBuildingLandNote;
+
+  /// No description provided for @valuationBuildingModelHIS.
+  ///
+  /// In sl, this message translates to:
+  /// **'Hiša'**
+  String get valuationBuildingModelHIS;
+
+  /// No description provided for @valuationBuildingModelSTA.
+  ///
+  /// In sl, this message translates to:
+  /// **'Stanovanje'**
+  String get valuationBuildingModelSTA;
+
+  /// No description provided for @valuationBuildingModelGAR.
+  ///
+  /// In sl, this message translates to:
+  /// **'Garaža'**
+  String get valuationBuildingModelGAR;
+
+  /// No description provided for @valuationBuildingModelPPL.
+  ///
+  /// In sl, this message translates to:
+  /// **'Lokal'**
+  String get valuationBuildingModelPPL;
+
+  /// No description provided for @valuationBuildingModelPPP.
+  ///
+  /// In sl, this message translates to:
+  /// **'Pisarna'**
+  String get valuationBuildingModelPPP;
+
+  /// No description provided for @valuationBuildingModelTUR.
+  ///
+  /// In sl, this message translates to:
+  /// **'Stavba za turizem'**
+  String get valuationBuildingModelTUR;
+
+  /// No description provided for @valuationBuildingModelIND.
+  ///
+  /// In sl, this message translates to:
+  /// **'Industrijska stavba'**
+  String get valuationBuildingModelIND;
+
+  /// No description provided for @valuationBuildingModelINP.
+  ///
+  /// In sl, this message translates to:
+  /// **'Industrijska stavba'**
+  String get valuationBuildingModelINP;
+
+  /// No description provided for @valuationBuildingModelSDP.
+  ///
+  /// In sl, this message translates to:
+  /// **'Javna stavba'**
+  String get valuationBuildingModelSDP;
+
+  /// No description provided for @valuationBuildingModelKDS.
+  ///
+  /// In sl, this message translates to:
+  /// **'Kmetijska ali druga stavba'**
+  String get valuationBuildingModelKDS;
+
+  /// No description provided for @valuationBuildingModelPNE.
+  ///
+  /// In sl, this message translates to:
+  /// **'Elektrarna'**
+  String get valuationBuildingModelPNE;
+
+  /// No description provided for @valuationBuildingModelPNP.
+  ///
+  /// In sl, this message translates to:
+  /// **'Marina ali pristanišče'**
+  String get valuationBuildingModelPNP;
+
+  /// No description provided for @valuationBuildingModelPNB.
+  ///
+  /// In sl, this message translates to:
+  /// **'Bencinski servis'**
+  String get valuationBuildingModelPNB;
+
   /// No description provided for @valuationModelGOZ.
   ///
   /// In sl, this message translates to:

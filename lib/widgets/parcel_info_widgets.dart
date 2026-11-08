@@ -286,11 +286,12 @@ String euros(BuildContext context, num value) {
   ).format(value);
 }
 
-/// "3.190 € · 0,91 €/m²" for one-line places.
+/// "3.190 € · 0,91 €/m²" for one-line places; €/m² only for bare land,
+/// since a building's value is not per m² of the parcel.
 String valuationSummary(BuildContext context, ParcelValuation v) {
-  final perM2 = v.perSquareMeter;
+  final perM2 = v.buildingsTotal > 0 ? null : v.perSquareMeter;
   return [
-    '${euros(context, v.total)} €',
+    '${euros(context, v.totalWithBuildings)} €',
     if (perM2 != null) context.l10n.valuationPerM2(euros(context, perM2)),
   ].join(' · ');
 }
@@ -411,9 +412,31 @@ class ParcelValuationCard extends StatelessWidget {
   }
 }
 
-/// The valuation itself: the total and €/m² in large type with the kind of
-/// land under it, a row per kind only when there are several, the forest
-/// factors with a plain-words line each, and the source with a link to GURS.
+/// GURS name of a building part's model: "Hiša", "Garaža", …
+String _buildingModelName(BuildContext context, String? model) {
+  final l10n = context.l10n;
+  return switch (model) {
+    'HIS' => l10n.valuationBuildingModelHIS,
+    'STA' => l10n.valuationBuildingModelSTA,
+    'GAR' => l10n.valuationBuildingModelGAR,
+    'PPL' => l10n.valuationBuildingModelPPL,
+    'PPP' => l10n.valuationBuildingModelPPP,
+    'TUR' => l10n.valuationBuildingModelTUR,
+    'IND' => l10n.valuationBuildingModelIND,
+    'INP' => l10n.valuationBuildingModelINP,
+    'SDP' => l10n.valuationBuildingModelSDP,
+    'KDS' => l10n.valuationBuildingModelKDS,
+    'PNE' => l10n.valuationBuildingModelPNE,
+    'PNP' => l10n.valuationBuildingModelPNP,
+    'PNB' => l10n.valuationBuildingModelPNB,
+    _ => l10n.valuationBuilding,
+  };
+}
+
+/// The valuation itself: the total in large type (€/m² beside it for bare
+/// land), the kinds of land, the buildings on the parcel with their value,
+/// the forest factors with a plain-words line each, and the source with a
+/// link to GURS.
 class ParcelValuationView extends StatelessWidget {
   final ParcelValuation valuation;
 
@@ -435,7 +458,8 @@ class ParcelValuationView extends StatelessWidget {
     final muted = theme.textTheme.bodyMedium?.copyWith(
       color: cs.onSurfaceVariant,
     );
-    final perM2 = v.perSquareMeter;
+    final withBuildings = v.buildingsTotal > 0;
+    final perM2 = withBuildings ? null : v.perSquareMeter;
     final date = v.modelDate;
     final single = v.parts.length == 1;
     final shareFormat = NumberFormat.decimalPatternDigits(
@@ -454,7 +478,7 @@ class ParcelValuationView extends StatelessWidget {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                '${euros(context, v.total)} €',
+                '${euros(context, v.totalWithBuildings)} €',
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: cs.primary,
@@ -468,10 +492,20 @@ class ParcelValuationView extends StatelessWidget {
                 ),
             ],
           ),
-          if (single) Text(_partLine(context, v.parts.single), style: muted),
+          if (withBuildings)
+            Text(
+              l10n.valuationLandAndBuildings(
+                euros(context, v.total),
+                euros(context, v.buildingsTotal),
+              ),
+              style: muted,
+            ),
+          if (single && !withBuildings)
+            Text(_partLine(context, v.parts.single), style: muted),
         ],
-        // Several kinds of land: each with its share and value.
-        if (!single) ...[
+        // Several kinds of land, or land next to buildings: each with its
+        // share and value.
+        if (!single || withBuildings) ...[
           const SizedBox(height: 8),
           for (final part in v.parts)
             Padding(
@@ -504,6 +538,12 @@ class ParcelValuationView extends StatelessWidget {
                 ],
               ),
             ),
+        ],
+        if (v.buildings.isNotEmpty) ...[
+          Divider(height: 24, color: cs.outlineVariant),
+          Text(l10n.valuationBuildings, style: theme.textTheme.titleSmall),
+          for (final b in v.buildings) _building(context, b),
+          Text(l10n.valuationBuildingLandNote, style: muted),
         ],
         if (v.isForest) ...[
           const SizedBox(height: 8),
@@ -552,6 +592,55 @@ class ParcelValuationView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// One building: its kind and number, the year and parts under it, the
+  /// value right, and a line when it stands on other parcels too.
+  Widget _building(BuildContext context, BuildingValuation b) {
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final muted = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    final value = b.value;
+    final models = b.models;
+    final title = [
+      _buildingModelName(context, models.firstOrNull),
+      if (b.number != null) l10n.valuationBuildingNumber('${b.number}'),
+    ].join(' · ');
+    final details = [
+      if (b.year != null && b.year! > 0)
+        l10n.valuationBuildingYear('${b.year}'),
+      if (b.partCount > 1) l10n.valuationBuildingParts(b.partCount),
+      if (value == null) l10n.valuationBuildingNoValue,
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: theme.textTheme.bodyLarge),
+                if (details.isNotEmpty) Text(details, style: muted),
+                if (b.spansParcels)
+                  Text(l10n.valuationBuildingSpans, style: muted),
+              ],
+            ),
+          ),
+          if (value != null) ...[
+            const SizedBox(width: 12),
+            Text(
+              '${euros(context, value)} €',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

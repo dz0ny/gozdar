@@ -102,4 +102,103 @@ void main() {
       expect(v.perSquareMeter, isNull);
     });
   });
+
+  group('SiValuationService buildings', () {
+    const parcel = {
+      'pcMid': 27533672,
+      'koSifko': 1695,
+      'parcela': '103',
+      'povrsina': 500.0,
+    };
+    const land = [
+      {'model': 'STZ', 'delezPov': 90.0, 'posplosenaVrednost': 40000},
+      {'model': 'ZPS', 'delezPov': 10.0, 'posplosenaVrednost': 0},
+    ];
+    Map<String, dynamic> building({
+      int staSid = 21467654,
+      num here = 41,
+      num footprint = 41,
+      List<Map<String, dynamic>> parts = const [
+        {'model': 'KDS', 'vrednost': 12562.89, 'napakaOpis': null},
+      ],
+      int? partCount,
+    }) => {
+      'staSid': staSid,
+      'stevStavbe': 284,
+      'letoIzgSta': 1928,
+      'zemPodStavbo': footprint,
+      'povrsinaNaParceli': here,
+      'partCount': partCount ?? parts.length,
+      'parts': parts,
+    };
+
+    test('a building only on the parcel adds to the total', () {
+      final v = SiValuationService.parse(parcel, land, buildings: [building()]);
+      final b = v.buildings.single;
+      expect(b.number, 284);
+      expect(b.year, 1928);
+      expect(b.value, 12563);
+      expect(b.models, ['KDS']);
+      expect(b.spansParcels, isFalse);
+      expect(v.total, 40000);
+      expect(v.buildingsTotal, 12563);
+      expect(v.totalWithBuildings, 52563);
+    });
+
+    test('parts are summed, a house first', () {
+      final b = SiValuationService.parseBuilding(
+        building(
+          parts: [
+            {'model': 'HIS', 'vrednost': 150000, 'napakaOpis': null},
+            {'model': 'GAR', 'vrednost': 9000, 'napakaOpis': null},
+            {'model': 'HIS', 'vrednost': 1000, 'napakaOpis': null},
+          ],
+        ),
+      );
+      expect(b.value, 160000);
+      expect(b.models, ['HIS', 'GAR']);
+    });
+
+    test('a building on other parcels too is listed, not added', () {
+      final v = SiValuationService.parse(
+        parcel,
+        land,
+        buildings: [building(here: 20, footprint: 41)],
+      );
+      expect(v.buildings.single.spansParcels, isTrue);
+      expect(v.buildingsTotal, 0);
+      expect(v.totalWithBuildings, 40000);
+    });
+
+    test('a part without a value, or too many parts, gives no value', () {
+      final failed = SiValuationService.parseBuilding(
+        building(
+          parts: [
+            {'model': 'HIS', 'vrednost': 1000, 'napakaOpis': null},
+            {'model': 'GAR', 'vrednost': 500, 'napakaOpis': 'Napaka'},
+          ],
+        ),
+      );
+      expect(failed.value, isNull);
+
+      final big = SiValuationService.parseBuilding(
+        building(parts: const [], partCount: 40),
+      );
+      expect(big.hasAllParts, isFalse);
+      expect(big.value, isNull);
+    });
+
+    test('only land under a building, with the building valued', () {
+      final v = SiValuationService.parse(
+        parcel,
+        const [
+          {'model': 'ZPS', 'delezPov': 100.0, 'posplosenaVrednost': 0},
+        ],
+        buildings: [building()],
+      );
+      expect(v.total, 0);
+      expect(v.isUnvalued, isFalse);
+      expect(v.totalWithBuildings, 12563);
+    });
+  });
 }
