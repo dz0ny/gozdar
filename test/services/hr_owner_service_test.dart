@@ -259,6 +259,57 @@ void main() {
     test('no ZK owners gives null so the cadastre is used', () {
       expect(HrOwnerService.parseLrUnits([{}], prezidParcel), isNull);
     });
+
+    group('ownersFrom', () {
+      final prezidUnit = <String, dynamic>{
+        'mainBookId': 30978,
+        'lrUnitNumber': '1876',
+        'ownershipSheetB': {
+          'lrUnitShares': [
+            {
+              'description': '1. Vlasnički dio: 1/1',
+              'status': 0,
+              'lrOwners': [
+                {'name': 'ZAKLADA', 'address': 'ZAGREB'},
+              ],
+            },
+          ],
+        },
+      };
+      const cadastreHolder =
+          'FINVEST CORP D.D. ZA PROIZVODNJU, TRGOVINU I USLUGE';
+
+      test('every unit read: ZK owners, complete', () {
+        final a = HrOwnerService.ownersFrom(prezidParcel, [prezidUnit]);
+        expect(a.info!.owners, ['ZAKLADA']);
+        expect(a.complete, isTrue);
+      });
+
+      test('no ZK unit: cadastre holders, complete', () {
+        final a = HrOwnerService.ownersFrom(prezidParcel, const []);
+        expect(a.info!.owners, [cadastreHolder]);
+        expect(a.info!.sources.single.kind, OwnerSourceKind.cadastre);
+        expect(a.complete, isTrue);
+      });
+
+      test('ZK read but lists no owners: cadastre holders, complete', () {
+        final a = HrOwnerService.ownersFrom(prezidParcel, [{}]);
+        expect(a.info!.owners, [cadastreHolder]);
+        expect(a.complete, isTrue);
+      });
+
+      test('ZK unreachable: cadastre holders, not complete', () {
+        final a = HrOwnerService.ownersFrom(prezidParcel, [null]);
+        expect(a.info!.owners, [cadastreHolder]);
+        expect(a.complete, isFalse);
+      });
+
+      test('one of two units failed: ZK owners read, not complete', () {
+        final a = HrOwnerService.ownersFrom(prezidParcel, [prezidUnit, null]);
+        expect(a.info!.owners, ['ZAKLADA']);
+        expect(a.complete, isFalse);
+      });
+    });
   });
 
   group('owner list', () {

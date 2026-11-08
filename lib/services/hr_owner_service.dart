@@ -9,6 +9,10 @@ import 'ko_locator.dart';
 import 'lookup_cache_store.dart';
 import 'owner_lookup_service.dart';
 
+/// Owners found for a parcel, and whether the answer is complete enough to
+/// cache: false when a ZK unit the parcel links to could not be read.
+typedef HrOwnerAnswer = ({OwnerInfo? info, bool complete});
+
 /// A cached Croatian parcel whose holders matched [HrOwnerService.searchCached].
 class HrOwnerHit {
   const HrOwnerHit(this.sifko, this.parcela, this.info);
@@ -22,8 +26,9 @@ class HrOwnerHit {
 /// (oss.uredjenazemlja.hr). The land registry (zemljišna knjiga, sheet B)
 /// is the legal record of ownership, so its owners come first; the cadastre
 /// holders (posjednici) are used only when the parcel has no ZK unit or the
-/// ZK request fails. Every answer is kept on disk with no expiry, so a parcel
-/// is asked about once; misses are not cached.
+/// ZK request fails. A complete answer is kept on disk with no expiry, so a
+/// parcel is asked about once. Misses, and answers with a ZK unit that could
+/// not be read, are not cached, so the next look asks again.
 class HrOwnerService {
   HrOwnerService._();
   static final HrOwnerService instance = HrOwnerService._();
@@ -84,10 +89,11 @@ class HrOwnerService {
   /// Rows hold [_toJson] answers keyed `sifko/parcela`, searchable by
   /// [_searchText]. Bump the version to drop them all. 2: owners from the
   /// ZK; answers before it were cadastre holders only, often not the owner.
-  /// 3: each answer names its source.
+  /// 3: each answer names its source. 4: drops cadastre answers cached
+  /// after a failed ZK request.
   static final _store = LookupCacheStore(
     'hr_owners',
-    version: 3,
+    version: 4,
     legacyFiles: const ['hr_owners_cache.json'],
   );
 
@@ -109,16 +115,18 @@ class HrOwnerService {
     final key = '$sifko/${parcela.trim()}';
     final pending = _cache[key];
     if (pending != null) return pending;
-    final future = _cachedOrFetch(key, sifko, parcela.trim(), parcelId);
+    final answer = _cachedOrFetch(key, sifko, parcela.trim(), parcelId);
+    final future = answer.then((a) => a.info);
     _cache[key] = future;
-    // Forget misses (_fetch never throws) so the next look retries.
-    future.then((v) {
-      if (v == null) _cache.remove(key);
+    // Forget misses and incomplete answers (_fetch never throws) so the
+    // next look retries.
+    answer.then((a) {
+      if (a.info == null || !a.complete) _cache.remove(key);
     });
     return future;
   }
 
-  Future<OwnerInfo?> _cachedOrFetch(
+  Future<HrOwnerAnswer> _cachedOrFetch(
     String key,
     int sifko,
     String parcela,
@@ -128,11 +136,14 @@ class HrOwnerService {
     final useCache = CacheSettings.instance.httpEnabled;
     if (useCache) {
       final hit = await _read(key);
-      if (hit != null) return hit;
+      if (hit != null) return (info: hit, complete: true);
     }
-    final info = await _fetch(sifko, parcela, parcelId);
-    if (info != null && useCache) unawaited(_write(key, info));
-    return info;
+    final answer = await _fetch(sifko, parcela, parcelId);
+    final info = answer.info;
+    if (info != null && answer.complete && useCache) {
+      unawaited(_write(key, info));
+    }
+    return answer;
   }
 
   Future<OwnerInfo?> _read(String key) async {
@@ -231,7 +242,12 @@ class HrOwnerService {
     );
   }
 
-  Future<OwnerInfo?> _fetch(int sifko, String parcela, String? parcelId) async {
+  Future<HrOwnerAnswer> _fetch(
+    int sifko,
+    String parcela,
+    String? parcelId,
+  ) async {
+    const miss = (info: null, complete: false);
     try {
       Map<String, dynamic>? json;
       if (parcelId != null && int.tryParse(parcelId) != null) {
@@ -245,34 +261,45 @@ class HrOwnerService {
       }
       if (json == null) {
         final id = await _parcelId(sifko, parcela);
-        if (id == null) return null;
+        if (id == null) return miss;
         json = await _parcelInfo(id);
       }
-      if (json == null) return null;
-      return await _landRegistryOwners(json) ?? parseParcelInfo(json);
+      if (json == null) return miss;
+      final parcelInfo = json;
+      final units = lrUnitsOf(parcelInfo).take(_maxLrUnits).toList();
+      final answers = await Future.wait([
+        for (final u in units)
+          _lrUnit(u.mainBookId, u.lrUnitNumber).catchError((Object e) {
+            debugPrint(
+              'HrOwnerService ZK ${u.mainBookId}/${u.lrUnitNumber}: $e',
+            );
+            return null;
+          }),
+      ]);
+      return ownersFrom(parcelInfo, answers);
     } catch (e) {
       debugPrint('HrOwnerService.lookup($sifko, $parcela) failed: $e');
-      return null;
+      return miss;
     }
   }
 
-  /// Owners from the ZK units [parcelInfo] links to, or null when it links
-  /// to none or none of them could be read.
-  Future<OwnerInfo?> _landRegistryOwners(
+  /// The owners of a parcel from its `/cad/parcel-info` response and the
+  /// `/lr/lr-unit` answers for the ZK units it links to (null where a unit
+  /// could not be read). ZK owners come first, the cadastre holders when
+  /// no unit gave any. The answer is complete, and may be cached, only when
+  /// every unit was read: with one missing, the ZK may name owners the
+  /// cadastre or the other units leave out, so it is asked again next time.
+  @visibleForTesting
+  static HrOwnerAnswer ownersFrom(
     Map<String, dynamic> parcelInfo,
-  ) async {
-    final units = lrUnitsOf(parcelInfo).take(_maxLrUnits).toList();
-    if (units.isEmpty) return null;
-    final answers = await Future.wait([
-      for (final u in units)
-        _lrUnit(u.mainBookId, u.lrUnitNumber).catchError((Object e) {
-          debugPrint('HrOwnerService ZK ${u.mainBookId}/${u.lrUnitNumber}: $e');
-          return null;
-        }),
-    ]);
-    final read = [for (final a in answers) ?a];
-    if (read.isEmpty) return null;
-    return parseLrUnits(read, parcelInfo);
+    List<Map<String, dynamic>?> lrAnswers,
+  ) {
+    final read = [for (final a in lrAnswers) ?a];
+    final complete = read.length == lrAnswers.length;
+    final info =
+        (read.isEmpty ? null : parseLrUnits(read, parcelInfo)) ??
+        parseParcelInfo(parcelInfo);
+    return (info: info, complete: complete);
   }
 
   /// The ZK unit (zemljišnoknjižni uložak) as the portal's "Pregled ZK
