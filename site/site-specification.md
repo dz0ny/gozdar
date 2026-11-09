@@ -50,3 +50,10 @@ Stock Tailwind gray/slate utilities are not used for text anywhere.
 ## Design Evolution
 - **User customizations**: 2026-11-02 — user asked to remove the old Leaflet layer viewer entirely (no `/pregledovalnik`); the landing page owns `/`.
 - **Current style**: Dark warm forest-green site, Fraunces headlines with a tan second clause, real phone screenshots in thick rounded bezels, faint green contour lines behind the hero and lead bento cell, one saturated brand-green band for the offline story. Long-form pages (`/zasebnost/`, `/podpora/`) use `.prose-gozd` on a 44rem column.
+
+## Blog (`/blog/`)
+One post per app feature, written in Slovenian from the landing-page and in-app copy. Astro content
+collection in `src/content/blog/*.md` (file name = URL), listing at `/blog/`, RSS at `/blog/rss.xml` with
+autodiscovery on blog routes only. Post bodies reuse `.prose-gozd` plus `.prose-post`; covers are the
+existing phone screenshots in a phone frame, so the social card stays the landscape feature graphic.
+No Gravatar or other third-party request: the author box is text with the app's GitHub and e-mail.

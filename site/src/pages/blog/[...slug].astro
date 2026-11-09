@@ -1,0 +1,126 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { Picture } from "astro:assets";
+import { render } from "astro:content";
+import { ArrowLeft, Download } from "lucide-react";
+import type { BlogPosting, WithContext } from "schema-dts";
+import { coverOf, formatDate, postPath, publishedPosts, type Post } from "@/lib/blog";
+import { CONTACT_EMAIL, GITHUB_URL } from "@/lib/site";
+
+export async function getStaticPaths() {
+	const posts = await publishedPosts();
+	return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+interface Props {
+	post: Post;
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const cover = coverOf(post);
+const site = Astro.site;
+const canonical = new URL(postPath(post), site).href;
+const published = post.data.date.toISOString();
+const modified = (post.data.updated ?? post.data.date).toISOString();
+
+// Covers are portrait phone screenshots, so they go into the JSON-LD only; the
+// landscape social card stays the site-wide feature graphic from the layout.
+const coverUrl = cover ? new URL(cover.src, site).href : undefined;
+
+const schema: WithContext<BlogPosting> = {
+	"@context": "https://schema.org",
+	"@type": "BlogPosting",
+	headline: post.data.title,
+	description: post.data.description,
+	datePublished: published,
+	dateModified: modified,
+	inLanguage: "sl",
+	url: canonical,
+	mainEntityOfPage: canonical,
+	...(coverUrl && { image: coverUrl }),
+	author: { "@type": "Person", name: post.data.author, url: GITHUB_URL },
+	publisher: { "@id": `${site?.href}#organization` },
+};
+
+const initials = post.data.author
+	.split(/\s+/)
+	.map((part) => part[0])
+	.join("")
+	.slice(0, 2);
+---
+
+<Layout
+  title={post.data.title}
+  description={post.data.description}
+  schema={schema}
+  feedUrl="/blog/rss.xml"
+  ogType="article"
+  publishedTime={published}
+  modifiedTime={modified}
+>
+  <article class="container-page py-section">
+    <div class="grid gap-10 lg:grid-cols-12">
+      <div class="lg:col-span-8">
+        <a href="/blog/" class="inline-flex items-center gap-2 text-[0.95rem] text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-4" aria-hidden="true" /> Vsi zapisi
+        </a>
+        <p class="mt-8 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <span class="font-semibold text-brand-bright">{post.data.category}</span>
+          <time datetime={published.slice(0, 10)} class="text-faint">{formatDate(post.data.date)}</time>
+          <span class="text-faint">· {post.data.author}</span>
+        </p>
+        <h1 class="mt-4 font-display text-4xl font-semibold leading-tight sm:text-5xl">{post.data.title}</h1>
+        <p class="mt-5 max-w-2xl text-xl text-muted-foreground">{post.data.description}</p>
+      </div>
+
+      {cover && (
+        <figure class="lg:col-span-4 lg:row-span-2 lg:justify-self-end">
+          <div class="mx-auto w-[60%] max-w-[16rem] overflow-hidden rounded-[1.8rem] border-[5px] border-muted bg-muted shadow-xl shadow-black/40 lg:mx-0 lg:w-full">
+            <Picture
+              src={cover}
+              formats={["webp"]}
+              fallbackFormat="webp"
+              width={256}
+              widths={[256, 512]}
+              sizes="(min-width: 1024px) 256px, 60vw"
+              alt={post.data.coverAlt ?? ""}
+              loading="eager"
+              class="block h-auto w-full"
+            />
+          </div>
+        </figure>
+      )}
+
+      <div class="lg:col-span-8">
+        <div id="blog-content" class="prose-gozd prose-post mt-2">
+          <Content />
+        </div>
+
+        <aside class="mt-16 flex items-start gap-4 border-t border-border pt-8">
+          <span
+            class="flex size-14 shrink-0 items-center justify-center rounded-full bg-muted font-display text-xl font-semibold text-brand-bright"
+            aria-hidden="true"
+          >{initials}</span>
+          <div>
+            <p class="font-semibold text-foreground">{post.data.author}</p>
+            <p class="mt-1 text-[0.95rem] text-muted-foreground">
+              Razvijalec Gozdarja. Aplikacijo gradi za lastnike gozdov in gozdarske delavce v Sloveniji, izvorna koda je na GitHubu.
+            </p>
+            <p class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[0.95rem]">
+              <a href={GITHUB_URL} class="text-primary underline underline-offset-4 hover:text-primary-hover">GitHub</a>
+              <a href={`mailto:${CONTACT_EMAIL}`} class="text-primary underline underline-offset-4 hover:text-primary-hover">{CONTACT_EMAIL}</a>
+            </p>
+          </div>
+        </aside>
+
+        <div class="mt-12 flex flex-col gap-4 rounded-xl border border-border bg-card p-7 sm:flex-row sm:items-center sm:justify-between">
+          <p class="text-muted-foreground">Preizkusite to na svojem gozdu.</p>
+          <a href="/#prenos" class="inline-flex items-center gap-2 font-semibold text-primary hover:text-primary-hover">
+            <Download className="size-5" aria-hidden="true" /> Namestite Gozdar
+          </a>
+        </div>
+      </div>
+    </div>
+  </article>
+</Layout>

@@ -13,13 +13,14 @@ Gozdar runs on Android (APK from GitHub releases; Google Play coming), iOS and i
 - Use this when: a Play Store reviewer or user needs Gozdar's privacy policy or support contact.
 - Not a fit for: official ownership or boundary data (go to GURS / e-prostor), forest management plans (ZGS), or timber sales.
 
-How to get an answer: features and downloads on the home page, data handling on /zasebnost/, contact and FAQ on /podpora/.
+How to get an answer: features and downloads on the home page, a longer explanation of each feature on /blog/, data handling on /zasebnost/, contact and FAQ on /podpora/.
 
 ## Key Pages
 
 - [Domov](https://gozdar.dz0ny.dev/) — what the app does, screenshots, downloads
 - [Zasebnost](https://gozdar.dz0ny.dev/zasebnost/) — privacy policy: on-device data, every server the app calls
 - [Podpora](https://gozdar.dz0ny.dev/podpora/) — support email, GitHub issues, FAQ
+- [Blog](https://gozdar.dz0ny.dev/blog/) — one post per app feature: kataster on the map, owner search, sharing sečnja, logs and volume, offline maps, compass navigation, parcel value, export (RSS: /blog/rss.xml)
 - [Releases](https://github.com/dz0ny/gozdar/releases) — APK and desktop downloads
 
 ## Contact

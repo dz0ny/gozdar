@@ -1,6 +1,6 @@
 # Gozdar website
 
-Landing page, privacy policy (`/zasebnost/`) and support page (`/podpora/`) for https://gozdar.dz0ny.dev.
+Landing page, blog (`/blog/`, one post per app feature, RSS at `/blog/rss.xml`), privacy policy (`/zasebnost/`) and support page (`/podpora/`) for https://gozdar.dz0ny.dev.
 Astro 6 + Tailwind v4, scaffolded with Hakuto. Design decisions: `site-specification.md`.
 
 ```sh

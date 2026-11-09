@@ -1,0 +1,93 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { Picture } from "astro:assets";
+import { Rss } from "lucide-react";
+import type { Blog, WithContext } from "schema-dts";
+import { coverOf, formatDate, postPath, publishedPosts } from "@/lib/blog";
+import { GITHUB_URL, SITE_NAME } from "@/lib/site";
+
+const description =
+	"Kaj zna Gozdar in kako to uporabite na terenu: parcele in kataster, iskanje lastnikov, deljenje sečnje, hlodi, karte brez signala in izvoz.";
+
+const posts = await publishedPosts();
+const site = Astro.site;
+
+const schema: WithContext<Blog> = {
+	"@context": "https://schema.org",
+	"@type": "Blog",
+	name: `${SITE_NAME} blog`,
+	description,
+	url: new URL("/blog/", site).href,
+	publisher: { "@id": `${site?.href}#organization` },
+	blogPost: posts.map((post) => ({
+		"@type": "BlogPosting",
+		headline: post.data.title,
+		description: post.data.description,
+		datePublished: post.data.date.toISOString(),
+		url: new URL(postPath(post), site).href,
+		author: { "@type": "Person", name: post.data.author, url: GITHUB_URL },
+	})),
+};
+---
+
+<Layout title="Blog" description={description} schema={schema} feedUrl="/blog/rss.xml">
+  <section class="container-page py-section">
+    <div class="grid gap-6 lg:grid-cols-12 lg:items-end">
+      <div class="lg:col-span-8">
+        <h1 class="font-display text-5xl font-semibold leading-tight sm:text-6xl">Blog</h1>
+        <p class="mt-5 max-w-2xl text-xl text-muted-foreground">
+          Vsaka funkcija Gozdarja posebej: kaj naredi, kje jo najdete in kako jo uporabite na terenu.
+        </p>
+      </div>
+      <a
+        href="/blog/rss.xml"
+        class="inline-flex items-center gap-2 text-[0.95rem] text-muted-foreground hover:text-foreground lg:col-span-4 lg:justify-self-end"
+      >
+        <Rss className="size-4 text-primary" aria-hidden="true" /> Naročite se na RSS
+      </a>
+    </div>
+
+    <ul class="mt-12 grid gap-4 md:grid-cols-2">
+      {posts.map((post) => {
+        const cover = coverOf(post);
+        return (
+        <li>
+          <a
+            href={postPath(post)}
+            class="group flex h-full gap-6 rounded-xl border border-border bg-card p-7 transition-colors hover:border-primary/60"
+          >
+            <div class="min-w-0 flex-1">
+              <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                <span class="font-semibold text-brand-bright">{post.data.category}</span>
+                <time datetime={post.data.date.toISOString().slice(0, 10)} class="text-faint">
+                  {formatDate(post.data.date)}
+                </time>
+              </p>
+              <h2 class="mt-3 font-display text-2xl font-semibold leading-snug group-hover:text-primary">
+                {post.data.title}
+              </h2>
+              <p class="mt-3 text-[0.97rem] text-muted-foreground">{post.data.description}</p>
+              <p class="mt-5 font-semibold text-primary group-hover:text-primary-hover">Preberite več →</p>
+            </div>
+            {cover && (
+              <div class="hidden w-24 shrink-0 self-start overflow-hidden rounded-[1rem] border-[3px] border-muted bg-muted shadow-lg shadow-black/40 sm:block">
+                <Picture
+                  src={cover}
+                  formats={["webp"]}
+                  fallbackFormat="webp"
+                  width={96}
+                  widths={[96, 192]}
+                  sizes="96px"
+                  alt=""
+                  loading="lazy"
+                  class="block h-auto w-full"
+                />
+              </div>
+            )}
+          </a>
+        </li>
+        );
+      })}
+    </ul>
+  </section>
+</Layout>
