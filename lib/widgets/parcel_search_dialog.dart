@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../services/address_lookup_service.dart';
 import '../services/auction_service.dart';
 import '../services/cadastral_service.dart';
 import '../services/ko_locator.dart';
@@ -24,6 +25,9 @@ class ParcelSearchDialog extends StatefulWidget {
   final MapController mapController;
   final Function(WfsParcel) onParcelFound;
 
+  /// Called with the tapped house number; the sheet is closed by then.
+  final Function(AddressHit)? onAddressFound;
+
   /// Where the map is looking, to preselect its KO. Defaults to the
   /// controller's camera centre.
   final LatLng? center;
@@ -32,6 +36,7 @@ class ParcelSearchDialog extends StatefulWidget {
     super.key,
     required this.mapController,
     required this.onParcelFound,
+    this.onAddressFound,
     this.center,
   });
 
@@ -49,6 +54,7 @@ class ParcelSearchDialog extends StatefulWidget {
     required BuildContext context,
     required MapController mapController,
     required Function(WfsParcel) onParcelFound,
+    Function(AddressHit)? onAddressFound,
     LatLng? center,
   }) {
     if (center == null) {
@@ -71,6 +77,7 @@ class ParcelSearchDialog extends StatefulWidget {
       builder: (context) => ParcelSearchDialog(
         mapController: mapController,
         onParcelFound: onParcelFound,
+        onAddressFound: onAddressFound,
         center: center,
       ),
     );
@@ -121,6 +128,8 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
       _prefillKo();
     }
     _controller.addListener(_remember);
+    // Load the street and settlement names now, not on the first keystroke.
+    AddressLookupService.instance.warmUp();
   }
 
   void _remember() {
@@ -160,7 +169,11 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
     _controller.focus.requestFocus();
   }
 
-  String _key(ParcelSuggestion s) => '${s.sifko}/${s.parcela}';
+  String _key(ParcelSuggestion s) => switch (s.kind) {
+    ParcelSuggestionKind.address => 'address/${s.address?.id}',
+    ParcelSuggestionKind.street => 'street/${s.title}',
+    _ => '${s.sifko}/${s.parcela}',
+  };
 
   Future<void> _open(ParcelSuggestion s) async {
     setState(() {
@@ -192,24 +205,43 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
   }
 
   void _onSuggestionTap(ParcelSuggestion s) {
-    if (s.kind == ParcelSuggestionKind.ko) {
-      // Keep a typed parcel number, drop the words that named the KO.
-      final number = ParsedParcelQuery.parse(_controller.text.text)
-          .parcelNumber;
-      _setKo(s.ko, keepText: number ?? '');
-    } else {
-      _open(s);
+    switch (s.kind) {
+      case ParcelSuggestionKind.ko:
+        // Keep a typed parcel number, drop the words that named the KO.
+        final number = ParsedParcelQuery.parse(_controller.text.text)
+            .parcelNumber;
+        _setKo(s.ko, keepText: number ?? '');
+      case ParcelSuggestionKind.street:
+        // Put the street in the field; the house number comes next.
+        final text = '${s.title} ';
+        _controller.text.value = TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+        );
+        _controller.queryChanged();
+        _controller.focus.requestFocus();
+      case ParcelSuggestionKind.address:
+        final hit = s.address;
+        if (hit == null) return;
+        Navigator.of(context).pop();
+        widget.onAddressFound?.call(hit);
+      case ParcelSuggestionKind.parcel:
+      case ParcelSuggestionKind.owner:
+        _open(s);
     }
   }
 
-  /// Keyboard "search": open the first parcel/owner row, else take the KO.
+  /// Keyboard "search": open the first parcel, address or owner row, else
+  /// take the KO or street.
   void _submit() {
     // The auctions tab filters as you type; there is nothing to submit.
     if (_locatingKey != null || _auctions) return;
     final rows = _controller.suggestions;
     if (rows.isEmpty) return;
     final target = rows.firstWhere(
-      (s) => s.kind != ParcelSuggestionKind.ko,
+      (s) =>
+          s.kind != ParcelSuggestionKind.ko &&
+          s.kind != ParcelSuggestionKind.street,
       orElse: () => rows.first,
     );
     _onSuggestionTap(target);
@@ -238,7 +270,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
               _field(context),
               SizedBox(
                 height: 2,
-                child: (_controller.searchingOwners || _locatingKey != null)
+                child: (_controller.searching || _locatingKey != null)
                     ? const LinearProgressIndicator()
                     : const Divider(height: 1),
               ),
@@ -501,7 +533,11 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
     final needsKo =
         parsed.parcelNumber != null &&
         _controller.ko == null &&
-        !rows.any((s) => s.kind == ParcelSuggestionKind.parcel);
+        !rows.any(
+          (s) =>
+              s.kind == ParcelSuggestionKind.parcel ||
+              s.kind == ParcelSuggestionKind.address,
+        );
 
     if (!_controller.hasQuery) {
       return _hint(
@@ -513,7 +549,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
       );
     }
     if (rows.isEmpty) {
-      if (_controller.searchingOwners) return const SizedBox.shrink();
+      if (_controller.searching) return const SizedBox.shrink();
       return _hint(
         context,
         needsKo ? Icons.place_outlined : Icons.search_off,
@@ -545,6 +581,13 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
       ParcelSuggestionKind.parcel => (Icons.grid_on, Icons.my_location),
       ParcelSuggestionKind.owner => (Icons.person_search, Icons.my_location),
       ParcelSuggestionKind.ko => (Icons.place_outlined, Icons.add),
+      ParcelSuggestionKind.address => (Icons.home_outlined, Icons.my_location),
+      ParcelSuggestionKind.street => (Icons.signpost_outlined, Icons.add),
+    };
+    final tooltip = switch (s.kind) {
+      ParcelSuggestionKind.ko => context.l10n.parcelSearchUseKo,
+      ParcelSuggestionKind.street => context.l10n.parcelSearchUseStreet,
+      _ => context.l10n.parcelSearchShowOnMap,
     };
     return ListTile(
       minVerticalPadding: 10,
@@ -566,11 +609,9 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : Tooltip(
-              // Target = open the parcel on the map; + = narrow the search to
-              // this cadastral municipality.
-              message: s.kind == ParcelSuggestionKind.ko
-                  ? context.l10n.parcelSearchUseKo
-                  : context.l10n.parcelSearchShowOnMap,
+              // Target = open the parcel or house on the map; + = narrow the
+              // search to this cadastral municipality or street.
+              message: tooltip,
               child: Icon(trailing, color: cs.onSurfaceVariant),
             ),
       onTap: _locatingKey != null ? null : () => _onSuggestionTap(s),

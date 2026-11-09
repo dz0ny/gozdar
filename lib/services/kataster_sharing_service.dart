@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'owner_lookup_service.dart';
 import 'resumable_download.dart';
+import 'address_lookup_service.dart';
 import 'vlake_service.dart';
 
 class KatasterPeer {
@@ -324,6 +325,7 @@ class KatasterSharingService {
     OwnerLookupService.publicFileName,
     OwnerLookupService.publicHrFileName,
     VlakeService.fileName,
+    AddressLookupService.fileName,
   };
 
   bool _isSharedFileName(String fileName) =>

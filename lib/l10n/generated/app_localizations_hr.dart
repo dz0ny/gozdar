@@ -742,6 +742,11 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
+  String mapTabSecnjaMarked(String name) {
+    return 'Sječa \"$name\" označena';
+  }
+
+  @override
   String mapTabSecnjaMarkError(Object error) {
     return 'Pogreška pri označavanju sječe: $error';
   }
@@ -1008,9 +1013,6 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String get mapwAddLogTitle => 'Dodaj trupac';
-
-  @override
   String get mapwAddLocationTitle => 'Dodaj lokaciju';
 
   @override
@@ -1060,6 +1062,21 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get mapwEnterName => 'Unesite naziv';
+
+  @override
+  String get mapwMarkFellingTitle => 'Označi sječu';
+
+  @override
+  String get mapwTreeDescLabel => 'Opis stabla';
+
+  @override
+  String get mapwTreeDescHint => 'npr. Hrast, Bukva, Smreka...';
+
+  @override
+  String get mapwEnterDescription => 'Molimo unesite opis';
+
+  @override
+  String get mapwMarkAction => 'Označi';
 
   @override
   String get mapwDeleteLocationTitle => 'Izbriši lokaciju';
@@ -1277,9 +1294,6 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get mapwCompass => 'Kompas';
-
-  @override
-  String get mapwEndNavigation => 'Završi navigaciju';
 
   @override
   String get mapwDistance => 'Udaljenost';
@@ -1525,6 +1539,15 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get mapwCatHrvatska => 'Hrvatska (DGU)';
+
+  @override
+  String get mapwCroatianMaps => 'Hrvatske karte';
+
+  @override
+  String get mapwAddLogTitle => 'Dodaj trupac';
+
+  @override
+  String get mapwEndNavigation => 'Završi navigaciju';
 
   @override
   String get parcelPointUnknown => 'Točka ?';
@@ -1939,89 +1962,6 @@ class AppLocalizationsHr extends AppLocalizations {
   String get valuationOpenGurs => 'Otvori u evidenciji vrednovanja';
 
   @override
-  String get valuationBuildings => 'Zgrade';
-
-  @override
-  String get valuationBuilding => 'Zgrada';
-
-  @override
-  String valuationBuildingNumber(String number) {
-    return 'zgrada $number';
-  }
-
-  @override
-  String valuationBuildingYear(String year) {
-    return 'izgrađena $year';
-  }
-
-  @override
-  String valuationBuildingParts(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count dijelova',
-      few: '$count dijela',
-      one: '$count dio',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get valuationBuildingSpans =>
-      'Stoji i na susjednoj čestici; vrijednost je za cijelu zgradu.';
-
-  @override
-  String get valuationBuildingNoValue => 'Vrijednost u evidenciji GURS-a';
-
-  @override
-  String valuationLandAndBuildings(String land, String buildings) {
-    return 'zemljište $land € · zgrade $buildings €';
-  }
-
-  @override
-  String get valuationBuildingLandNote =>
-      'Vrijednost zgrade uključuje zemljište pod njom.';
-
-  @override
-  String get valuationBuildingModelHIS => 'Kuća';
-
-  @override
-  String get valuationBuildingModelSTA => 'Stan';
-
-  @override
-  String get valuationBuildingModelGAR => 'Garaža';
-
-  @override
-  String get valuationBuildingModelPPL => 'Lokal';
-
-  @override
-  String get valuationBuildingModelPPP => 'Ured';
-
-  @override
-  String get valuationBuildingModelTUR => 'Zgrada za turizam';
-
-  @override
-  String get valuationBuildingModelIND => 'Industrijska zgrada';
-
-  @override
-  String get valuationBuildingModelINP => 'Industrijska zgrada';
-
-  @override
-  String get valuationBuildingModelSDP => 'Javna zgrada';
-
-  @override
-  String get valuationBuildingModelKDS => 'Poljoprivredna ili druga zgrada';
-
-  @override
-  String get valuationBuildingModelPNE => 'Elektrana';
-
-  @override
-  String get valuationBuildingModelPNP => 'Marina ili luka';
-
-  @override
-  String get valuationBuildingModelPNB => 'Benzinska postaja';
-
-  @override
   String get valuationModelGOZ => 'Šuma';
 
   @override
@@ -2159,6 +2099,246 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get notesDiscard => 'Odbaci';
+
+  @override
+  String get ownersSourceTitle => 'Izvor';
+
+  @override
+  String get ownersSourceLandRegistry => 'Zemljišna knjiga';
+
+  @override
+  String get ownersSourceCadastre => 'Katastar';
+
+  @override
+  String ownersSourceLrUnit(String unit, String place) {
+    return 'ZK uložak $unit, k.o. $place';
+  }
+
+  @override
+  String ownersSourceLine(String source) {
+    return 'Izvor: $source';
+  }
+
+  @override
+  String get ownersSourceCadastreNote =>
+      'Posjednici prema katastru, nisu nužno vlasnici.';
+
+  @override
+  String get ownersSourceOpen => 'Otvori u registru';
+
+  @override
+  String get parcelSearchUseStreet => 'Traži na ovoj ulici';
+
+  @override
+  String parcelSearchAddressNoParcel(String address) {
+    return 'Pod adresom $address nije pronađena čestica.';
+  }
+
+  @override
+  String get valuationBuildings => 'Zgrade';
+
+  @override
+  String get valuationBuilding => 'Zgrada';
+
+  @override
+  String valuationBuildingNumber(String number) {
+    return 'zgrada $number';
+  }
+
+  @override
+  String valuationBuildingYear(String year) {
+    return 'izgrađena $year';
+  }
+
+  @override
+  String valuationBuildingParts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dijelova',
+      few: '$count dijela',
+      one: '$count dio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get valuationBuildingSpans =>
+      'Stoji i na susjednoj čestici; vrijednost je za cijelu zgradu.';
+
+  @override
+  String get valuationBuildingNoValue => 'Vrijednost u evidenciji GURS-a';
+
+  @override
+  String valuationLandAndBuildings(String land, String buildings) {
+    return 'zemljište $land € · zgrade $buildings €';
+  }
+
+  @override
+  String get valuationBuildingLandNote =>
+      'Vrijednost zgrade uključuje zemljište pod njom.';
+
+  @override
+  String get valuationBuildingModelHIS => 'Kuća';
+
+  @override
+  String get valuationBuildingModelSTA => 'Stan';
+
+  @override
+  String get valuationBuildingModelGAR => 'Garaža';
+
+  @override
+  String get valuationBuildingModelPPL => 'Lokal';
+
+  @override
+  String get valuationBuildingModelPPP => 'Ured';
+
+  @override
+  String get valuationBuildingModelTUR => 'Zgrada za turizam';
+
+  @override
+  String get valuationBuildingModelIND => 'Industrijska zgrada';
+
+  @override
+  String get valuationBuildingModelINP => 'Industrijska zgrada';
+
+  @override
+  String get valuationBuildingModelSDP => 'Javna zgrada';
+
+  @override
+  String get valuationBuildingModelKDS => 'Poljoprivredna ili druga zgrada';
+
+  @override
+  String get valuationBuildingModelPNE => 'Elektrana';
+
+  @override
+  String get valuationBuildingModelPNP => 'Marina ili luka';
+
+  @override
+  String get valuationBuildingModelPNB => 'Benzinska postaja';
+
+  @override
+  String secnjaShareHeadline(String parcel, String ko) {
+    return '🪓 Sječa — čestica $parcel, k.o. $ko';
+  }
+
+  @override
+  String get secnjaOutsideParcel => 'Izvan čestice';
+
+  @override
+  String secnjaDefaultName(int n) {
+    return 'Stablo $n';
+  }
+
+  @override
+  String get secnjaMarkAction => 'Označi';
+
+  @override
+  String get secnjaFinish => 'Završi';
+
+  @override
+  String get secnjaHere => 'Ovdje sam';
+
+  @override
+  String secnjaMarkingTitle(String parcel) {
+    return '🪓 Sječa · $parcel';
+  }
+
+  @override
+  String secnjaMarkedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count stabala',
+      few: '$count stabla',
+      one: '$count stablo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get secnjaShareAction => 'Podijeli sjekaču';
+
+  @override
+  String secnjaMarkedSnack(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Označeno $count stabala',
+      few: 'Označena $count stabla',
+      one: 'Označeno $count stablo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pointDefaultName(int n) {
+    return 'Točka $n';
+  }
+
+  @override
+  String get pointOwnNameLabel => 'Naziv (neobavezno)';
+
+  @override
+  String get secnjaShareAgain => 'Podijeli ponovno';
+
+  @override
+  String get secnjaShareUpdate => 'Ažuriraj poveznicu';
+
+  @override
+  String secnjaSharedUntil(String date) {
+    return 'Podijeljeno · vrijedi do $date';
+  }
+
+  @override
+  String secnjaImportUpdated(String parcel, int added, int removed) {
+    return 'Popis stabala za čest. $parcel je ažuriran (+$added / −$removed)';
+  }
+
+  @override
+  String secnjaImportWithdrawn(String parcel) {
+    return 'Popis stabala za čest. $parcel više nije podijeljen. Stabla ostaju.';
+  }
+
+  @override
+  String get secnjaImportWithdrawnNote =>
+      'Vlasnik je povukao popis ili je istekao. Stabla ostaju.';
+
+  @override
+  String get secnjaRevoke => 'Opozovi';
+
+  @override
+  String get secnjaRevokeConfirm =>
+      'Opozvati poveznicu? Sjekač je više neće moći otvoriti.';
+
+  @override
+  String get secnjaShareFailed => 'Dijeljenje nije uspjelo — provjeri vezu';
+
+  @override
+  String secnjaForCutCount(int count) {
+    return '$count za sječu';
+  }
+
+  @override
+  String secnjaReceived(String parcel, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Primljena sječa: čestica $parcel · $count stabala',
+      few: 'Primljena sječa: čestica $parcel · $count stabla',
+      one: 'Primljena sječa: čestica $parcel · $count stablo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get secnjaLinkExpired => 'Poveznica je istekla ili je opozvana';
+
+  @override
+  String get secnjaNoConnection => 'Nema veze — pokušaj ponovno';
+
+  @override
+  String get secnjaLinkInvalid => 'Poveznicu nije moguće pročitati';
 
   @override
   String get svcKmlExportSubject => 'Gozdar izvoz čestica';
@@ -2957,130 +3137,16 @@ class AppLocalizationsHr extends AppLocalizations {
       'Ponovno pogledajte predstavljanje aplikacije';
 
   @override
-  String secnjaShareHeadline(String parcel, String ko) {
-    return '🪓 Sječa — čestica $parcel, k.o. $ko';
-  }
+  String get aboutAddresses => 'adrese';
 
   @override
-  String get secnjaOutsideParcel => 'Izvan čestice';
+  String get aboutAddressesLabel => 'Adrese…';
 
   @override
-  String secnjaDefaultName(int n) {
-    return 'Stablo $n';
-  }
-
-  @override
-  String get secnjaMarkAction => 'Označi';
-
-  @override
-  String get secnjaFinish => 'Završi';
-
-  @override
-  String get secnjaHere => 'Ovdje sam';
-
-  @override
-  String secnjaMarkingTitle(String parcel) {
-    return '🪓 Sječa · $parcel';
-  }
-
-  @override
-  String secnjaMarkedCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count stabala',
-      few: '$count stabla',
-      one: '$count stablo',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get secnjaShareAction => 'Podijeli sjekaču';
-
-  @override
-  String secnjaMarkedSnack(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Označeno $count stabala',
-      few: 'Označena $count stabla',
-      one: 'Označeno $count stablo',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String pointDefaultName(int n) {
-    return 'Točka $n';
-  }
-
-  @override
-  String get pointOwnNameLabel => 'Naziv (neobavezno)';
-
-  @override
-  String get secnjaShareAgain => 'Podijeli ponovno';
-
-  @override
-  String get secnjaShareUpdate => 'Ažuriraj poveznicu';
-
-  @override
-  String secnjaSharedUntil(String date) {
-    return 'Podijeljeno · vrijedi do $date';
-  }
-
-  @override
-  String secnjaImportUpdated(String parcel, int added, int removed) {
-    return 'Popis stabala za čest. $parcel je ažuriran (+$added / −$removed)';
-  }
-
-  @override
-  String secnjaImportWithdrawn(String parcel) {
-    return 'Popis stabala za čest. $parcel više nije podijeljen. Stabla ostaju.';
-  }
-
-  @override
-  String get secnjaImportWithdrawnNote =>
-      'Vlasnik je povukao popis ili je istekao. Stabla ostaju.';
-
-  @override
-  String get secnjaRevoke => 'Opozovi';
-
-  @override
-  String get secnjaRevokeConfirm =>
-      'Opozvati poveznicu? Sjekač je više neće moći otvoriti.';
-
-  @override
-  String get secnjaShareFailed => 'Dijeljenje nije uspjelo — provjeri vezu';
-
-  @override
-  String secnjaForCutCount(int count) {
-    return '$count za sječu';
-  }
-
-  @override
-  String secnjaReceived(String parcel, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Primljena sječa: čestica $parcel · $count stabala',
-      few: 'Primljena sječa: čestica $parcel · $count stabla',
-      one: 'Primljena sječa: čestica $parcel · $count stablo',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get secnjaLinkExpired => 'Poveznica je istekla ili je opozvana';
-
-  @override
-  String get secnjaNoConnection => 'Nema veze — pokušaj ponovno';
+  String get aboutAddressesFailed => 'Preuzimanje adresa nije uspjelo.';
 
   @override
   String get receivedLoading => 'Učitavam sječu…';
-
-  @override
-  String get secnjaLinkInvalid => 'Poveznicu nije moguće pročitati';
 
   @override
   String get introSecnjaTitle => 'Sječa za sjekača';
@@ -3105,33 +3171,4 @@ class AppLocalizationsHr extends AppLocalizations {
   @override
   String get introSecnjaLoggerDesc =>
       'Poveznica se otvara u Gozdaru i dodaje česticu sa stablima u Moju šumu. Radi bez signala, sjekač je može podijeliti dalje.';
-
-  @override
-  String get ownersSourceTitle => 'Izvor';
-
-  @override
-  String get ownersSourceLandRegistry => 'Zemljišna knjiga';
-
-  @override
-  String get ownersSourceCadastre => 'Katastar';
-
-  @override
-  String ownersSourceLrUnit(String unit, String place) {
-    return 'ZK uložak $unit, k.o. $place';
-  }
-
-  @override
-  String ownersSourceLine(String source) {
-    return 'Izvor: $source';
-  }
-
-  @override
-  String get ownersSourceCadastreNote =>
-      'Posjednici prema katastru, nisu nužno vlasnici.';
-
-  @override
-  String get ownersSourceOpen => 'Otvori u registru';
-
-  @override
-  String get mapwCroatianMaps => 'Hrvatske karte';
 }

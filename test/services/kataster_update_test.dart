@@ -10,6 +10,12 @@ const _manifestJson = {
     'bytes': 92303360,
     'built': '2026-10-13T09:41:18Z',
   },
+  'addresses': {
+    'file': 'addresses.sqlite',
+    'bytes': 42328064,
+    'built': '2026-11-09T12:43:25Z',
+    'date': '2026-10-30',
+  },
   'regions': [
     {
       'code': 'kr',
@@ -36,6 +42,8 @@ void main() {
       expect(m.regions.map((r) => r.code), ['kr', 'za']);
       expect(m.publicOwnersBuilt, '2026-10-13T09:41:18Z');
       expect(m.publicOwnersBytes, 92303360);
+      expect(m.addressesBuilt, '2026-11-09T12:43:25Z');
+      expect(m.addressesBytes, 42328064);
     });
 
     test('tolerates a manifest without public owners', () {
@@ -125,6 +133,21 @@ void main() {
       expect(run('2026-06-02T14:33:42Z').publicOwnersOutdated, isTrue);
       expect(run('2026-10-13T09:41:18Z').publicOwnersOutdated, isFalse);
       expect(run('2026-06-02T14:33:42Z').isEmpty, isFalse);
+    });
+
+    test('flags addresses only when a local build is older', () {
+      KatasterUpdate run(String? built) => KatasterUpdate.compute(
+        manifest,
+        loadedRegionDates: const {},
+        publicOwnersBuilt: null,
+        addressesBuilt: built,
+      );
+      expect(run(null).addressesOutdated, isFalse);
+      expect(run(null).isEmpty, isTrue);
+      expect(run('2026-06-02T14:33:42Z').addressesOutdated, isTrue);
+      expect(run('2026-06-02T14:33:42Z').isEmpty, isFalse);
+      expect(run('2026-06-02T14:33:42Z').bytes, 42328064);
+      expect(run('2026-11-09T12:43:25Z').addressesOutdated, isFalse);
     });
 
     test('is empty when nothing is loaded', () {

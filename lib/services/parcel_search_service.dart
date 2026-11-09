@@ -1,12 +1,15 @@
 import 'package:latlong2/latlong.dart';
 
+import 'address_lookup_service.dart';
 import 'hr_owner_service.dart';
 import 'ko_locator.dart';
 import 'owner_lookup_service.dart';
 import 'parcel_lookup_service.dart';
 import '../l10n/l10n.dart';
 
-enum ParcelSuggestionKind { parcel, owner, ko }
+/// [address] is a house number with a map point; [street] is a street name
+/// that completes the typed words.
+enum ParcelSuggestionKind { parcel, owner, ko, address, street }
 
 /// One row in the parcel-search suggestion list.
 class ParcelSuggestion {
@@ -25,6 +28,9 @@ class ParcelSuggestion {
   /// The KO to select (KO suggestions).
   final KoInfo? ko;
 
+  /// The house number (address suggestions).
+  final AddressHit? address;
+
   const ParcelSuggestion({
     required this.kind,
     required this.title,
@@ -32,7 +38,11 @@ class ParcelSuggestion {
     this.sifko,
     this.parcela,
     this.ko,
+    this.address,
   });
+
+  /// Where the suggestion lies on the map (address suggestions).
+  LatLng? get point => address?.point;
 
   @override
   bool operator ==(Object other) =>
@@ -40,10 +50,11 @@ class ParcelSuggestion {
       other.kind == kind &&
       other.sifko == sifko &&
       other.parcela == parcela &&
+      other.address == address &&
       other.title == title;
 
   @override
-  int get hashCode => Object.hash(kind, sifko, parcela, title);
+  int get hashCode => Object.hash(kind, sifko, parcela, address, title);
 }
 
 /// A search query split into its parcel-number token and the remaining words.
@@ -200,6 +211,49 @@ class ParcelSearchService {
       if (out.length >= limit) break;
     }
     return out;
+  }
+
+  /// Address rows for [query]: the house number on the streets or in the
+  /// settlements the words name ("Poljska ulica 15", "Babno Polje 12"), or,
+  /// without a number, the streets the words start ("Poljska ulica"). Empty
+  /// until the address database is on the device. Hits in [ko] come first.
+  static List<ParcelSuggestion> addresses(
+    String query, {
+    KoInfo? ko,
+    int limit = 10,
+  }) {
+    final addresses = AddressLookupService.instance;
+    if (!addresses.isAvailable) return const [];
+    final parsed = ParsedParcelQuery.parse(query);
+    if (parsed.words.length < AddressLookupService.minQueryLength) {
+      return const [];
+    }
+    final number = parsed.parcelNumber;
+    if (number == null) {
+      return [
+        for (final s in addresses.streets(parsed.words))
+          ParcelSuggestion(
+            kind: ParcelSuggestionKind.street,
+            title: s.name,
+            subtitle: s.settlement,
+          ),
+      ];
+    }
+    if (!AddressLookupService.houseNumber.hasMatch(number)) return const [];
+    return [
+      for (final hit in addresses.search(
+        parsed.words,
+        number,
+        preferKo: ko,
+        limit: limit,
+      ))
+        ParcelSuggestion(
+          kind: ParcelSuggestionKind.address,
+          title: hit.title,
+          subtitle: hit.subtitle,
+          address: hit,
+        ),
+    ];
   }
 
   static ParcelSuggestion _ownerSuggestion({

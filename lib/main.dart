@@ -12,6 +12,7 @@ import 'router/navigation_notifier.dart';
 import 'services/database_service.dart';
 import 'services/tile_cache_service.dart';
 import 'services/onboarding_service.dart';
+import 'services/address_lookup_service.dart';
 import 'services/owner_lookup_service.dart';
 import 'services/parcel_lookup_service.dart';
 import 'services/kataster_update_service.dart';
@@ -39,6 +40,7 @@ void main() async {
   await OwnerLookupService.instance.initPublic();
   await ParcelLookupService.instance.init();
   OwnerLookupService.instance.initPublicHr().ignore();
+  await AddressLookupService.instance.init();
   await KatasterUpdateService.instance.init();
   await OwnerOfflineSettingsService.instance.init();
   await DroneSettings.instance.init();

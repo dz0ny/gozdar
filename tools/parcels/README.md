@@ -178,6 +178,44 @@ covered by `test/services/aes_file_decryptor_test.dart`.
 > Parcels region DBs are **not** encrypted (public cadastral geometry); only the
 > owners DB is.
 
+## 4c. Addresses (house numbers) — `addresses.sqlite`
+
+`build_addresses.py` turns the GURS **Register prostorskih enot / naslovi**
+(CC-BY 4.0) into `addresses.sqlite`: every Slovenian house number with its
+WGS84 point, street, settlement, post office and building MID. The app's
+`AddressLookupService` downloads it from R2 on first start (like
+`public_owners.sqlite`) and the parcel search then answers "Poljska ulica 15"
+or "Babno Polje 12" offline.
+
+The JGP portal (`ipi.eprostor.gov.si`) answers 403 to non-browser clients from
+some networks, so the script reads the weekly mirror
+[stefanb/gurs-rpe](https://github.com/stefanb/gurs-rpe) by default:
+
+```bash
+./build_addresses.py -o work/addresses.sqlite --names-date 2024-02-21
+# or from the raw JGP CSVs when the portal is reachable:
+#   --hs KN_SLO_NASLOVI_HS_naslovi_hs_<date>.csv  (reprojected to WGS84, see the mirror's Makefile)
+```
+
+Join: the house numbers carry new GURS EIDs, the name tables old MIDs; the EID
+embeds the MID (`1103 00000 10116309 9` = prefix, pad, MID, check digit), so
+`MID = int(EID[:-1]) % 10**8`. The mirror regenerates the name tables
+(`NA/UL/PT/OB.csv`) only by hand — they date from 2024-02, while `HS.csv` is
+weekly. A house on a street the names do not know (≈180 of 580k) keeps
+`street_id NULL` and shows as "<settlement> <number>". Record the names' date
+with `--names-date`; the newest house-number change lands in `meta.date`.
+
+Upload next to the regions and describe it in the manifest:
+
+```bash
+rclone copyto work/addresses.sqlite cloudflare:gozdar-kataster/addresses.sqlite
+./manifest.py work/regions -o work/regions/regions.json \
+  --public-owners work/public_owners.sqlite --addresses work/addresses.sqlite
+```
+
+Installed apps compare `addresses.built` with their copy's `meta.built`
+(`KatasterUpdateService`) and offer the refresh on the about screen.
+
 ## 5. In-app download
 
 The about/developer screen downloads these straight from R2 into app storage:
@@ -197,7 +235,8 @@ DB — together they make the kataster fully offline.
 - **Privacy**: only **legal-person** (pravne osebe) owners are public in this
   dataset; natural-person owners are absent. Don't ship anything else.
 - **Updates**: GURS refreshes weekly — re-run steps 0, 3, 4 (and
-  `fetch_public_owners.py` + `build_public_owners.py` for `public_owners.sqlite`),
+  `fetch_public_owners.py` + `build_public_owners.py` for `public_owners.sqlite`,
+  `build_addresses.py` for `addresses.sqlite`),
   bump the `--date`, re-upload, and upload `regions.json` last. Ship date-stamped
   data. Installed apps only download a file when it is missing locally, so users
   pick up a new build by re-downloading from the about screen / region picker.

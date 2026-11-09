@@ -29,6 +29,7 @@ import '../utils/formats.dart';
 import '../widgets/download_progress_view.dart';
 import '../widgets/owner_list.dart';
 import '../widgets/add_log_sheet.dart';
+import '../services/address_lookup_service.dart';
 import '../services/cadastral_service.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/public_parcel_settings.dart';
@@ -3045,6 +3046,36 @@ class MapTabState extends State<MapTab> {
       context: context,
       mapController: _mapController,
       onParcelFound: _handleParcelFound,
+      onAddressFound: _handleAddressFound,
+    );
+  }
+
+  /// A house number from the search: show the parcel under it, from the
+  /// offline cadastre when a region is loaded, else from the ZGS service.
+  /// Without a parcel the map only moves to the house.
+  Future<void> _handleAddressFound(AddressHit hit) async {
+    _mapController.move(hit.point, 18);
+    var parcel = ParcelLookupService.instance.parcelAt(hit.point);
+    parcel ??= await CadastralService().queryParcelAtLocation(hit.point);
+    if (!mounted) return;
+    if (parcel == null || parcel.polygon.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(L10n.current.parcelSearchAddressNoParcel(hit.title)),
+        ),
+      );
+      return;
+    }
+    await _handleParcelFound(
+      WfsParcel(
+        localId: parcel.id,
+        label: parcel.parcelNumber,
+        nationalCadastralReference:
+            '${parcel.cadastralMunicipality} ${parcel.parcelNumber}',
+        area: parcel.area,
+        polygon: parcel.polygon,
+        referencePoint: hit.point,
+      ),
     );
   }
 

@@ -380,5 +380,16 @@
   "introTermsLinkLabel": "prostor.zgs.gov.si/pregledovalnik",
   "introTermsUrl": "https://prostor.zgs.gov.si/pregledovalnik/",
   "aboutShowIntro": "Uvodni vodič",
-  "aboutShowIntroDesc": "Ponovno si oglejte predstavitev aplikacije"
+  "aboutShowIntroDesc": "Ponovno si oglejte predstavitev aplikacije",
+  "aboutAddresses": "naslovi",
+  "aboutAddressesLabel": "Naslovi…",
+  "aboutAddressesFailed": "Prenos naslovov ni uspel.",
+  "receivedLoading": "Nalagam sečnjo…",
+  "introSecnjaTitle": "Sečnja za sekača",
+  "introSecnjaMarkTitle": "Označi drevesa",
+  "introSecnjaMarkDesc": "Dolgo pritisni karto → Dodaj → Sečnja. Nameri križec na drevo in tapni Označi. Vrsto izbereš enkrat.",
+  "introSecnjaShareTitle": "Deli sekaču",
+  "introSecnjaShareDesc": "V parceli tapni Deli sekaču in pošlji povezavo. Velja 30 dni; ob novih oznakah jo posodobiš.",
+  "introSecnjaLoggerTitle": "Sekač dobi parcelo",
+  "introSecnjaLoggerDesc": "Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej."
 }

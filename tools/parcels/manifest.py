@@ -15,11 +15,13 @@ databases' ``meta`` table and use the most common value. A region that differs
 
 With ``--public-owners``, the public-owners DB's size and ``meta.built``
 timestamp are added under ``public_owners`` so installed apps can tell when a
-newer build is on R2 (``KatasterUpdateService``).
+newer build is on R2 (``KatasterUpdateService``). ``--addresses`` does the
+same for ``addresses.sqlite`` under ``addresses``.
 
 Usage:
     ./manifest.py work/regions -o work/regions/regions.json \
         [--regions regije.geojson] [--public-owners work/public_owners.sqlite]
+        [--addresses work/addresses.sqlite]
 """
 
 from __future__ import annotations
@@ -40,6 +42,8 @@ def main() -> None:
                     help="GeoJSON with region 'code' + 'name' properties")
     ap.add_argument("--public-owners", default=None,
                     help="public_owners.sqlite to describe under 'public_owners'")
+    ap.add_argument("--addresses", default=None,
+                    help="addresses.sqlite to describe under 'addresses'")
     args = ap.parse_args()
 
     d = Path(args.dir)
@@ -85,6 +89,15 @@ def main() -> None:
             sys.exit(f"{po.name}: meta.built missing")
         manifest["public_owners"] = {"file": po.name, "bytes": po.stat().st_size,
                                      "built": meta["built"]}
+    if args.addresses:
+        ad = Path(args.addresses)
+        con = sqlite3.connect(f"file:{ad}?mode=ro", uri=True)
+        meta = dict(con.execute("SELECT k, v FROM meta"))
+        con.close()
+        if not meta.get("built"):
+            sys.exit(f"{ad.name}: meta.built missing")
+        manifest["addresses"] = {"file": ad.name, "bytes": ad.stat().st_size,
+                                 "built": meta["built"], "date": meta.get("date")}
     out.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     total = sum(e["bytes"] for e in entries)
     print(f"Wrote {out}: {len(entries)} regions, {sum(e['rows'] for e in entries):,} rows, "
@@ -94,6 +107,9 @@ def main() -> None:
     if "public_owners" in manifest:
         po = manifest["public_owners"]
         print(f"  public owners: {po['file']} built {po['built']} {po['bytes'] / 1e6:.1f} MB")
+    if "addresses" in manifest:
+        ad = manifest["addresses"]
+        print(f"  addresses: {ad['file']} built {ad['built']} {ad['bytes'] / 1e6:.1f} MB")
 
 
 if __name__ == "__main__":

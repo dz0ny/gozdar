@@ -199,5 +199,16 @@
   "introTermsLinkLabel": "oss.uredjenazemlja.hr",
   "introTermsUrl": "https://oss.uredjenazemlja.hr/",
   "aboutShowIntro": "Uvodni vodič",
-  "aboutShowIntroDesc": "Ponovno pogledajte predstavljanje aplikacije"
+  "aboutShowIntroDesc": "Ponovno pogledajte predstavljanje aplikacije",
+  "aboutAddresses": "adrese",
+  "aboutAddressesLabel": "Adrese…",
+  "aboutAddressesFailed": "Preuzimanje adresa nije uspjelo.",
+  "receivedLoading": "Učitavam sječu…",
+  "introSecnjaTitle": "Sječa za sjekača",
+  "introSecnjaMarkTitle": "Označi stabla",
+  "introSecnjaMarkDesc": "Dugo pritisni kartu → Dodaj → Sječa. Usmjeri križić na stablo i dodirni Označi. Vrstu biraš jednom.",
+  "introSecnjaShareTitle": "Podijeli sjekaču",
+  "introSecnjaShareDesc": "U čestici dodirni Podijeli sjekaču i pošalji poveznicu. Vrijedi 30 dana; nakon novih oznaka je ažuriraš.",
+  "introSecnjaLoggerTitle": "Sjekač dobiva česticu",
+  "introSecnjaLoggerDesc": "Poveznica se otvara u Gozdaru i dodaje česticu sa stablima u Moju šumu. Radi bez signala, sjekač je može podijeliti dalje."
 }

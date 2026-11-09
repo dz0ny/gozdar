@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import '../services/address_lookup_service.dart';
 import '../services/ko_locator.dart';
 import '../services/parcel_search_service.dart';
 
@@ -23,17 +24,26 @@ class ParcelSearchController extends ChangeNotifier {
   KoInfo? get ko => _ko;
 
   List<ParcelSuggestion> _instant = const [];
+  List<ParcelSuggestion> _addresses = const [];
   List<ParcelSuggestion> _owners = const [];
   bool _searchingOwners = false;
+  bool _searchingAddresses = false;
   Timer? _debounce;
   int _generation = 0;
   bool _disposed = false;
 
   bool get searchingOwners => _searchingOwners;
+
+  /// True while owner or address rows are still to come.
+  bool get searching => _searchingOwners || _searchingAddresses;
   bool get hasQuery => text.text.trim().isNotEmpty;
 
-  /// Parcel and KO rows first, then owners.
-  List<ParcelSuggestion> get suggestions => [..._instant, ..._owners];
+  /// Parcel and KO rows first, then addresses, then owners.
+  List<ParcelSuggestion> get suggestions => [
+    ..._instant,
+    ..._addresses,
+    ..._owners,
+  ];
 
   void setKo(KoInfo? ko) {
     _ko = ko;
@@ -46,24 +56,48 @@ class ParcelSearchController extends ChangeNotifier {
     _generation++; // drop any owner search still in flight
     final query = text.text;
     _instant = ParcelSearchService.instant(query, ko: _ko);
+    _addresses = const [];
     _owners = const [];
     _searchingOwners = false;
+    _searchingAddresses = false;
     final parsed = ParsedParcelQuery.parse(query);
-    if (parsed.parcelNumber == null && parsed.words.length >= 3) {
-      _searchingOwners = true;
+    final wantOwners = parsed.parcelNumber == null && parsed.words.length >= 3;
+    final wantAddresses =
+        AddressLookupService.instance.isAvailable &&
+        parsed.words.length >= AddressLookupService.minQueryLength;
+    if (wantOwners || wantAddresses) {
+      _searchingOwners = wantOwners;
+      _searchingAddresses = wantAddresses;
       _debounce = Timer(
         ownerDebounce ?? const Duration(milliseconds: 250),
-        _runOwners,
+        () => _runDeferred(owners: wantOwners, addresses: wantAddresses),
       );
     }
     notifyListeners();
   }
 
-  Future<void> _runOwners() async {
+  /// The address rows are indexed lookups and run right away; the owner
+  /// search runs off the UI thread.
+  Future<void> _runDeferred({
+    required bool owners,
+    required bool addresses,
+  }) async {
     final generation = ++_generation;
+    final query = text.text;
+    if (addresses) {
+      try {
+        _addresses = ParcelSearchService.addresses(query, ko: _ko);
+      } catch (e) {
+        debugPrint('ParcelSearchController address search failed: $e');
+        _addresses = const [];
+      }
+      _searchingAddresses = false;
+      notifyListeners();
+    }
+    if (!owners) return;
     List<ParcelSuggestion> found;
     try {
-      found = await ParcelSearchService.owners(text.text, ko: _ko);
+      found = await ParcelSearchService.owners(query, ko: _ko);
     } catch (e) {
       debugPrint('ParcelSearchController owner search failed: $e');
       found = const [];

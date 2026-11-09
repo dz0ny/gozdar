@@ -1268,6 +1268,12 @@ abstract class AppLocalizations {
   /// **'Napaka pri dodajanju lokacije: {error}'**
   String mapTabLocationAddError(Object error);
 
+  /// No description provided for @mapTabSecnjaMarked.
+  ///
+  /// In sl, this message translates to:
+  /// **'Sečnja \"{name}\" označena'**
+  String mapTabSecnjaMarked(String name);
+
   /// No description provided for @mapTabSecnjaMarkError.
   ///
   /// In sl, this message translates to:
@@ -1663,12 +1669,6 @@ abstract class AppLocalizations {
   /// **'Lokacija preimenovana v \"{newName}\"'**
   String mapTabLocationRenamed(String newName);
 
-  /// No description provided for @mapwAddLogTitle.
-  ///
-  /// In sl, this message translates to:
-  /// **'Dodaj hlod'**
-  String get mapwAddLogTitle;
-
   /// No description provided for @mapwAddLocationTitle.
   ///
   /// In sl, this message translates to:
@@ -1764,6 +1764,36 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Vnesite ime'**
   String get mapwEnterName;
+
+  /// No description provided for @mapwMarkFellingTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Označi sečnjo'**
+  String get mapwMarkFellingTitle;
+
+  /// No description provided for @mapwTreeDescLabel.
+  ///
+  /// In sl, this message translates to:
+  /// **'Opis drevesa'**
+  String get mapwTreeDescLabel;
+
+  /// No description provided for @mapwTreeDescHint.
+  ///
+  /// In sl, this message translates to:
+  /// **'npr. Hrast, Bukev, Smreka...'**
+  String get mapwTreeDescHint;
+
+  /// No description provided for @mapwEnterDescription.
+  ///
+  /// In sl, this message translates to:
+  /// **'Prosim vnesite opis'**
+  String get mapwEnterDescription;
+
+  /// No description provided for @mapwMarkAction.
+  ///
+  /// In sl, this message translates to:
+  /// **'Označi'**
+  String get mapwMarkAction;
 
   /// No description provided for @mapwDeleteLocationTitle.
   ///
@@ -2160,12 +2190,6 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Kompas'**
   String get mapwCompass;
-
-  /// No description provided for @mapwEndNavigation.
-  ///
-  /// In sl, this message translates to:
-  /// **'Končaj navigacijo'**
-  String get mapwEndNavigation;
 
   /// No description provided for @mapwDistance.
   ///
@@ -2586,6 +2610,24 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Hrvaška (DGU)'**
   String get mapwCatHrvatska;
+
+  /// No description provided for @mapwCroatianMaps.
+  ///
+  /// In sl, this message translates to:
+  /// **'Hrvaške karte'**
+  String get mapwCroatianMaps;
+
+  /// No description provided for @mapwAddLogTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Dodaj hlod'**
+  String get mapwAddLogTitle;
+
+  /// No description provided for @mapwEndNavigation.
+  ///
+  /// In sl, this message translates to:
+  /// **'Končaj navigacijo'**
+  String get mapwEndNavigation;
 
   /// No description provided for @parcelPointUnknown.
   ///
@@ -3265,138 +3307,6 @@ abstract class AppLocalizations {
   /// **'Odpri v evidenci vrednotenja'**
   String get valuationOpenGurs;
 
-  /// No description provided for @valuationBuildings.
-  ///
-  /// In sl, this message translates to:
-  /// **'Stavbe'**
-  String get valuationBuildings;
-
-  /// No description provided for @valuationBuilding.
-  ///
-  /// In sl, this message translates to:
-  /// **'Stavba'**
-  String get valuationBuilding;
-
-  /// No description provided for @valuationBuildingNumber.
-  ///
-  /// In sl, this message translates to:
-  /// **'stavba {number}'**
-  String valuationBuildingNumber(String number);
-
-  /// No description provided for @valuationBuildingYear.
-  ///
-  /// In sl, this message translates to:
-  /// **'zgrajena {year}'**
-  String valuationBuildingYear(String year);
-
-  /// No description provided for @valuationBuildingParts.
-  ///
-  /// In sl, this message translates to:
-  /// **'{count, plural, one{{count} del} two{{count} dela} few{{count} deli} other{{count} delov}}'**
-  String valuationBuildingParts(int count);
-
-  /// No description provided for @valuationBuildingSpans.
-  ///
-  /// In sl, this message translates to:
-  /// **'Stoji tudi na sosednji parceli; vrednost je za celo stavbo.'**
-  String get valuationBuildingSpans;
-
-  /// No description provided for @valuationBuildingNoValue.
-  ///
-  /// In sl, this message translates to:
-  /// **'Vrednost v evidenci GURS'**
-  String get valuationBuildingNoValue;
-
-  /// No description provided for @valuationLandAndBuildings.
-  ///
-  /// In sl, this message translates to:
-  /// **'zemljišče {land} € · stavbe {buildings} €'**
-  String valuationLandAndBuildings(String land, String buildings);
-
-  /// No description provided for @valuationBuildingLandNote.
-  ///
-  /// In sl, this message translates to:
-  /// **'Vrednost stavbe vključuje zemljišče pod njo.'**
-  String get valuationBuildingLandNote;
-
-  /// No description provided for @valuationBuildingModelHIS.
-  ///
-  /// In sl, this message translates to:
-  /// **'Hiša'**
-  String get valuationBuildingModelHIS;
-
-  /// No description provided for @valuationBuildingModelSTA.
-  ///
-  /// In sl, this message translates to:
-  /// **'Stanovanje'**
-  String get valuationBuildingModelSTA;
-
-  /// No description provided for @valuationBuildingModelGAR.
-  ///
-  /// In sl, this message translates to:
-  /// **'Garaža'**
-  String get valuationBuildingModelGAR;
-
-  /// No description provided for @valuationBuildingModelPPL.
-  ///
-  /// In sl, this message translates to:
-  /// **'Lokal'**
-  String get valuationBuildingModelPPL;
-
-  /// No description provided for @valuationBuildingModelPPP.
-  ///
-  /// In sl, this message translates to:
-  /// **'Pisarna'**
-  String get valuationBuildingModelPPP;
-
-  /// No description provided for @valuationBuildingModelTUR.
-  ///
-  /// In sl, this message translates to:
-  /// **'Stavba za turizem'**
-  String get valuationBuildingModelTUR;
-
-  /// No description provided for @valuationBuildingModelIND.
-  ///
-  /// In sl, this message translates to:
-  /// **'Industrijska stavba'**
-  String get valuationBuildingModelIND;
-
-  /// No description provided for @valuationBuildingModelINP.
-  ///
-  /// In sl, this message translates to:
-  /// **'Industrijska stavba'**
-  String get valuationBuildingModelINP;
-
-  /// No description provided for @valuationBuildingModelSDP.
-  ///
-  /// In sl, this message translates to:
-  /// **'Javna stavba'**
-  String get valuationBuildingModelSDP;
-
-  /// No description provided for @valuationBuildingModelKDS.
-  ///
-  /// In sl, this message translates to:
-  /// **'Kmetijska ali druga stavba'**
-  String get valuationBuildingModelKDS;
-
-  /// No description provided for @valuationBuildingModelPNE.
-  ///
-  /// In sl, this message translates to:
-  /// **'Elektrarna'**
-  String get valuationBuildingModelPNE;
-
-  /// No description provided for @valuationBuildingModelPNP.
-  ///
-  /// In sl, this message translates to:
-  /// **'Marina ali pristanišče'**
-  String get valuationBuildingModelPNP;
-
-  /// No description provided for @valuationBuildingModelPNB.
-  ///
-  /// In sl, this message translates to:
-  /// **'Bencinski servis'**
-  String get valuationBuildingModelPNB;
-
   /// No description provided for @valuationModelGOZ.
   ///
   /// In sl, this message translates to:
@@ -3642,6 +3552,348 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Zavrzi'**
   String get notesDiscard;
+
+  /// No description provided for @ownersSourceTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Vir'**
+  String get ownersSourceTitle;
+
+  /// No description provided for @ownersSourceLandRegistry.
+  ///
+  /// In sl, this message translates to:
+  /// **'Zemljiška knjiga'**
+  String get ownersSourceLandRegistry;
+
+  /// No description provided for @ownersSourceCadastre.
+  ///
+  /// In sl, this message translates to:
+  /// **'Kataster'**
+  String get ownersSourceCadastre;
+
+  /// No description provided for @ownersSourceLrUnit.
+  ///
+  /// In sl, this message translates to:
+  /// **'ZK vložek {unit}, k.o. {place}'**
+  String ownersSourceLrUnit(String unit, String place);
+
+  /// No description provided for @ownersSourceLine.
+  ///
+  /// In sl, this message translates to:
+  /// **'Vir: {source}'**
+  String ownersSourceLine(String source);
+
+  /// No description provided for @ownersSourceCadastreNote.
+  ///
+  /// In sl, this message translates to:
+  /// **'Posestniki po katastru, niso nujno lastniki.'**
+  String get ownersSourceCadastreNote;
+
+  /// No description provided for @ownersSourceOpen.
+  ///
+  /// In sl, this message translates to:
+  /// **'Odpri v registru'**
+  String get ownersSourceOpen;
+
+  /// No description provided for @parcelSearchUseStreet.
+  ///
+  /// In sl, this message translates to:
+  /// **'Išči na tej ulici'**
+  String get parcelSearchUseStreet;
+
+  /// No description provided for @parcelSearchAddressNoParcel.
+  ///
+  /// In sl, this message translates to:
+  /// **'Pod naslovom {address} ni najdene parcele.'**
+  String parcelSearchAddressNoParcel(String address);
+
+  /// No description provided for @valuationBuildings.
+  ///
+  /// In sl, this message translates to:
+  /// **'Stavbe'**
+  String get valuationBuildings;
+
+  /// No description provided for @valuationBuilding.
+  ///
+  /// In sl, this message translates to:
+  /// **'Stavba'**
+  String get valuationBuilding;
+
+  /// No description provided for @valuationBuildingNumber.
+  ///
+  /// In sl, this message translates to:
+  /// **'stavba {number}'**
+  String valuationBuildingNumber(String number);
+
+  /// No description provided for @valuationBuildingYear.
+  ///
+  /// In sl, this message translates to:
+  /// **'zgrajena {year}'**
+  String valuationBuildingYear(String year);
+
+  /// No description provided for @valuationBuildingParts.
+  ///
+  /// In sl, this message translates to:
+  /// **'{count, plural, one{{count} del} two{{count} dela} few{{count} deli} other{{count} delov}}'**
+  String valuationBuildingParts(int count);
+
+  /// No description provided for @valuationBuildingSpans.
+  ///
+  /// In sl, this message translates to:
+  /// **'Stoji tudi na sosednji parceli; vrednost je za celo stavbo.'**
+  String get valuationBuildingSpans;
+
+  /// No description provided for @valuationBuildingNoValue.
+  ///
+  /// In sl, this message translates to:
+  /// **'Vrednost v evidenci GURS'**
+  String get valuationBuildingNoValue;
+
+  /// No description provided for @valuationLandAndBuildings.
+  ///
+  /// In sl, this message translates to:
+  /// **'zemljišče {land} € · stavbe {buildings} €'**
+  String valuationLandAndBuildings(String land, String buildings);
+
+  /// No description provided for @valuationBuildingLandNote.
+  ///
+  /// In sl, this message translates to:
+  /// **'Vrednost stavbe vključuje zemljišče pod njo.'**
+  String get valuationBuildingLandNote;
+
+  /// No description provided for @valuationBuildingModelHIS.
+  ///
+  /// In sl, this message translates to:
+  /// **'Hiša'**
+  String get valuationBuildingModelHIS;
+
+  /// No description provided for @valuationBuildingModelSTA.
+  ///
+  /// In sl, this message translates to:
+  /// **'Stanovanje'**
+  String get valuationBuildingModelSTA;
+
+  /// No description provided for @valuationBuildingModelGAR.
+  ///
+  /// In sl, this message translates to:
+  /// **'Garaža'**
+  String get valuationBuildingModelGAR;
+
+  /// No description provided for @valuationBuildingModelPPL.
+  ///
+  /// In sl, this message translates to:
+  /// **'Lokal'**
+  String get valuationBuildingModelPPL;
+
+  /// No description provided for @valuationBuildingModelPPP.
+  ///
+  /// In sl, this message translates to:
+  /// **'Pisarna'**
+  String get valuationBuildingModelPPP;
+
+  /// No description provided for @valuationBuildingModelTUR.
+  ///
+  /// In sl, this message translates to:
+  /// **'Stavba za turizem'**
+  String get valuationBuildingModelTUR;
+
+  /// No description provided for @valuationBuildingModelIND.
+  ///
+  /// In sl, this message translates to:
+  /// **'Industrijska stavba'**
+  String get valuationBuildingModelIND;
+
+  /// No description provided for @valuationBuildingModelINP.
+  ///
+  /// In sl, this message translates to:
+  /// **'Industrijska stavba'**
+  String get valuationBuildingModelINP;
+
+  /// No description provided for @valuationBuildingModelSDP.
+  ///
+  /// In sl, this message translates to:
+  /// **'Javna stavba'**
+  String get valuationBuildingModelSDP;
+
+  /// No description provided for @valuationBuildingModelKDS.
+  ///
+  /// In sl, this message translates to:
+  /// **'Kmetijska ali druga stavba'**
+  String get valuationBuildingModelKDS;
+
+  /// No description provided for @valuationBuildingModelPNE.
+  ///
+  /// In sl, this message translates to:
+  /// **'Elektrarna'**
+  String get valuationBuildingModelPNE;
+
+  /// No description provided for @valuationBuildingModelPNP.
+  ///
+  /// In sl, this message translates to:
+  /// **'Marina ali pristanišče'**
+  String get valuationBuildingModelPNP;
+
+  /// No description provided for @valuationBuildingModelPNB.
+  ///
+  /// In sl, this message translates to:
+  /// **'Bencinski servis'**
+  String get valuationBuildingModelPNB;
+
+  /// No description provided for @secnjaShareHeadline.
+  ///
+  /// In sl, this message translates to:
+  /// **'🪓 Sečnja — parcela {parcel}, k.o. {ko}'**
+  String secnjaShareHeadline(String parcel, String ko);
+
+  /// No description provided for @secnjaOutsideParcel.
+  ///
+  /// In sl, this message translates to:
+  /// **'Izven parcele'**
+  String get secnjaOutsideParcel;
+
+  /// No description provided for @secnjaDefaultName.
+  ///
+  /// In sl, this message translates to:
+  /// **'Drevo {n}'**
+  String secnjaDefaultName(int n);
+
+  /// No description provided for @secnjaMarkAction.
+  ///
+  /// In sl, this message translates to:
+  /// **'Označi'**
+  String get secnjaMarkAction;
+
+  /// No description provided for @secnjaFinish.
+  ///
+  /// In sl, this message translates to:
+  /// **'Končaj'**
+  String get secnjaFinish;
+
+  /// No description provided for @secnjaHere.
+  ///
+  /// In sl, this message translates to:
+  /// **'Tu stojim'**
+  String get secnjaHere;
+
+  /// No description provided for @secnjaMarkingTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'🪓 Sečnja · {parcel}'**
+  String secnjaMarkingTitle(String parcel);
+
+  /// No description provided for @secnjaMarkedCount.
+  ///
+  /// In sl, this message translates to:
+  /// **'{count, plural, one{{count} drevo} two{{count} drevesi} few{{count} drevesa} other{{count} dreves}}'**
+  String secnjaMarkedCount(int count);
+
+  /// No description provided for @secnjaShareAction.
+  ///
+  /// In sl, this message translates to:
+  /// **'Deli sekaču'**
+  String get secnjaShareAction;
+
+  /// No description provided for @secnjaMarkedSnack.
+  ///
+  /// In sl, this message translates to:
+  /// **'{count, plural, one{Označeno {count} drevo} two{Označeni {count} drevesi} few{Označena {count} drevesa} other{Označenih {count} dreves}}'**
+  String secnjaMarkedSnack(int count);
+
+  /// No description provided for @pointDefaultName.
+  ///
+  /// In sl, this message translates to:
+  /// **'Točka {n}'**
+  String pointDefaultName(int n);
+
+  /// No description provided for @pointOwnNameLabel.
+  ///
+  /// In sl, this message translates to:
+  /// **'Ime (neobvezno)'**
+  String get pointOwnNameLabel;
+
+  /// No description provided for @secnjaShareAgain.
+  ///
+  /// In sl, this message translates to:
+  /// **'Deli znova'**
+  String get secnjaShareAgain;
+
+  /// No description provided for @secnjaShareUpdate.
+  ///
+  /// In sl, this message translates to:
+  /// **'Posodobi povezavo'**
+  String get secnjaShareUpdate;
+
+  /// No description provided for @secnjaSharedUntil.
+  ///
+  /// In sl, this message translates to:
+  /// **'Deljeno · velja do {date}'**
+  String secnjaSharedUntil(String date);
+
+  /// No description provided for @secnjaImportUpdated.
+  ///
+  /// In sl, this message translates to:
+  /// **'Seznam dreves za parc. {parcel} je posodobljen (+{added} / −{removed})'**
+  String secnjaImportUpdated(String parcel, int added, int removed);
+
+  /// No description provided for @secnjaImportWithdrawn.
+  ///
+  /// In sl, this message translates to:
+  /// **'Seznam dreves za parc. {parcel} ni več deljen. Drevesa ostanejo.'**
+  String secnjaImportWithdrawn(String parcel);
+
+  /// No description provided for @secnjaImportWithdrawnNote.
+  ///
+  /// In sl, this message translates to:
+  /// **'Lastnik je seznam umaknil ali je potekel. Drevesa ostanejo.'**
+  String get secnjaImportWithdrawnNote;
+
+  /// No description provided for @secnjaRevoke.
+  ///
+  /// In sl, this message translates to:
+  /// **'Prekliči'**
+  String get secnjaRevoke;
+
+  /// No description provided for @secnjaRevokeConfirm.
+  ///
+  /// In sl, this message translates to:
+  /// **'Preklic povezave? Sekač je ne bo mogel več odpreti.'**
+  String get secnjaRevokeConfirm;
+
+  /// No description provided for @secnjaShareFailed.
+  ///
+  /// In sl, this message translates to:
+  /// **'Deljenje ni uspelo — preveri povezavo'**
+  String get secnjaShareFailed;
+
+  /// No description provided for @secnjaForCutCount.
+  ///
+  /// In sl, this message translates to:
+  /// **'{count} za posek'**
+  String secnjaForCutCount(int count);
+
+  /// No description provided for @secnjaReceived.
+  ///
+  /// In sl, this message translates to:
+  /// **'{count, plural, one{Prejeta sečnja: parcela {parcel} · {count} drevo} two{Prejeta sečnja: parcela {parcel} · {count} drevesi} few{Prejeta sečnja: parcela {parcel} · {count} drevesa} other{Prejeta sečnja: parcela {parcel} · {count} dreves}}'**
+  String secnjaReceived(String parcel, int count);
+
+  /// No description provided for @secnjaLinkExpired.
+  ///
+  /// In sl, this message translates to:
+  /// **'Povezava je potekla ali bila preklicana'**
+  String get secnjaLinkExpired;
+
+  /// No description provided for @secnjaNoConnection.
+  ///
+  /// In sl, this message translates to:
+  /// **'Ni povezave — poskusi znova'**
+  String get secnjaNoConnection;
+
+  /// No description provided for @secnjaLinkInvalid.
+  ///
+  /// In sl, this message translates to:
+  /// **'Povezave ni mogoče prebrati'**
+  String get secnjaLinkInvalid;
 
   /// No description provided for @svcKmlExportSubject.
   ///
@@ -5034,167 +5286,29 @@ abstract class AppLocalizations {
   /// **'Ponovno si oglejte predstavitev aplikacije'**
   String get aboutShowIntroDesc;
 
-  /// No description provided for @secnjaShareHeadline.
+  /// No description provided for @aboutAddresses.
   ///
   /// In sl, this message translates to:
-  /// **'🪓 Sečnja — parcela {parcel}, k.o. {ko}'**
-  String secnjaShareHeadline(String parcel, String ko);
+  /// **'naslovi'**
+  String get aboutAddresses;
 
-  /// No description provided for @secnjaOutsideParcel.
+  /// No description provided for @aboutAddressesLabel.
   ///
   /// In sl, this message translates to:
-  /// **'Izven parcele'**
-  String get secnjaOutsideParcel;
+  /// **'Naslovi…'**
+  String get aboutAddressesLabel;
 
-  /// No description provided for @secnjaDefaultName.
+  /// No description provided for @aboutAddressesFailed.
   ///
   /// In sl, this message translates to:
-  /// **'Drevo {n}'**
-  String secnjaDefaultName(int n);
-
-  /// No description provided for @secnjaMarkAction.
-  ///
-  /// In sl, this message translates to:
-  /// **'Označi'**
-  String get secnjaMarkAction;
-
-  /// No description provided for @secnjaFinish.
-  ///
-  /// In sl, this message translates to:
-  /// **'Končaj'**
-  String get secnjaFinish;
-
-  /// No description provided for @secnjaHere.
-  ///
-  /// In sl, this message translates to:
-  /// **'Tu stojim'**
-  String get secnjaHere;
-
-  /// No description provided for @secnjaMarkingTitle.
-  ///
-  /// In sl, this message translates to:
-  /// **'🪓 Sečnja · {parcel}'**
-  String secnjaMarkingTitle(String parcel);
-
-  /// No description provided for @secnjaMarkedCount.
-  ///
-  /// In sl, this message translates to:
-  /// **'{count, plural, one{{count} drevo} two{{count} drevesi} few{{count} drevesa} other{{count} dreves}}'**
-  String secnjaMarkedCount(int count);
-
-  /// No description provided for @secnjaShareAction.
-  ///
-  /// In sl, this message translates to:
-  /// **'Deli sekaču'**
-  String get secnjaShareAction;
-
-  /// No description provided for @secnjaMarkedSnack.
-  ///
-  /// In sl, this message translates to:
-  /// **'{count, plural, one{Označeno {count} drevo} two{Označeni {count} drevesi} few{Označena {count} drevesa} other{Označenih {count} dreves}}'**
-  String secnjaMarkedSnack(int count);
-
-  /// No description provided for @pointDefaultName.
-  ///
-  /// In sl, this message translates to:
-  /// **'Točka {n}'**
-  String pointDefaultName(int n);
-
-  /// No description provided for @pointOwnNameLabel.
-  ///
-  /// In sl, this message translates to:
-  /// **'Ime (neobvezno)'**
-  String get pointOwnNameLabel;
-
-  /// No description provided for @secnjaShareAgain.
-  ///
-  /// In sl, this message translates to:
-  /// **'Deli znova'**
-  String get secnjaShareAgain;
-
-  /// No description provided for @secnjaShareUpdate.
-  ///
-  /// In sl, this message translates to:
-  /// **'Posodobi povezavo'**
-  String get secnjaShareUpdate;
-
-  /// No description provided for @secnjaSharedUntil.
-  ///
-  /// In sl, this message translates to:
-  /// **'Deljeno · velja do {date}'**
-  String secnjaSharedUntil(String date);
-
-  /// No description provided for @secnjaImportUpdated.
-  ///
-  /// In sl, this message translates to:
-  /// **'Seznam dreves za parc. {parcel} je posodobljen (+{added} / −{removed})'**
-  String secnjaImportUpdated(String parcel, int added, int removed);
-
-  /// No description provided for @secnjaImportWithdrawn.
-  ///
-  /// In sl, this message translates to:
-  /// **'Seznam dreves za parc. {parcel} ni več deljen. Drevesa ostanejo.'**
-  String secnjaImportWithdrawn(String parcel);
-
-  /// No description provided for @secnjaImportWithdrawnNote.
-  ///
-  /// In sl, this message translates to:
-  /// **'Lastnik je seznam umaknil ali je potekel. Drevesa ostanejo.'**
-  String get secnjaImportWithdrawnNote;
-
-  /// No description provided for @secnjaRevoke.
-  ///
-  /// In sl, this message translates to:
-  /// **'Prekliči'**
-  String get secnjaRevoke;
-
-  /// No description provided for @secnjaRevokeConfirm.
-  ///
-  /// In sl, this message translates to:
-  /// **'Preklic povezave? Sekač je ne bo mogel več odpreti.'**
-  String get secnjaRevokeConfirm;
-
-  /// No description provided for @secnjaShareFailed.
-  ///
-  /// In sl, this message translates to:
-  /// **'Deljenje ni uspelo — preveri povezavo'**
-  String get secnjaShareFailed;
-
-  /// No description provided for @secnjaForCutCount.
-  ///
-  /// In sl, this message translates to:
-  /// **'{count} za posek'**
-  String secnjaForCutCount(int count);
-
-  /// No description provided for @secnjaReceived.
-  ///
-  /// In sl, this message translates to:
-  /// **'{count, plural, one{Prejeta sečnja: parcela {parcel} · {count} drevo} two{Prejeta sečnja: parcela {parcel} · {count} drevesi} few{Prejeta sečnja: parcela {parcel} · {count} drevesa} other{Prejeta sečnja: parcela {parcel} · {count} dreves}}'**
-  String secnjaReceived(String parcel, int count);
-
-  /// No description provided for @secnjaLinkExpired.
-  ///
-  /// In sl, this message translates to:
-  /// **'Povezava je potekla ali bila preklicana'**
-  String get secnjaLinkExpired;
-
-  /// No description provided for @secnjaNoConnection.
-  ///
-  /// In sl, this message translates to:
-  /// **'Ni povezave — poskusi znova'**
-  String get secnjaNoConnection;
+  /// **'Prenos naslovov ni uspel.'**
+  String get aboutAddressesFailed;
 
   /// No description provided for @receivedLoading.
   ///
   /// In sl, this message translates to:
   /// **'Nalagam sečnjo…'**
   String get receivedLoading;
-
-  /// No description provided for @secnjaLinkInvalid.
-  ///
-  /// In sl, this message translates to:
-  /// **'Povezave ni mogoče prebrati'**
-  String get secnjaLinkInvalid;
 
   /// No description provided for @introSecnjaTitle.
   ///
@@ -5237,54 +5351,6 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej.'**
   String get introSecnjaLoggerDesc;
-
-  /// No description provided for @ownersSourceTitle.
-  ///
-  /// In sl, this message translates to:
-  /// **'Vir'**
-  String get ownersSourceTitle;
-
-  /// No description provided for @ownersSourceLandRegistry.
-  ///
-  /// In sl, this message translates to:
-  /// **'Zemljiška knjiga'**
-  String get ownersSourceLandRegistry;
-
-  /// No description provided for @ownersSourceCadastre.
-  ///
-  /// In sl, this message translates to:
-  /// **'Kataster'**
-  String get ownersSourceCadastre;
-
-  /// No description provided for @ownersSourceLrUnit.
-  ///
-  /// In sl, this message translates to:
-  /// **'ZK vložek {unit}, k.o. {place}'**
-  String ownersSourceLrUnit(String unit, String place);
-
-  /// No description provided for @ownersSourceLine.
-  ///
-  /// In sl, this message translates to:
-  /// **'Vir: {source}'**
-  String ownersSourceLine(String source);
-
-  /// No description provided for @ownersSourceCadastreNote.
-  ///
-  /// In sl, this message translates to:
-  /// **'Posestniki po katastru, niso nujno lastniki.'**
-  String get ownersSourceCadastreNote;
-
-  /// No description provided for @ownersSourceOpen.
-  ///
-  /// In sl, this message translates to:
-  /// **'Odpri v registru'**
-  String get ownersSourceOpen;
-
-  /// No description provided for @mapwCroatianMaps.
-  ///
-  /// In sl, this message translates to:
-  /// **'Hrvaške karte'**
-  String get mapwCroatianMaps;
 }
 
 class _AppLocalizationsDelegate

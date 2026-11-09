@@ -506,6 +506,14 @@
       }
     }
   },
+  "mapTabSecnjaMarked": "Sečnja \"{name}\" označena",
+  "@mapTabSecnjaMarked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "mapTabSecnjaMarkError": "Napaka pri označevanju sečnje: {error}",
   "@mapTabSecnjaMarkError": {
     "placeholders": {
@@ -789,7 +797,6 @@
       }
     }
   },
-  "mapwAddLogTitle": "Dodaj hlod",
   "mapwAddLocationTitle": "Dodaj lokacijo",
   "mapwAddLocationHint": "Koordinate iz dolgo-pritiska ali vnesite svoje",
   "mapwLatLabel": "Zemljepisna širina (Lat)",
@@ -806,6 +813,11 @@
   "mapwLocationNameLabel": "Ime lokacije",
   "mapwLocationNameHint": "Vnesite ime za to lokacijo",
   "mapwEnterName": "Vnesite ime",
+  "mapwMarkFellingTitle": "Označi sečnjo",
+  "mapwTreeDescLabel": "Opis drevesa",
+  "mapwTreeDescHint": "npr. Hrast, Bukev, Smreka...",
+  "mapwEnterDescription": "Prosim vnesite opis",
+  "mapwMarkAction": "Označi",
   "mapwDeleteLocationTitle": "Izbriši lokacijo",
   "mapwDeleteLocationSure": "Ali ste prepričani, da želite izbrisati \"{name}\"?",
   "@mapwDeleteLocationSure": {
@@ -921,7 +933,6 @@
   },
   "mapwLocationPermissionDenied": "Dovoljenje za lokacijo zavrnjeno — razdalja ni na voljo",
   "mapwCompass": "Kompas",
-  "mapwEndNavigation": "Končaj navigacijo",
   "mapwDistance": "Razdalja",
   "mapwAzimuth": "Azimut",
   "mapwDirection": "Smer",
@@ -1117,6 +1128,9 @@
   "mapwCatFunkcijeGozda": "Funkcije gozda",
   "mapwCatPosebno": "Posebno",
   "mapwCatHrvatska": "Hrvaška (DGU)",
+  "mapwCroatianMaps": "Hrvaške karte",
+  "mapwAddLogTitle": "Dodaj hlod",
+  "mapwEndNavigation": "Končaj navigacijo",
   "parcelPointUnknown": "Točka ?",
   "parcelPointNumbered": "Točka {number}",
   "parcelDetailUpdateError": "Napaka pri posodabljanju: {error}",
@@ -1435,59 +1449,6 @@
   "valuationSource": "Posplošena tržna vrednost GURS, izračun {date}. Podatki so informativni.",
   "valuationSourceUndated": "Posplošena tržna vrednost GURS. Podatki so informativni.",
   "valuationOpenGurs": "Odpri v evidenci vrednotenja",
-  "valuationBuildings": "Stavbe",
-  "valuationBuilding": "Stavba",
-  "valuationBuildingNumber": "stavba {number}",
-  "@valuationBuildingNumber": {
-    "placeholders": {
-      "number": {
-        "type": "String"
-      }
-    }
-  },
-  "valuationBuildingYear": "zgrajena {year}",
-  "@valuationBuildingYear": {
-    "placeholders": {
-      "year": {
-        "type": "String"
-      }
-    }
-  },
-  "valuationBuildingParts": "{count, plural, one{{count} del} two{{count} dela} few{{count} deli} other{{count} delov}}",
-  "@valuationBuildingParts": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "valuationBuildingSpans": "Stoji tudi na sosednji parceli; vrednost je za celo stavbo.",
-  "valuationBuildingNoValue": "Vrednost v evidenci GURS",
-  "valuationLandAndBuildings": "zemljišče {land} € · stavbe {buildings} €",
-  "@valuationLandAndBuildings": {
-    "placeholders": {
-      "land": {
-        "type": "String"
-      },
-      "buildings": {
-        "type": "String"
-      }
-    }
-  },
-  "valuationBuildingLandNote": "Vrednost stavbe vključuje zemljišče pod njo.",
-  "valuationBuildingModelHIS": "Hiša",
-  "valuationBuildingModelSTA": "Stanovanje",
-  "valuationBuildingModelGAR": "Garaža",
-  "valuationBuildingModelPPL": "Lokal",
-  "valuationBuildingModelPPP": "Pisarna",
-  "valuationBuildingModelTUR": "Stavba za turizem",
-  "valuationBuildingModelIND": "Industrijska stavba",
-  "valuationBuildingModelINP": "Industrijska stavba",
-  "valuationBuildingModelSDP": "Javna stavba",
-  "valuationBuildingModelKDS": "Kmetijska ali druga stavba",
-  "valuationBuildingModelPNE": "Elektrarna",
-  "valuationBuildingModelPNP": "Marina ali pristanišče",
-  "valuationBuildingModelPNB": "Bencinski servis",
   "valuationModelGOZ": "Gozd",
   "valuationModelKME": "Kmetijsko zemljišče",
   "valuationModelSTZ": "Stavbno zemljišče",
@@ -1606,6 +1567,207 @@
   "notesDiscardMessage": "Spremembe zapiskov še niso shranjene.",
   "notesKeepEditing": "Nadaljuj urejanje",
   "notesDiscard": "Zavrzi",
+  "ownersSourceTitle": "Vir",
+  "ownersSourceLandRegistry": "Zemljiška knjiga",
+  "ownersSourceCadastre": "Kataster",
+  "ownersSourceLrUnit": "ZK vložek {unit}, k.o. {place}",
+  "@ownersSourceLrUnit": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      },
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "ownersSourceLine": "Vir: {source}",
+  "@ownersSourceLine": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "ownersSourceCadastreNote": "Posestniki po katastru, niso nujno lastniki.",
+  "ownersSourceOpen": "Odpri v registru",
+  "parcelSearchUseStreet": "Išči na tej ulici",
+  "parcelSearchAddressNoParcel": "Pod naslovom {address} ni najdene parcele.",
+  "@parcelSearchAddressNoParcel": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "valuationBuildings": "Stavbe",
+  "valuationBuilding": "Stavba",
+  "valuationBuildingNumber": "stavba {number}",
+  "@valuationBuildingNumber": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "valuationBuildingYear": "zgrajena {year}",
+  "@valuationBuildingYear": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "valuationBuildingParts": "{count, plural, one{{count} del} two{{count} dela} few{{count} deli} other{{count} delov}}",
+  "@valuationBuildingParts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "valuationBuildingSpans": "Stoji tudi na sosednji parceli; vrednost je za celo stavbo.",
+  "valuationBuildingNoValue": "Vrednost v evidenci GURS",
+  "valuationLandAndBuildings": "zemljišče {land} € · stavbe {buildings} €",
+  "@valuationLandAndBuildings": {
+    "placeholders": {
+      "land": {
+        "type": "String"
+      },
+      "buildings": {
+        "type": "String"
+      }
+    }
+  },
+  "valuationBuildingLandNote": "Vrednost stavbe vključuje zemljišče pod njo.",
+  "valuationBuildingModelHIS": "Hiša",
+  "valuationBuildingModelSTA": "Stanovanje",
+  "valuationBuildingModelGAR": "Garaža",
+  "valuationBuildingModelPPL": "Lokal",
+  "valuationBuildingModelPPP": "Pisarna",
+  "valuationBuildingModelTUR": "Stavba za turizem",
+  "valuationBuildingModelIND": "Industrijska stavba",
+  "valuationBuildingModelINP": "Industrijska stavba",
+  "valuationBuildingModelSDP": "Javna stavba",
+  "valuationBuildingModelKDS": "Kmetijska ali druga stavba",
+  "valuationBuildingModelPNE": "Elektrarna",
+  "valuationBuildingModelPNP": "Marina ali pristanišče",
+  "valuationBuildingModelPNB": "Bencinski servis",
+  "secnjaShareHeadline": "🪓 Sečnja — parcela {parcel}, k.o. {ko}",
+  "@secnjaShareHeadline": {
+    "placeholders": {
+      "parcel": {
+        "type": "String"
+      },
+      "ko": {
+        "type": "String"
+      }
+    }
+  },
+  "secnjaOutsideParcel": "Izven parcele",
+  "secnjaDefaultName": "Drevo {n}",
+  "@secnjaDefaultName": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "secnjaMarkAction": "Označi",
+  "secnjaFinish": "Končaj",
+  "secnjaHere": "Tu stojim",
+  "secnjaMarkingTitle": "🪓 Sečnja · {parcel}",
+  "@secnjaMarkingTitle": {
+    "placeholders": {
+      "parcel": {
+        "type": "String"
+      }
+    }
+  },
+  "secnjaMarkedCount": "{count, plural, one{{count} drevo} two{{count} drevesi} few{{count} drevesa} other{{count} dreves}}",
+  "@secnjaMarkedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "secnjaShareAction": "Deli sekaču",
+  "secnjaMarkedSnack": "{count, plural, one{Označeno {count} drevo} two{Označeni {count} drevesi} few{Označena {count} drevesa} other{Označenih {count} dreves}}",
+  "@secnjaMarkedSnack": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pointDefaultName": "Točka {n}",
+  "@pointDefaultName": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pointOwnNameLabel": "Ime (neobvezno)",
+  "secnjaShareAgain": "Deli znova",
+  "secnjaShareUpdate": "Posodobi povezavo",
+  "secnjaSharedUntil": "Deljeno · velja do {date}",
+  "@secnjaSharedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "secnjaImportUpdated": "Seznam dreves za parc. {parcel} je posodobljen (+{added} / −{removed})",
+  "@secnjaImportUpdated": {
+    "placeholders": {
+      "parcel": {
+        "type": "String"
+      },
+      "added": {
+        "type": "int"
+      },
+      "removed": {
+        "type": "int"
+      }
+    }
+  },
+  "secnjaImportWithdrawn": "Seznam dreves za parc. {parcel} ni več deljen. Drevesa ostanejo.",
+  "@secnjaImportWithdrawn": {
+    "placeholders": {
+      "parcel": {
+        "type": "String"
+      }
+    }
+  },
+  "secnjaImportWithdrawnNote": "Lastnik je seznam umaknil ali je potekel. Drevesa ostanejo.",
+  "secnjaRevoke": "Prekliči",
+  "secnjaRevokeConfirm": "Preklic povezave? Sekač je ne bo mogel več odpreti.",
+  "secnjaShareFailed": "Deljenje ni uspelo — preveri povezavo",
+  "secnjaForCutCount": "{count} za posek",
+  "@secnjaForCutCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "secnjaReceived": "{count, plural, one{Prejeta sečnja: parcela {parcel} · {count} drevo} two{Prejeta sečnja: parcela {parcel} · {count} drevesi} few{Prejeta sečnja: parcela {parcel} · {count} drevesa} other{Prejeta sečnja: parcela {parcel} · {count} dreves}}",
+  "@secnjaReceived": {
+    "placeholders": {
+      "parcel": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "secnjaLinkExpired": "Povezava je potekla ali bila preklicana",
+  "secnjaNoConnection": "Ni povezave — poskusi znova",
+  "secnjaLinkInvalid": "Povezave ni mogoče prebrati",
   "svcKmlExportSubject": "Gozdar Parcels Export",
   "svcKmlExportText": "Exported {count} parcels",
   "@svcKmlExportText": {
@@ -2075,152 +2237,15 @@
   "introTermsUrl": "https://prostor.zgs.gov.si/pregledovalnik/",
   "aboutShowIntro": "Uvodni vodič",
   "aboutShowIntroDesc": "Ponovno si oglejte predstavitev aplikacije",
-  "secnjaShareHeadline": "🪓 Sečnja — parcela {parcel}, k.o. {ko}",
-  "@secnjaShareHeadline": {
-    "placeholders": {
-      "parcel": {
-        "type": "String"
-      },
-      "ko": {
-        "type": "String"
-      }
-    }
-  },
-  "secnjaOutsideParcel": "Izven parcele",
-  "secnjaDefaultName": "Drevo {n}",
-  "@secnjaDefaultName": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "secnjaMarkAction": "Označi",
-  "secnjaFinish": "Končaj",
-  "secnjaHere": "Tu stojim",
-  "secnjaMarkingTitle": "🪓 Sečnja · {parcel}",
-  "@secnjaMarkingTitle": {
-    "placeholders": {
-      "parcel": {
-        "type": "String"
-      }
-    }
-  },
-  "secnjaMarkedCount": "{count, plural, one{{count} drevo} two{{count} drevesi} few{{count} drevesa} other{{count} dreves}}",
-  "@secnjaMarkedCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "secnjaShareAction": "Deli sekaču",
-  "secnjaMarkedSnack": "{count, plural, one{Označeno {count} drevo} two{Označeni {count} drevesi} few{Označena {count} drevesa} other{Označenih {count} dreves}}",
-  "@secnjaMarkedSnack": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "pointDefaultName": "Točka {n}",
-  "@pointDefaultName": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "pointOwnNameLabel": "Ime (neobvezno)",
-  "secnjaShareAgain": "Deli znova",
-  "secnjaShareUpdate": "Posodobi povezavo",
-  "secnjaSharedUntil": "Deljeno · velja do {date}",
-  "@secnjaSharedUntil": {
-    "placeholders": {
-      "date": {
-        "type": "String"
-      }
-    }
-  },
-  "secnjaImportUpdated": "Seznam dreves za parc. {parcel} je posodobljen (+{added} / −{removed})",
-  "@secnjaImportUpdated": {
-    "placeholders": {
-      "parcel": {
-        "type": "String"
-      },
-      "added": {
-        "type": "int"
-      },
-      "removed": {
-        "type": "int"
-      }
-    }
-  },
-  "secnjaImportWithdrawn": "Seznam dreves za parc. {parcel} ni več deljen. Drevesa ostanejo.",
-  "@secnjaImportWithdrawn": {
-    "placeholders": {
-      "parcel": {
-        "type": "String"
-      }
-    }
-  },
-  "secnjaImportWithdrawnNote": "Lastnik je seznam umaknil ali je potekel. Drevesa ostanejo.",
-  "secnjaRevoke": "Prekliči",
-  "secnjaRevokeConfirm": "Preklic povezave? Sekač je ne bo mogel več odpreti.",
-  "secnjaShareFailed": "Deljenje ni uspelo — preveri povezavo",
-  "secnjaForCutCount": "{count} za posek",
-  "@secnjaForCutCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "secnjaReceived": "{count, plural, one{Prejeta sečnja: parcela {parcel} · {count} drevo} two{Prejeta sečnja: parcela {parcel} · {count} drevesi} few{Prejeta sečnja: parcela {parcel} · {count} drevesa} other{Prejeta sečnja: parcela {parcel} · {count} dreves}}",
-  "@secnjaReceived": {
-    "placeholders": {
-      "parcel": {
-        "type": "String"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "secnjaLinkExpired": "Povezava je potekla ali bila preklicana",
-  "secnjaNoConnection": "Ni povezave — poskusi znova",
+  "aboutAddresses": "naslovi",
+  "aboutAddressesLabel": "Naslovi…",
+  "aboutAddressesFailed": "Prenos naslovov ni uspel.",
   "receivedLoading": "Nalagam sečnjo…",
-  "secnjaLinkInvalid": "Povezave ni mogoče prebrati",
   "introSecnjaTitle": "Sečnja za sekača",
   "introSecnjaMarkTitle": "Označi drevesa",
   "introSecnjaMarkDesc": "Dolgo pritisni karto → Dodaj → Sečnja. Nameri križec na drevo in tapni Označi. Vrsto izbereš enkrat.",
   "introSecnjaShareTitle": "Deli sekaču",
   "introSecnjaShareDesc": "V parceli tapni Deli sekaču in pošlji povezavo. Velja 30 dni; ob novih oznakah jo posodobiš.",
   "introSecnjaLoggerTitle": "Sekač dobi parcelo",
-  "introSecnjaLoggerDesc": "Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej.",
-  "ownersSourceTitle": "Vir",
-  "ownersSourceLandRegistry": "Zemljiška knjiga",
-  "ownersSourceCadastre": "Kataster",
-  "ownersSourceLrUnit": "ZK vložek {unit}, k.o. {place}",
-  "@ownersSourceLrUnit": {
-    "placeholders": {
-      "unit": {
-        "type": "String"
-      },
-      "place": {
-        "type": "String"
-      }
-    }
-  },
-  "ownersSourceLine": "Vir: {source}",
-  "@ownersSourceLine": {
-    "placeholders": {
-      "source": {
-        "type": "String"
-      }
-    }
-  },
-  "ownersSourceCadastreNote": "Posestniki po katastru, niso nujno lastniki.",
-  "ownersSourceOpen": "Odpri v registru",
-  "mapwCroatianMaps": "Hrvaške karte"
+  "introSecnjaLoggerDesc": "Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej."
 }

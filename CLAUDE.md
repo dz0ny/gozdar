@@ -48,6 +48,7 @@ keytool -genkey -v -keystore ~/android-keystores/gozdar-release-key.jks \
 - `CadastralService` - WMS queries to prostor.zgs.gov.si (30s timeout)
 - `HttpCacheService` / `TileCacheService` - 1-year cache for govt APIs (drift `http_cache`), drift tile cache
 - `LookupCacheStore` - Per-answer cache of online lookups in the drift `lookup_cache` table (HR owners, SI valuations, parcel shapes). Each source has a `version`; bump it to drop its old rows. Don't add new JSON-file caches
+- `AddressLookupService` - Offline house numbers (`addresses.sqlite` from R2, built by `tools/parcels/build_addresses.py` from the GURS address register). Powers the address rows of the parcel search; tapping one opens the parcel under the house
 - `HrOwnerService` - Croatian owners from oss.uredjenazemlja.hr: land registry (ZK sheet B, `/lr/lr-unit`) first, cadastre possessors (`/cad/parcel-info`) only as fallback
 - `MapPreferencesService` - Layer prefs (defaults: Ortofoto + Kataster + Kataster z nazivi)
 - `SpeciesService` - Tree species (SharedPreferences, defaults: Smreka, Bukev, Jelka)

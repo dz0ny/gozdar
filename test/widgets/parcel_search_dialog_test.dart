@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gozdar/l10n/l10n.dart';
+import 'package:gozdar/services/address_lookup_service.dart';
 import 'package:gozdar/services/ko_locator.dart';
 import 'package:gozdar/services/owner_lookup_service.dart';
 import 'package:gozdar/theme/app_theme.dart';
 import 'package:gozdar/widgets/parcel_search_dialog.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sqlite3/sqlite3.dart';
+
+import '../fixtures/address_fixture.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +24,11 @@ void main() {
   // Inside BABNO POLJE of the fixture index.
   const babnoCenter = LatLng(45.655, 14.555);
 
-  Future<void> open(WidgetTester tester, {LatLng? center = babnoCenter}) async {
+  Future<void> open(
+    WidgetTester tester, {
+    LatLng? center = babnoCenter,
+    void Function(AddressHit)? onAddressFound,
+  }) async {
     ParcelSearchDialog.forgetLastSearch();
     tester.view.physicalSize = const Size(1080, 2200);
     tester.view.devicePixelRatio = 3;
@@ -40,6 +47,7 @@ void main() {
                 mapController: MapController(),
                 center: center,
                 onParcelFound: (_) {},
+                onAddressFound: onAddressFound,
               ),
               child: const Text('open'),
             ),
@@ -198,5 +206,51 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Parcela 5'), findsOneWidget);
     expect(find.text('KO KOZARIŠČE • NOVAK ANA'), findsOneWidget);
+  });
+
+  testWidgets('house numbers are suggested and tapped', (tester) async {
+    final dir = Directory.systemTemp.createTempSync('addresses-');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    openAddressFixture(dir);
+
+    AddressHit? found;
+    await open(tester, onAddressFound: (hit) => found = hit);
+    await tester.tap(find.byTooltip('Odstrani katastrsko občino'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Poljska ulica 15');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    // An address row (the field holds the same text, so look for the
+    // ListTile), and no "choose a KO for parcel 15" tile above it.
+    final row = find.widgetWithText(ListTile, 'Poljska ulica 15');
+    expect(row, findsOneWidget);
+    expect(find.text('Kranj, 4000 Kranj'), findsOneWidget);
+    expect(find.textContaining('izberite katastrsko'), findsNothing);
+    expect(find.text('Ni zadetkov.'), findsNothing);
+
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    expect(found?.title, 'Poljska ulica 15');
+    expect(found?.point.latitude, closeTo(46.24, 0.001));
+    expect(find.text('Iskanje parcele'), findsNothing); // sheet closed
+
+    // Words alone offer the street; tapping it fills the field.
+    await open(tester, onAddressFound: (hit) => found = hit);
+    await tester.enterText(find.byType(TextField), 'Jereb');
+    await tester.pump(const Duration(milliseconds: 400));
+    // Words alone also start the owner search on a background isolate.
+    await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+    await tester.pumpAndSettle();
+    final street = find.widgetWithText(ListTile, 'Jerebova ulica');
+    expect(street, findsOneWidget);
+    await tester.tap(street);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'Jerebova ulica ',
+    );
   });
 }

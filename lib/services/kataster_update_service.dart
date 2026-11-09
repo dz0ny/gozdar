@@ -4,12 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'address_lookup_service.dart';
 import 'owner_lookup_service.dart';
 import 'parcel_lookup_service.dart';
 
 /// The R2 `regions.json` manifest: the GURS data date the region databases
 /// were built from, the downloadable regions, and (optionally) the build
-/// timestamp of the public-owners database that sits next to them.
+/// timestamps of the public-owners and address databases next to them.
 class KatasterManifest {
   /// The decoded JSON this was parsed from (persisted between launches).
   final Map<String, dynamic> raw;
@@ -18,6 +19,8 @@ class KatasterManifest {
   final List<ParcelRegion> regions;
   final String? publicOwnersBuilt;
   final int? publicOwnersBytes;
+  final String? addressesBuilt;
+  final int? addressesBytes;
 
   const KatasterManifest({
     required this.raw,
@@ -26,11 +29,14 @@ class KatasterManifest {
     required this.regions,
     this.publicOwnersBuilt,
     this.publicOwnersBytes,
+    this.addressesBuilt,
+    this.addressesBytes,
   });
 
   factory KatasterManifest.fromJson(Map<String, dynamic> j) {
     final list = (j['regions'] as List<dynamic>? ?? const []);
     final pub = j['public_owners'];
+    final addr = j['addresses'];
     return KatasterManifest(
       raw: j,
       date: j['date']?.toString(),
@@ -40,6 +46,8 @@ class KatasterManifest {
           .toList(),
       publicOwnersBuilt: pub is Map ? pub['built']?.toString() : null,
       publicOwnersBytes: pub is Map ? (pub['bytes'] as num?)?.toInt() : null,
+      addressesBuilt: addr is Map ? addr['built']?.toString() : null,
+      addressesBytes: addr is Map ? (addr['bytes'] as num?)?.toInt() : null,
     );
   }
 
@@ -71,30 +79,37 @@ class KatasterUpdate {
   /// Whether a public-owners DB is present locally and older than the one on R2.
   final bool publicOwnersOutdated;
 
+  /// Whether the address DB is present locally and older than the one on R2.
+  final bool addressesOutdated;
+
   const KatasterUpdate({
     required this.manifest,
     required this.outdatedRegions,
     required this.publicOwnersOutdated,
+    this.addressesOutdated = false,
   });
 
-  bool get isEmpty => outdatedRegions.isEmpty && !publicOwnersOutdated;
+  bool get isEmpty =>
+      outdatedRegions.isEmpty && !publicOwnersOutdated && !addressesOutdated;
 
   /// Total download size of the update, when the manifest reports sizes.
   int get bytes =>
       outdatedRegions.fold<int>(0, (s, r) => s + (r.bytes ?? 0)) +
-      (publicOwnersOutdated ? (manifest.publicOwnersBytes ?? 0) : 0);
+      (publicOwnersOutdated ? (manifest.publicOwnersBytes ?? 0) : 0) +
+      (addressesOutdated ? (manifest.addressesBytes ?? 0) : 0);
 
   /// Compare [manifest] against what is on the device. [loadedRegionDates]
   /// maps each loaded region file name to its `meta.date` (null when the DB
-  /// carries none); [publicOwnersBuilt] is the local public-owners DB's
-  /// `meta.built`, or null when it has not been downloaded yet — in which case
-  /// `OwnerLookupService.initPublic` fetches it anyway, so nothing to flag.
+  /// carries none); [publicOwnersBuilt] and [addressesBuilt] are the local
+  /// DBs' `meta.built`, or null when not downloaded yet — in which case the
+  /// services fetch them anyway, so nothing to flag.
   ///
   /// Dates are ISO-8601 strings, so plain string comparison orders them.
   static KatasterUpdate compute(
     KatasterManifest manifest, {
     required Map<String, String?> loadedRegionDates,
     required String? publicOwnersBuilt,
+    String? addressesBuilt,
   }) {
     final outdated = <ParcelRegion>[];
     for (final region in manifest.regions) {
@@ -112,10 +127,16 @@ class KatasterUpdate {
         publicOwnersBuilt != null &&
         remoteBuilt != null &&
         publicOwnersBuilt.compareTo(remoteBuilt) < 0;
+    final remoteAddresses = manifest.addressesBuilt;
+    final addressesOutdated =
+        addressesBuilt != null &&
+        remoteAddresses != null &&
+        addressesBuilt.compareTo(remoteAddresses) < 0;
     return KatasterUpdate(
       manifest: manifest,
       outdatedRegions: outdated,
       publicOwnersOutdated: publicOutdated,
+      addressesOutdated: addressesOutdated,
     );
   }
 }
@@ -135,6 +156,7 @@ class KatasterUpdateService {
         KatasterManifest.fetch(ParcelLookupService.regionsManifestUrl),
     loadedRegionDates: () => ParcelLookupService.instance.loadedDataDates,
     publicOwnersBuilt: () => OwnerLookupService.instance.publicBuilt,
+    addressesBuilt: () => AddressLookupService.instance.built,
     clock: DateTime.now,
   );
 
@@ -145,6 +167,8 @@ class KatasterUpdateService {
   final Map<String, String?> Function() loadedRegionDates;
   @visibleForTesting
   final String? Function() publicOwnersBuilt;
+  @visibleForTesting
+  final String? Function() addressesBuilt;
   @visibleForTesting
   final DateTime Function() clock;
 
@@ -157,6 +181,7 @@ class KatasterUpdateService {
     required this.fetchManifest,
     required this.loadedRegionDates,
     required this.publicOwnersBuilt,
+    required this.addressesBuilt,
     required this.clock,
   });
 
@@ -165,13 +190,17 @@ class KatasterUpdateService {
     required Future<KatasterManifest> Function() fetchManifest,
     required Map<String, String?> Function() loadedRegionDates,
     required String? Function() publicOwnersBuilt,
+    String? Function() addressesBuilt = _noBuilt,
     required DateTime Function() clock,
   }) => KatasterUpdateService._(
     fetchManifest: fetchManifest,
     loadedRegionDates: loadedRegionDates,
     publicOwnersBuilt: publicOwnersBuilt,
+    addressesBuilt: addressesBuilt,
     clock: clock,
   );
+
+  static String? _noBuilt() => null;
 
   Future<void> init() async {
     if (_prefs != null) return;
@@ -248,6 +277,7 @@ class KatasterUpdateService {
       m,
       loadedRegionDates: loadedRegionDates(),
       publicOwnersBuilt: publicOwnersBuilt(),
+      addressesBuilt: addressesBuilt(),
     );
   }
 

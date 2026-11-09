@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../l10n/l10n.dart';
 import '../router/route_names.dart';
 import '../services/locale_settings.dart';
+import '../services/address_lookup_service.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/cache_settings.dart';
 import '../services/drone_settings.dart';
@@ -579,6 +580,7 @@ class _AboutScreenState extends State<AboutScreen> {
       if (update.outdatedRegions.isNotEmpty)
         update.outdatedRegions.map((r) => r.name).join(', '),
       if (update.publicOwnersOutdated) L10n.current.aboutPublicOwners,
+      if (update.addressesOutdated) L10n.current.aboutAddresses,
     ];
     final mb = (update.bytes / (1024 * 1024)).toStringAsFixed(0);
     return Padding(
@@ -665,6 +667,42 @@ class _AboutScreenState extends State<AboutScreen> {
         if (!ok && !_cancelParcelDownload) {
           messenger.showSnackBar(
             SnackBar(content: Text(L10n.current.aboutPublicOwnersFailed)),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _downloadingParcels = false;
+            _cancelParcelDownload = false;
+          });
+        }
+      }
+    }
+    if (update.addressesOutdated && !cancelled && mounted) {
+      setState(() {
+        _downloadingParcels = true;
+        _cancelParcelDownload = false;
+        _parcelDownloadLabel = L10n.current.aboutAddressesLabel;
+        _parcelReceived = 0;
+        _parcelTotal = update.manifest.addressesBytes;
+      });
+      try {
+        final ok = await AddressLookupService.instance.refresh(
+          isCancelled: () => _cancelParcelDownload,
+          onProgress: (received, total) {
+            if (!mounted) return;
+            if (received - _parcelReceived >= 4 * 1024 * 1024 ||
+                (total != null && received >= total)) {
+              setState(() {
+                _parcelReceived = received;
+                _parcelTotal = total ?? update.manifest.addressesBytes;
+              });
+            }
+          },
+        );
+        if (!ok && !_cancelParcelDownload) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(L10n.current.aboutAddressesFailed)),
           );
         }
       } finally {
