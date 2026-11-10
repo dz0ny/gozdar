@@ -459,6 +459,7 @@
   },
   "ownersSourceCadastreNote": "Posestniki po katastru, niso nujno lastniki.",
   "ownersSourceOpen": "Odpri v registru",
+  "ownerWebSearch": "Poišči na spletu",
   "parcelSearchUseStreet": "Išči na tej ulici",
   "parcelSearchAddressNoParcel": "Pod naslovom {address} ni najdene parcele.",
   "@parcelSearchAddressNoParcel": {

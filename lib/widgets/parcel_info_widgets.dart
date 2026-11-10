@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../models/parcel.dart';
 import '../services/ko_locator.dart';
 import '../services/owner_lookup_service.dart';
 import '../services/si_valuation_service.dart';
+import '../utils/external_url.dart';
 import '../utils/formats.dart';
 import 'sheet_parts.dart';
 import '../screens/forest_tab.dart';
@@ -583,10 +583,7 @@ class ParcelValuationView extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
             style: TextButton.styleFrom(padding: EdgeInsets.zero),
-            onPressed: () => launchUrl(
-              Uri.parse(v.gursUrl),
-              mode: LaunchMode.externalApplication,
-            ),
+            onPressed: () => openExternalUrl(Uri.parse(v.gursUrl)),
             icon: const Icon(Icons.open_in_new, size: 18),
             label: Text(l10n.valuationOpenGurs),
           ),

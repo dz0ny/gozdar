@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/l10n.dart';
 import '../services/auction_service.dart';
+import '../utils/external_url.dart';
 import 'parcel_info_widgets.dart';
 import 'sheet_parts.dart';
 
@@ -189,10 +189,7 @@ class AuctionSheet extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
                       style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                      onPressed: () => launchUrl(
-                        Uri.parse(a.url),
-                        mode: LaunchMode.externalApplication,
-                      ),
+                      onPressed: () => openExternalUrl(Uri.parse(a.url)),
                       icon: const Icon(Icons.open_in_new, size: 18),
                       label: Text(l10n.auctionOpen),
                     ),

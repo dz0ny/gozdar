@@ -160,6 +160,7 @@
   "ownersSourceLine": "Izvor: {source}",
   "ownersSourceCadastreNote": "Posjednici prema katastru, nisu nužno vlasnici.",
   "ownersSourceOpen": "Otvori u registru",
+  "ownerWebSearch": "Potraži na internetu",
   "parcelSearchUseStreet": "Traži na ovoj ulici",
   "parcelSearchAddressNoParcel": "Pod adresom {address} nije pronađena čestica.",
   "valuationBuildings": "Zgrade",

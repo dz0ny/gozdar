@@ -2135,6 +2135,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get ownersSourceOpen => 'Odpri v registru';
 
   @override
+  String get ownerWebSearch => 'Poišči na spletu';
+
+  @override
   String get parcelSearchUseStreet => 'Išči na tej ulici';
 
   @override

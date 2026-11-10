@@ -931,29 +931,34 @@ class OwnerLookupService {
       String? naslov;
       String? imeko;
       String? obcina;
+      // Each owner keeps the address of the owner's own first row.
+      final addressOf = <String, String>{};
       for (final row in rows) {
         final name = _repairEncoding((row['lastnik'] as String?)?.trim());
-        if (name != null && name.isNotEmpty && !owners.contains(name)) {
-          owners.add(name);
+        final rowNaslov = _normalizeAddress(row['naslov'] as String?);
+        final rowObcina = _normalizeAddress(row['obcina'] as String?);
+        if (name != null && name.isNotEmpty) {
+          if (!owners.contains(name)) owners.add(name);
+          if (rowNaslov != null) {
+            addressOf.putIfAbsent(
+              name,
+              () => [rowNaslov, ?rowObcina].join(', '),
+            );
+          }
         }
-        if (naslov == null) {
-          final v = _normalizeAddress(row['naslov'] as String?);
-          if (v != null) naslov = v;
-        }
-        if (imeko == null) {
-          final v = _normalizeAddress(row['imeko'] as String?);
-          if (v != null) imeko = v;
-        }
-        if (obcina == null) {
-          final v = _normalizeAddress(row['obcina'] as String?);
-          if (v != null) obcina = v;
-        }
+        naslov ??= rowNaslov;
+        obcina ??= rowObcina;
+        imeko ??= _normalizeAddress(row['imeko'] as String?);
       }
       if (owners.isEmpty) return null;
       final addressParts = [?naslov, ?obcina];
       final address = addressParts.isEmpty ? null : addressParts.join(', ');
       return OwnerInfo(
         owners: owners,
+        holders: [
+          for (final name in owners)
+            OwnerHolder(name, address: addressOf[name]),
+        ],
         address: address,
         koName: imeko,
         municipality: obcina,

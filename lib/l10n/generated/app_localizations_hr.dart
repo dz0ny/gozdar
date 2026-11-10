@@ -2127,6 +2127,9 @@ class AppLocalizationsHr extends AppLocalizations {
   String get ownersSourceOpen => 'Otvori u registru';
 
   @override
+  String get ownerWebSearch => 'Potraži na internetu';
+
+  @override
   String get parcelSearchUseStreet => 'Traži na ovoj ulici';
 
   @override

@@ -36,6 +36,25 @@ void main() {
     expect(const OwnerInfo(owners: [owner, 'B']).hasDetails, isTrue);
   });
 
+  test('the web search for an owner uses the name and the address', () {
+    expect(ownerSearchQuery(const OwnerHolder('NOVAK JANEZ')), 'NOVAK JANEZ');
+    const full = OwnerHolder(
+      'NOVAK JANEZ',
+      share: '1/2',
+      address: 'BABNO POLJE 12, Loška dolina',
+    );
+    // The share stays out of the query.
+    expect(ownerSearchQuery(full), 'NOVAK JANEZ BABNO POLJE 12, Loška dolina');
+    expect(
+      ownerSearchUri(full).queryParameters['q'],
+      'NOVAK JANEZ BABNO POLJE 12, Loška dolina',
+    );
+    expect(
+      ownerSearchQuery(const OwnerHolder('NOVAK JANEZ', address: '  ')),
+      'NOVAK JANEZ',
+    );
+  });
+
   testWidgets('the caption names the register', (tester) async {
     await tester.pumpWidget(app(OwnerSourceCaption(info: info)));
     expect(find.text('Vir: Zemljiška knjiga'), findsOneWidget);

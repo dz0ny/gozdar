@@ -3595,6 +3595,12 @@ abstract class AppLocalizations {
   /// **'Odpri v registru'**
   String get ownersSourceOpen;
 
+  /// No description provided for @ownerWebSearch.
+  ///
+  /// In sl, this message translates to:
+  /// **'Poišči na spletu'**
+  String get ownerWebSearch;
+
   /// No description provided for @parcelSearchUseStreet.
   ///
   /// In sl, this message translates to:

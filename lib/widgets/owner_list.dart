@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/l10n.dart';
 import '../services/owner_lookup_service.dart';
+import '../utils/external_url.dart';
 import 'sheet_parts.dart';
 
 /// "HORVAT IVA in še 11": the first owner and how many more, for one-line
@@ -12,6 +12,18 @@ String ownerSummary(List<String> owners) {
   if (owners.length == 1) return owners.first;
   return L10n.current.ownerAndMore(owners.first, owners.length - 1);
 }
+
+/// Web search text for one owner: the name and the address, when known.
+/// The share says nothing to a search engine, so it stays out.
+String ownerSearchQuery(OwnerHolder holder) => [
+  holder.name.trim(),
+  if (holder.address case final address? when address.trim().isNotEmpty)
+    address.trim(),
+].join(' ');
+
+/// The web search page for one owner.
+Uri ownerSearchUri(OwnerHolder holder) =>
+    Uri.https('www.google.com', '/search', {'q': ownerSearchQuery(holder)});
 
 /// The register a source names, e.g. "Zemljiška knjiga".
 String ownerSourceName(BuildContext context, OwnerSource source) =>
@@ -66,9 +78,7 @@ class OwnerSourceTile extends StatelessWidget {
     final url = source.url;
     return InkWell(
       borderRadius: BorderRadius.circular(8),
-      onTap: url == null
-          ? null
-          : () => launchUrl(url, mode: LaunchMode.externalApplication),
+      onTap: url == null ? null : () => openExternalUrl(url),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
@@ -225,53 +235,60 @@ class OwnerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () => launchUrl(
-        Uri.https('www.google.com', '/search', {'q': holder.name}),
-        mode: LaunchMode.externalApplication,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 4, top: 2),
-              child: Icon(Icons.person, size: 20, color: cs.primary),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(holder.name, style: theme.textTheme.bodyLarge),
-                  if (holder.address != null)
-                    Text(
-                      holder.address!,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                ],
+    return Semantics(
+      link: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => openExternalUrl(ownerSearchUri(holder)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 4, top: 2),
+                child: Icon(Icons.person, size: 20, color: cs.primary),
               ),
-            ),
-            if (holder.share != null) ...[
-              const SizedBox(width: 12),
-              Text(
-                holder.share!,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: cs.primary,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(holder.name, style: theme.textTheme.bodyLarge),
+                    if (holder.address != null)
+                      Text(
+                        holder.address!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (holder.share != null) ...[
+                const SizedBox(width: 12),
+                Text(
+                  holder.share!,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: cs.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Tooltip(
+                  message: context.l10n.ownerWebSearch,
+                  child: Icon(
+                    Icons.travel_explore,
+                    size: 20,
+                    color: cs.primary,
+                  ),
                 ),
               ),
             ],
-            const SizedBox(width: 8),
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Icon(Icons.travel_explore, size: 20, color: cs.primary),
-            ),
-          ],
+          ),
         ),
       ),
     );
