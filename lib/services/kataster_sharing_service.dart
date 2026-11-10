@@ -8,9 +8,11 @@ import 'package:http/http.dart' as http;
 import 'package:nsd/nsd.dart' as nsd;
 import 'package:path_provider/path_provider.dart';
 
+import 'address_lookup_service.dart';
+import 'file_hash.dart';
+import 'kataster_update_service.dart';
 import 'owner_lookup_service.dart';
 import 'resumable_download.dart';
-import 'address_lookup_service.dart';
 import 'vlake_service.dart';
 
 class KatasterPeer {
@@ -62,6 +64,19 @@ class KatasterSharingService {
   nsd.Registration? _registration;
   StreamSubscription<NsdServiceInfo>? _discoverySubscription;
   bool _discovering = false;
+
+  /// The SHA-256 a data file must have, or null when it is not known. The
+  /// default reads the manifest on R2, which comes over HTTPS.
+  @visibleForTesting
+  Future<String?> Function(String fileName) trustedHash =
+      KatasterUpdateService.instance.trustedSha256;
+
+  /// Adds a phone without the network discovery.
+  @visibleForTesting
+  void addPeerForTesting(KatasterPeer peer) => _peers.add(peer);
+
+  @visibleForTesting
+  void clearPeersForTesting() => _peers.clear();
 
   bool get isSharing => _server != null;
   Stream<Set<KatasterPeer>> get peersStream => _peersController.stream;
@@ -136,11 +151,17 @@ class KatasterSharingService {
     }
   }
 
-  /// Fetches [fileName] from a nearby phone that has it into [target],
-  /// continuing a part left there earlier. With [discover] it first looks
-  /// for phones (and briefly waits for them); without, only phones already
-  /// found are asked, so a background download never triggers the system's
-  /// local-network prompt.
+  /// Fetches [fileName] from a nearby phone that has it into [target]. With
+  /// [discover] it first looks for phones (and briefly waits for them);
+  /// without, only phones already found are asked, so a background download
+  /// never triggers the system's local-network prompt.
+  ///
+  /// A phone sends the file over plain HTTP, so the copy is only accepted
+  /// when its SHA-256 equals the one in the manifest ([trustedHash]). The
+  /// copy arrives in `<target>.peer`, where an interrupted transfer
+  /// continues, and replaces [target] after the check. Returns false when
+  /// no phone has the file, the hash is not known or no copy passed; the
+  /// caller then downloads from the internet.
   Future<bool> downloadFileTo(
     String fileName,
     File target, {
@@ -155,18 +176,43 @@ class KatasterSharingService {
       }
     }
 
-    for (final peer in List<KatasterPeer>.from(_peers)) {
-      if (isCancelled?.call() ?? false) return false;
-      final files = await fetchFiles(peer);
-      if (!files.any((file) => file.fileName == fileName)) continue;
-      final ok = await _downloadFromPeer(
-        peer,
-        fileName,
-        target,
-        onProgress: onProgress,
-        isCancelled: isCancelled,
-      );
-      if (ok) return true;
+    final part = File('${target.path}.peer');
+    String? expected;
+    try {
+      for (final peer in List<KatasterPeer>.from(_peers)) {
+        if (isCancelled?.call() ?? false) return false;
+        final files = await fetchFiles(peer);
+        if (!files.any((file) => file.fileName == fileName)) continue;
+        expected ??= await trustedHash(fileName);
+        if (expected == null) {
+          debugPrint('KatasterSharingService: no hash for $fileName');
+          return false;
+        }
+        final ok = await _downloadFromPeer(
+          peer,
+          fileName,
+          part,
+          onProgress: onProgress,
+          isCancelled: isCancelled,
+        );
+        if (isCancelled?.call() ?? false) return false;
+        if (!ok) continue;
+        if (await sha256OfFile(part.path) != expected) {
+          debugPrint(
+            'KatasterSharingService: $fileName from ${peer.host} has '
+            'the wrong hash',
+          );
+          await ResumableDownload.discard(part);
+          continue;
+        }
+        // An internet download left unfinished must not mix with this copy.
+        await ResumableDownload.discard(target);
+        await part.rename(target.path);
+        await ResumableDownload.discard(part);
+        return true;
+      }
+    } on FileSystemException catch (e, s) {
+      debugPrint('KatasterSharingService.downloadFileTo failed: $e\n$s');
     }
     return false;
   }

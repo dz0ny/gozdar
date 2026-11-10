@@ -18,20 +18,34 @@ timestamp are added under ``public_owners`` so installed apps can tell when a
 newer build is on R2 (``KatasterUpdateService``). ``--addresses`` does the
 same for ``addresses.sqlite`` under ``addresses``.
 
+``sha256`` maps each file name to its SHA-256. The app accepts a copy from a
+nearby phone only when it has this hash (``KatasterSharingService``), so every
+shared file must be listed: the regions, the public owners and the addresses
+are added by themselves, the others with ``--extra``. An entry is ``PATH`` or
+``NAME=PATH`` when the app knows the file by another name.
+
 Usage:
     ./manifest.py work/regions -o work/regions/regions.json \
         [--regions regije.geojson] [--public-owners work/public_owners.sqlite]
         [--addresses work/addresses.sqlite]
+        [--extra work/vlake.bin work/public_owners_hr.sqlite
+                 owners.sqlite.aes=owners.sqlite.enc]
 """
 
 from __future__ import annotations
 
 import argparse
 import collections
+import hashlib
 import json
 import sqlite3
 import sys
 from pathlib import Path
+
+
+def sha256_of(path: Path) -> str:
+    with path.open("rb") as f:
+        return hashlib.file_digest(f, "sha256").hexdigest()
 
 
 def main() -> None:
@@ -44,6 +58,8 @@ def main() -> None:
                     help="public_owners.sqlite to describe under 'public_owners'")
     ap.add_argument("--addresses", default=None,
                     help="addresses.sqlite to describe under 'addresses'")
+    ap.add_argument("--extra", nargs="*", default=[], metavar="[NAME=]PATH",
+                    help="other files to list under 'sha256'")
     args = ap.parse_args()
 
     d = Path(args.dir)
@@ -52,6 +68,7 @@ def main() -> None:
     code_by_name = {f["properties"]["name"]: f["properties"]["code"] for f in geo["features"]}
 
     entries, metas = [], []
+    hashes: dict[str, str] = {}
     for f in sorted(d.glob("parcels-*.sqlite")):
         con = sqlite3.connect(f"file:{f}?mode=ro", uri=True)
         meta = dict(con.execute("SELECT k, v FROM meta"))
@@ -68,6 +85,7 @@ def main() -> None:
         metas.append((meta.get("date"), meta.get("source")))
         entries.append({"code": code, "name": name, "file": f.name,
                         "bytes": f.stat().st_size, "rows": rows})
+        hashes[f.name] = sha256_of(f)
 
     if not entries:
         sys.exit(f"No parcels-*.sqlite in {d}")
@@ -89,6 +107,7 @@ def main() -> None:
             sys.exit(f"{po.name}: meta.built missing")
         manifest["public_owners"] = {"file": po.name, "bytes": po.stat().st_size,
                                      "built": meta["built"]}
+        hashes[po.name] = sha256_of(po)
     if args.addresses:
         ad = Path(args.addresses)
         con = sqlite3.connect(f"file:{ad}?mode=ro", uri=True)
@@ -98,6 +117,14 @@ def main() -> None:
             sys.exit(f"{ad.name}: meta.built missing")
         manifest["addresses"] = {"file": ad.name, "bytes": ad.stat().st_size,
                                  "built": meta["built"], "date": meta.get("date")}
+        hashes[ad.name] = sha256_of(ad)
+    for extra in args.extra:
+        name, sep, path = extra.partition("=")
+        ex = Path(path if sep else name)
+        if not ex.is_file():
+            sys.exit(f"--extra {extra}: no such file")
+        hashes[name if sep else ex.name] = sha256_of(ex)
+    manifest["sha256"] = dict(sorted(hashes.items()))
     out.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     total = sum(e["bytes"] for e in entries)
     print(f"Wrote {out}: {len(entries)} regions, {sum(e['rows'] for e in entries):,} rows, "
@@ -110,6 +137,7 @@ def main() -> None:
     if "addresses" in manifest:
         ad = manifest["addresses"]
         print(f"  addresses: {ad['file']} built {ad['built']} {ad['bytes'] / 1e6:.1f} MB")
+    print(f"  sha256: {len(hashes)} files")
 
 
 if __name__ == "__main__":

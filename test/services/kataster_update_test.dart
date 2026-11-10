@@ -46,6 +46,15 @@ void main() {
       expect(m.addressesBytes, 42328064);
     });
 
+    test('reads the file hashes in lower case', () {
+      final m = KatasterManifest.fromJson({
+        ..._manifestJson,
+        'sha256': {'addresses.sqlite': 'AB12', 'broken': 7},
+      });
+      expect(m.sha256, {'addresses.sqlite': 'ab12'});
+      expect(KatasterManifest.fromJson(_manifestJson).sha256, isEmpty);
+    });
+
     test('tolerates a manifest without public owners', () {
       final m = KatasterManifest.fromJson({
         'date': '2026-05-31',
@@ -245,6 +254,39 @@ void main() {
         expect(fetches, 3);
       },
     );
+
+    test('trustedSha256 reads a fresh manifest, else the saved one', () async {
+      var fetches = 0;
+      var fail = false;
+      var now = DateTime.utc(2026, 11, 10, 12);
+      KatasterUpdateService make() => KatasterUpdateService.forTesting(
+        fetchManifest: () async {
+          fetches++;
+          if (fail) throw Exception('offline');
+          return KatasterManifest.fromJson({
+            ..._manifestJson,
+            'sha256': {'addresses.sqlite': 'aa$fetches'},
+          });
+        },
+        loadedRegionDates: () => const {},
+        publicOwnersBuilt: () => null,
+        clock: () => now,
+      );
+      final service = make();
+      expect(await service.trustedSha256('addresses.sqlite'), 'aa1');
+      expect(await service.trustedSha256('vlake.bin'), isNull);
+      // Inside ten minutes the manifest in memory answers.
+      expect(fetches, 1);
+
+      now = now.add(const Duration(minutes: 11));
+      expect(await service.trustedSha256('addresses.sqlite'), 'aa2');
+
+      // Offline after a restart: the saved manifest answers.
+      fail = true;
+      final restarted = make();
+      expect(await restarted.trustedSha256('addresses.sqlite'), 'aa2');
+      expect(fetches, 3);
+    });
 
     test('dismiss hides the update for that manifest date only', () async {
       final service = KatasterUpdateService.forTesting(

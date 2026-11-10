@@ -135,13 +135,24 @@ caps at ~300 MiB (single PUT, no multipart):
 
 ```bash
 ./manifest.py work/regions -o work/regions/regions.json \
-    --public-owners work/public_owners.sqlite   # reads each DB's meta
+    --public-owners work/public_owners.sqlite \
+    --addresses work/addresses.sqlite \
+    --extra work/vlake.bin work/public_owners_hr.sqlite \
+            owners.sqlite.aes=owners.sqlite.enc   # reads each DB's meta
 rclone copy work/regions/ cloudflare:gozdar-kataster/ \
   --transfers 4 --s3-chunk-size 64M --s3-upload-concurrency 4
 # owners DB:
 rclone copyto owners.sqlite cloudflare:gozdar-kataster/owners.sqlite \
   --s3-chunk-size 64M
 ```
+
+The manifest lists the SHA-256 of every file under `sha256`. Phones copy the
+files from each other over plain HTTP, and the app accepts such a copy only
+when its hash equals the one in the manifest; a file that is not listed is
+always downloaded from R2. So give every file that is on R2 to `manifest.py`
+(`--extra` for the ones without their own option; `NAME=PATH` when the app
+keeps the file under another name), and generate the manifest again after any
+of them changes.
 
 The `cloudflare:` rclone remote (S3/Cloudflare provider) holds the R2 API
 credentials — it lives in the local rclone config, **never in this repo**.
