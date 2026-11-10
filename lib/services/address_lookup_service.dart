@@ -88,14 +88,76 @@ class _Named {
       tokens.every((t) => words.any((w) => w.startsWith(t)));
 }
 
+/// The name tables of one database. [load] builds them off the UI thread.
+class _Names {
+  final List<_Named> settlements;
+  final List<_Named> streets;
+  final Map<int, _Named> settlementById;
+  final Map<int, _Named> streetById;
+  final Map<int, String> municipalities;
+  final Map<int, (int, String)> posts;
+
+  _Names._({
+    required this.settlements,
+    required this.streets,
+    required this.settlementById,
+    required this.streetById,
+    required this.municipalities,
+    required this.posts,
+  });
+
+  /// Read the ~16k settlement, street, municipality and post names.
+  factory _Names.read(Database db) {
+    final settlements = [
+      for (final r in db.select(
+        'SELECT id, name, municipality_id FROM settlements',
+      ))
+        _Named(
+          r['id'] as int,
+          r['name'] as String,
+          r['municipality_id'] as int?,
+        ),
+    ];
+    final streets = [
+      for (final r in db.select('SELECT id, name, settlement_id FROM streets'))
+        _Named(r['id'] as int, r['name'] as String, r['settlement_id'] as int?),
+    ];
+    return _Names._(
+      settlements: settlements,
+      streets: streets,
+      settlementById: {for (final s in settlements) s.id: s},
+      streetById: {for (final s in streets) s.id: s},
+      municipalities: {
+        for (final r in db.select('SELECT id, name FROM municipalities'))
+          r['id'] as int: r['name'] as String,
+      },
+      posts: {
+        for (final r in db.select('SELECT id, code, name FROM posts'))
+          r['id'] as int: (r['code'] as int, r['name'] as String),
+      },
+    );
+  }
+
+  /// Entry point of the background isolate. It opens its own connection,
+  /// because a connection cannot move between isolates.
+  static _Names load(String path) {
+    final db = sqlite3.open(path, mode: OpenMode.readOnly);
+    try {
+      return _Names.read(db);
+    } finally {
+      db.close();
+    }
+  }
+}
+
 /// Offline lookup of Slovenian house numbers from `addresses.sqlite`, which
 /// `tools/parcels/build_addresses.py` builds from the GURS address register.
 ///
 /// The file comes from R2 on first start, in the background, the same way as
 /// the public owners database. Until it is there, [isAvailable] is false and
 /// the search shows no address rows. The street and settlement names are
-/// loaded into memory on first use ([warmUp]); house numbers are read from
-/// the database per query.
+/// loaded into memory in a background isolate ([loadNames]); house numbers
+/// are read from the database per query.
 class AddressLookupService {
   AddressLookupService._();
   static final AddressLookupService instance = AddressLookupService._();
@@ -110,6 +172,7 @@ class AddressLookupService {
   static const minQueryLength = 2;
 
   Database? _db;
+  String? _path;
   String? _built;
   int _rowCount = 0;
   List<_Named> _settlements = const [];
@@ -141,13 +204,14 @@ class AddressLookupService {
     }
   }
 
+  /// Never throws: [init] starts it without waiting for it.
   Future<void> _download() async {
-    final path = await RemoteAsset.ensure(url, fileName);
-    if (path == null) return;
     try {
+      final path = await RemoteAsset.ensure(url, fileName);
+      if (path == null) return;
       _open(path);
-    } catch (e) {
-      debugPrint('AddressLookupService open after download failed: $e');
+    } catch (e, s) {
+      debugPrint('AddressLookupService download failed: $e\n$s');
     }
   }
 
@@ -162,7 +226,16 @@ class AddressLookupService {
       fileName,
       onProgress: onProgress,
       refresh: true,
-      beforeSwap: () async => _close(),
+      beforeSwap: () async {
+        // The isolate that reads the names holds the old file open.
+        final load = _namesLoad;
+        _close();
+        try {
+          await load;
+        } on Object catch (e, s) {
+          debugPrint('AddressLookupService name load failed: $e\n$s');
+        }
+      },
       isCancelled: isCancelled,
     );
     if (path == null) {
@@ -197,61 +270,90 @@ class AddressLookupService {
       return r.isEmpty ? null : r.first['v']?.toString();
     }
 
+    // Read everything first. A damaged file then leaves the old copy open.
+    final String? built;
+    final int rows;
+    try {
+      built = meta('built');
+      rows = int.tryParse(meta('rows') ?? '') ?? 0;
+    } on SqliteException {
+      db.close();
+      rethrow;
+    }
     _close();
     _db = db;
-    _built = meta('built');
-    _rowCount = int.tryParse(meta('rows') ?? '') ?? 0;
+    _path = path;
+    _built = built;
+    _rowCount = rows;
   }
 
-  /// Load the name tables now, so the first search does not pay for it.
-  /// Runs after the current frame; a no-op without a database.
+  /// Close the database, so a test can delete its file.
+  @visibleForTesting
+  void closeForTesting() => _close();
+
+  /// Load the name tables now, so the first search does not wait for them.
+  /// A no-op without a database.
   void warmUp() {
-    if (_db == null || _namesLoaded) return;
-    Future(_ensureNames);
+    unawaited(
+      loadNames().catchError((Object e, StackTrace s) {
+        // A damaged file: the search shows no address rows.
+        debugPrint('AddressLookupService.warmUp failed: $e\n$s');
+      }),
+    );
   }
 
   bool _namesLoaded = false;
+  Future<void>? _namesLoad;
 
-  /// Read the ~16k settlement, street, municipality and post names into
-  /// memory once per open database.
+  /// Counts each open and close. A name load of an older database is
+  /// dropped.
+  int _epoch = 0;
+
+  /// Load the name tables in a background isolate. The Future completes
+  /// when they are in memory, at once when they are there already or when
+  /// there is no database. It fails when the file cannot be read.
+  Future<void> loadNames() {
+    final path = _path;
+    if (_db == null || path == null || _namesLoaded) {
+      return Future<void>.value();
+    }
+    return _namesLoad ??= _loadNames(path, _epoch);
+  }
+
+  Future<void> _loadNames(String path, int epoch) async {
+    try {
+      final names = await compute(_Names.load, path);
+      // Dropped when the database changed, or when a search read them first.
+      if (epoch == _epoch && !_namesLoaded) _apply(names);
+    } finally {
+      if (epoch == _epoch) _namesLoad = null;
+    }
+  }
+
+  /// Read the name tables on the calling thread. Only a search that comes
+  /// before [loadNames] is done pays for this.
   void _ensureNames() {
     final db = _db;
     if (db == null || _namesLoaded) return;
-    final settlements = <_Named>[];
-    final byId = <int, _Named>{};
-    for (final r in db.select(
-      'SELECT id, name, municipality_id FROM settlements',
-    )) {
-      final s = _Named(
-        r['id'] as int,
-        r['name'] as String,
-        r['municipality_id'] as int?,
-      );
-      settlements.add(s);
-      byId[s.id] = s;
-    }
-    final streets = [
-      for (final r in db.select('SELECT id, name, settlement_id FROM streets'))
-        _Named(r['id'] as int, r['name'] as String, r['settlement_id'] as int?),
-    ];
-    _settlements = settlements;
-    _settlementById = byId;
-    _streets = streets;
-    _streetById = {for (final s in streets) s.id: s};
-    _municipalities = {
-      for (final r in db.select('SELECT id, name FROM municipalities'))
-        r['id'] as int: r['name'] as String,
-    };
-    _posts = {
-      for (final r in db.select('SELECT id, code, name FROM posts'))
-        r['id'] as int: (r['code'] as int, r['name'] as String),
-    };
+    _apply(_Names.read(db));
+  }
+
+  void _apply(_Names names) {
+    _settlements = names.settlements;
+    _settlementById = names.settlementById;
+    _streets = names.streets;
+    _streetById = names.streetById;
+    _municipalities = names.municipalities;
+    _posts = names.posts;
     _namesLoaded = true;
   }
 
   void _close() {
     _db?.close();
     _db = null;
+    _path = null;
+    _epoch++;
+    _namesLoad = null;
     _built = null;
     _rowCount = 0;
     _namesLoaded = false;
@@ -300,7 +402,10 @@ class AddressLookupService {
       final c = a.$1.compareTo(b.$1);
       if (c != 0) return c;
       final l = a.$2.name.length.compareTo(b.$2.name.length);
-      return l != 0 ? l : a.$2.name.compareTo(b.$2.name);
+      if (l != 0) return l;
+      final n = a.$2.name.compareTo(b.$2.name);
+      // Streets with one name keep a fixed order.
+      return n != 0 ? n : a.$2.id.compareTo(b.$2.id);
     });
     return [
       for (final s in scored.take(limit))
@@ -329,42 +434,61 @@ class AddressLookupService {
     }
     _ensureNames();
     final num = number.toUpperCase();
-    final out = <AddressHit>[];
-    final seen = <int>{};
-
-    void add(ResultSet rows) {
-      for (final r in rows) {
-        final hit = _hit(r);
-        if (seen.add(hit.id)) out.add(hit);
-      }
-    }
-
     const select =
         'SELECT id, number, street_id, settlement_id, post_id, lat_e7, '
         'lon_e7, building FROM addresses';
-    for (final s in streets(words, limit: 20)) {
-      add(db.select('$select WHERE street_id=? AND number=?', [s.id, num]));
+
+    // One query for all the units of a kind. A common name ("Šolska ulica"
+    // is in 51 settlements) then keeps its hits in [preferKo].
+    List<AddressHit> hitsIn(String column, List<int> ids, String extra) {
+      if (ids.isEmpty) return const [];
+      final rank = {for (final (i, id) in ids.indexed) id: i};
+      final marks = List.filled(ids.length, '?').join(',');
+      final rows = db.select(
+        '$select WHERE number=? AND $column IN ($marks)$extra',
+        [num, ...ids],
+      ).toList();
+      // Stable order: the rank of the unit, then the row id.
+      rows.sort((x, y) {
+        final c = rank[x[column] as int]!.compareTo(rank[y[column] as int]!);
+        return c != 0 ? c : (x['id'] as int).compareTo(y['id'] as int);
+      });
+      return [for (final r in rows) _hit(r)];
     }
-    for (final s in _settlements) {
-      if (!s.matches(tokens)) continue;
-      add(
-        db.select(
-          '$select WHERE settlement_id=? AND number=? AND street_id IS NULL',
-          [s.id, num],
-        ),
-      );
-    }
+
+    final out = [
+      ...hitsIn('street_id', [
+        for (final s in streets(words, limit: _maxUnits)) s.id,
+      ], ''),
+      ...hitsIn(
+        'settlement_id',
+        [
+          for (final s in _settlements)
+            if (s.matches(tokens)) s.id,
+        ].take(_maxUnits).toList(),
+        ' AND street_id IS NULL',
+      ),
+    ];
     if (preferKo != null && out.length > 1) {
       final inside = <AddressHit>[], outside = <AddressHit>[];
       for (final h in out) {
-        (KoLocator.instance.koAt(h.point)?.sifko == preferKo.sifko
-                ? inside
-                : outside)
-            .add(h);
+        (_isIn(preferKo, h.point) ? inside : outside).add(h);
       }
       return [...inside, ...outside].take(limit).toList();
     }
     return out.take(limit).toList();
+  }
+
+  /// Most streets or settlements that one search reads house numbers from.
+  static const _maxUnits = 500;
+
+  /// True when [point] is in [ko]. The bounding box comes first, because the
+  /// exact test looks at every KO.
+  static bool _isIn(KoInfo ko, LatLng point) {
+    final lon = point.longitude, lat = point.latitude;
+    if (lon < ko.minLon || lon > ko.maxLon) return false;
+    if (lat < ko.minLat || lat > ko.maxLat) return false;
+    return KoLocator.instance.koAt(point)?.sifko == ko.sifko;
   }
 
   AddressHit _hit(Row r) {

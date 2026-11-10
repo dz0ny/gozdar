@@ -26,7 +26,7 @@ class ParcelSearchDialog extends StatefulWidget {
   final Function(WfsParcel) onParcelFound;
 
   /// Called with the tapped house number; the sheet is closed by then.
-  final Function(AddressHit)? onAddressFound;
+  final void Function(AddressHit)? onAddressFound;
 
   /// Where the map is looking, to preselect its KO. Defaults to the
   /// controller's camera centre.
@@ -54,7 +54,7 @@ class ParcelSearchDialog extends StatefulWidget {
     required BuildContext context,
     required MapController mapController,
     required Function(WfsParcel) onParcelFound,
-    Function(AddressHit)? onAddressFound,
+    void Function(AddressHit)? onAddressFound,
     LatLng? center,
   }) {
     if (center == null) {
@@ -213,7 +213,10 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         _setKo(s.ko, keepText: number ?? '');
       case ParcelSuggestionKind.street:
         // Put the street in the field; the house number comes next.
-        final text = '${s.title} ';
+        final settlement = s.subtitle ?? '';
+        final text = settlement.isEmpty
+            ? '${s.title} '
+            : '${s.title}, $settlement ';
         _controller.text.value = TextEditingValue(
           text: text,
           selection: TextSelection.collapsed(offset: text.length),
@@ -556,6 +559,7 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         needsKo
             ? context.l10n.parcelSearchNeedsKoHint(parsed.parcelNumber!)
             : context.l10n.parcelSearchNoResults,
+        announce: true,
       );
     }
     return ListView.separated(
@@ -623,24 +627,28 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
     IconData icon,
     String text, {
     Widget? action,
+    bool announce = false,
   }) {
     final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 48, color: cs.onSurfaceVariant),
-            const SizedBox(height: 12),
-            Text(
-              text,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium
-                  ?.copyWith(color: cs.onSurfaceVariant),
-            ),
-            if (action != null) ...[const SizedBox(height: 16), action],
-          ],
+    return Semantics(
+      liveRegion: announce,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 48, color: cs.onSurfaceVariant),
+              const SizedBox(height: 12),
+              Text(
+                text,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              if (action != null) ...[const SizedBox(height: 16), action],
+            ],
+          ),
         ),
       ),
     );
@@ -648,21 +656,27 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
 
   Widget _errorBox(BuildContext context, String message) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cs.errorContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: cs.error, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(message, style: TextStyle(color: cs.onErrorContainer)),
-          ),
-        ],
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: cs.errorContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: cs.error, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(color: cs.onErrorContainer),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

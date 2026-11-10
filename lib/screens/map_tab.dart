@@ -1076,6 +1076,12 @@ class MapTabState extends State<MapTab> {
   /// overwrite a newer viewport.
   int _offlineLoadGeneration = 0;
 
+  /// Counts address lookups, so a slow one cannot replace a newer result.
+  int _addressLookup = 0;
+
+  /// The address lookup that waits for the network; the map shows a pill.
+  int? _addressQuery;
+
   /// Loads the parcels of [padded] off the UI isolate (see
   /// [MapParcelsWorker]), with each parcel's public-owner category when
   /// [anyCategory] so the polygon builder can tint by owner type.
@@ -2870,7 +2876,8 @@ class MapTabState extends State<MapTab> {
           if (_downloadingRegionName != null) _buildRegionDownloadCard(context),
           if (downloadState.isDownloading)
             _buildTileDownloadCard(context, downloadState),
-          if (mapProvider.isQueryingParcel) _buildParcelQueryPill(context),
+          if (mapProvider.isQueryingParcel || _addressQuery != null)
+            _buildParcelQueryPill(context),
           if (mapProvider.isLoadingLocations)
             _buildLocationsLoadingPill(context),
         ];
@@ -3046,7 +3053,13 @@ class MapTabState extends State<MapTab> {
       context: context,
       mapController: _mapController,
       onParcelFound: _handleParcelFound,
-      onAddressFound: _handleAddressFound,
+      // The sheet takes a void callback. The error handler keeps a failure
+      // of the lookup out of the lost-Future hole.
+      onAddressFound: (hit) => unawaited(
+        _handleAddressFound(hit).catchError((Object e, StackTrace s) {
+          debugPrint('Address lookup failed: ${e.runtimeType}\n$s');
+        }),
+      ),
     );
   }
 
@@ -3054,10 +3067,26 @@ class MapTabState extends State<MapTab> {
   /// offline cadastre when a region is loaded, else from the ZGS service.
   /// Without a parcel the map only moves to the house.
   Future<void> _handleAddressFound(AddressHit hit) async {
+    final lookup = ++_addressLookup;
     _mapController.move(hit.point, 18);
     var parcel = ParcelLookupService.instance.parcelAt(hit.point);
-    parcel ??= await CadastralService().queryParcelAtLocation(hit.point);
-    if (!mounted) return;
+    if (parcel == null) {
+      // The offline cadastre has no parcel here. The network can be slow.
+      setState(() => _addressQuery = lookup);
+      try {
+        parcel = await CadastralService().queryParcelAtLocation(hit.point);
+      } finally {
+        // A newer lookup has its own pill, or none.
+        if (mounted && _addressQuery == lookup) {
+          setState(() => _addressQuery = null);
+        }
+      }
+    } else if (_addressQuery != null) {
+      // An older lookup still waits. Its answer is dropped below.
+      setState(() => _addressQuery = null);
+    }
+    // A newer address search owns the map now.
+    if (!mounted || lookup != _addressLookup) return;
     if (parcel == null || parcel.polygon.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

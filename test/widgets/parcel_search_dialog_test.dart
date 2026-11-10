@@ -212,6 +212,8 @@ void main() {
     final dir = Directory.systemTemp.createTempSync('addresses-');
     addTearDown(() => dir.deleteSync(recursive: true));
     openAddressFixture(dir);
+    // Registered last, so it runs first: close before the file goes.
+    addTearDown(AddressLookupService.instance.closeForTesting);
 
     AddressHit? found;
     await open(tester, onAddressFound: (hit) => found = hit);
@@ -219,6 +221,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Poljska ulica 15');
     await tester.pump(const Duration(milliseconds: 400));
+    // The names load on a real background isolate.
+    await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
     await tester.pumpAndSettle();
 
     // An address row (the field holds the same text, so look for the
@@ -250,7 +254,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      'Jerebova ulica ',
+      'Jerebova ulica, Kranj ',
     );
   });
 }

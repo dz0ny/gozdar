@@ -76,8 +76,8 @@ class ParcelSearchController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// The address rows are indexed lookups and run right away; the owner
-  /// search runs off the UI thread.
+  /// The address rows are indexed lookups, once the names are in memory;
+  /// the names and the owner search load off the UI thread.
   Future<void> _runDeferred({
     required bool owners,
     required bool addresses,
@@ -85,12 +85,16 @@ class ParcelSearchController extends ChangeNotifier {
     final generation = ++_generation;
     final query = text.text;
     if (addresses) {
+      var found = const <ParcelSuggestion>[];
       try {
-        _addresses = ParcelSearchService.addresses(query, ko: _ko);
-      } catch (e) {
-        debugPrint('ParcelSearchController address search failed: $e');
-        _addresses = const [];
+        await AddressLookupService.instance.loadNames();
+        if (_disposed || generation != _generation) return;
+        found = ParcelSearchService.addresses(query, ko: _ko);
+      } catch (e, s) {
+        debugPrint('ParcelSearchController address search failed: $e\n$s');
       }
+      if (_disposed || generation != _generation) return;
+      _addresses = found;
       _searchingAddresses = false;
       notifyListeners();
     }
@@ -98,8 +102,8 @@ class ParcelSearchController extends ChangeNotifier {
     List<ParcelSuggestion> found;
     try {
       found = await ParcelSearchService.owners(query, ko: _ko);
-    } catch (e) {
-      debugPrint('ParcelSearchController owner search failed: $e');
+    } catch (e, s) {
+      debugPrint('ParcelSearchController owner search failed: $e\n$s');
       found = const [];
     }
     if (_disposed || generation != _generation) return;

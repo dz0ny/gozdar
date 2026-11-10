@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gozdar/services/address_lookup_service.dart';
 import 'package:gozdar/services/ko_locator.dart';
 import 'package:gozdar/services/parcel_search_service.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import '../fixtures/address_fixture.dart';
 
@@ -19,7 +20,10 @@ void main() {
     openAddressFixture(dir);
   });
 
-  tearDownAll(() => dir.deleteSync(recursive: true));
+  tearDownAll(() {
+    service.closeForTesting();
+    dir.deleteSync(recursive: true);
+  });
 
   group('AddressLookupService', () {
     test('opens the fixture', () {
@@ -79,6 +83,62 @@ void main() {
       ]);
       expect(streets.first.settlement, 'Kranj');
       expect(service.streets('x'), isEmpty);
+    });
+  });
+
+  group('a street name that many settlements share', () {
+    late Directory many;
+
+    // 30 settlements with a "Dolga ulica 1" each; only the last is in the
+    // BABNO POLJE of the KO fixture.
+    setUpAll(() {
+      many = Directory.systemTemp.createTempSync('addresses_many');
+      final path = openAddressFixture(many);
+      service.closeForTesting();
+      final db = sqlite3.open(path);
+      for (var i = 0; i < 30; i++) {
+        final inBabno = i == 29;
+        db
+          ..execute("INSERT INTO settlements VALUES (?, ?, 2)", [
+            1000 + i,
+            'Vas ${i.toString().padLeft(2, '0')}',
+          ])
+          ..execute("INSERT INTO streets VALUES (?, 'Dolga ulica', ?)", [
+            2000 + i,
+            1000 + i,
+          ])
+          ..execute(
+            "INSERT INTO addresses VALUES (?, '1', ?, ?, 20, ?, ?, NULL)",
+            [
+              3000 + i,
+              2000 + i,
+              1000 + i,
+              inBabno ? 456550000 : 462400000 + i,
+              inBabno ? 145550000 : 143550000,
+            ],
+          );
+      }
+      db.close();
+      service.openForTesting(path);
+    });
+
+    tearDownAll(() {
+      service.closeForTesting();
+      many.deleteSync(recursive: true);
+      service.openForTesting('${dir.path}/addresses.sqlite');
+    });
+
+    test('the house in the selected KO comes first', () {
+      final babno = KoLocator.instance.bySifko(1651);
+      final hits = service.search('Dolga ulica', '1', preferKo: babno);
+      expect(hits, hasLength(10));
+      expect(hits.first.settlement, 'Vas 29');
+    });
+
+    test('without a KO the order is the same on every run', () {
+      final hits = service.search('Dolga ulica', '1', limit: 30);
+      expect(hits, hasLength(30));
+      expect(hits.map((h) => h.id), [for (var i = 0; i < 30; i++) 3000 + i]);
     });
   });
 
