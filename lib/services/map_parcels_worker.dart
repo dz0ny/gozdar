@@ -16,10 +16,19 @@ import 'public_parcel_settings.dart';
 /// Parcels of a map viewport, with the public-owner category of those that
 /// have one (keyed by [CadastralParcel.id]).
 class MapParcels {
-  const MapParcels(this.parcels, this.categories, {this.truncated = false});
+  const MapParcels(
+    this.parcels,
+    this.categories, {
+    this.truncated = false,
+    this.extraParts = const [],
+  });
 
   final List<CadastralParcel> parcels;
   final Map<String, PublicOwnerCategory> categories;
+
+  /// The further pieces of parcels that consist of several separate ones;
+  /// [CadastralParcel.polygon] holds only the first.
+  final List<({CadastralParcel parcel, List<LatLng> ring})> extraParts;
 
   /// More parcels were in the bounds than the limit: these are the ones on
   /// screen and nearest its centre, the bounds are not covered in full.
@@ -42,19 +51,20 @@ class MapParcelsWorker {
 
   /// Decoded parcels by `eid`, so re-querying an overlapping viewport reuses
   /// the [LatLng] lists; cleared when the open files change.
-  static const _decodedCap = 8000;
+  static const _decodedCap = 16000; // above a full screen's parcels
   final _decoded = <String, CadastralParcel>{}; // insertion-ordered
   String? _decodedFor;
 
-  /// Up to [limit] parcels inside [bounds] from the loaded regions, plus
-  /// their public-owner categories when [categories] is set. When there are
-  /// more, the ones inside [visible] (the screen; defaults to [bounds]) come
-  /// first, then the nearest to its centre, so a dense area never leaves the
-  /// screen empty while drawing parcels beyond it.
+  /// The parcels inside [bounds] from the loaded regions, plus their
+  /// public-owner categories when [categories] is set. Every parcel inside
+  /// [visible] (the screen; defaults to [bounds]) is returned, nearest its
+  /// centre first, up to [screenLimit]: a hole on screen reads as missing
+  /// data. Parcels beyond the screen only fill up to [limit] in total.
   Future<MapParcels> parcelsInBounds(
     LatLngBounds bounds, {
     required bool categories,
     int limit = 4000,
+    int screenLimit = 12000,
     LatLngBounds? visible,
   }) async {
     final screen = visible ?? bounds;
@@ -90,6 +100,7 @@ class MapParcelsWorker {
         visibleSouth: screen.south,
         visibleNorth: screen.north,
         limit: limit,
+        screenLimit: screenLimit,
         categories: categories,
       ),
     );
@@ -108,7 +119,15 @@ class MapParcelsWorker {
       final c = r.categories?[i] ?? -1;
       if (c >= 0) cats[parcel.id] = PublicOwnerCategory.values[c];
     }
-    return MapParcels(parcels, cats, truncated: r.truncated);
+    return MapParcels(
+      parcels,
+      cats,
+      truncated: r.truncated,
+      extraParts: [
+        for (var i = 0; i < r.extraRings.length; i++)
+          (parcel: parcels[r.extraOwners[i]], ring: _latLngs(r.extraRings[i])),
+      ],
+    );
   }
 
   CadastralParcel _parcel(_Reply r, int i) {
@@ -121,10 +140,7 @@ class MapParcelsWorker {
       cadastralMunicipality: r.sifkos[i],
       parcelNumber: r.parcele[i],
       area: r.areas[i],
-      polygon: [
-        for (var p = 0; p + 1 < ring.length; p += 2)
-          LatLng(ring[p + 1] / 1e7, ring[p] / 1e7),
-      ],
+      polygon: _latLngs(ring),
     );
     if (eid.isNotEmpty) {
       _decoded[eid] = parcel;
@@ -132,6 +148,15 @@ class MapParcelsWorker {
     }
     return parcel;
   }
+
+  static List<LatLng> _latLngs(Int32List ring) => [
+    for (var p = 0; p + 1 < ring.length; p += 2)
+      LatLng(ring[p + 1] / 1e7, ring[p] / 1e7),
+  ];
+
+  @visibleForTesting
+  static List<Int32List> outerRingsForTesting(Uint8List poly) =>
+      _WorkerState.outerRings(poly);
 
   Future<SendPort> _start() async {
     final ready = Completer<SendPort>();
@@ -178,6 +203,7 @@ class _Request {
     required this.visibleSouth,
     required this.visibleNorth,
     required this.limit,
+    required this.screenLimit,
     required this.categories,
   });
 
@@ -186,10 +212,13 @@ class _Request {
   final double west, east, south, north;
   final double visibleWest, visibleEast, visibleSouth, visibleNorth;
   final int limit;
+  final int screenLimit;
   final bool categories;
 }
 
-/// Column-wise parcels: rings hold the outer ring as lon/lat E7 pairs.
+/// Column-wise parcels: rings hold the first piece's outer ring as lon/lat
+/// E7 pairs; [extraRings] the further pieces, each with the index of its
+/// parcel in [extraOwners].
 /// [categories] holds a [PublicOwnerCategory] index or -1 per parcel.
 class _Reply {
   const _Reply({
@@ -199,6 +228,8 @@ class _Reply {
     this.parcele = const [],
     this.areas = const [],
     this.rings = const [],
+    this.extraOwners = const [],
+    this.extraRings = const [],
     this.categories,
     this.truncated = false,
     this.error,
@@ -211,6 +242,8 @@ class _Reply {
   final List<String> parcele;
   final List<double> areas;
   final List<Int32List> rings;
+  final List<int> extraOwners;
+  final List<Int32List> extraRings;
   final Int8List? categories;
   final String? error;
 }
@@ -270,7 +303,8 @@ class _WorkerState {
       r.visibleWest, r.visibleEast, r.visibleSouth, r.visibleNorth, // ?5-?8
       (r.visibleWest + r.visibleEast) / 2, centreLat, // ?9, ?10: the centre
       cosLat * cosLat, // ?11: squared longitude scale
-      r.limit + 1, // ?12: one more tells whether the limit cut it off
+      // ?12: one more tells whether the limit cut it off
+      math.max(r.limit, r.screenLimit) + 1,
     ];
     // Each region gives its own nearest; merged by the same key so a border
     // between regions does not favour the first file.
@@ -289,22 +323,35 @@ class _WorkerState {
       }
     }
     found.sort((a, b) => a.k.compareTo(b.k));
-    final truncated = found.length > r.limit;
+    // The key puts the screen's parcels below 1e6 (see [_orderKey]): all of
+    // those are kept, the ones beyond only while the total is under the limit.
+    final onScreen = found.where((f) => f.k < 1e6).length;
+    final keep = math.max(
+      math.min(onScreen, r.screenLimit),
+      math.min(found.length, r.limit),
+    );
+    final truncated = found.length > keep;
 
     final eids = <String>[];
     final sifkos = <int>[];
     final parcele = <String>[];
     final areas = <double>[];
     final rings = <Int32List>[];
-    for (final f in found.take(r.limit)) {
+    final extraOwners = <int>[];
+    final extraRings = <Int32List>[];
+    for (final f in found.take(keep)) {
       final row = f.row;
-      final ring = _outerRing(row['poly'] as Uint8List);
-      if (ring == null) continue;
+      final parts = outerRings(row['poly'] as Uint8List);
+      if (parts.isEmpty) continue;
       eids.add((row['eid'] ?? '').toString());
       sifkos.add((row['sifko'] as int?) ?? 0);
       parcele.add((row['parcela'] ?? '').toString());
       areas.add((row['area'] as num?)?.toDouble() ?? 0.0);
-      rings.add(ring);
+      rings.add(parts.first);
+      for (final part in parts.skip(1)) {
+        extraOwners.add(rings.length - 1);
+        extraRings.add(part);
+      }
     }
 
     Int8List? categories;
@@ -321,6 +368,8 @@ class _WorkerState {
       parcele: parcele,
       areas: areas,
       rings: rings,
+      extraOwners: extraOwners,
+      extraRings: extraRings,
       categories: categories,
       truncated: truncated,
     );
@@ -383,13 +432,16 @@ class _WorkerState {
     _key = null;
   }
 
-  /// The first ring with at least 3 points of a `poly` blob (see
-  /// [ParcelLookupService]), as lon/lat E7 pairs; null when there is none.
-  static Int32List? _outerRing(Uint8List bytes) {
-    if (bytes.length < 5) return null;
+  /// The outer rings of a `poly` blob (see [ParcelLookupService]) as lon/lat
+  /// E7 pairs: one per separate piece of the parcel, holes left out. The blob
+  /// lists the rings without saying which is which, so a ring that lies
+  /// inside another one of the same parcel counts as a hole.
+  static List<Int32List> outerRings(Uint8List bytes) {
+    if (bytes.length < 5) return const [];
     final data = ByteData.sublistView(bytes);
-    if (data.getUint8(0) != ParcelLookupService.blobVersion) return null;
+    if (data.getUint8(0) != ParcelLookupService.blobVersion) return const [];
     final ringCount = data.getUint32(1, Endian.little);
+    final rings = <Int32List>[];
     var offset = 5;
     for (var r = 0; r < ringCount; r++) {
       if (offset + 4 > bytes.length) break;
@@ -402,10 +454,33 @@ class _WorkerState {
         for (var i = 0; i < points * 2; i++) {
           ring[i] = data.getInt32(offset + i * 4, Endian.little);
         }
-        return ring;
+        rings.add(ring);
       }
       offset += pointCount * 8;
     }
-    return null;
+    if (rings.length < 2) return rings;
+    return [
+      for (final ring in rings)
+        if (!rings.any(
+          (other) => !identical(other, ring) && _inside(ring, other),
+        ))
+          ring,
+    ];
+  }
+
+  /// Whether [ring] lies inside [other]: tested at the middle of its first
+  /// edge, which unlike a vertex cannot sit on a corner the two share.
+  static bool _inside(Int32List ring, Int32List other) {
+    final x = (ring[0] + ring[2]) / 2, y = (ring[1] + ring[3]) / 2;
+    var inside = false;
+    final n = other.length ~/ 2;
+    for (var i = 0, j = n - 1; i < n; j = i++) {
+      final xi = other[i * 2], yi = other[i * 2 + 1];
+      final xj = other[j * 2], yj = other[j * 2 + 1];
+      if ((yi > y) != (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) {
+        inside = !inside;
+      }
+    }
+    return inside;
   }
 }

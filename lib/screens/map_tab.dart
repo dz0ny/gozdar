@@ -232,6 +232,11 @@ class MapTabState extends State<MapTab> {
   /// Populated only when an offline parcels DB is loaded and zoomed in.
   List<CadastralParcel> _offlineParcels = const [];
 
+  /// Further pieces of [_offlineParcels] that consist of several separate
+  /// ones; drawn like the first piece, without a second label.
+  List<({CadastralParcel parcel, List<LatLng> ring})> _offlineExtraParts =
+      const [];
+
   /// Public-owner category per [_offlineParcels] id (state / municipality /
   /// company), for parcels that are publicly owned/managed. Computed in
   /// [_refreshOfflineParcels] so the polygon build stays cheap. Empty
@@ -1038,6 +1043,7 @@ class MapTabState extends State<MapTab> {
       if (_offlineParcels.isNotEmpty) {
         setState(() {
           _offlineParcels = const [];
+          _offlineExtraParts = const [];
           _publicParcelCategory = const {};
           _offlineFillPolygons = const [];
           _offlineOutlinePolygons = const [];
@@ -1121,6 +1127,7 @@ class MapTabState extends State<MapTab> {
     _offlineQueriedAnyCategory = anyCategory;
     setState(() {
       _offlineParcels = result.parcels;
+      _offlineExtraParts = result.extraParts;
       _publicParcelCategory = result.categories;
       _rebuildOfflinePolygons(labels: labels);
     });
@@ -1139,8 +1146,11 @@ class MapTabState extends State<MapTab> {
             color: cat.fillColor,
             borderStrokeWidth: 0,
           ),
+      for (final e in _offlineExtraParts)
+        if (_highlightCategory(e.parcel) case final cat?)
+          Polygon(points: e.ring, color: cat.fillColor, borderStrokeWidth: 0),
     ];
-    _offlineOutlinePolygons = _offlineParcels.map((p) {
+    final outlines = _offlineParcels.map((p) {
       // Colour the outline by public-owner category when on; otherwise the
       // default red kataster outline.
       final color = _highlightCategory(p)?.color;
@@ -1167,6 +1177,17 @@ class MapTabState extends State<MapTab> {
         ),
       );
     }).toList();
+    for (final e in _offlineExtraParts) {
+      outlines.add(
+        Polygon(
+          points: e.ring,
+          borderColor:
+              _highlightCategory(e.parcel)?.color ?? const Color(0xFFD50000),
+          borderStrokeWidth: 2.5,
+        ),
+      );
+    }
+    _offlineOutlinePolygons = outlines;
   }
 
   /// Recolour the cached polygons after a category-highlight toggle without

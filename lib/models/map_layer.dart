@@ -120,6 +120,10 @@ class MapLayer {
   /// the difference is far below a pixel.
   final String? wmsCrs;
 
+  /// Pixel size of a [isDirectWms] GetMap. DGU draws parcels only below about
+  /// 2 m/px: a 256 px tile reaches that at zoom 17, a 512 px one at zoom 16.
+  final int wmsTileSize;
+
   /// Extra HTTP headers the tile source requires (e.g. mapy.cz rejects
   /// requests without a mapy.com Referer with 403).
   final Map<String, String> httpHeaders;
@@ -144,6 +148,7 @@ class MapLayer {
     this.proxySlugOverride,
     this.httpHeaders = const {},
     this.wmsCrs,
+    this.wmsTileSize = 256,
   });
 
   static const _mapyHeaders = {'Referer': 'https://mapy.com/'};
@@ -219,8 +224,8 @@ class MapLayer {
       'FORMAT': wmsFormat ?? 'image/png',
       'TRANSPARENT': '$isTransparent'.toUpperCase(),
       'SRS': 'EPSG:3857',
-      'WIDTH': '256',
-      'HEIGHT': '256',
+      'WIDTH': '$wmsTileSize',
+      'HEIGHT': '$wmsTileSize',
     };
     final query = params.entries
         .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
@@ -1133,13 +1138,15 @@ class MapLayer {
     type: MapLayerType.hrKataster,
     name: 'Katastarske čestice',
     attribution: '© DGU',
-    minZoom: 15,
+    // The server draws nothing coarser: zoom 15 came back empty.
+    minZoom: 16,
     maxZoom: 19,
     isWms: true,
     wmsBaseUrl: 'https://wms1-gs-oss.uredjenazemlja.hr/ows2-m/wms?',
     wmsLayers: ['oss:BZP_CESTICE'],
     wmsFormat: 'image/png',
     wmsStyles: 'jis_cestice_kathr',
+    wmsTileSize: 512,
     isTransparent: true,
     isOverlay: true,
     category: OverlayCategory.hrvatska,
@@ -1150,13 +1157,15 @@ class MapLayer {
     type: MapLayerType.hrKatasterNazivi,
     name: 'Katastarske čestice s brojevima',
     attribution: '© DGU',
-    minZoom: 15,
+    // The server draws nothing coarser: zoom 15 came back empty.
+    minZoom: 16,
     maxZoom: 19,
     isWms: true,
     wmsBaseUrl: 'https://wms1-gs-oss.uredjenazemlja.hr/ows2-m/wms?',
     wmsLayers: ['oss:BZP_CESTICE'],
     wmsFormat: 'image/png',
     wmsStyles: 'jis_cestice_nazivi_kathr',
+    wmsTileSize: 512,
     isTransparent: true,
     isOverlay: true,
     category: OverlayCategory.hrvatska,
