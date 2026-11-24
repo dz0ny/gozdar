@@ -111,16 +111,23 @@ The whole-Slovenia DB is ~1.6 GB. Split it into the 12 statistical regions so
 the app downloads only the user's region (39–219 MB each):
 
 ```bash
+# regije.geojson also holds the Croatian counties; keep the 12 Slovenian ones
+jq -c '.features |= map(select(.properties.area > 0))' regije.geojson > work/regije_si.geojson
 ./convert.py build work/slo/shp/KN_SLO_PARCELE_SLO_PARCELE_poligon.shp -o work/regions \
-  --eid-field EID_PARCEL --source "GURS KN parcele (SLO)" --date 2026-10-11 \
-  --regions regije.geojson
+  --eid-field EID_PARCEL --source "GURS KN parcele (SLO)" --date 2026-11-21 \
+  --regions work/regije_si.geojson
 ```
+
+Do not pass `regije.geojson` itself: with the Croatian counties in it, about
+11,000 Slovenian parcels along the border land in Croatian-named files. The
+log must end with `(12 regions)`.
 
 (`--eid-field EID_PARCEL` is needed because the DBF truncates `EID_PARCELA` to
 10 characters and the auto-detection would otherwise pick `FEATUREID`.)
 
 - `regije.geojson` = Slovenia's 12 statistical regions (GURS RPE 2020, CC-BY),
-  from sledilnik `statistical-regions-gurs-simplified.geojson`. Tracked in repo.
+  from sledilnik `statistical-regions-gurs-simplified.geojson`, plus the
+  Croatian counties from `convert_hr.py` (`area` 0). Tracked in repo.
 - Each parcel is assigned by its viewport-centre to the containing region; whole
   KOs stay together (first parcel of a KO fixes the region) and a nearest-region
   fallback covers border gaps in the simplified boundaries (→ 0 unassigned).
