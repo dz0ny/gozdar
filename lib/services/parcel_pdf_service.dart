@@ -188,7 +188,24 @@ class ParcelPdfService {
       for (final tile in tiles) {
         final image = tile.image;
         if (image == null) continue;
-        canvas.drawImage(image, ui.Offset(tile.dx, tile.dy), ui.Paint());
+        // Scaled into the tile's slot: a layer may send larger images than
+        // 256 px (MapLayer.wmsTileSize).
+        canvas.drawImageRect(
+          image,
+          ui.Rect.fromLTWH(
+            0,
+            0,
+            image.width.toDouble(),
+            image.height.toDouble(),
+          ),
+          ui.Rect.fromLTWH(
+            tile.dx,
+            tile.dy,
+            _tileSize.toDouble(),
+            _tileSize.toDouble(),
+          ),
+          ui.Paint()..filterQuality = ui.FilterQuality.medium,
+        );
         image.dispose();
       }
     }

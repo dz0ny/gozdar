@@ -25,6 +25,25 @@ Uint8List _poly(List<(double, double)> lonLat) {
   return data.buffer.asUint8List();
 }
 
+/// A `poly` blob of several rings.
+Uint8List _polyRings(List<List<(double, double)>> rings) {
+  final size = rings.fold(5, (n, r) => n + 4 + r.length * 8);
+  final data = ByteData(size)
+    ..setUint8(0, ParcelLookupService.blobVersion)
+    ..setUint32(1, rings.length, Endian.little);
+  var offset = 5;
+  for (final ring in rings) {
+    data.setUint32(offset, ring.length, Endian.little);
+    offset += 4;
+    for (final (lon, lat) in ring) {
+      data.setInt32(offset, (lon * 1e7).round(), Endian.little);
+      data.setInt32(offset + 4, (lat * 1e7).round(), Endian.little);
+      offset += 8;
+    }
+  }
+  return data.buffer.asUint8List();
+}
+
 void main() {
   late Directory dir;
 
@@ -58,6 +77,33 @@ void main() {
     parcel(1651, '100', 'e1', 14.50, 45.60);
     parcel(1651, '101/2', 'e2', 14.51, 45.61);
     parcel(1651, '900', 'far', 15.50, 46.50); // outside the queried bounds
+    // Two pieces, the first with a hole; outside the queried bounds.
+    List<(double, double)> box(double lon, double lat, double size) => [
+      (lon, lat),
+      (lon + size, lat),
+      (lon + size, lat + size),
+      (lon, lat + size),
+      (lon, lat),
+    ];
+    parcels.execute(
+      'INSERT INTO parcels (sifko, parcela, area, eid, poly, min_lon, '
+      'max_lon, min_lat, max_lat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        302759,
+        '5000',
+        100.0,
+        'multi',
+        _polyRings([
+          box(16.000, 46.000, .010),
+          box(16.002, 46.002, .002),
+          box(16.020, 46.000, .005),
+        ]),
+        16.000,
+        16.025,
+        46.000,
+        46.010,
+      ],
+    );
     parcels.close();
 
     final public = sqlite3.open('${dir.path}/public.sqlite');
@@ -133,6 +179,56 @@ void main() {
     expect(all.parcels.map((p) => p.id).first, 'e2');
     expect(all.parcels, hasLength(2));
     expect(all.truncated, isFalse);
+  });
+
+  test('every parcel on screen is drawn, however low the limit', () async {
+    final all = await MapParcelsWorker.instance.parcelsInBounds(
+      bounds,
+      categories: false,
+      limit: 1,
+    );
+    expect(all.parcels, hasLength(2));
+    expect(all.truncated, isFalse);
+
+    final capped = await MapParcelsWorker.instance.parcelsInBounds(
+      bounds,
+      categories: false,
+      limit: 1,
+      screenLimit: 1,
+    );
+    expect(capped.parcels, hasLength(1));
+    expect(capped.truncated, isTrue);
+  });
+
+  test('a parcel of several pieces gives every piece, but no hole', () {
+    List<(double, double)> box(double lon, double lat, double size) => [
+      (lon, lat),
+      (lon + size, lat),
+      (lon + size, lat + size),
+      (lon, lat + size),
+      (lon, lat),
+    ];
+    final rings = MapParcelsWorker.outerRingsForTesting(
+      _polyRings([
+        box(14.50, 45.60, .010), // first piece
+        box(14.502, 45.602, .002), // its hole
+        box(14.52, 45.60, .005), // second piece, apart from the first
+      ]),
+    );
+    expect(rings, hasLength(2));
+    expect(rings[0][0], 145000000);
+    expect(rings[1][0], 145200000);
+  });
+
+  test('a tap finds a parcel by any of its pieces, not by its hole', () {
+    final svc = ParcelLookupService.instance;
+    expect(svc.parcelAt(const LatLng(46.008, 16.008))?.id, 'multi');
+    final second = svc.parcelAt(const LatLng(46.002, 16.022));
+    expect(second?.id, 'multi');
+    // The shape is the piece that was tapped.
+    expect(second!.polygon.first.longitude, closeTo(16.020, 1e-6));
+    expect(svc.parcelAt(const LatLng(46.003, 16.003)), isNull); // the hole
+    expect(svc.parcelAt(const LatLng(46.002, 16.015)), isNull); // between
   });
 
   test('then the nearest to the screen centre', () async {

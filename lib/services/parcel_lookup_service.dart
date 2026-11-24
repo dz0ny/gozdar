@@ -555,9 +555,12 @@ class ParcelLookupService {
       for (final row in rows) {
         final rings = _decodeRings(row['poly'] as Uint8List);
         if (rings.isEmpty) continue;
-        if (_pointInRing(lon, lat, rings.first)) {
-          return _parcelFrom(row, rings.first);
-        }
+        // Even-odd over all rings: a hit in any piece of a parcel made of
+        // several, but not in a hole (that is another parcel's ground).
+        // The parcel takes the shape of the piece that was hit, so the
+        // highlight lands where the user tapped.
+        final hits = rings.where((r) => _pointInRing(lon, lat, r)).toList();
+        if (hits.length.isOdd) return _parcelFrom(row, hits.last);
       }
     } catch (e) {
       debugPrint('ParcelLookupService._atFrom failed: $e');

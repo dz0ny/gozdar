@@ -72,6 +72,16 @@ void main() {
       expect(template, endsWith('&BBOX={bbox}'));
     });
 
+    test('asks DGU for 512 px parcel tiles, drawn from zoom 16', () {
+      // The server leaves a 256 px tile empty below zoom 17.
+      for (final layer in [MapLayer.hrKataster, MapLayer.hrKatasterNazivi]) {
+        final template = layer.resolveUrlTemplate(null);
+        expect(template, contains('WIDTH=512'));
+        expect(template, contains('HEIGHT=512'));
+        expect(layer.minZoom, 16);
+      }
+    });
+
     test('computes EPSG:3857 tile bounds', () {
       expect(
         MapLayer.webMercatorTileBbox(0, 0, 0),
