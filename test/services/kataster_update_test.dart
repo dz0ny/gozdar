@@ -286,6 +286,20 @@ void main() {
       final restarted = make();
       expect(await restarted.trustedSha256('addresses.sqlite'), 'aa2');
       expect(fetches, 3);
+
+      // The next file does not wait for the network again.
+      expect(await restarted.trustedSha256('vlake.bin'), isNull);
+      expect(fetches, 3);
+      now = now.add(const Duration(minutes: 2));
+      fail = false;
+      expect(await restarted.trustedSha256('addresses.sqlite'), 'aa4');
+    });
+
+    test('bytesOf gives the size of a listed file', () {
+      final manifest = KatasterManifest.fromJson(_manifestJson);
+      expect(manifest.bytesOf('addresses.sqlite'), 42328064);
+      expect(manifest.bytesOf('public_owners.sqlite'), 92303360);
+      expect(manifest.bytesOf('vlake.bin'), isNull);
     });
 
     test('dismiss hides the update for that manifest date only', () async {

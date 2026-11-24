@@ -14,6 +14,9 @@ class _Peer {
   final String fileName;
   final File file;
   var downloads = 0;
+
+  /// The phone still lists the file but cannot send it.
+  var broken = false;
   late final HttpServer _server;
 
   KatasterPeer get peer =>
@@ -30,6 +33,11 @@ class _Peer {
               {'fileName': fileName, 'bytes': file.lengthSync()},
             ]),
           );
+        await request.response.close();
+        return;
+      }
+      if (broken) {
+        request.response.statusCode = HttpStatus.internalServerError;
         await request.response.close();
         return;
       }
@@ -63,6 +71,7 @@ void main() {
     dir = Directory.systemTemp.createTempSync('peer_verify');
     target = File('${dir.path}/$name.part');
     service.trustedHash = (_) async => goodHash;
+    service.trustedBytes = (_) => null;
   });
 
   tearDown(() async {
@@ -116,6 +125,59 @@ void main() {
     final ok = await service.downloadFileTo(name, target, discover: false);
 
     expect(ok, isTrue);
+    expect(target.readAsBytesSync(), good);
+  });
+
+  test('a phone with another file size is skipped', () async {
+    final old = await share('old', good.sublist(0, 60000));
+    await share('good', good);
+    service.trustedBytes = (_) => good.length;
+
+    final ok = await service.downloadFileTo(name, target, discover: false);
+
+    expect(ok, isTrue);
+    expect(old.downloads, 0);
+    expect(target.readAsBytesSync(), good);
+  });
+
+  test('a part of a phone that went away is removed', () async {
+    final peer = await share('good', good);
+    // What an interrupted transfer left behind.
+    final part = File('${target.path}.peer')..writeAsBytesSync([1, 2, 3]);
+    File('${part.path}.validator').writeAsStringSync('"gone"');
+    peer.broken = true;
+
+    final ok = await service.downloadFileTo(name, target, discover: false);
+
+    expect(ok, isFalse);
+    expect(part.existsSync(), isFalse);
+    expect(File('${part.path}.validator').existsSync(), isFalse);
+  });
+
+  test('a cancelled transfer keeps its part', () async {
+    await share('good', good);
+    final part = File('${target.path}.peer')..writeAsBytesSync([1, 2, 3]);
+
+    final ok = await service.downloadFileTo(
+      name,
+      target,
+      discover: false,
+      isCancelled: () => true,
+    );
+
+    expect(ok, isFalse);
+    expect(part.existsSync(), isTrue);
+  });
+
+  test('a copy that passed before is accepted without a transfer', () async {
+    final peer = await share('good', good);
+    // The verified copy has no validator next to it.
+    target.writeAsBytesSync(good);
+
+    final ok = await service.downloadFileTo(name, target, discover: false);
+
+    expect(ok, isTrue);
+    expect(peer.downloads, 0);
     expect(target.readAsBytesSync(), good);
   });
 

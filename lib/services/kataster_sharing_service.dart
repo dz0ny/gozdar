@@ -71,6 +71,14 @@ class KatasterSharingService {
   Future<String?> Function(String fileName) trustedHash =
       KatasterUpdateService.instance.trustedSha256;
 
+  /// The size in bytes a data file must have, or null when the manifest
+  /// does not say. Read after [trustedHash], which refreshes the manifest.
+  @visibleForTesting
+  int? Function(String fileName) trustedBytes = _manifestBytes;
+
+  static int? _manifestBytes(String fileName) =>
+      KatasterUpdateService.instance.manifest?.bytesOf(fileName);
+
   /// Adds a phone without the network discovery.
   @visibleForTesting
   void addPeerForTesting(KatasterPeer peer) => _peers.add(peer);
@@ -158,10 +166,16 @@ class KatasterSharingService {
   ///
   /// A phone sends the file over plain HTTP, so the copy is only accepted
   /// when its SHA-256 equals the one in the manifest ([trustedHash]). The
-  /// copy arrives in `<target>.peer`, where an interrupted transfer
-  /// continues, and replaces [target] after the check. Returns false when
-  /// no phone has the file, the hash is not known or no copy passed; the
-  /// caller then downloads from the internet.
+  /// copy arrives in `<target>.peer` and replaces [target] after the check.
+  /// A cancelled transfer keeps that part and continues next time; a failed
+  /// one removes it. A phone whose file has another size than the manifest
+  /// says is skipped before any transfer. Returns false when no phone has
+  /// the file, the hash is not known or no copy passed; the caller then
+  /// downloads from the internet.
+  ///
+  /// A [target] that passed the check in an earlier call (it has no
+  /// validator file, e.g. the owners file after a wrong password) is
+  /// accepted again without a transfer.
   Future<bool> downloadFileTo(
     String fileName,
     File target, {
@@ -178,15 +192,42 @@ class KatasterSharingService {
 
     final part = File('${target.path}.peer');
     String? expected;
+    // Only a cancelled transfer keeps its part for the next call.
+    var keepPart = false;
     try {
+      // Without a validator the internet download cannot continue [target],
+      // so the only useful thing it can be is a copy that passed before.
+      if (await target.exists() &&
+          await target.length() > 0 &&
+          !await File('${target.path}.validator').exists()) {
+        expected = await trustedHash(fileName);
+        if (expected != null && await sha256OfFile(target.path) == expected) {
+          return true;
+        }
+      }
       for (final peer in List<KatasterPeer>.from(_peers)) {
-        if (isCancelled?.call() ?? false) return false;
+        if (isCancelled?.call() ?? false) {
+          keepPart = true;
+          return false;
+        }
         final files = await fetchFiles(peer);
-        if (!files.any((file) => file.fileName == fileName)) continue;
+        final listed = files
+            .where((file) => file.fileName == fileName)
+            .firstOrNull;
+        if (listed == null) continue;
         expected ??= await trustedHash(fileName);
         if (expected == null) {
           debugPrint('KatasterSharingService: no hash for $fileName');
           return false;
+        }
+        // Another size cannot have the hash: skip it before the transfer.
+        final size = trustedBytes(fileName);
+        if (size != null && listed.bytes != size) {
+          debugPrint(
+            'KatasterSharingService: $fileName on ${peer.host} has '
+            'another size',
+          );
+          continue;
         }
         final ok = await _downloadFromPeer(
           peer,
@@ -195,7 +236,10 @@ class KatasterSharingService {
           onProgress: onProgress,
           isCancelled: isCancelled,
         );
-        if (isCancelled?.call() ?? false) return false;
+        if (isCancelled?.call() ?? false) {
+          keepPart = true;
+          return false;
+        }
         if (!ok) continue;
         if (await sha256OfFile(part.path) != expected) {
           debugPrint(
@@ -208,11 +252,14 @@ class KatasterSharingService {
         // An internet download left unfinished must not mix with this copy.
         await ResumableDownload.discard(target);
         await part.rename(target.path);
-        await ResumableDownload.discard(part);
         return true;
       }
     } on FileSystemException catch (e, s) {
       debugPrint('KatasterSharingService.downloadFileTo failed: $e\n$s');
+    } finally {
+      // A part of a phone that went away would stay on disk for good: the
+      // caller downloads from the internet and never looks at it again.
+      if (!keepPart) await ResumableDownload.discard(part);
     }
     return false;
   }

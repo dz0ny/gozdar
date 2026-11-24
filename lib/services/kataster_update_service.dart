@@ -64,6 +64,17 @@ class KatasterManifest {
     );
   }
 
+  /// The size in bytes of [fileName] on R2, or null when the manifest does
+  /// not give it.
+  int? bytesOf(String fileName) {
+    if (fileName == OwnerLookupService.publicFileName) return publicOwnersBytes;
+    if (fileName == AddressLookupService.fileName) return addressesBytes;
+    for (final region in regions) {
+      if (region.file == fileName) return region.bytes;
+    }
+    return null;
+  }
+
   /// Fetch and parse the manifest at [url]. Throws a [FormatException] with a
   /// user-facing message on HTTP errors.
   static Future<KatasterManifest> fetch(String url) async {
@@ -167,6 +178,10 @@ class KatasterUpdateService {
   /// How long a fetched manifest answers [trustedSha256] from memory.
   static const hashMaxAge = Duration(minutes: 10);
 
+  /// How long [trustedSha256] waits after a failed fetch before it tries
+  /// the network again, so each file does not wait for the timeout.
+  static const hashRetryAfter = Duration(minutes: 1);
+
   static final KatasterUpdateService instance = KatasterUpdateService._(
     fetchManifest: () =>
         KatasterManifest.fetch(ParcelLookupService.regionsManifestUrl),
@@ -191,6 +206,7 @@ class KatasterUpdateService {
   SharedPreferences? _prefs;
   KatasterManifest? _manifest;
   DateTime? _manifestFetchedAt;
+  DateTime? _manifestFailedAt;
   KatasterUpdate? _update;
   Future<KatasterUpdate?>? _inFlight;
 
@@ -289,23 +305,29 @@ class KatasterUpdateService {
   /// The SHA-256 of [fileName] from the manifest. The manifest comes over
   /// HTTPS, so the hash can check a copy from a nearby phone. Fetches the
   /// manifest when the one in memory is older than [hashMaxAge]; without
-  /// network the saved manifest answers. Null when no manifest lists the
-  /// file. Never throws.
+  /// network the saved manifest answers, and the network is left alone for
+  /// [hashRetryAfter]. Null when no manifest lists the file. Never throws.
   Future<String?> trustedSha256(String fileName) async {
     await init();
     final now = clock();
     final at = _manifestFetchedAt;
-    if (at == null || now.difference(at) > hashMaxAge) {
+    final failedAt = _manifestFailedAt;
+    final stale = at == null || now.difference(at) > hashMaxAge;
+    final failedNow =
+        failedAt != null && now.difference(failedAt) < hashRetryAfter;
+    if (stale && !failedNow) {
       try {
         final fresh = await fetchManifest().timeout(
           const Duration(seconds: 5),
         );
         _manifest = fresh;
         _manifestFetchedAt = now;
+        _manifestFailedAt = null;
         await _prefs!.setString(_keyManifest, jsonEncode(fresh.raw));
         recompute();
       } on Object catch (e, s) {
         // Offline, or a manifest that cannot be read.
+        _manifestFailedAt = now;
         debugPrint('KatasterUpdateService.trustedSha256 failed: $e\n$s');
       }
     }
