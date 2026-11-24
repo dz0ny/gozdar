@@ -148,8 +148,9 @@ rclone copyto owners.sqlite cloudflare:gozdar-kataster/owners.sqlite \
 
 The manifest lists the SHA-256 of every file under `sha256`. Phones copy the
 files from each other over plain HTTP, and the app accepts such a copy only
-when its hash equals the one in the manifest; a file that is not listed is
-always downloaded from R2. So give every file that is on R2 to `manifest.py`
+when its hash equals the one in the manifest. A file that is not listed, or
+any file on a phone that has no manifest and no network, is accepted
+unchecked. So give every file that is on R2 to `manifest.py`
 (`--extra` for the ones without their own option; `NAME=PATH` when the app
 keeps the file under another name), and generate the manifest again after any
 of them changes.

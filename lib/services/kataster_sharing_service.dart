@@ -164,14 +164,16 @@ class KatasterSharingService {
   /// without, only phones already found are asked, so a background download
   /// never triggers the system's local-network prompt.
   ///
-  /// A phone sends the file over plain HTTP, so the copy is only accepted
-  /// when its SHA-256 equals the one in the manifest ([trustedHash]). The
-  /// copy arrives in `<target>.peer` and replaces [target] after the check.
-  /// A cancelled transfer keeps that part and continues next time; a failed
-  /// one removes it. A phone whose file has another size than the manifest
-  /// says is skipped before any transfer. Returns false when no phone has
-  /// the file, the hash is not known or no copy passed; the caller then
-  /// downloads from the internet.
+  /// A phone sends the file over plain HTTP, so when the manifest gives a
+  /// SHA-256 for the file ([trustedHash]) the copy is only accepted with
+  /// that hash. When no hash is known (no network and no saved manifest
+  /// that lists the file) the copy is accepted unchecked, so phones can
+  /// share where there is no signal. The copy arrives in `<target>.peer`
+  /// and replaces [target] after the check. A cancelled transfer keeps
+  /// that part and continues next time; a failed one removes it. A phone
+  /// whose file has another size than the manifest says is skipped before
+  /// any transfer. Returns false when no phone has the file or no copy
+  /// passed; the caller then downloads from the internet.
   ///
   /// A [target] that passed the check in an earlier call (it has no
   /// validator file, e.g. the owners file after a wrong password) is
@@ -192,6 +194,7 @@ class KatasterSharingService {
 
     final part = File('${target.path}.peer');
     String? expected;
+    var hashAsked = false;
     // Only a cancelled transfer keeps its part for the next call.
     var keepPart = false;
     try {
@@ -201,6 +204,7 @@ class KatasterSharingService {
           await target.length() > 0 &&
           !await File('${target.path}.validator').exists()) {
         expected = await trustedHash(fileName);
+        hashAsked = true;
         if (expected != null && await sha256OfFile(target.path) == expected) {
           return true;
         }
@@ -215,13 +219,12 @@ class KatasterSharingService {
             .where((file) => file.fileName == fileName)
             .firstOrNull;
         if (listed == null) continue;
-        expected ??= await trustedHash(fileName);
-        if (expected == null) {
-          debugPrint('KatasterSharingService: no hash for $fileName');
-          return false;
+        if (!hashAsked) {
+          expected = await trustedHash(fileName);
+          hashAsked = true;
         }
         // Another size cannot have the hash: skip it before the transfer.
-        final size = trustedBytes(fileName);
+        final size = expected == null ? null : trustedBytes(fileName);
         if (size != null && listed.bytes != size) {
           debugPrint(
             'KatasterSharingService: $fileName on ${peer.host} has '
@@ -241,7 +244,12 @@ class KatasterSharingService {
           return false;
         }
         if (!ok) continue;
-        if (await sha256OfFile(part.path) != expected) {
+        if (expected == null) {
+          debugPrint(
+            'KatasterSharingService: no hash for $fileName, the copy from '
+            '${peer.host} is accepted unchecked',
+          );
+        } else if (await sha256OfFile(part.path) != expected) {
           debugPrint(
             'KatasterSharingService: $fileName from ${peer.host} has '
             'the wrong hash',

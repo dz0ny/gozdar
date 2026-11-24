@@ -181,14 +181,22 @@ void main() {
     expect(target.readAsBytesSync(), good);
   });
 
-  test('without a known hash nothing is downloaded from a phone', () async {
+  test('without a known hash the copy is accepted unchecked', () async {
     final peer = await share('good', good);
-    service.trustedHash = (_) async => null;
+    var asked = 0;
+    service.trustedHash = (_) async {
+      asked++;
+      return null;
+    };
+    // A size alone is not trusted without the hash.
+    service.trustedBytes = (_) => 1;
 
     final ok = await service.downloadFileTo(name, target, discover: false);
 
-    expect(ok, isFalse);
-    expect(peer.downloads, 0);
-    expect(target.existsSync(), isFalse);
+    expect(ok, isTrue);
+    expect(peer.downloads, 1);
+    expect(asked, 1);
+    expect(target.readAsBytesSync(), good);
+    expect(File('${target.path}.peer').existsSync(), isFalse);
   });
 }

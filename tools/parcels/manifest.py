@@ -18,8 +18,9 @@ timestamp are added under ``public_owners`` so installed apps can tell when a
 newer build is on R2 (``KatasterUpdateService``). ``--addresses`` does the
 same for ``addresses.sqlite`` under ``addresses``.
 
-``sha256`` maps each file name to its SHA-256. The app accepts a copy from a
-nearby phone only when it has this hash (``KatasterSharingService``), so every
+``sha256`` maps each file name to its SHA-256. The app checks a copy from a
+nearby phone against this hash (``KatasterSharingService``); a file without
+one is accepted unchecked, so every
 shared file must be listed: the regions, the public owners and the addresses
 are added by themselves, the others with ``--extra``. An entry is ``PATH`` or
 ``NAME=PATH`` when the app knows the file by another name.
