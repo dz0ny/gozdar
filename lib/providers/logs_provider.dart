@@ -51,6 +51,11 @@ class LogsProvider extends ChangeNotifier {
   String? _error;
   ConversionFactors _conversionFactors = const ConversionFactors();
   String? _currentSpecies;
+  int? _lastAddedId;
+
+  /// Id of the log added last from this tab, so the list can scroll to it
+  /// and mark it. Null until something is added.
+  int? get lastAddedId => _lastAddedId;
 
   // Getters
   List<LogEntry> get logEntries => List.unmodifiable(_logEntries);
@@ -96,7 +101,7 @@ class LogsProvider extends ChangeNotifier {
   /// Parcel assignment is handled automatically by DatabaseService
   Future<bool> addLogEntry(LogEntry entry) async {
     try {
-      await _databaseService.insertLog(entry);
+      _lastAddedId = await _databaseService.insertLog(entry);
       await loadLogEntries();
       return true;
     } catch (e) {

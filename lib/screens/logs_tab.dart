@@ -569,7 +569,13 @@ class LogsTab extends StatelessWidget {
                 Expanded(
                   child: provider.logEntries.isEmpty
                       ? _buildEmptyState(context)
-                      : _buildGroupedLogsList(context, provider),
+                      : _LogsList(
+                          entries: provider.logEntries,
+                          lastAddedId: provider.lastAddedId,
+                          onTap: (entry) => _editLogEntry(context, entry),
+                          onDismissed: (entry) =>
+                              _deleteLogEntry(context, entry),
+                        ),
                 ),
 
                 // Quick-add bar (always visible, no popup)
@@ -579,97 +585,6 @@ class LogsTab extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildGroupedLogsList(BuildContext context, LogsProvider provider) {
-    // Group logs by species
-    final unknownSpecies = context.l10n.logsUnknownSpecies;
-    final groupedLogs = <String, List<LogEntry>>{};
-    for (final entry in provider.logEntries) {
-      final species = entry.species ?? unknownSpecies;
-      if (!groupedLogs.containsKey(species)) {
-        groupedLogs[species] = [];
-      }
-      groupedLogs[species]!.add(entry);
-    }
-
-    // Progressive enhancement: only show grouping if more than one species
-    if (groupedLogs.length <= 1) {
-      return ListView.builder(
-        itemCount: provider.logEntries.length,
-        itemBuilder: (context, index) {
-          final entry = provider.logEntries[index];
-          return LogCard(
-            logEntry: entry,
-            onTap: () => _editLogEntry(context, entry),
-            onDismissed: () => _deleteLogEntry(context, entry),
-          );
-        },
-      );
-    }
-
-    // Sort species alphabetically, but put "Neznana vrsta" at the end
-    final sortedSpecies = groupedLogs.keys.toList()
-      ..sort((a, b) {
-        if (a == unknownSpecies) return 1;
-        if (b == unknownSpecies) return -1;
-        return a.compareTo(b);
-      });
-
-    return ListView.builder(
-      itemCount: sortedSpecies.length,
-      itemBuilder: (context, groupIndex) {
-        final species = sortedSpecies[groupIndex];
-        final entries = groupedLogs[species]!;
-        final count = entries.length;
-        final totalVolume = entries.fold<double>(
-          0,
-          (sum, entry) => sum + entry.volume,
-        );
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Species header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Row(
-                children: [
-                  Icon(Icons.forest, size: 20, color: Colors.green[400]),
-                  const SizedBox(width: 8),
-                  Text(
-                    species,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    context.l10n.logsGroupSummary(
-                      count,
-                      Fmt.num(totalVolume, 2),
-                    ),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Logs in this group
-            ...entries.map((entry) {
-              return LogCard(
-                logEntry: entry,
-                onTap: () => _editLogEntry(context, entry),
-                onDismissed: () => _deleteLogEntry(context, entry),
-              );
-            }),
-          ],
-        );
-      },
     );
   }
 
@@ -699,6 +614,131 @@ class LogsTab extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The working list of logs, grouped by species once there are two or more.
+///
+/// After a log is added it scrolls to that log and marks it, since the list
+/// is newest-first (or grouped) while the add bar sits at the bottom.
+class _LogsList extends StatefulWidget {
+  final List<LogEntry> entries;
+  final int? lastAddedId;
+  final void Function(LogEntry entry) onTap;
+  final void Function(LogEntry entry) onDismissed;
+
+  const _LogsList({
+    required this.entries,
+    required this.lastAddedId,
+    required this.onTap,
+    required this.onDismissed,
+  });
+
+  @override
+  State<_LogsList> createState() => _LogsListState();
+}
+
+class _LogsListState extends State<_LogsList> {
+  final _lastAddedKey = GlobalKey();
+
+  @override
+  void didUpdateWidget(covariant _LogsList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.lastAddedId != null &&
+        widget.lastAddedId != oldWidget.lastAddedId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final target = _lastAddedKey.currentContext;
+        if (target == null || !target.mounted) return;
+        Scrollable.ensureVisible(
+          target,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        );
+      });
+    }
+  }
+
+  Widget _card(LogEntry entry) {
+    final isLast = entry.id == widget.lastAddedId;
+    return LogCard(
+      key: isLast ? _lastAddedKey : null,
+      logEntry: entry,
+      highlighted: isLast,
+      onTap: () => widget.onTap(entry),
+      onDismissed: () => widget.onDismissed(entry),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unknownSpecies = context.l10n.logsUnknownSpecies;
+    final groupedLogs = <String, List<LogEntry>>{};
+    for (final entry in widget.entries) {
+      groupedLogs.putIfAbsent(entry.species ?? unknownSpecies, () => []).add(
+        entry,
+      );
+    }
+
+    // All rows are built (not lazily) so the added log always has a context
+    // to scroll to, wherever its species group sits.
+    final children = <Widget>[];
+    if (groupedLogs.length <= 1) {
+      children.addAll(widget.entries.map(_card));
+    } else {
+      // Species alphabetically, "Neznana vrsta" last.
+      final sortedSpecies = groupedLogs.keys.toList()
+        ..sort((a, b) {
+          if (a == unknownSpecies) return 1;
+          if (b == unknownSpecies) return -1;
+          return a.compareTo(b);
+        });
+      for (final species in sortedSpecies) {
+        final entries = groupedLogs[species]!;
+        final totalVolume = entries.fold<double>(
+          0,
+          (sum, entry) => sum + entry.volume,
+        );
+        children.add(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: Row(
+              children: [
+                Icon(Icons.forest, size: 20, color: Colors.green[400]),
+                const SizedBox(width: 8),
+                Text(
+                  species,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  context.l10n.logsGroupSummary(
+                    entries.length,
+                    Fmt.num(totalVolume, 2),
+                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        children.addAll(entries.map(_card));
+      }
+    }
+
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
       ),
     );
   }

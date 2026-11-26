@@ -8,11 +8,15 @@ class LogCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onDismissed;
 
+  /// Marks the log added last, so it stands out in a long list.
+  final bool highlighted;
+
   const LogCard({
     super.key,
     required this.logEntry,
     required this.onTap,
     required this.onDismissed,
+    this.highlighted = false,
   });
 
   @override
@@ -31,13 +35,22 @@ class LogCard extends StatelessWidget {
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
+            color: highlighted
+                ? Theme.of(context).colorScheme.primaryContainer
+                : null,
             border: Border(
+              left: BorderSide(
+                width: 4,
+                color: highlighted
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.transparent,
+              ),
               bottom: BorderSide(
                 color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
               ),
             ),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
           // Volume and dimensions on the left, species on the right (capped);
           // both truncate with an ellipsis so large text or long species names
           // don't overflow the row.
