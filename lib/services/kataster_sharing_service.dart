@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_nsd/flutter_nsd.dart';
 import 'package:http/http.dart' as http;
 import 'package:nsd/nsd.dart' as nsd;
 import 'package:path_provider/path_provider.dart';
@@ -53,17 +52,14 @@ class KatasterSharingService {
 
   static const int defaultPort = 8348;
   static const String serviceType = '_gozdar-kataster._tcp';
-  static const String discoveryServiceType = '$serviceType.';
 
-  final FlutterNsd _flutterNsd = FlutterNsd();
   final http.Client _httpClient = http.Client();
   final _peersController = StreamController<Set<KatasterPeer>>.broadcast();
   final Set<KatasterPeer> _peers = {};
 
   HttpServer? _server;
   nsd.Registration? _registration;
-  StreamSubscription<NsdServiceInfo>? _discoverySubscription;
-  bool _discovering = false;
+  nsd.Discovery? _discovery;
 
   /// The SHA-256 a data file must have, or null when it is not known. The
   /// default reads the manifest on R2, which comes over HTTPS.
@@ -115,28 +111,24 @@ class KatasterSharingService {
   }
 
   Future<void> startDiscovery() async {
-    if (_discovering) return;
-    _discoverySubscription ??= _flutterNsd.stream.listen(
-      _handleDiscoveredService,
-      onError: (error) =>
-          debugPrint('KatasterSharingService discovery: $error'),
-    );
+    if (_discovery != null) return;
     try {
-      await _flutterNsd.discoverServices(discoveryServiceType);
-      _discovering = true;
+      _discovery = await nsd.startDiscovery(serviceType);
+      _discovery!.addServiceListener(_handleDiscoveredService);
     } catch (e) {
       debugPrint('KatasterSharingService.startDiscovery failed: $e');
     }
   }
 
   Future<void> stopDiscovery() async {
-    if (!_discovering) return;
+    final discovery = _discovery;
+    if (discovery == null) return;
+    _discovery = null;
     try {
-      await _flutterNsd.stopDiscovery();
+      await nsd.stopDiscovery(discovery);
     } catch (e) {
       debugPrint('KatasterSharingService.stopDiscovery failed: $e');
     }
-    _discovering = false;
   }
 
   Future<List<SharedKatasterFile>> fetchFiles(KatasterPeer peer) async {
@@ -331,13 +323,17 @@ class KatasterSharingService {
     _registration = null;
   }
 
-  void _handleDiscoveredService(NsdServiceInfo service) {
-    final host = service.hostname;
+  void _handleDiscoveredService(nsd.Service service, nsd.ServiceStatus status) {
+    final host = service.host;
     final port = service.port;
     if (host == null || host.isEmpty || port == null || port <= 0) return;
 
     final peer = KatasterPeer(host: host, port: port);
-    _peers.add(peer);
+    if (status == nsd.ServiceStatus.found) {
+      _peers.add(peer);
+    } else {
+      _peers.remove(peer);
+    }
     _peersController.add(Set.unmodifiable(_peers));
   }
 

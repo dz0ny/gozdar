@@ -1,0 +1,26 @@
+name: flutter_compass
+description: Copy of flutter_compass 0.8.1 with a Swift package for iOS, so the app builds without CocoaPods. A Flutter compass. The heading varies from 0-360, 0 being north.
+version: 0.8.1
+publish_to: none
+homepage: https://github.com/hemanthrajv/flutter_compass
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+environment:
+  sdk: ">=2.12.0 <4.0.0"
+  flutter: ">=1.10.0"
+
+# For information on the generic Dart part of this file, see the
+# following page: https://www.dartlang.org/tools/pub/pubspec
+
+# The following section is specific to Flutter.
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.hemanthraj.fluttercompass
+        pluginClass: FlutterCompassPlugin
+      ios:
+        pluginClass: FlutterCompassPlugin

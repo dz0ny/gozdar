@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 2026.1124.2+120
 
 environment:
-  sdk: ^3.13.0
+  sdk: ^3.14.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -48,7 +48,8 @@ dependencies:
   sqlite3_flutter_libs: any
 
   # Location & Compass
-  flutter_compass: any
+  flutter_compass:
+    path: packages/flutter_compass
   geolocator: ^14.1.1
 
   # Export & Share
@@ -70,7 +71,6 @@ dependencies:
   http: any
   crypto: any
   pointycastle: any
-  flutter_nsd: ^1.6.0
   nsd: any
 
   # App Updates
@@ -125,6 +125,11 @@ flutter_launcher_icons:
 # The following section is specific to Flutter packages.
 flutter:
   generate: true
+
+  # iOS and macOS plugins come in through Swift Package Manager; the app has
+  # no CocoaPods. A plugin without a Package.swift fails the build.
+  config:
+    enable-swift-package-manager: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
