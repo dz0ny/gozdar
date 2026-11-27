@@ -4386,6 +4386,24 @@ abstract class AppLocalizations {
   /// **'Zastarelo: {parts}{size}'**
   String aboutKatasterOutdated(String parts, String size);
 
+  /// No description provided for @aboutRefreshKataster.
+  ///
+  /// In sl, this message translates to:
+  /// **'Osveži kataster'**
+  String get aboutRefreshKataster;
+
+  /// No description provided for @aboutKatasterUpToDate.
+  ///
+  /// In sl, this message translates to:
+  /// **'Kataster je posodobljen.'**
+  String get aboutKatasterUpToDate;
+
+  /// No description provided for @aboutRefreshKatasterFailed.
+  ///
+  /// In sl, this message translates to:
+  /// **'Preverjanje ni uspelo. Preverite povezavo.'**
+  String get aboutRefreshKatasterFailed;
+
   /// No description provided for @updateLater.
   ///
   /// In sl, this message translates to:

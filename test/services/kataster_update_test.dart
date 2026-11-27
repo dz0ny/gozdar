@@ -302,6 +302,33 @@ void main() {
       expect(manifest.bytesOf('vlake.bin'), isNull);
     });
 
+    test('refresh fetches inside the week and undoes a dismiss', () async {
+      var fetches = 0;
+      var fail = false;
+      final now = DateTime.utc(2026, 10, 13, 12);
+      final service = KatasterUpdateService.forTesting(
+        fetchManifest: () async {
+          fetches++;
+          if (fail) throw Exception('offline');
+          return KatasterManifest.fromJson(_manifestJson);
+        },
+        loadedRegionDates: () => {'parcels-zasavska.sqlite': '2026-05-31'},
+        publicOwnersBuilt: () => null,
+        clock: () => now,
+      );
+      await service.check();
+      await service.dismiss();
+      expect(service.pending, isNull);
+
+      expect(await service.refresh(), isTrue);
+      expect(fetches, 2);
+      expect(service.pending, isNotNull);
+
+      fail = true;
+      expect(await service.refresh(), isFalse);
+      expect(fetches, 3);
+    });
+
     test('dismiss hides the update for that manifest date only', () async {
       final service = KatasterUpdateService.forTesting(
         fetchManifest: () async => KatasterManifest.fromJson(_manifestJson),

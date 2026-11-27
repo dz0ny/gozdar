@@ -209,6 +209,7 @@ class KatasterUpdateService {
   DateTime? _manifestFailedAt;
   KatasterUpdate? _update;
   Future<KatasterUpdate?>? _inFlight;
+  bool _lastFetchFailed = false;
 
   KatasterUpdateService._({
     required this.fetchManifest,
@@ -292,14 +293,27 @@ class KatasterUpdateService {
       _manifest = await fetchManifest();
     } catch (e) {
       debugPrint('KatasterUpdateService.check failed: $e');
+      _lastFetchFailed = true;
       recompute();
       return pending;
     }
     _manifestFetchedAt = now;
+    _lastFetchFailed = false;
     await prefs.setInt(_keyLastCheck, now.toUtc().millisecondsSinceEpoch);
     await prefs.setString(_keyManifest, jsonEncode(_manifest!.raw));
     recompute();
     return pending;
+  }
+
+  /// Check now, for "refresh" in settings: fetches the manifest without
+  /// the weekly guard and shows an update the user dismissed earlier again.
+  /// False when the manifest could not be fetched (offline).
+  Future<bool> refresh() async {
+    await init();
+    await _prefs!.remove(_keyDismissedDate);
+    _lastFetchFailed = false;
+    await check(force: true);
+    return !_lastFetchFailed;
   }
 
   /// The SHA-256 of [fileName] from the manifest. The manifest comes over
@@ -317,9 +331,7 @@ class KatasterUpdateService {
         failedAt != null && now.difference(failedAt) < hashRetryAfter;
     if (stale && !failedNow) {
       try {
-        final fresh = await fetchManifest().timeout(
-          const Duration(seconds: 5),
-        );
+        final fresh = await fetchManifest().timeout(const Duration(seconds: 5));
         _manifest = fresh;
         _manifestFetchedAt = now;
         _manifestFailedAt = null;

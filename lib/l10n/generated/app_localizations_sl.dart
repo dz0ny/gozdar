@@ -2646,6 +2646,16 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String get aboutRefreshKataster => 'Osveži kataster';
+
+  @override
+  String get aboutKatasterUpToDate => 'Kataster je posodobljen.';
+
+  @override
+  String get aboutRefreshKatasterFailed =>
+      'Preverjanje ni uspelo. Preverite povezavo.';
+
+  @override
   String get updateLater => 'Pozneje';
 
   @override

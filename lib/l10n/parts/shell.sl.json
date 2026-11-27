@@ -120,6 +120,9 @@
       }
     }
   },
+  "aboutRefreshKataster": "Osveži kataster",
+  "aboutKatasterUpToDate": "Kataster je posodobljen.",
+  "aboutRefreshKatasterFailed": "Preverjanje ni uspelo. Preverite povezavo.",
   "updateLater": "Pozneje",
   "updateNow": "Posodobi",
   "aboutPublicOwnersLabel": "Javni lastniki…",

@@ -59,6 +59,8 @@ class _AboutScreenState extends State<AboutScreen> {
   int _ownerReceived = 0;
   int? _ownerTotal;
 
+  bool _refreshingKataster = false;
+
   @override
   void initState() {
     super.initState();
@@ -556,6 +558,20 @@ class _AboutScreenState extends State<AboutScreen> {
               ],
             ],
           ),
+        if (!_downloadingParcels && service.isAvailable)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              onPressed: _refreshingKataster ? null : _refreshKataster,
+              icon: _refreshingKataster
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh),
+              label: Text(context.l10n.aboutRefreshKataster),
+            ),
+          ),
         if (!_downloadingParcels && !service.isAvailable) ...[
           const SizedBox(height: 6),
           Text(
@@ -632,6 +648,24 @@ class _AboutScreenState extends State<AboutScreen> {
         ),
       ),
     );
+  }
+
+  /// Check R2 for newer kataster now; a newer one shows the update card.
+  Future<void> _refreshKataster() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _refreshingKataster = true);
+    final ok = await KatasterUpdateService.instance.refresh();
+    if (!mounted) return;
+    setState(() => _refreshingKataster = false);
+    if (!ok) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(L10n.current.aboutRefreshKatasterFailed)),
+      );
+    } else if (KatasterUpdateService.instance.pending == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(L10n.current.aboutKatasterUpToDate)),
+      );
+    }
   }
 
   /// Re-download every outdated region, then the public owners DB, then
