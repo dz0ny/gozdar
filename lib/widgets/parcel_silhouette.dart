@@ -1,6 +1,6 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:latlong2/latlong.dart';
 
 /// A widget that displays a small silhouette/preview of a parcel polygon

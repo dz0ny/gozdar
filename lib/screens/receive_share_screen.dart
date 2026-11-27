@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/l10n.dart';
 import '../providers/map_provider.dart';
@@ -10,16 +10,16 @@ import '../services/secnja_share_service.dart';
 
 /// Opens a sečnja share link: downloads the share, stores it and goes to the
 /// map with a short message about the result.
-class ReceiveShareScreen extends StatefulWidget {
+class ReceiveShareScreen extends ConsumerStatefulWidget {
   final String shareId;
 
   const ReceiveShareScreen({super.key, required this.shareId});
 
   @override
-  State<ReceiveShareScreen> createState() => _ReceiveShareScreenState();
+  ConsumerState<ReceiveShareScreen> createState() => _ReceiveShareScreenState();
 }
 
-class _ReceiveShareScreenState extends State<ReceiveShareScreen> {
+class _ReceiveShareScreenState extends ConsumerState<ReceiveShareScreen> {
   @override
   void initState() {
     super.initState();
@@ -30,7 +30,7 @@ class _ReceiveShareScreenState extends State<ReceiveShareScreen> {
   Future<void> _receive() async {
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
-    final mapProvider = Provider.of<MapProvider?>(context, listen: false);
+    final mapProvider = ref.read(mapNotifierProvider.notifier);
     String message;
     try {
       final result = await SecnjaShareService.instance.receive(widget.shareId);
@@ -41,7 +41,7 @@ class _ReceiveShareScreenState extends State<ReceiveShareScreen> {
             payload!.parcelNumber,
             payload.points.length,
           );
-          mapProvider?.focusOn(payload);
+          mapProvider.focusOn(payload);
         case ReceiveOutcome.expired:
           message = l10n.secnjaLinkExpired;
         case ReceiveOutcome.offline:

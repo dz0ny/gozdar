@@ -66,7 +66,6 @@ dependencies:
 
   # Utilities
   intl: any
-  provider: any
   shared_preferences: any
   http: any
   crypto: any
@@ -77,6 +76,10 @@ dependencies:
   ota_update: any
   package_info_plus: any
   url_launcher: any
+  flutter_riverpod: ^3.5.0
+  freezed_annotation: ^3.1.0
+  material_ui: ^1.11.1
+  cupertino_ui: ^1.1.7
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -98,6 +101,7 @@ dev_dependencies:
   # Drift code generation
   drift_dev: ^2.32.1
   build_runner: ^2.13.1
+  freezed: ^4.0.3
 
 
 flutter_launcher_icons:

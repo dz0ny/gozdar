@@ -3,12 +3,16 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../l10n/l10n.dart';
 
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../providers/forest_provider.dart';
+import '../providers/service_providers.dart';
 
 import '../models/parcel.dart';
 import '../router/navigation_notifier.dart';
@@ -37,26 +41,26 @@ import '../widgets/sheet_parts.dart';
   }
 }
 
-class ForestTab extends StatefulWidget {
+class ForestTab extends ConsumerStatefulWidget {
   const ForestTab({super.key});
 
   @override
-  State<ForestTab> createState() => ForestTabState();
+  ConsumerState<ForestTab> createState() => ForestTabState();
 }
 
-class ForestTabState extends State<ForestTab> {
+class ForestTabState extends ConsumerState<ForestTab> {
   /// Height of the fade at the top of the parcel list.
   static const double _listFade = 12;
 
-  final DatabaseService _databaseService = DatabaseService();
+  DatabaseService get _databaseService => ref.read(databaseServiceProvider);
 
   /// Public method to refresh data from outside
   Future<void> refresh() => _loadData();
 
-  List<Parcel> _parcels = [];
-  // Sečnja marks per parcel id, for the count on each row.
-  Map<int, int> _secnjaCounts = {};
-  bool _isLoading = true;
+  ForestData get _forest =>
+      ref.read(forestNotifierProvider).value ?? const ForestData();
+  List<Parcel> get _parcels => _forest.parcels;
+  Map<int, int> get _secnjaCounts => _forest.secnjaCounts;
   String? _selectedOwnerFilter; // null means show all
 
   /// Get unique owners from all parcels
@@ -95,7 +99,6 @@ class ForestTabState extends State<ForestTab> {
     KoLocator.instance.ensureLoaded().then((_) {
       if (mounted) setState(() {});
     });
-    _loadData();
   }
 
   /// Pull to refresh also picks up the owner's changes to imported lists.
@@ -108,27 +111,8 @@ class ForestTabState extends State<ForestTab> {
     await _loadData();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final parcels = await _databaseService.getAllParcels();
-      final secnjaCounts = await _databaseService.getSecnjaCountsByParcel();
-
-      setState(() {
-        _parcels = parcels;
-        _secnjaCounts = secnjaCounts;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.forestLoadError('$e'))),
-        );
-      }
-    }
-  }
+  Future<void> _loadData() =>
+      ref.read(forestNotifierProvider.notifier).refresh();
 
   /// Public method to open a specific parcel detail (can be called from outside)
   Future<void> openParcelDetail(Parcel parcel) async {
@@ -461,12 +445,22 @@ class ForestTabState extends State<ForestTab> {
 
   /// Opens the map's parcel search (the same path as the empty-state button).
   void _openParcelSearch() {
-    context.read<NavigationNotifier>().navigateToMapWithSearch();
+    ref.read(navigationNotifierProvider.notifier).navigateToMapWithSearch();
     context.go(AppRoutes.map);
   }
 
   @override
   Widget build(BuildContext context) {
+    final forest = ref.watch(forestNotifierProvider);
+    ref.listen(forestNotifierProvider, (_, next) {
+      if (next.hasError && !next.isLoading) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.forestLoadError('${next.error}')),
+          ),
+        );
+      }
+    });
     // Use filtered parcels for display
     final displayParcels = _filteredParcels;
 
@@ -533,7 +527,7 @@ class ForestTabState extends State<ForestTab> {
           ),
         ],
       ),
-      body: _isLoading
+      body: !forest.hasValue && !forest.hasError
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _pullToRefresh,

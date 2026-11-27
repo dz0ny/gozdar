@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../l10n/l10n.dart';
 
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/log_batch.dart';
 import '../providers/logs_provider.dart';
@@ -10,7 +10,7 @@ import '../screens/batch_detail_screen.dart';
 import '../utils/formats.dart';
 
 /// Bottom sheet displaying saved log batches/projects
-class SavedBatchesSheet extends StatefulWidget {
+class SavedBatchesSheet extends ConsumerStatefulWidget {
   const SavedBatchesSheet({super.key});
 
   /// Show the saved batches sheet as a modal bottom sheet
@@ -24,16 +24,16 @@ class SavedBatchesSheet extends StatefulWidget {
   }
 
   @override
-  State<SavedBatchesSheet> createState() => _SavedBatchesSheetState();
+  ConsumerState<SavedBatchesSheet> createState() => _SavedBatchesSheetState();
 }
 
-class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
+class _SavedBatchesSheetState extends ConsumerState<SavedBatchesSheet> {
   @override
   void initState() {
     super.initState();
     // Load batches when sheet opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<LogsProvider>().loadBatches();
+      ref.read(logsNotifierProvider.notifier).loadBatches();
     });
   }
 
@@ -58,7 +58,7 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
     );
 
     if (confirmed == true && batch.id != 0 && mounted) {
-      await context.read<LogsProvider>().deleteBatch(batch.id);
+      await ref.read(logsNotifierProvider.notifier).deleteBatch(batch.id);
     }
   }
 
@@ -68,7 +68,7 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
     );
     // Always reload batches after returning (logs may have been added/removed)
     if (mounted) {
-      context.read<LogsProvider>().loadBatches();
+      ref.read(logsNotifierProvider.notifier).loadBatches();
     }
   }
 
@@ -123,8 +123,9 @@ class _SavedBatchesSheetState extends State<SavedBatchesSheet> {
                   ),
                 ),
                 Expanded(
-                  child: Consumer<LogsProvider>(
-                    builder: (context, provider, child) {
+                  child: Consumer(
+                    builder: (context, ref, child) {
+                      final provider = ref.watch(logsNotifierProvider);
                       if (provider.isBatchesLoading) {
                         return const Center(child: CircularProgressIndicator());
                       }

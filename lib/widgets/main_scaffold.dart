@@ -1,8 +1,8 @@
 import 'dart:io' show Platform;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/distribution.dart';
 import '../l10n/l10n.dart';
@@ -16,18 +16,17 @@ import 'map_long_press_menu.dart';
 import 'update_banner.dart';
 
 /// Main scaffold with bottom navigation for the app shell
-class MainScaffold extends StatefulWidget {
+class MainScaffold extends ConsumerStatefulWidget {
   final StatefulNavigationShell navigationShell;
 
   const MainScaffold({super.key, required this.navigationShell});
 
   @override
-  State<MainScaffold> createState() => _MainScaffoldState();
+  ConsumerState<MainScaffold> createState() => _MainScaffoldState();
 }
 
-class _MainScaffoldState extends State<MainScaffold> {
+class _MainScaffoldState extends ConsumerState<MainScaffold> {
   int _tabTapCount = 0;
-  NavigationNotifier? _navNotifier;
 
   NavigationDestination _buildNavigationDestination({
     required String semanticLabel,
@@ -110,7 +109,10 @@ class _MainScaffoldState extends State<MainScaffold> {
     super.initState();
     // Listen to navigation notifier for cross-tab navigation
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _handlePendingNavigation();
+      if (!mounted) return;
+      // A command sent before the shell existed.
+      final pending = ref.read(navigationNotifierProvider);
+      if (!pending.isEmpty) _handlePendingNavigation(pending);
       _checkKatasterUpdate();
     });
   }
@@ -151,55 +153,45 @@ class _MainScaffoldState extends State<MainScaffold> {
     );
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final notifier = context.read<NavigationNotifier>();
-    if (!identical(_navNotifier, notifier)) {
-      _navNotifier?.removeListener(_handlePendingNavigation);
-      _navNotifier = notifier;
-      _navNotifier?.addListener(_handlePendingNavigation);
-    }
-  }
-
-  @override
-  void dispose() {
-    _navNotifier?.removeListener(_handlePendingNavigation);
-    super.dispose();
-  }
-
-  void _handlePendingNavigation() {
-    final navNotifier = context.read<NavigationNotifier>();
+  void _handlePendingNavigation(NavigationState pending) {
+    final nav = ref.read(navigationNotifierProvider.notifier);
 
     // Handle pending navigation target (switch to map and set target)
-    if (navNotifier.pendingNavigationTarget != null) {
+    if (pending.pendingNavigationTarget != null) {
       widget.navigationShell.goBranch(0); // Switch to map tab
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final target = navNotifier.pendingNavigationTarget!;
+        if (!mounted) return;
+        final target = ref
+            .read(navigationNotifierProvider)
+            .pendingNavigationTarget;
+        if (target == null) return;
         final map = mapTabKey.currentState;
         map?.setNavigationTarget(target);
         if (target.startNavigation) map?.showCompassForTarget();
-        navNotifier.clearNavigationTarget();
+        nav.clearNavigationTarget();
       });
     }
 
     // Handle pending parcel to show (switch to forest and open detail)
-    if (navNotifier.pendingParcelToShow != null) {
+    if (pending.pendingParcelToShow != null) {
       widget.navigationShell.goBranch(1); // Switch to forest tab
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        forestTabKey.currentState?.openParcelDetail(
-          navNotifier.pendingParcelToShow!,
-        );
-        navNotifier.clearPendingParcel();
+        if (!mounted) return;
+        final parcel = ref.read(navigationNotifierProvider).pendingParcelToShow;
+        if (parcel == null) return;
+        forestTabKey.currentState?.openParcelDetail(parcel);
+        nav.clearPendingParcel();
       });
     }
 
     // Handle search dialog request
-    if (navNotifier.shouldShowSearch) {
+    if (pending.shouldShowSearch) {
       widget.navigationShell.goBranch(0); // Switch to map tab
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (!ref.read(navigationNotifierProvider).shouldShowSearch) return;
         mapTabKey.currentState?.showParcelSearchDialog();
-        navNotifier.clearSearchFlag();
+        nav.clearSearchFlag();
       });
     }
   }
@@ -260,8 +252,10 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to navigation notifier changes
-    context.watch<NavigationNotifier>();
+    // Act on cross-tab navigation commands as they arrive.
+    ref.listen(navigationNotifierProvider, (_, pending) {
+      if (!pending.isEmpty) _handlePendingNavigation(pending);
+    });
 
     final tabs = _tabDefinitions();
     final currentIndex = widget.navigationShell.currentIndex;

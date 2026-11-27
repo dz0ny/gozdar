@@ -1,12 +1,13 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:share_plus/share_plus.dart';
 
 import '../models/parcel.dart';
@@ -48,7 +49,7 @@ import '../widgets/parcel_data_cards.dart';
 import 'forest_tab.dart' show getForestTypeIcon;
 import '../l10n/l10n.dart';
 
-class ParcelDetailScreen extends StatefulWidget {
+class ParcelDetailScreen extends ConsumerStatefulWidget {
   final Parcel parcel;
 
   /// Scroll to the Sečnja card once it is loaded, e.g. right after marking.
@@ -61,10 +62,10 @@ class ParcelDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<ParcelDetailScreen> createState() => _ParcelDetailScreenState();
+  ConsumerState<ParcelDetailScreen> createState() => _ParcelDetailScreenState();
 }
 
-class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
+class _ParcelDetailScreenState extends ConsumerState<ParcelDetailScreen> {
   final DatabaseService _databaseService = DatabaseService();
   late Parcel _parcel;
   bool _isLoading = false;
@@ -79,7 +80,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   bool _secnjaBusy = false;
   List<LogEntry> _logsInParcel = [];
   double _logsVolume = 0.0;
-  LogsProvider? _logsProvider;
+  ProviderSubscription<LogsState>? _logsSub;
   OwnerInfo? _lookedUpOwner;
 
   /// GURS value of a Slovenian cadastral parcel; null elsewhere.
@@ -127,18 +128,16 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Subscribe to logs provider changes
-    final newProvider = context.read<LogsProvider>();
-    if (_logsProvider != newProvider) {
-      _logsProvider?.removeListener(_onLogsChanged);
-      _logsProvider = newProvider;
-      _logsProvider?.addListener(_onLogsChanged);
-    }
+    // Reload this parcel's logs whenever the logs list changes.
+    _logsSub ??= ref.listenManual(
+      logsNotifierProvider,
+      (_, _) => _onLogsChanged(),
+    );
   }
 
   @override
   void dispose() {
-    _logsProvider?.removeListener(_onLogsChanged);
+    _logsSub?.close();
     super.dispose();
   }
 
@@ -149,7 +148,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
 
   /// Deletes one tree after a swipe, then refreshes the card and the map.
   Future<bool> _deleteSecnjaMark(MapLocation mark) async {
-    final mapProvider = context.read<MapProvider>();
+    final mapProvider = ref.read(mapNotifierProvider.notifier);
     final deleted = await mapProvider.deleteLocation(mark.id);
     if (deleted) await _loadLocationsInParcel();
     return deleted;
@@ -276,7 +275,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
 
   /// Generate a PDF of this parcel (map snapshot + attributes) and open it.
   Future<void> _printParcel() async {
-    final mapProvider = context.read<MapProvider>();
+    final mapProvider = ref.read(mapNotifierProvider.notifier);
     final messenger = ScaffoldMessenger.of(context);
     // PDF generation fetches map tiles and is slow; show progress feedback
     // since the popup menu has already closed.
@@ -542,7 +541,7 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
   /// Builds a ZIP with the plan, the boundary, the orthophoto and the photos.
   Future<void> _exportDroneBundle() async {
     final messenger = ScaffoldMessenger.of(context);
-    final mapProvider = context.read<MapProvider>();
+    final mapProvider = ref.read(mapNotifierProvider.notifier);
     const options = DroneMissionOptions();
     final svc = DroneMissionService.instance;
     final waypoints = svc.planGrid(_parcel.polygon, options);
@@ -1270,9 +1269,9 @@ class _ParcelDetailScreenState extends State<ParcelDetailScreen> {
                     SizedBox(
                       height: 200,
                       width: double.infinity,
-                      child: Builder(
-                        builder: (context) {
-                          final mapProvider = context.watch<MapProvider>();
+                      child: Consumer(
+                        builder: (context, ref, _) {
+                          final mapProvider = ref.watch(mapNotifierProvider);
                           return ParcelMapPreview(
                             polygon: _parcel.polygon,
                             baseLayer: mapProvider.currentBaseLayer,

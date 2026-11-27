@@ -1,14 +1,12 @@
 import 'dart:io' show Platform;
 
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'config/distribution.dart';
 import 'router/app_router.dart';
-import 'router/navigation_notifier.dart';
 import 'services/database_service.dart';
 import 'services/tile_cache_service.dart';
 import 'services/onboarding_service.dart';
@@ -25,8 +23,6 @@ import 'services/auction_service.dart';
 import 'services/vlake_settings.dart';
 import 'services/locale_settings.dart';
 import 'l10n/l10n.dart';
-import 'providers/logs_provider.dart';
-import 'providers/map_provider.dart';
 import 'services/secnja_share_flow.dart';
 import 'theme/app_theme.dart';
 
@@ -46,27 +42,33 @@ void main() async {
   await DroneSettings.instance.init();
   await CacheSettings.instance.load();
   await PublicParcelSettings.instance.load();
-  await VlakeSettings.instance.load();
   await AuctionService.instance.loadSettings();
   await initializeDateFormatting();
-  await LocaleSettings.instance.load();
 
   // Initialize update service (Android only)
   if (Platform.isAndroid && !isPlayDistribution) {
     await UpdateService().init();
   }
 
-  runApp(const GozdarApp());
+  // Settings the first frame needs, read before it.
+  final container = ProviderContainer();
+  await container.read(vlakeSettingsProvider.notifier).load();
+  await container.read(localeSettingsProvider.notifier).load();
+
+  runApp(
+    UncontrolledProviderScope(container: container, child: const GozdarApp()),
+  );
 }
 
-class GozdarApp extends StatefulWidget {
+class GozdarApp extends ConsumerStatefulWidget {
   const GozdarApp({super.key});
 
   @override
-  State<GozdarApp> createState() => _GozdarAppState();
+  ConsumerState<GozdarApp> createState() => _GozdarAppState();
 }
 
-class _GozdarAppState extends State<GozdarApp> with WidgetsBindingObserver {
+class _GozdarAppState extends ConsumerState<GozdarApp>
+    with WidgetsBindingObserver {
   /// Messages from work outside a screen, e.g. imported sečnja updates.
   final _messengerKey = GlobalKey<ScaffoldMessengerState>();
   DateTime? _sharesCheckedAt;
@@ -74,13 +76,11 @@ class _GozdarAppState extends State<GozdarApp> with WidgetsBindingObserver {
   static const _initialRouteDefine = String.fromEnvironment(
     'GOZDAR_INITIAL_ROUTE',
   );
-  late final NavigationNotifier _navigationNotifier;
   late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
-    _navigationNotifier = NavigationNotifier();
     final initialRoute = _initialRouteDefine.isEmpty
         ? null
         : _initialRouteDefine;
@@ -132,41 +132,17 @@ class _GozdarAppState extends State<GozdarApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => LogsProvider()..loadLogEntries()),
-        ChangeNotifierProvider(
-          create: (_) => MapProvider()
-            ..loadPreferences()
-            ..loadLocations()
-            ..loadParcels()
-            ..loadGeolocatedLogs(),
-        ),
-        ChangeNotifierProvider.value(value: _navigationNotifier),
-        ChangeNotifierProvider.value(value: VlakeSettings.instance),
-        ChangeNotifierProvider.value(value: AuctionService.instance),
-        ChangeNotifierProvider.value(value: LocaleSettings.instance),
-        if (Platform.isAndroid && !isPlayDistribution)
-          ChangeNotifierProvider.value(value: UpdateService()),
-      ],
-      child: Consumer<LocaleSettings>(
-        builder: (context, localeSettings, _) => MaterialApp.router(
-          title: 'Gozdar',
-          debugShowCheckedModeBanner: false,
-          scaffoldMessengerKey: _messengerKey,
-          theme: AppTheme.greenTheme,
-          routerConfig: _router,
-          locale: localeSettings.override,
-          supportedLocales: const [Locale('sl'), Locale('hr')],
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          localeResolutionCallback: (locale, supported) => L10n.resolve(locale),
-        ),
-      ),
+    final locale = ref.watch(localeSettingsProvider);
+    return MaterialApp.router(
+      title: 'Gozdar',
+      debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: _messengerKey,
+      theme: AppTheme.greenTheme,
+      routerConfig: _router,
+      locale: locale,
+      supportedLocales: const [Locale('sl'), Locale('hr')],
+      localizationsDelegates: appLocalizationsDelegates,
+      localeResolutionCallback: (locale, supported) => L10n.resolve(locale),
     );
   }
 }

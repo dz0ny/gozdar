@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,7 +18,7 @@ void main() {
   testWidgets('App builds and shows navigation bar', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const GozdarApp());
+    await tester.pumpWidget(const ProviderScope(child: GozdarApp()));
     await tester.pumpAndSettle();
 
     // Verify that navigation tabs are present

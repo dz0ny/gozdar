@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../l10n/l10n.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/log_batch.dart';
 import '../models/log_entry.dart';
@@ -20,16 +20,16 @@ import '../utils/formats.dart';
 import '../widgets/conversion_settings_sheet.dart';
 import '../widgets/log_card.dart';
 
-class BatchDetailScreen extends StatefulWidget {
+class BatchDetailScreen extends ConsumerStatefulWidget {
   final LogBatch batch;
 
   const BatchDetailScreen({super.key, required this.batch});
 
   @override
-  State<BatchDetailScreen> createState() => _BatchDetailScreenState();
+  ConsumerState<BatchDetailScreen> createState() => _BatchDetailScreenState();
 }
 
-class _BatchDetailScreenState extends State<BatchDetailScreen> {
+class _BatchDetailScreenState extends ConsumerState<BatchDetailScreen> {
   final DatabaseService _databaseService = DatabaseService();
   late LogBatch _batch;
   List<LogEntry> _logs = [];
@@ -199,7 +199,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
     );
 
     if (confirmed == true && mounted) {
-      await context.read<LogsProvider>().deleteBatch(_batch.id);
+      await ref.read(logsNotifierProvider.notifier).deleteBatch(_batch.id);
       if (mounted) {
         context.pop();
       }
@@ -207,7 +207,7 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
   }
 
   void _showConversionDialog() {
-    final provider = context.read<LogsProvider>();
+    final provider = ref.read(logsNotifierProvider.notifier);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -331,8 +331,9 @@ class _BatchDetailScreenState extends State<BatchDetailScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Consumer<LogsProvider>(
-              builder: (context, provider, _) {
+          : Consumer(
+              builder: (context, ref, _) {
+                final provider = ref.watch(logsNotifierProvider);
                 final prmVolume = provider.conversionFactors.toPrm(
                   _totalVolume,
                 );

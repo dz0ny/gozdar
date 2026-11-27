@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Small compass indicator widget (56x56)
 /// Shows compass rose with cardinal directions, red needle, and heading text

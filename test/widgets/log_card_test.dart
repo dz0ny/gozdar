@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gozdar/models/log_entry.dart';
 import 'package:gozdar/widgets/log_card.dart';
@@ -18,10 +18,12 @@ void main() {
       ),
     );
     final container = tester.widget<Container>(
-      find.descendant(
-        of: find.byType(InkWell),
-        matching: find.byType(Container),
-      ).first,
+      find
+          .descendant(
+            of: find.byType(InkWell),
+            matching: find.byType(Container),
+          )
+          .first,
     );
     return container.decoration! as BoxDecoration;
   }

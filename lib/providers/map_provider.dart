@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:flutter_map/flutter_map.dart' show LatLngBounds;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../l10n/l10n.dart';
@@ -11,46 +13,60 @@ import '../models/parcel.dart';
 import '../models/log_entry.dart';
 import '../models/navigation_target.dart';
 import '../models/secnja_share.dart';
-import '../services/database_service.dart';
-import '../services/map_preferences_service.dart';
 import '../services/cadastral_service.dart';
 import '../services/hr_owner_service.dart';
 import '../services/ko_locator.dart';
 import '../services/parcel_lookup_service.dart';
+import 'service_providers.dart';
 
-/// Provider for map state management
-class MapProvider extends ChangeNotifier {
-  final DatabaseService _databaseService;
-  final MapPreferencesService _prefsService;
-  final CadastralService _cadastralService;
+part 'map_provider.freezed.dart';
 
-  MapProvider({
-    DatabaseService? databaseService,
-    MapPreferencesService? prefsService,
-    CadastralService? cadastralService,
-  }) : _databaseService = databaseService ?? DatabaseService(),
-       _prefsService = prefsService ?? MapPreferencesService(),
-       _cadastralService = cadastralService ?? CadastralService();
+/// What the map shows: layers, saved data and the current target.
+///
+/// The camera position is not here: it changes on every pan and nothing
+/// should rebuild for it. [MapNotifier] keeps it.
+@freezed
+abstract class MapState with _$MapState {
+  const MapState._();
 
-  // Map position state
+  const factory MapState({
+    @Default(false) bool isPreferencesLoaded,
+    @Default(MapLayer.esriWorldImagery) MapLayer currentBaseLayer,
+    @Default(<MapLayerType>{}) Set<MapLayerType> activeOverlays,
+    String? workerUrl,
+    @Default(<MapLocation>[]) List<MapLocation> locations,
+    @Default(<Parcel>[]) List<Parcel> parcels,
+    @Default(<LogEntry>[]) List<LogEntry> geolocatedLogs,
+    @Default(false) bool isLoadingLocations,
+    @Default(false) bool isLoadingParcels,
+    @Default(false) bool isLoadingLogs,
+    @Default(false) bool isQueryingParcel,
+    NavigationTarget? navigationTarget,
+    String? error,
+
+    /// Area the map should show next, e.g. a share that just arrived.
+    LatLngBounds? pendingFocus,
+
+    /// Counts focus requests, so asking for the same area twice still
+    /// moves the map.
+    @Default(0) int focusRequest,
+  }) = _MapState;
+
+  bool get isSlovenianBase => currentBaseLayer.isSlovenian;
+  bool get hasNavigationTarget => navigationTarget != null;
+}
+
+/// Map state. The getters read the current state, so a callback that keeps
+/// the notifier sees fresh values after an await.
+class MapNotifier extends Notifier<MapState> {
+  // Camera position: saved on every move, read when the map opens.
   LatLng _center = const LatLng(46.0569, 14.5058);
   double _zoom = 13.0;
   double _rotation = 0.0;
-  bool _isPreferencesLoaded = false;
 
-  // Layer state
-  MapLayer _currentBaseLayer = MapLayer.esriWorldImagery;
-  final Set<MapLayerType> _activeOverlays = {};
-  String? _workerUrl;
-
-  // Data state
-  List<MapLocation> _locations = [];
-  List<Parcel> _parcels = [];
-  List<LogEntry> _geolocatedLogs = [];
-  bool _isLoadingLocations = false;
-  bool _isLoadingParcels = false;
-  bool _isLoadingLogs = false;
-  bool _isQueryingParcel = false;
+  // The focus request already handed out by [takePendingFocus], so the map
+  // moves only once without writing state while a widget builds.
+  int _takenFocusRequest = 0;
 
   // Database watches. Once a load* call starts one, every write to that
   // table (from any screen) reaches the map without a manual reload.
@@ -58,74 +74,83 @@ class MapProvider extends ChangeNotifier {
   StreamSubscription<List<Parcel>>? _parcelsSub;
   StreamSubscription<List<LogEntry>>? _logsSub;
 
-  // Area the map should show next, e.g. a share that just arrived.
-  LatLngBounds? _pendingFocus;
-
-  // Navigation state
-  NavigationTarget? _navigationTarget;
-
-  // Error state
-  String? _error;
+  @override
+  MapState build() {
+    ref.onDispose(() {
+      unawaited(_locationsSub?.cancel());
+      unawaited(_parcelsSub?.cancel());
+      unawaited(_logsSub?.cancel());
+    });
+    // Loads run after build; state can't be written while it builds.
+    Future.microtask(() async {
+      await loadPreferences();
+      if (!ref.mounted) return;
+      await Future.wait([loadLocations(), loadParcels(), loadGeolocatedLogs()]);
+    });
+    return const MapState();
+  }
 
   // Getters - Position
   LatLng get center => _center;
   double get zoom => _zoom;
   double get rotation => _rotation;
-  bool get isPreferencesLoaded => _isPreferencesLoaded;
+  bool get isPreferencesLoaded => state.isPreferencesLoaded;
 
   // Getters - Layers
-  MapLayer get currentBaseLayer => _currentBaseLayer;
-  Set<MapLayerType> get activeOverlays => Set.unmodifiable(_activeOverlays);
-  bool get isSlovenianBase => _currentBaseLayer.isSlovenian;
-  String? get workerUrl => _workerUrl;
+  MapLayer get currentBaseLayer => state.currentBaseLayer;
+  Set<MapLayerType> get activeOverlays => state.activeOverlays;
+  bool get isSlovenianBase => state.isSlovenianBase;
+  String? get workerUrl => state.workerUrl;
 
   // Getters - Data
-  List<MapLocation> get locations => List.unmodifiable(_locations);
-  List<Parcel> get parcels => List.unmodifiable(_parcels);
-  List<LogEntry> get geolocatedLogs => List.unmodifiable(_geolocatedLogs);
-  bool get isLoadingLocations => _isLoadingLocations;
-  bool get isLoadingParcels => _isLoadingParcels;
-  bool get isLoadingLogs => _isLoadingLogs;
-  bool get isQueryingParcel => _isQueryingParcel;
+  List<MapLocation> get locations => state.locations;
+  List<Parcel> get parcels => state.parcels;
+  List<LogEntry> get geolocatedLogs => state.geolocatedLogs;
+  bool get isLoadingLocations => state.isLoadingLocations;
+  bool get isLoadingParcels => state.isLoadingParcels;
+  bool get isLoadingLogs => state.isLoadingLogs;
+  bool get isQueryingParcel => state.isQueryingParcel;
 
   // Getters - Navigation
-  NavigationTarget? get navigationTarget => _navigationTarget;
-  bool get hasNavigationTarget => _navigationTarget != null;
+  NavigationTarget? get navigationTarget => state.navigationTarget;
+  bool get hasNavigationTarget => state.hasNavigationTarget;
 
   // Getters - Error
-  String? get error => _error;
+  String? get error => state.error;
 
   /// Load map preferences from storage
   Future<void> loadPreferences() async {
     try {
-      final state = await _prefsService.loadAll();
+      final saved = await ref.read(mapPreferencesServiceProvider).loadAll();
+      if (!ref.mounted) return;
 
       // Find the base layer from saved type
       MapLayer baseLayer = MapLayer.esriWorldImagery;
       for (final layer in MapLayer.baseLayers) {
-        if (layer.type == state.baseLayer) {
+        if (layer.type == saved.baseLayer) {
           baseLayer = layer;
           break;
         }
       }
 
-      _center = LatLng(state.latitude, state.longitude);
-      _zoom = state.zoom;
-      _rotation = state.rotation;
-      _currentBaseLayer = baseLayer;
-      _activeOverlays.clear();
-      _activeOverlays.addAll(state.overlays);
-      _workerUrl = state.workerUrl;
-      _isPreferencesLoaded = true;
-      notifyListeners();
+      _center = LatLng(saved.latitude, saved.longitude);
+      _zoom = saved.zoom;
+      _rotation = saved.rotation;
+      state = state.copyWith(
+        currentBaseLayer: baseLayer,
+        activeOverlays: {...saved.overlays},
+        workerUrl: saved.workerUrl,
+        isPreferencesLoaded: true,
+      );
     } catch (e) {
-      _error = e.toString();
-      _isPreferencesLoaded = true; // Use defaults
-      notifyListeners();
+      if (!ref.mounted) return;
+      // Use defaults
+      state = state.copyWith(error: e.toString(), isPreferencesLoaded: true);
     }
   }
 
-  /// Save current map state to preferences
+  /// Save current map state to preferences. Doesn't notify: the camera is
+  /// already where it was saved.
   Future<void> saveMapState({
     required LatLng center,
     required double zoom,
@@ -134,64 +159,50 @@ class MapProvider extends ChangeNotifier {
     _center = center;
     _zoom = zoom;
     _rotation = rotation;
-
-    await _prefsService.saveAll(
-      latitude: center.latitude,
-      longitude: center.longitude,
-      zoom: zoom,
-      rotation: rotation,
-      baseLayer: _currentBaseLayer.type,
-      overlays: _activeOverlays,
-      workerUrl: _workerUrl,
-    );
+    await _savePreferences();
   }
 
   /// Switch base layer
   void setBaseLayer(MapLayer layer) {
-    _currentBaseLayer = layer;
-    notifyListeners();
-    _saveLayerPreferences();
+    state = state.copyWith(currentBaseLayer: layer);
+    unawaited(_savePreferences());
   }
 
   /// Toggle an overlay layer
   void toggleOverlay(MapLayerType type) {
-    if (_activeOverlays.contains(type)) {
-      _activeOverlays.remove(type);
-    } else {
-      _activeOverlays.add(type);
-    }
-    notifyListeners();
-    _saveLayerPreferences();
+    setOverlayActive(type, !state.activeOverlays.contains(type));
   }
 
   /// Set overlay active state
   void setOverlayActive(MapLayerType type, bool active) {
+    final overlays = {...state.activeOverlays};
     if (active) {
-      _activeOverlays.add(type);
+      overlays.add(type);
     } else {
-      _activeOverlays.remove(type);
+      overlays.remove(type);
     }
-    notifyListeners();
-    _saveLayerPreferences();
+    state = state.copyWith(activeOverlays: overlays);
+    unawaited(_savePreferences());
   }
 
-  Future<void> _saveLayerPreferences() async {
-    await _prefsService.saveAll(
-      latitude: _center.latitude,
-      longitude: _center.longitude,
-      zoom: _zoom,
-      rotation: _rotation,
-      baseLayer: _currentBaseLayer.type,
-      overlays: _activeOverlays,
-      workerUrl: _workerUrl,
-    );
+  Future<void> _savePreferences() async {
+    await ref
+        .read(mapPreferencesServiceProvider)
+        .saveAll(
+          latitude: _center.latitude,
+          longitude: _center.longitude,
+          zoom: _zoom,
+          rotation: _rotation,
+          baseLayer: state.currentBaseLayer.type,
+          overlays: state.activeOverlays,
+          workerUrl: state.workerUrl,
+        );
   }
 
   /// Set worker URL
   Future<void> setWorkerUrl(String? url) async {
-    _workerUrl = url;
-    notifyListeners();
-    await _saveLayerPreferences();
+    state = state.copyWith(workerUrl: url);
+    await _savePreferences();
   }
 
   // Location operations
@@ -202,47 +213,48 @@ class MapProvider extends ChangeNotifier {
         ? payload.polygon
         : [for (final p in payload.points) p.position];
     if (points.isEmpty) return;
-    _pendingFocus = LatLngBounds.fromPoints(points);
-    notifyListeners();
+    state = state.copyWith(
+      pendingFocus: LatLngBounds.fromPoints(points),
+      focusRequest: state.focusRequest + 1,
+    );
   }
 
-  /// Returns the area to show and clears it, so the map moves only once.
+  /// Returns the area to show once, so the map moves only once. Safe to
+  /// call from a build: it writes no state.
   LatLngBounds? takePendingFocus() {
-    final focus = _pendingFocus;
-    _pendingFocus = null;
+    final focus = state.pendingFocus;
+    if (focus == null || state.focusRequest == _takenFocusRequest) return null;
+    _takenFocusRequest = state.focusRequest;
     return focus;
   }
 
   /// Load all saved locations from database
   Future<void> loadLocations() async {
-    _locationsSub ??= _databaseService.watchAllLocations().listen((rows) {
-      _locations = rows;
-      notifyListeners();
+    if (!ref.mounted) return;
+    final db = ref.read(databaseServiceProvider);
+    _locationsSub ??= db.watchAllLocations().listen((rows) {
+      state = state.copyWith(locations: rows);
     }, onError: _onWatchError);
-    _isLoadingLocations = true;
-    notifyListeners();
+    state = state.copyWith(isLoadingLocations: true);
 
     try {
-      final locations = await _databaseService.getAllLocations();
-      _locations = locations;
-      _isLoadingLocations = false;
-      notifyListeners();
+      final locations = await db.getAllLocations();
+      if (!ref.mounted) return;
+      state = state.copyWith(locations: locations, isLoadingLocations: false);
     } catch (e) {
-      _isLoadingLocations = false;
-      _error = e.toString();
-      notifyListeners();
+      if (!ref.mounted) return;
+      state = state.copyWith(isLoadingLocations: false, error: e.toString());
     }
   }
 
   /// Add a new location
   Future<bool> addLocation(MapLocation location) async {
     try {
-      await _databaseService.insertLocation(location);
+      await ref.read(databaseServiceProvider).insertLocation(location);
       await loadLocations();
       return true;
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      if (ref.mounted) state = state.copyWith(error: e.toString());
       return false;
     }
   }
@@ -250,12 +262,11 @@ class MapProvider extends ChangeNotifier {
   /// Delete a location
   Future<bool> deleteLocation(int locationId) async {
     try {
-      await _databaseService.deleteLocation(locationId);
+      await ref.read(databaseServiceProvider).deleteLocation(locationId);
       await loadLocations();
       return true;
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      if (ref.mounted) state = state.copyWith(error: e.toString());
       return false;
     }
   }
@@ -264,22 +275,25 @@ class MapProvider extends ChangeNotifier {
 
   /// Load all geolocated logs from database (logs with latitude/longitude)
   Future<void> loadGeolocatedLogs() async {
-    _logsSub ??= _databaseService.watchAllLogs().listen((rows) {
-      _geolocatedLogs = rows.where((log) => log.hasLocation).toList();
-      notifyListeners();
+    if (!ref.mounted) return;
+    final db = ref.read(databaseServiceProvider);
+    _logsSub ??= db.watchAllLogs().listen((rows) {
+      state = state.copyWith(
+        geolocatedLogs: rows.where((log) => log.hasLocation).toList(),
+      );
     }, onError: _onWatchError);
-    _isLoadingLogs = true;
-    notifyListeners();
+    state = state.copyWith(isLoadingLogs: true);
 
     try {
-      final allLogs = await _databaseService.getAllLogs();
-      _geolocatedLogs = allLogs.where((log) => log.hasLocation).toList();
-      _isLoadingLogs = false;
-      notifyListeners();
+      final allLogs = await db.getAllLogs();
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        geolocatedLogs: allLogs.where((log) => log.hasLocation).toList(),
+        isLoadingLogs: false,
+      );
     } catch (e) {
-      _isLoadingLogs = false;
-      _error = e.toString();
-      notifyListeners();
+      if (!ref.mounted) return;
+      state = state.copyWith(isLoadingLogs: false, error: e.toString());
     }
   }
 
@@ -287,22 +301,20 @@ class MapProvider extends ChangeNotifier {
 
   /// Load all saved parcels from database
   Future<void> loadParcels() async {
-    _parcelsSub ??= _databaseService.watchAllParcels().listen((rows) {
-      _parcels = rows;
-      notifyListeners();
+    if (!ref.mounted) return;
+    final db = ref.read(databaseServiceProvider);
+    _parcelsSub ??= db.watchAllParcels().listen((rows) {
+      state = state.copyWith(parcels: rows);
     }, onError: _onWatchError);
-    _isLoadingParcels = true;
-    notifyListeners();
+    state = state.copyWith(isLoadingParcels: true);
 
     try {
-      final parcels = await _databaseService.getAllParcels();
-      _parcels = parcels;
-      _isLoadingParcels = false;
-      notifyListeners();
+      final parcels = await db.getAllParcels();
+      if (!ref.mounted) return;
+      state = state.copyWith(parcels: parcels, isLoadingParcels: false);
     } catch (e) {
-      _isLoadingParcels = false;
-      _error = e.toString();
-      notifyListeners();
+      if (!ref.mounted) return;
+      state = state.copyWith(isLoadingParcels: false, error: e.toString());
     }
   }
 
@@ -312,7 +324,7 @@ class MapProvider extends ChangeNotifier {
   /// online proxy/WFS call. Falls back to the online service only when offline
   /// data is unavailable (or the point isn't covered by the local dataset).
   Future<CadastralParcel?> queryParcelAtLocation(LatLng location) async {
-    if (_isQueryingParcel) return null;
+    if (state.isQueryingParcel) return null;
 
     final offline = ParcelLookupService.instance;
     if (offline.isAvailable) {
@@ -320,31 +332,27 @@ class MapProvider extends ChangeNotifier {
       if (local != null) return local;
     }
 
-    _isQueryingParcel = true;
-    notifyListeners();
+    state = state.copyWith(isQueryingParcel: true);
 
     try {
-      final parcel = await _cadastralService.queryParcelAtLocation(location);
-      _isQueryingParcel = false;
-      notifyListeners();
+      final parcel = await ref
+          .read(cadastralServiceProvider)
+          .queryParcelAtLocation(location);
+      if (ref.mounted) state = state.copyWith(isQueryingParcel: false);
       return parcel;
     } catch (e) {
-      _isQueryingParcel = false;
-      _error = e.toString();
-      notifyListeners();
+      if (ref.mounted) {
+        state = state.copyWith(isQueryingParcel: false, error: e.toString());
+      }
       return null;
     }
   }
 
   /// Check if cadastral parcel already exists
-  Future<bool> cadastralParcelExists(
-    int municipality,
-    String parcelNumber,
-  ) async {
-    return await _databaseService.cadastralParcelExists(
-      municipality,
-      parcelNumber,
-    );
+  Future<bool> cadastralParcelExists(int municipality, String parcelNumber) {
+    return ref
+        .read(databaseServiceProvider)
+        .cadastralParcelExists(municipality, parcelNumber);
   }
 
   /// Import a cadastral parcel
@@ -357,11 +365,14 @@ class MapProvider extends ChangeNotifier {
       );
 
       if (exists) {
-        _error = L10n.current.mapwParcelAlreadyInDb(
-          cadastralParcel.cadastralMunicipality.toString(),
-          cadastralParcel.parcelNumber.toString(),
-        );
-        notifyListeners();
+        if (ref.mounted) {
+          state = state.copyWith(
+            error: L10n.current.mapwParcelAlreadyInDb(
+              cadastralParcel.cadastralMunicipality.toString(),
+              cadastralParcel.parcelNumber.toString(),
+            ),
+          );
+        }
         return false;
       }
 
@@ -386,12 +397,11 @@ class MapProvider extends ChangeNotifier {
         owner: hrOwner?.displayOwners,
       );
 
-      await _databaseService.insertParcel(parcel);
+      await ref.read(databaseServiceProvider).insertParcel(parcel);
       await loadParcels();
       return true;
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      if (ref.mounted) state = state.copyWith(error: e.toString());
       return false;
     }
   }
@@ -400,33 +410,25 @@ class MapProvider extends ChangeNotifier {
 
   /// Set navigation target
   void setNavigationTarget(NavigationTarget target) {
-    _navigationTarget = target;
-    notifyListeners();
+    state = state.copyWith(navigationTarget: target);
   }
 
   /// Clear navigation target
   void clearNavigationTarget() {
-    _navigationTarget = null;
-    notifyListeners();
+    state = state.copyWith(navigationTarget: null);
   }
 
   void _onWatchError(Object e, StackTrace s) {
-    debugPrint('MapProvider watch failed: $e\n$s');
-    _error = e.toString();
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    unawaited(_locationsSub?.cancel());
-    unawaited(_parcelsSub?.cancel());
-    unawaited(_logsSub?.cancel());
-    super.dispose();
+    debugPrint('MapNotifier watch failed: $e\n$s');
+    if (ref.mounted) state = state.copyWith(error: e.toString());
   }
 
   /// Clear error state
   void clearError() {
-    _error = null;
-    notifyListeners();
+    state = state.copyWith(error: null);
   }
 }
+
+final mapNotifierProvider = NotifierProvider<MapNotifier, MapState>(
+  MapNotifier.new,
+);

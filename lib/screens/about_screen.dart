@@ -1,7 +1,8 @@
 import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -28,14 +29,14 @@ import '../widgets/region_picker_sheet.dart';
 enum _WipeScope { all, imported, downloaded }
 
 /// Full-featured About screen with app info, map sources, and legal information
-class AboutScreen extends StatefulWidget {
+class AboutScreen extends ConsumerStatefulWidget {
   const AboutScreen({super.key});
 
   @override
-  State<AboutScreen> createState() => _AboutScreenState();
+  ConsumerState<AboutScreen> createState() => _AboutScreenState();
 }
 
-class _AboutScreenState extends State<AboutScreen> {
+class _AboutScreenState extends ConsumerState<AboutScreen> {
   PackageInfo? _packageInfo;
 
   /// Hidden developer options, revealed by long-pressing the version card.
@@ -338,11 +339,10 @@ class _AboutScreenState extends State<AboutScreen> {
             secondary: Icon(Icons.forest, color: colorScheme.primary),
             title: Text(context.l10n.aboutVlake),
             subtitle: Text(context.l10n.aboutVlakeDesc),
-            value: VlakeSettings.instance.enabled,
+            value: ref.watch(vlakeSettingsProvider.select((s) => s.enabled)),
             onChanged: (v) async {
-              await VlakeSettings.instance.setEnabled(v);
+              await ref.read(vlakeSettingsProvider.notifier).setEnabled(v);
               if (v) VlakeService.instance.ensureLoaded();
-              if (mounted) setState(() {});
             },
           ),
           SwitchListTile(
@@ -1059,10 +1059,9 @@ class _AboutScreenState extends State<AboutScreen> {
 
   /// Language selector: follow the device, or force Slovenian / Croatian.
   Widget _buildLanguageRow(BuildContext context, ColorScheme colorScheme) {
-    return ListenableBuilder(
-      listenable: LocaleSettings.instance,
-      builder: (context, _) {
-        final code = LocaleSettings.instance.override?.languageCode;
+    return Consumer(
+      builder: (context, ref, _) {
+        final code = ref.watch(localeSettingsProvider)?.languageCode;
         return ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.language, color: colorScheme.primary),
@@ -1078,9 +1077,9 @@ class _AboutScreenState extends State<AboutScreen> {
               const DropdownMenuItem(value: 'sl', child: Text('Slovenščina')),
               const DropdownMenuItem(value: 'hr', child: Text('Hrvatski')),
             ],
-            onChanged: (v) => LocaleSettings.instance.setOverride(
-              (v == null || v == 'auto') ? null : Locale(v),
-            ),
+            onChanged: (v) => ref
+                .read(localeSettingsProvider.notifier)
+                .setOverride((v == null || v == 'auto') ? null : Locale(v)),
           ),
         );
       },

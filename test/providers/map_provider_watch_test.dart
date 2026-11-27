@@ -1,11 +1,14 @@
 import 'package:drift/native.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:gozdar/db/app_database.dart';
 import 'package:gozdar/models/log_entry.dart';
 import 'package:gozdar/models/map_location.dart';
 import 'package:gozdar/models/parcel.dart';
 import 'package:gozdar/providers/map_provider.dart';
+import 'package:gozdar/providers/service_providers.dart';
 import 'package:gozdar/services/database_service.dart';
 
 /// Other screens write straight to the database and no longer tell the map
@@ -14,20 +17,25 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late AppDatabase db;
-  late MapProvider provider;
+  late ProviderContainer container;
+  late MapNotifier provider;
   final service = DatabaseService();
 
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
     service.setDatabaseForTesting(db);
-    provider = MapProvider(databaseService: service);
+    SharedPreferences.setMockInitialValues({});
+    container = ProviderContainer(
+      overrides: [databaseServiceProvider.overrideWithValue(service)],
+    );
+    provider = container.read(mapNotifierProvider.notifier);
     await provider.loadParcels();
     await provider.loadLocations();
     await provider.loadGeolocatedLogs();
   });
 
   tearDown(() async {
-    provider.dispose();
+    container.dispose();
     await service.resetForTesting();
   });
 

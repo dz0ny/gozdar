@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gozdar/l10n/l10n.dart';
 import 'package:gozdar/models/secnja_share.dart';
+import 'package:gozdar/providers/map_provider.dart';
 import 'package:gozdar/router/app_router.dart';
 import 'package:gozdar/services/onboarding_service.dart';
 import 'package:gozdar/services/secnja_share_service.dart';
@@ -51,11 +53,20 @@ GoRouter router(String initial) => GoRouter(
   ],
 );
 
-Widget app(GoRouter r) => MaterialApp.router(
-  routerConfig: r,
-  localizationsDelegates: AppLocalizations.localizationsDelegates,
-  supportedLocales: AppLocalizations.supportedLocales,
-  locale: const Locale('sl'),
+/// Map state without the database: these tests only follow the route.
+class _IdleMapNotifier extends MapNotifier {
+  @override
+  MapState build() => const MapState();
+}
+
+Widget app(GoRouter r) => ProviderScope(
+  overrides: [mapNotifierProvider.overrideWith(_IdleMapNotifier.new)],
+  child: MaterialApp.router(
+    routerConfig: r,
+    localizationsDelegates: appLocalizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('sl'),
+  ),
 );
 
 void main() {

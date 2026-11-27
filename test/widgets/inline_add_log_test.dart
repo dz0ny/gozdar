@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gozdar/l10n/l10n.dart';
 import 'package:gozdar/models/log_entry.dart';
@@ -14,7 +14,7 @@ void main() {
     final added = <LogEntry>[];
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('sl'),
         home: Scaffold(
@@ -96,7 +96,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('sl'),
         home: Scaffold(
@@ -124,7 +124,7 @@ void main() {
     tester,
   ) async {
     Widget build() => MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('sl'),
       home: Scaffold(
@@ -174,7 +174,7 @@ void main() {
     final added = <LogEntry>[];
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('sl'),
         home: Scaffold(

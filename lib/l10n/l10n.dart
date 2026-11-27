@@ -1,8 +1,23 @@
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show GlobalCupertinoLocalizations;
 import 'package:flutter/widgets.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'
+    show GlobalWidgetsLocalizations;
+import 'package:material_ui/material_ui.dart' show GlobalMaterialLocalizations;
 
 import 'generated/app_localizations.dart';
 
 export 'generated/app_localizations.dart';
+
+/// Delegates for the app's MaterialApp. The generated
+/// [AppLocalizations.localizationsDelegates] still names the old Material and
+/// Cupertino localizations, which material_ui widgets don't look up.
+const appLocalizationsDelegates = <LocalizationsDelegate<Object>>[
+  AppLocalizations.delegate,
+  GlobalMaterialLocalizations.delegate,
+  GlobalWidgetsLocalizations.delegate,
+  GlobalCupertinoLocalizations.delegate,
+];
 
 extension L10nContext on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this);

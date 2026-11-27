@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../l10n/l10n.dart';
 
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/log_batch.dart';
 import '../models/log_entry.dart';
@@ -20,9 +20,14 @@ import '../widgets/save_batch_sheet.dart';
 import '../widgets/saved_batches_sheet.dart';
 import '../widgets/species_management_sheet.dart';
 
-class LogsTab extends StatelessWidget {
+class LogsTab extends ConsumerStatefulWidget {
   const LogsTab({super.key});
 
+  @override
+  ConsumerState<LogsTab> createState() => _LogsTabState();
+}
+
+class _LogsTabState extends ConsumerState<LogsTab> {
   /// PRM preset matching a species, so picking "Bukev" also selects the
   /// beech/oak factor. Only presets; a custom factor is left alone.
   static const Map<String, double> _speciesPrm = {
@@ -39,7 +44,7 @@ class LogsTab extends StatelessWidget {
   /// species chip in the total card; conversion factors stay in their own
   /// sheet (tap the rest of the card).
   Future<void> _showSpeciesPicker(BuildContext context) async {
-    final provider = context.read<LogsProvider>();
+    final provider = ref.read(logsNotifierProvider.notifier);
     final species = await SpeciesService().getSpecies();
     if (!context.mounted) return;
     final current = species.contains(provider.currentSpecies)
@@ -106,7 +111,7 @@ class LogsTab extends StatelessWidget {
   }
 
   Future<void> _showConversionDialog(BuildContext context) async {
-    final provider = context.read<LogsProvider>();
+    final provider = ref.read(logsNotifierProvider.notifier);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -139,7 +144,7 @@ class LogsTab extends StatelessWidget {
 
   /// Inline quick-add bar pinned under the list (no popup).
   Widget _buildInlineAdd(BuildContext context) {
-    final provider = context.read<LogsProvider>();
+    final provider = ref.read(logsNotifierProvider.notifier);
     return InlineAddLog(
       species: provider.currentSpecies,
       onAdd: (entry) async {
@@ -149,7 +154,7 @@ class LogsTab extends StatelessWidget {
   }
 
   void _editLogEntry(BuildContext context, LogEntry entry) {
-    final provider = context.read<LogsProvider>();
+    final provider = ref.read(logsNotifierProvider.notifier);
 
     context.push(
       AppRoutes.logEdit(entry.id),
@@ -176,7 +181,7 @@ class LogsTab extends StatelessWidget {
   }
 
   Future<void> _deleteLogEntry(BuildContext context, LogEntry entry) async {
-    final provider = context.read<LogsProvider>();
+    final provider = ref.read(logsNotifierProvider.notifier);
     final success = await provider.deleteLogEntry(entry);
 
     if (success && context.mounted) {
@@ -201,7 +206,7 @@ class LogsTab extends StatelessWidget {
   }
 
   Future<void> _showExportMenu(BuildContext context) async {
-    final provider = context.read<LogsProvider>();
+    final provider = ref.read(logsNotifierProvider.notifier);
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -251,7 +256,7 @@ class LogsTab extends StatelessWidget {
   }
 
   Future<void> _deleteAllLogs(BuildContext context) async {
-    final provider = context.read<LogsProvider>();
+    final provider = ref.read(logsNotifierProvider.notifier);
 
     if (!provider.hasEntries) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -305,7 +310,7 @@ class LogsTab extends StatelessWidget {
   }
 
   Future<void> _saveBatch(BuildContext context) async {
-    final provider = context.read<LogsProvider>();
+    final provider = ref.read(logsNotifierProvider.notifier);
 
     if (!provider.hasEntries) {
       ScaffoldMessenger.of(
@@ -378,7 +383,7 @@ class LogsTab extends StatelessWidget {
     );
     // The selected species may have been removed or the list was empty.
     if (context.mounted) {
-      await context.read<LogsProvider>().ensureValidSpecies();
+      await ref.read(logsNotifierProvider.notifier).ensureValidSpecies();
     }
   }
 
@@ -388,11 +393,14 @@ class LogsTab extends StatelessWidget {
       appBar: AppBar(
         title: Text(context.l10n.logsHeaderTitle),
         actions: [
-          Consumer<LogsProvider>(
-            builder: (context, provider, _) => IconButton(
+          Consumer(
+            builder: (context, ref, _) => IconButton(
               icon: const Icon(Icons.save),
               tooltip: context.l10n.commonSave,
-              onPressed: provider.hasEntries ? () => _saveBatch(context) : null,
+              onPressed:
+                  ref.watch(logsNotifierProvider.select((s) => s.hasEntries))
+                  ? () => _saveBatch(context)
+                  : null,
             ),
           ),
           IconButton(
@@ -447,14 +455,16 @@ class LogsTab extends StatelessWidget {
           ),
         ],
       ),
-      body: Consumer<LogsProvider>(
-        builder: (context, provider, _) {
+      body: Consumer(
+        builder: (context, ref, _) {
+          final provider = ref.watch(logsNotifierProvider);
           if (provider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
           return RefreshIndicator(
-            onRefresh: () => provider.loadLogEntries(),
+            onRefresh: () =>
+                ref.read(logsNotifierProvider.notifier).loadLogEntries(),
             child: Column(
               children: [
                 // Volume summary card
@@ -677,9 +687,9 @@ class _LogsListState extends State<_LogsList> {
     final unknownSpecies = context.l10n.logsUnknownSpecies;
     final groupedLogs = <String, List<LogEntry>>{};
     for (final entry in widget.entries) {
-      groupedLogs.putIfAbsent(entry.species ?? unknownSpecies, () => []).add(
-        entry,
-      );
+      groupedLogs
+          .putIfAbsent(entry.species ?? unknownSpecies, () => [])
+          .add(entry);
     }
 
     // All rows are built (not lazily) so the added log always has a context

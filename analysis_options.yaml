@@ -9,6 +9,9 @@
 # packages, and plugins designed to encourage good coding practices.
 analyzer:
   exclude:
+    # Written by flutter gen-l10n, which still names the old Material
+    # localizations; the app uses appLocalizationsDelegates instead.
+    - lib/l10n/generated/**
     - build/**
     - android/**
     - ios/**

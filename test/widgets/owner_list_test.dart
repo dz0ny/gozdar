@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gozdar/l10n/l10n.dart';
 import 'package:gozdar/services/owner_lookup_service.dart';
@@ -24,7 +24,7 @@ void main() {
   );
 
   Widget app(Widget child) => MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     locale: const Locale('sl'),
     home: Scaffold(body: child),
