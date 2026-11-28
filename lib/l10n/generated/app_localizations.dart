@@ -5387,6 +5387,48 @@ abstract class AppLocalizations {
   /// In sl, this message translates to:
   /// **'Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej.'**
   String get introSecnjaLoggerDesc;
+
+  /// No description provided for @testerSignupTitle.
+  ///
+  /// In sl, this message translates to:
+  /// **'Gozdar v Googlu Play'**
+  String get testerSignupTitle;
+
+  /// No description provided for @testerSignupDesc.
+  ///
+  /// In sl, this message translates to:
+  /// **'Postanite preizkuševalec in pomagajte pri objavi'**
+  String get testerSignupDesc;
+
+  /// No description provided for @testerSignupBody.
+  ///
+  /// In sl, this message translates to:
+  /// **'Google aplikacijo objavi v Trgovini Play šele, ko jo dva tedna preizkuša vsaj 12 ljudi. Pomagate v dveh korakih: pridružite se skupini preizkuševalcev, nato potrdite preizkušanje v Googlu Play.'**
+  String get testerSignupBody;
+
+  /// No description provided for @testerSignupJoinGroup.
+  ///
+  /// In sl, this message translates to:
+  /// **'1. Pridruži se skupini'**
+  String get testerSignupJoinGroup;
+
+  /// No description provided for @testerSignupOptIn.
+  ///
+  /// In sl, this message translates to:
+  /// **'2. Postani preizkuševalec'**
+  String get testerSignupOptIn;
+
+  /// No description provided for @testerSignupAccountNote.
+  ///
+  /// In sl, this message translates to:
+  /// **'V obeh korakih uporabite Google Račun, s katerim ste prijavljeni v Trgovino Play na tem telefonu.'**
+  String get testerSignupAccountNote;
+
+  /// No description provided for @testerSignupClose.
+  ///
+  /// In sl, this message translates to:
+  /// **'Zapri'**
+  String get testerSignupClose;
 }
 
 class _AppLocalizationsDelegate

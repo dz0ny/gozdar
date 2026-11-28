@@ -3195,4 +3195,28 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get introSecnjaLoggerDesc =>
       'Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej.';
+
+  @override
+  String get testerSignupTitle => 'Gozdar v Googlu Play';
+
+  @override
+  String get testerSignupDesc =>
+      'Postanite preizkuševalec in pomagajte pri objavi';
+
+  @override
+  String get testerSignupBody =>
+      'Google aplikacijo objavi v Trgovini Play šele, ko jo dva tedna preizkuša vsaj 12 ljudi. Pomagate v dveh korakih: pridružite se skupini preizkuševalcev, nato potrdite preizkušanje v Googlu Play.';
+
+  @override
+  String get testerSignupJoinGroup => '1. Pridruži se skupini';
+
+  @override
+  String get testerSignupOptIn => '2. Postani preizkuševalec';
+
+  @override
+  String get testerSignupAccountNote =>
+      'V obeh korakih uporabite Google Račun, s katerim ste prijavljeni v Trgovino Play na tem telefonu.';
+
+  @override
+  String get testerSignupClose => 'Zapri';
 }

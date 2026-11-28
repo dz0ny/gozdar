@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
@@ -7,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../config/distribution.dart';
 import '../l10n/l10n.dart';
 import '../router/route_names.dart';
 import '../services/locale_settings.dart';
@@ -24,6 +26,7 @@ import '../services/vlake_service.dart';
 import '../services/vlake_settings.dart';
 import '../widgets/download_progress_view.dart';
 import '../widgets/region_picker_sheet.dart';
+import '../widgets/tester_signup_tile.dart';
 
 /// Which offline reference databases a wipe action targets.
 enum _WipeScope { all, imported, downloaded }
@@ -1299,6 +1302,11 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
     return Card(
       child: Column(
         children: [
+          // People with the APK from the website can join the Play test.
+          if (Platform.isAndroid && !isPlayDistribution) ...[
+            const TesterSignupTile(),
+            const Divider(height: 1),
+          ],
           ListTile(
             leading: Icon(Icons.bug_report, color: colorScheme.primary),
             title: Text(context.l10n.aboutReportBug),

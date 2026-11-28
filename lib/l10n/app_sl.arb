@@ -2253,5 +2253,12 @@
   "introSecnjaShareTitle": "Deli sekaču",
   "introSecnjaShareDesc": "V parceli tapni Deli sekaču in pošlji povezavo. Velja 30 dni; ob novih oznakah jo posodobiš.",
   "introSecnjaLoggerTitle": "Sekač dobi parcelo",
-  "introSecnjaLoggerDesc": "Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej."
+  "introSecnjaLoggerDesc": "Povezava se odpre v Gozdarju in doda parcelo z drevesi v Moj gozd. Deluje brez signala, sekač jo lahko deli naprej.",
+  "testerSignupTitle": "Gozdar v Googlu Play",
+  "testerSignupDesc": "Postanite preizkuševalec in pomagajte pri objavi",
+  "testerSignupBody": "Google aplikacijo objavi v Trgovini Play šele, ko jo dva tedna preizkuša vsaj 12 ljudi. Pomagate v dveh korakih: pridružite se skupini preizkuševalcev, nato potrdite preizkušanje v Googlu Play.",
+  "testerSignupJoinGroup": "1. Pridruži se skupini",
+  "testerSignupOptIn": "2. Postani preizkuševalec",
+  "testerSignupAccountNote": "V obeh korakih uporabite Google Račun, s katerim ste prijavljeni v Trgovino Play na tem telefonu.",
+  "testerSignupClose": "Zapri"
 }

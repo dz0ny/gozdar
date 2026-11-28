@@ -3190,4 +3190,27 @@ class AppLocalizationsHr extends AppLocalizations {
   @override
   String get introSecnjaLoggerDesc =>
       'Poveznica se otvara u Gozdaru i dodaje česticu sa stablima u Moju šumu. Radi bez signala, sjekač je može podijeliti dalje.';
+
+  @override
+  String get testerSignupTitle => 'Gozdar u Google Playu';
+
+  @override
+  String get testerSignupDesc => 'Postanite tester i pomozite pri objavi';
+
+  @override
+  String get testerSignupBody =>
+      'Google aplikaciju objavljuje u Trgovini Play tek nakon što je dva tjedna testira najmanje 12 ljudi. Pomažete u dva koraka: pridružite se grupi testera, zatim potvrdite testiranje u Google Playu.';
+
+  @override
+  String get testerSignupJoinGroup => '1. Pridruži se grupi';
+
+  @override
+  String get testerSignupOptIn => '2. Postani tester';
+
+  @override
+  String get testerSignupAccountNote =>
+      'U oba koraka koristite Google račun kojim ste prijavljeni u Trgovinu Play na ovom telefonu.';
+
+  @override
+  String get testerSignupClose => 'Zatvori';
 }
