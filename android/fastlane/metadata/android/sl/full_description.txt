@@ -1,13 +1,39 @@
-Gozdar je terenska aplikacija za lastnike gozdov, izvajalce del in gozdarske strokovnjake v Sloveniji.
+Gozdar je terenska aplikacija za lastnike gozdov, sekače in gozdarje v Sloveniji in na Hrvaškem. Parcele, kataster, hlodi in navigacija so na enem mestu in delujejo tudi tam, kjer ni signala.
 
-Delo lahko načrtujete in vodite neposredno na telefonu:
+KARTA IN KATASTER
+- ortofoto, meje parcel z nazivi, gozdni sestoji in več kot 40 slojev ZGS in GURS
+- z dolgim pritiskom na karto parcelo uvozite iz katastra
+- parcelo poiščete po številki, katastrski občini, naslovu ali lastniku iz javnih evidenc
+- katastrski podatki za Slovenijo in Hrvaško
 
-- pregledujete gozdne parcele na interaktivnem zemljevidu
-- za orientacijo na terenu uporabljate katastrske in ortofoto sloje
-- beležite hlode z merami, prostornino, drevesno vrsto in opombami
-- shranjujete pomembne lokacije za poznejšo navigacijo
-- hranite podatke o parcelah in hlodovini na enem mestu
+GOZD
+- svoje parcele hranite s površino, vrsto gozda, opombami in dovoljenim posekom
+- posplošena vrednost parcele po GURS z boniteto in odprtostjo gozda
+- poseben sloj pokaže parcele, ki so na sodni dražbi
 
-Aplikacija je zasnovana za praktično uporabo na terenu, z hitrim dostopom do zemljevida, podatkov o parcelah in evidence hlodovine med delom.
+HLODI
+- vpišete premer in dolžino, Gozdar izračuna prostornino
+- hlodi se razvrstijo po drevesnih vrstah
+- skupne količine v m³, prostorninskih (PRM) in nasutih metrih (NM)
 
-Ne glede na to, ali pregledujete parcele, načrtujete posek ali vodite natančno evidenco lesa na lokaciji, vam Gozdar pomaga ostati organiziran v gozdu in na poti.
+SEČNJA IN NAVIGACIJA
+- drevesa za posek označite na karti in jih sekaču pošljete z eno povezavo
+- kompas kaže smer in razdaljo do mejnika ali shranjene točke
+
+BREZ SIGNALA
+- ogledane karte se shranijo same, večje območje prenesete vnaprej
+- kataster in iskanje delujeta brez povezave, ko podatke enkrat naložite
+- karte in podatke kopirate sodelavcu neposredno med telefoni
+
+IZVOZ
+- hlodi v Excel, parcela s karto v PDF, parcele v KML za druge GIS programe
+
+Vse, kar vnesete, ostane na vašem telefonu. Brez računa, oglasov in analitike.
+
+VIRI PODATKOV
+Gozdar ni uradna aplikacija nobenega državnega organa in ne zastopa nobene državne ustanove. Javne podatke prikazuje iz teh virov:
+- Geodetska uprava RS (GURS): https://www.e-prostor.gov.si
+- Zavod za gozdove Slovenije (ZGS): https://prostor.zgs.gov.si
+- Državna geodetska uprava RH (DGU): https://oss.uredjenazemlja.hr
+
+Podatki o parcelah, lastništvu in vrednostih so informativni in so lahko zastareli. Za uradne podatke se obrnite na pristojni organ.

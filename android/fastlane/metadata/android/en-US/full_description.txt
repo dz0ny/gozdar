@@ -1,13 +1,39 @@
-Gozdar is a field app for forest owners, contractors, and forestry professionals working in Slovenia.
+Gozdar is a field app for forest owners, loggers and foresters in Slovenia and Croatia. Parcels, cadastre, logs and navigation are in one place and keep working where there is no signal.
 
-Plan and manage work directly on your phone:
+MAP AND CADASTRE
+- aerial imagery, parcel boundaries with labels, forest stands and more than 40 layers from ZGS and GURS
+- long-press the map to import a parcel from the cadastre
+- find a parcel by number, cadastral municipality, address or owner from public registers
+- cadastral data for Slovenia and Croatia
 
-- view forest parcels on an interactive map
-- use cadastral and aerial layers for orientation in the field
-- record logs with dimensions, volume, species, and notes
-- save important locations for later navigation
-- keep parcel and logging data together in one place
+FOREST
+- keep your parcels with area, forest type, notes and allowed cut
+- generalised parcel value from GURS, with site quality and forest accessibility
+- a separate layer shows parcels currently in court auctions
 
-The app is designed for practical outdoor use, with fast access to map tools, parcel data, and log tracking while you work.
+LOGS
+- enter diameter and length, Gozdar calculates the volume
+- logs are grouped by tree species
+- totals in m³, stacked cubic metres (PRM) and loose cubic metres (NM)
 
-Whether you are checking parcels, planning cuts, or keeping a clear record of timber on site, Gozdar helps you stay organized in the forest and on the move.
+FELLING AND NAVIGATION
+- mark trees for felling on the map and send them to the logger with one link
+- the compass shows direction and distance to a boundary point or saved location
+
+WITHOUT SIGNAL
+- maps you have viewed are saved automatically, larger areas can be downloaded in advance
+- cadastre and search work offline once the data is downloaded
+- copy maps and data to a colleague directly between phones
+
+EXPORT
+- logs to Excel, a parcel with its map to PDF, parcels to KML for other GIS software
+
+Everything you enter stays on your phone. No account, no ads, no analytics.
+
+DATA SOURCES
+Gozdar is not an official app of any government body and does not represent any government entity. It shows public data from these sources:
+- Surveying and Mapping Authority of the Republic of Slovenia (GURS): https://www.e-prostor.gov.si
+- Slovenia Forest Service (ZGS): https://prostor.zgs.gov.si
+- State Geodetic Administration of Croatia (DGU): https://oss.uredjenazemlja.hr
+
+Parcel, ownership and value data is informational and may be out of date. For official data, contact the responsible authority.
