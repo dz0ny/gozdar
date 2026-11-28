@@ -109,6 +109,40 @@ extension _Search on MapTabState {
     });
   }
 
+  /// The row for My parcels, named like the Forest tab names imports.
+  Future<Parcel> _parcelFromWfs(WfsParcel wfsParcel) async {
+    final koInt = int.tryParse(wfsParcel.koNumber);
+    // Croatian holders are only fetched live, so keep them with the parcel.
+    final hrOwner = HrOwnerService.isCroatianKo(koInt)
+        ? await HrOwnerService.instance.lookup(koInt!, wfsParcel.parcelNumber)
+        : null;
+    return Parcel(
+      name: await KoLocator.defaultParcelName(
+        koInt,
+        wfsParcel.parcelNumber,
+        fallbackKo: wfsParcel.koNumber,
+      ),
+      polygon: wfsParcel.polygon,
+      cadastralMunicipality: koInt,
+      parcelNumber: wfsParcel.parcelNumber,
+      owner: hrOwner?.displayOwners,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  /// Quick add from the search sheet: save without moving the map or
+  /// closing the sheet. False when the parcel was already saved.
+  Future<bool> _quickAddParcel(WfsParcel wfsParcel) async {
+    final db = DatabaseService();
+    final existing = await db.findParcelByKoAndNumber(
+      int.tryParse(wfsParcel.koNumber),
+      wfsParcel.parcelNumber,
+    );
+    if (existing != null) return false;
+    await db.insertParcel(await _parcelFromWfs(wfsParcel));
+    return true;
+  }
+
   /// Import the searched parcel into the database
   Future<void> _importSearchedParcel(WfsParcel wfsParcel) async {
     try {
@@ -160,26 +194,7 @@ extension _Search on MapTabState {
         return;
       }
 
-      // Croatian holders are only fetched live, so keep them with the parcel.
-      final hrOwner = HrOwnerService.isCroatianKo(koInt)
-          ? await HrOwnerService.instance.lookup(koInt!, wfsParcel.parcelNumber)
-          : null;
-
-      // Convert WfsParcel to Parcel model
-      final parcel = Parcel(
-        name: await KoLocator.defaultParcelName(
-          koInt,
-          wfsParcel.parcelNumber,
-          fallbackKo: wfsParcel.koNumber,
-        ),
-        polygon: wfsParcel.polygon,
-        cadastralMunicipality: koInt,
-        parcelNumber: wfsParcel.parcelNumber,
-        owner: hrOwner?.displayOwners,
-        createdAt: DateTime.now(),
-      );
-
-      await dbService.insertParcel(parcel);
+      await dbService.insertParcel(await _parcelFromWfs(wfsParcel));
 
       // Clear searched parcel
       _setState(() {

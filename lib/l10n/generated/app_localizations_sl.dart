@@ -1522,6 +1522,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get parcelSearchShowOnMap => 'Pokaži na karti';
 
   @override
+  String get parcelSearchQuickAdd => 'Dodaj med moje parcele';
+
+  @override
+  String get parcelSearchQuickAdded => 'Dodano med moje parcele';
+
+  @override
   String get parcelSearchUseKo => 'Išči v tej k.o.';
 
   @override

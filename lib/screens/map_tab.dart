@@ -1297,6 +1297,7 @@ class MapTabState extends ConsumerState<MapTab> with TickerProviderStateMixin {
       context: context,
       mapController: _mapController,
       onParcelFound: _handleParcelFound,
+      onQuickAdd: _quickAddParcel,
       // The sheet takes a void callback. The error handler keeps a failure
       // of the lookup out of the lost-Future hole.
       onAddressFound: (hit) => unawaited(

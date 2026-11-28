@@ -2557,6 +2557,18 @@ abstract class AppLocalizations {
   /// **'Pokaži na karti'**
   String get parcelSearchShowOnMap;
 
+  /// No description provided for @parcelSearchQuickAdd.
+  ///
+  /// In sl, this message translates to:
+  /// **'Dodaj med moje parcele'**
+  String get parcelSearchQuickAdd;
+
+  /// No description provided for @parcelSearchQuickAdded.
+  ///
+  /// In sl, this message translates to:
+  /// **'Dodano med moje parcele'**
+  String get parcelSearchQuickAdded;
+
   /// No description provided for @parcelSearchUseKo.
   ///
   /// In sl, this message translates to:

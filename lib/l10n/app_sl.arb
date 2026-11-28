@@ -1119,6 +1119,8 @@
   "auctionsLoadError": "Napaka pri nalaganju dražb.",
   "auctionsRetry": "Poskusi znova",
   "parcelSearchShowOnMap": "Pokaži na karti",
+  "parcelSearchQuickAdd": "Dodaj med moje parcele",
+  "parcelSearchQuickAdded": "Dodano med moje parcele",
   "parcelSearchUseKo": "Išči v tej k.o.",
   "mapwCatAdministrativno": "Administrativno",
   "mapwCatInfrastruktura": "Infrastruktura",

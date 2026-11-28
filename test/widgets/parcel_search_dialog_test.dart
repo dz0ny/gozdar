@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gozdar/l10n/l10n.dart';
 import 'package:gozdar/services/address_lookup_service.dart';
+import 'package:gozdar/services/cadastral_service.dart';
 import 'package:gozdar/services/ko_locator.dart';
 import 'package:gozdar/services/owner_lookup_service.dart';
 import 'package:gozdar/theme/app_theme.dart';
@@ -28,6 +29,7 @@ void main() {
     WidgetTester tester, {
     LatLng? center = babnoCenter,
     void Function(AddressHit)? onAddressFound,
+    Future<bool> Function(WfsParcel)? onQuickAdd,
   }) async {
     ParcelSearchDialog.forgetLastSearch();
     tester.view.physicalSize = const Size(1080, 2200);
@@ -48,6 +50,7 @@ void main() {
                 center: center,
                 onParcelFound: (_) {},
                 onAddressFound: onAddressFound,
+                onQuickAdd: onQuickAdd,
               ),
               child: const Text('open'),
             ),
@@ -95,6 +98,21 @@ void main() {
 
     expect(find.text('Parcela 123/4'), findsOneWidget);
     expect(find.text('KO BABNO POLJE (1651)'), findsNWidgets(2)); // chip + row
+  });
+
+  testWidgets('parcel rows get a quick add button before the target', (
+    tester,
+  ) async {
+    await open(tester, onQuickAdd: (_) async => true);
+    await type(tester, '123/4');
+    expect(find.byTooltip('Dodaj med moje parcele'), findsOneWidget);
+    expect(find.byIcon(Icons.my_location), findsWidgets);
+  });
+
+  testWidgets('no quick add without a handler', (tester) async {
+    await open(tester);
+    await type(tester, '123/4');
+    expect(find.byTooltip('Dodaj med moje parcele'), findsNothing);
   });
 
   testWidgets('KO names autocomplete ignoring case and diacritics, and the '

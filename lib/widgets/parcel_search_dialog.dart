@@ -9,6 +9,7 @@ import '../services/auction_service.dart';
 import '../services/cadastral_service.dart';
 import '../services/ko_locator.dart';
 import '../services/parcel_search_service.dart';
+import '../utils/haptics.dart';
 import 'auction_sheet.dart';
 import 'parcel_info_widgets.dart';
 import 'parcel_search_controller.dart';
@@ -28,6 +29,10 @@ class ParcelSearchDialog extends StatefulWidget {
   /// Called with the tapped house number; the sheet is closed by then.
   final void Function(AddressHit)? onAddressFound;
 
+  /// Saves the parcel to My parcels without closing the sheet, so several
+  /// can be added in a row. Completes with false when it was already saved.
+  final Future<bool> Function(WfsParcel)? onQuickAdd;
+
   /// Where the map is looking, to preselect its KO. Defaults to the
   /// controller's camera centre.
   final LatLng? center;
@@ -37,6 +42,7 @@ class ParcelSearchDialog extends StatefulWidget {
     required this.mapController,
     required this.onParcelFound,
     this.onAddressFound,
+    this.onQuickAdd,
     this.center,
   });
 
@@ -55,6 +61,7 @@ class ParcelSearchDialog extends StatefulWidget {
     required MapController mapController,
     required Function(WfsParcel) onParcelFound,
     void Function(AddressHit)? onAddressFound,
+    Future<bool> Function(WfsParcel)? onQuickAdd,
     LatLng? center,
   }) {
     if (center == null) {
@@ -78,6 +85,7 @@ class ParcelSearchDialog extends StatefulWidget {
         mapController: mapController,
         onParcelFound: onParcelFound,
         onAddressFound: onAddressFound,
+        onQuickAdd: onQuickAdd,
         center: center,
       ),
     );
@@ -105,6 +113,10 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
 
   /// Key of the suggestion whose geometry is being fetched.
   String? _locatingKey;
+
+  /// Rows being saved by quick add, and rows saved (or already saved).
+  final _addingKeys = <String>{};
+  final _addedKeys = <String>{};
   String? _error;
 
   /// Court auctions load; replaced by Retry after a failed load.
@@ -202,6 +214,107 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         _error = L10n.current.parcelSearchError('$e');
       });
     }
+  }
+
+  /// Fetch the parcel and save it in the background; the sheet stays open
+  /// with the same results so the next one can be added.
+  Future<void> _quickAdd(ParcelSuggestion s) async {
+    final onQuickAdd = widget.onQuickAdd;
+    if (onQuickAdd == null) return;
+    final key = _key(s);
+    setState(() {
+      _addingKeys.add(key);
+      _error = null;
+    });
+    try {
+      final parcel = await _cadastralService.queryParcelByKoAndNumber(
+        s.sifko.toString(),
+        s.parcela!,
+      );
+      if (parcel == null || parcel.polygon.isEmpty) {
+        if (mounted) {
+          setState(
+            () => _error = L10n.current.parcelSearchNotFound(s.parcela!),
+          );
+        }
+        return;
+      }
+      await onQuickAdd(parcel);
+      Haptics.confirm();
+      if (mounted) setState(() => _addedKeys.add(key));
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = L10n.current.parcelSearchError('$e'));
+      }
+    } finally {
+      if (mounted) setState(() => _addingKeys.remove(key));
+    }
+  }
+
+  /// The + / ✓ in front of the locate target on parcel rows.
+  Widget _quickAddButton(BuildContext context, ParcelSuggestion s) {
+    final cs = Theme.of(context).colorScheme;
+    final key = _key(s);
+    if (_addingKeys.contains(key)) {
+      return const SizedBox(
+        width: 48,
+        height: 48,
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    if (_addedKeys.contains(key)) {
+      return Tooltip(
+        message: context.l10n.parcelSearchQuickAdded,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Icon(Icons.check_circle, color: cs.primary),
+        ),
+      );
+    }
+    return IconButton(
+      tooltip: context.l10n.parcelSearchQuickAdd,
+      icon: Icon(Icons.add_circle_outline, color: cs.primary),
+      onPressed: () => unawaited(_quickAdd(s)),
+    );
+  }
+
+  Widget _trailing(
+    BuildContext context,
+    ParcelSuggestion s, {
+    required bool locating,
+    required IconData icon,
+    required String tooltip,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final target = locating
+        ? const SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : Tooltip(
+            // Target = open the parcel or house on the map; + = narrow the
+            // search to this cadastral municipality or street.
+            message: tooltip,
+            child: Icon(icon, color: cs.onSurfaceVariant),
+          );
+    final addable =
+        widget.onQuickAdd != null &&
+        s.parcela != null &&
+        (s.kind == ParcelSuggestionKind.parcel ||
+            s.kind == ParcelSuggestionKind.owner);
+    if (!addable) return target;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [_quickAddButton(context, s), target],
+    );
   }
 
   void _onSuggestionTap(ParcelSuggestion s) {
@@ -453,16 +566,13 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: locating
-          ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Tooltip(
-              message: context.l10n.parcelSearchShowOnMap,
-              child: Icon(Icons.my_location, color: cs.onSurfaceVariant),
-            ),
+      trailing: _trailing(
+        context,
+        suggestion,
+        locating: locating,
+        icon: Icons.my_location,
+        tooltip: context.l10n.parcelSearchShowOnMap,
+      ),
       onTap: _locatingKey != null ? null : () => _open(suggestion),
     );
   }
@@ -606,18 +716,13 @@ class _ParcelSearchDialogState extends State<ParcelSearchDialog> {
       subtitle: s.subtitle == null
           ? null
           : Text(s.subtitle!, maxLines: 2, overflow: TextOverflow.ellipsis),
-      trailing: locating
-          ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Tooltip(
-              // Target = open the parcel or house on the map; + = narrow the
-              // search to this cadastral municipality or street.
-              message: tooltip,
-              child: Icon(trailing, color: cs.onSurfaceVariant),
-            ),
+      trailing: _trailing(
+        context,
+        s,
+        locating: locating,
+        icon: trailing,
+        tooltip: tooltip,
+      ),
       onTap: _locatingKey != null ? null : () => _onSuggestionTap(s),
     );
   }

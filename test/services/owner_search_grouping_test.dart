@@ -136,6 +136,7 @@ void main() {
 
         test('words match in any order, one per field', () async {
           expect(await any(['ziga', 'kosir']), ['1700/5']);
+          expect(await any(['kosir', 'ziga']), ['1700/5']);
           expect(await any(['skofja', 'kosir']), ['1700/5']);
           expect(await any(['loka', 'ziga']), ['1700/5']);
           expect(await any(['skofja', 'novak']), isEmpty);

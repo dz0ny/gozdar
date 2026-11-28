@@ -409,6 +409,8 @@
   "auctionsLoadError": "Greška pri učitavanju dražbi.",
   "auctionsRetry": "Pokušaj ponovno",
   "parcelSearchShowOnMap": "Prikaži na karti",
+  "parcelSearchQuickAdd": "Dodaj u moje čestice",
+  "parcelSearchQuickAdded": "Dodano u moje čestice",
   "parcelSearchUseKo": "Traži u ovoj k.o.",
   "mapwCatAdministrativno": "Administrativno",
   "mapwCatInfrastruktura": "Infrastruktura",
