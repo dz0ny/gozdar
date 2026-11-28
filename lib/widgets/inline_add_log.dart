@@ -277,13 +277,14 @@ class _InlineAddLogState extends State<InlineAddLog> {
         ? Colors.green[400]
         : cs.onSurfaceVariant;
 
-    return Material(
-      color: cs.surfaceContainer,
-      elevation: 8,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    // Part of the page, not a sheet: same background, a hairline above.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        border: Border(
+          top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
+        ),
       ),
-      clipBehavior: Clip.antiAlias,
       child: SafeArea(
         top: false,
         child: Padding(
@@ -331,84 +332,74 @@ class _InlineAddLogState extends State<InlineAddLog> {
                     ),
                   ),
                 const SizedBox(height: 12),
-                // Volumen 0,96 m³            [ + Dodaj ]
+                // Volumen                     0,96 m³
                 // (the label briefly reads "✓ Dodano: N" after an add)
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AnimatedSwitcher(
-                            duration: Motion.of(context, Motion.short),
-                            child: Text(
-                              _showAdded
-                                  ? '✓ ${context.l10n.logsInlineAdded(_addedCount)}'
-                                  : context.l10n.logsVolumeLabel,
-                              key: ValueKey(_showAdded),
-                              maxLines: 1,
-                              style: textTheme.labelLarge?.copyWith(
-                                color: _showAdded
-                                    ? Colors.green[400]
-                                    : cs.onSurfaceVariant,
-                                fontWeight: _showAdded ? FontWeight.bold : null,
-                              ),
-                            ),
-                          ),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  _calculatedVolume != null
-                                      ? Fmt.num(_calculatedVolume!, 2)
-                                      : '–',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: textTheme.headlineLarge?.copyWith(
-                                    fontSize: 34,
-                                    fontWeight: FontWeight.bold,
-                                    color: volumeColor,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'm³',
-                                style: textTheme.titleLarge?.copyWith(
-                                  color: cs.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Counts as part of the fields so tapping it keeps the
-                    // keyboard open for the next log.
-                    TextFieldTapRegion(
-                      child: SizedBox(
-                        height: 60,
-                        child: FilledButton.icon(
-                          onPressed: canAdd ? _saveAndContinue : null,
-                          style: FilledButton.styleFrom(
-                            shape: const StadiumBorder(),
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            backgroundColor: Colors.green[700],
-                            foregroundColor: Colors.white,
-                            textStyle: textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          icon: const Icon(Icons.add, size: 30),
-                          label: Text(context.l10n.commonAdd),
+                    AnimatedSwitcher(
+                      duration: Motion.of(context, Motion.short),
+                      child: Text(
+                        _showAdded
+                            ? '✓ ${context.l10n.logsInlineAdded(_addedCount)}'
+                            : context.l10n.logsVolumeLabel,
+                        key: ValueKey(_showAdded),
+                        maxLines: 1,
+                        style: textTheme.titleMedium?.copyWith(
+                          color: _showAdded
+                              ? Colors.green[400]
+                              : cs.onSurfaceVariant,
+                          fontWeight: _showAdded ? FontWeight.bold : null,
                         ),
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _calculatedVolume != null
+                            ? Fmt.num(_calculatedVolume!, 2)
+                            : '–',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        style: textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: volumeColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'm³',
+                      style: textTheme.titleLarge?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
                   ],
+                ),
+                const SizedBox(height: 10),
+                // Full width under the fields. Counts as part of the fields
+                // so tapping it keeps the keyboard open for the next log.
+                TextFieldTapRegion(
+                  child: SizedBox(
+                    height: 52,
+                    child: FilledButton.icon(
+                      onPressed: canAdd ? _saveAndContinue : null,
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: Colors.green[700],
+                        foregroundColor: Colors.white,
+                        textStyle: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      icon: const Icon(Icons.add, size: 24),
+                      label: Text(context.l10n.commonAdd),
+                    ),
+                  ),
                 ),
               ],
             ),
