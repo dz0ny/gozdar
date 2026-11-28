@@ -185,7 +185,12 @@ extension _Status on MapTabState {
     if (result != null) {
       await _addLocation(result.name, result.latitude, result.longitude);
       // Center map on newly added location
-      _mapController.move(LatLng(result.latitude, result.longitude), 15);
+      if (!mounted) return;
+      _camera.moveTo(
+        LatLng(result.latitude, result.longitude),
+        15,
+        reduced: Motion.reduced(context),
+      );
     }
   }
 }

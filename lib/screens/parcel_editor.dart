@@ -12,6 +12,7 @@ import '../services/location_settings.dart';
 import '../services/tile_cache_service.dart';
 import '../services/map_preferences_service.dart';
 import '../l10n/l10n.dart';
+import '../utils/haptics.dart';
 
 class ParcelEditor extends StatefulWidget {
   final Parcel? parcel;
@@ -148,6 +149,7 @@ class _ParcelEditorState extends State<ParcelEditor> {
 
   void _addPoint(LatLng point) {
     if (!_isDrawing) return;
+    Haptics.select();
     setState(() {
       _polygon.add(point);
     });

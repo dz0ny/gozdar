@@ -4,7 +4,11 @@ part of '../map_tab.dart';
 extension _Secnja on MapTabState {
   /// Enters the sečnja marking mode with the crosshair on [position].
   Future<void> _startSecnjaMarking(LatLng position) async {
-    _mapController.move(position, _mapController.camera.zoom);
+    _camera.moveTo(
+      position,
+      _mapController.camera.zoom,
+      reduced: Motion.reduced(context),
+    );
     final species = await SpeciesService().getSpecies();
     final remembered = await _secnjaPrefs.getSpecies();
     if (!mounted) return;
@@ -38,7 +42,7 @@ extension _Secnja on MapTabState {
 
   /// Marks the tree under the crosshair.
   Future<void> _markSecnjaAtCrosshair() async {
-    HapticFeedback.mediumImpact();
+    Haptics.confirm();
     final MapLocation mark;
     try {
       mark = await markSecnjaAt(

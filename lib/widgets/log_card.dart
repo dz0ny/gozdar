@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../models/log_entry.dart';
+import '../theme/motion.dart';
 import '../utils/formats.dart';
 
 class LogCard extends StatelessWidget {
@@ -33,7 +34,8 @@ class LogCard extends StatelessWidget {
       ),
       child: InkWell(
         onTap: onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: Motion.of(context, Motion.short),
           decoration: BoxDecoration(
             color: highlighted
                 ? Theme.of(context).colorScheme.primaryContainer

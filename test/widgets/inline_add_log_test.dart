@@ -87,6 +87,7 @@ void main() {
     expect(find.text('✓ Dodano: 2'), findsOneWidget);
     // The confirmation is transient: the label returns to "Volumen".
     await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle(); // the old label fades out
     expect(find.text('✓ Dodano: 2'), findsNothing);
     expect(find.text('Volumen'), findsOneWidget);
   });

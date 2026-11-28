@@ -12,8 +12,11 @@ import '../router/app_router.dart';
 import '../router/route_names.dart';
 import 'batch_detail_screen.dart';
 import '../services/species_service.dart';
+import '../theme/motion.dart';
 import '../utils/formats.dart';
+import '../utils/haptics.dart';
 import '../widgets/log_card.dart';
+import '../widgets/motion_widgets.dart';
 import '../widgets/inline_add_log.dart';
 import '../widgets/conversion_settings_sheet.dart';
 import '../widgets/save_batch_sheet.dart';
@@ -148,7 +151,8 @@ class _LogsTabState extends ConsumerState<LogsTab> {
     return InlineAddLog(
       species: provider.currentSpecies,
       onAdd: (entry) async {
-        await provider.addLogEntry(entry);
+        final added = await provider.addLogEntry(entry);
+        if (added) Haptics.confirm();
       },
     );
   }
@@ -182,6 +186,7 @@ class _LogsTabState extends ConsumerState<LogsTab> {
 
   Future<void> _deleteLogEntry(BuildContext context, LogEntry entry) async {
     final provider = ref.read(logsNotifierProvider.notifier);
+    Haptics.remove();
     final success = await provider.deleteLogEntry(entry);
 
     if (success && context.mounted) {
@@ -483,8 +488,9 @@ class _LogsTabState extends ConsumerState<LogsTab> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                Fmt.m3(provider.totalVolume),
+                              AnimatedNumber(
+                                value: provider.totalVolume,
+                                format: Fmt.m3,
                                 style: Theme.of(context)
                                     .textTheme
                                     .headlineMedium
@@ -494,8 +500,15 @@ class _LogsTabState extends ConsumerState<LogsTab> {
                                     ),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                '${Fmt.num(provider.prmVolume, 2)} PRM  •  ${Fmt.num(provider.nmVolume, 2)} NM',
+                              // PRM and NM follow the m³ total, so one
+                              // number drives both.
+                              AnimatedNumber(
+                                value: provider.totalVolume,
+                                format: (m3) {
+                                  final f = provider.conversionFactors;
+                                  return '${Fmt.num(f.toPrm(m3), 2)} PRM  •  '
+                                      '${Fmt.num(f.toNm(m3), 2)} NM';
+                                },
                                 style: Theme.of(context).textTheme.bodyLarge
                                     ?.copyWith(color: Colors.grey[500]),
                               ),
@@ -653,19 +666,24 @@ class _LogsList extends StatefulWidget {
 class _LogsListState extends State<_LogsList> {
   final _lastAddedKey = GlobalKey();
 
+  /// The log added while this list was showing; its row grows in.
+  int? _enteringId;
+
   @override
   void didUpdateWidget(covariant _LogsList oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.lastAddedId != null &&
         widget.lastAddedId != oldWidget.lastAddedId) {
+      _enteringId = widget.lastAddedId;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final target = _lastAddedKey.currentContext;
         if (target == null || !target.mounted) return;
         Scrollable.ensureVisible(
           target,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          duration: Motion.of(target, Motion.medium),
+          curve: Motion.emphasized,
+          // Middle of the view: the row is still growing in.
+          alignment: 0.5,
         );
       });
     }
@@ -673,12 +691,16 @@ class _LogsListState extends State<_LogsList> {
 
   Widget _card(LogEntry entry) {
     final isLast = entry.id == widget.lastAddedId;
-    return LogCard(
-      key: isLast ? _lastAddedKey : null,
-      logEntry: entry,
-      highlighted: isLast,
-      onTap: () => widget.onTap(entry),
-      onDismissed: () => widget.onDismissed(entry),
+    return RowEntrance(
+      key: ValueKey(entry.id),
+      animate: entry.id == _enteringId,
+      child: LogCard(
+        key: isLast ? _lastAddedKey : null,
+        logEntry: entry,
+        highlighted: isLast,
+        onTap: () => widget.onTap(entry),
+        onDismissed: () => widget.onDismissed(entry),
+      ),
     );
   }
 

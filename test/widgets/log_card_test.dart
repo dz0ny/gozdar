@@ -17,6 +17,8 @@ void main() {
         ),
       ),
     );
+    // The highlight fades in.
+    await tester.pumpAndSettle();
     final container = tester.widget<Container>(
       find
           .descendant(

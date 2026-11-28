@@ -20,6 +20,7 @@ extension _Measurement on MapTabState {
 
   void _addMeasurementPoint(LatLng point) {
     if (!_measurement.isActive || _measurement.isFinished) return;
+    Haptics.select();
 
     _setState(() {
       _measurement = _measurement.copyWith(

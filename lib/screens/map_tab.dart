@@ -4,7 +4,6 @@ import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
@@ -69,6 +68,9 @@ import '../providers/map_provider.dart';
 import '../services/location_settings.dart';
 import '../services/map_preferences_service.dart';
 import '../l10n/l10n.dart';
+import '../theme/motion.dart';
+import '../utils/haptics.dart';
+import '../widgets/map_camera_animator.dart';
 
 part 'map_tab/measurement_tool.dart';
 part 'map_tab/secnja.dart';
@@ -107,9 +109,15 @@ class MapTab extends ConsumerStatefulWidget {
   ConsumerState<MapTab> createState() => MapTabState();
 }
 
-class MapTabState extends ConsumerState<MapTab> {
+class MapTabState extends ConsumerState<MapTab> with TickerProviderStateMixin {
   // Map controller for programmatic map control
   final MapController _mapController = MapController();
+
+  /// Glides the camera for the app's own moves (search, targets, shares).
+  late final MapCameraAnimator _camera = MapCameraAnimator(
+    _mapController,
+    this,
+  );
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TileCacheService _tileCacheService = TileCacheService();
 
@@ -374,7 +382,12 @@ class MapTabState extends ConsumerState<MapTab> {
     final targetZoom = zoomIn
         ? 17.0.clamp(7.0, MapLayer.appMaxZoom)
         : currentZoom;
-    _mapController.moveAndRotate(target.location, targetZoom, currentRotation);
+    _camera.moveTo(
+      target.location,
+      targetZoom,
+      rotation: currentRotation,
+      reduced: Motion.reduced(context),
+    );
   }
 
   /// Clear navigation target
@@ -491,6 +504,7 @@ class MapTabState extends ConsumerState<MapTab> {
     _offlineZoomDebounce?.cancel();
     _cameraSettleDebounce?.cancel();
     _locationTracker.dispose();
+    _camera.dispose();
     _mapController.dispose();
     super.dispose();
   }
@@ -549,8 +563,14 @@ class MapTabState extends ConsumerState<MapTab> {
       final target = LatLng(position.latitude, position.longitude);
 
       // Locate without changing scale; reset rotation to north-up.
+      if (!mounted) return;
       final currentZoom = _mapController.camera.zoom;
-      _mapController.moveAndRotate(target, currentZoom, 0);
+      _camera.moveTo(
+        target,
+        currentZoom,
+        rotation: 0,
+        reduced: Motion.reduced(context),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -594,6 +614,7 @@ class MapTabState extends ConsumerState<MapTab> {
 
       if (mounted) {
         if (success) {
+          Haptics.confirm();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(L10n.current.mapTabLocationAdded(name))),
           );
@@ -617,15 +638,14 @@ class MapTabState extends ConsumerState<MapTab> {
   }
 
   /// Moves the camera to show [bounds], e.g. a received share.
+  /// The camera saves itself once it settles.
   void _fitTo(LatLngBounds bounds) {
-    _mapController.fitCamera(
-      CameraFit.bounds(
-        bounds: bounds,
-        padding: const EdgeInsets.all(64),
-        maxZoom: 17,
-      ),
+    _camera.fitBounds(
+      bounds,
+      padding: const EdgeInsets.all(64),
+      maxZoom: 17,
+      reduced: Motion.reduced(context),
     );
-    _saveMapState();
   }
 
   /// Show log entry form with pre-filled location
@@ -872,6 +892,12 @@ class MapTabState extends ConsumerState<MapTab> {
                 },
                 // Save map state when position/zoom/rotation changes
                 onMapEvent: (event) {
+                  // A finger on the map takes over from a camera glide.
+                  if (_camera.isAnimating &&
+                      event.source != MapEventSource.mapController &&
+                      event.source != MapEventSource.nonRotatedSizeChange) {
+                    _camera.stop();
+                  }
                   if (event is MapEventMoveEnd || event is MapEventRotateEnd) {
                     unawaited(_refreshSecnjaHeader());
                     _cameraSettleDebounce?.cancel();

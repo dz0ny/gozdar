@@ -7,7 +7,7 @@ extension _Search on MapTabState {
   /// Without a parcel the map only moves to the house.
   Future<void> _handleAddressFound(AddressHit hit) async {
     final lookup = ++_addressLookup;
-    _mapController.move(hit.point, 18);
+    _camera.moveTo(hit.point, 18, reduced: Motion.reduced(context));
     var parcel = ParcelLookupService.instance.parcelAt(hit.point);
     if (parcel == null) {
       // The offline cadastre has no parcel here. The network can be slow.
@@ -56,12 +56,11 @@ extension _Search on MapTabState {
     // Fit map to parcel bounds
     if (parcel.polygon.isNotEmpty) {
       final bounds = LatLngBounds.fromPoints(parcel.polygon);
-      _mapController.fitCamera(
-        CameraFit.bounds(
-          bounds: bounds,
-          padding: const EdgeInsets.all(50),
-          maxZoom: 17,
-        ),
+      _camera.fitBounds(
+        bounds,
+        padding: const EdgeInsets.all(50),
+        maxZoom: 17,
+        reduced: Motion.reduced(context),
       );
     }
 

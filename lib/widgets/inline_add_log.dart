@@ -5,11 +5,12 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/l10n.dart';
 import '../models/log_entry.dart';
 import '../services/log_input_prefs_service.dart';
+import '../theme/motion.dart';
 import '../utils/decimal_input.dart';
 import '../utils/formats.dart';
 
-/// Always-visible quick-add bar at the bottom of the Hlodi tab: diameter,
-/// length, then the round "+". Replaces the modal add sheet
+/// Always-visible quick-add panel at the bottom of the Hlodi tab: diameter
+/// and length tiles, then the volume and a wide "Dodaj" button. Replaces the modal add sheet
 /// so logging a pile of timber is a steady type → Dodaj → type loop without a
 /// popup in between. The length is remembered (prefilled from the last added
 /// log and kept after each add); the diameter is cleared after each add and
@@ -172,42 +173,98 @@ class _InlineAddLogState extends State<InlineAddLog> {
     }
   }
 
-  /// Big underlined number field, as on a pocket calculator: a small label
-  /// above it, the unit sits next to it as plain text.
-  Widget _numberField({
+  /// A rounded tile holding one number: a small label on top, the big
+  /// number with its unit beside it. Tapping anywhere on the tile types into
+  /// it; the outline turns green while it has the focus.
+  Widget _numberTile({
     required String label,
+    required String unit,
     required TextEditingController controller,
     required FocusNode focusNode,
     required TextInputAction action,
     required void Function(String) onSubmitted,
-    required TextStyle style,
-    required Color underline,
   }) {
-    return TextFormField(
-      controller: controller,
-      focusNode: focusNode,
-      style: style,
-      textAlign: TextAlign.right,
-      decoration: InputDecoration(
-        labelText: label,
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: underline, width: 1.5),
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return TextFieldTapRegion(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: focusNode.requestFocus,
+        child: ListenableBuilder(
+          listenable: focusNode,
+          builder: (context, child) => AnimatedContainer(
+            duration: Motion.of(context, Motion.short),
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                width: 2,
+                color: focusNode.hasFocus
+                    ? Colors.green[600]!
+                    : Colors.transparent,
+              ),
+            ),
+            child: child,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: textTheme.labelLarge?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      style: textTheme.headlineLarge?.copyWith(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: cs.onSurface,
+                      ),
+                      textAlign: TextAlign.right,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                        errorStyle: TextStyle(height: 0, fontSize: 0),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      textInputAction: action,
+                      onFieldSubmitted: onSubmitted,
+                      // Tapping anywhere else closes the keyboard.
+                      onTapOutside: (_) => focusNode.unfocus(),
+                      inputFormatters: [DecimalTextInputFormatter()],
+                      validator: (v) => v == null || v.isEmpty ? '' : null,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    unit,
+                    style: textTheme.titleLarge?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        focusedBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.green[600]!, width: 2.5),
-        ),
-        errorStyle: const TextStyle(height: 0, fontSize: 0),
       ),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      textInputAction: action,
-      onFieldSubmitted: onSubmitted,
-      // Tapping anywhere else (list, header, empty space) closes the keyboard.
-      onTapOutside: (_) => focusNode.unfocus(),
-      inputFormatters: [DecimalTextInputFormatter()],
-      validator: (v) => v == null || v.isEmpty ? '' : null,
     );
   }
 
@@ -216,138 +273,141 @@ class _InlineAddLogState extends State<InlineAddLog> {
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final canAdd = _calculatedVolume != null && !_isSaving;
-
-    final numberStyle = textTheme.displaySmall!.copyWith(
-      fontSize: 40,
-      fontWeight: FontWeight.bold,
-      color: cs.onSurface,
-    );
-    final unitStyle = textTheme.headlineSmall!.copyWith(
-      fontSize: 26,
-      color: cs.onSurfaceVariant,
-    );
-    final underline = cs.onSurfaceVariant.withValues(alpha: 0.5);
+    final volumeColor = _calculatedVolume != null
+        ? Colors.green[400]
+        : cs.onSurfaceVariant;
 
     return Material(
-      color: cs.surface,
-      elevation: 4,
+      color: cs.surfaceContainer,
+      elevation: 8,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
           child: Form(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 39 cm  ×  8 m   (+)
+                // [Premer 39 cm] [Dolžina 4 m]
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
-                      flex: 5,
-                      child: _numberField(
+                      child: _numberTile(
                         label: context.l10n.logsInlineDiameterHint,
+                        unit: 'cm',
                         controller: _diameterController,
                         focusNode: _diameterFocus,
                         action: TextInputAction.next,
                         onSubmitted: (_) => _lengthFocus.requestFocus(),
-                        style: numberStyle,
-                        underline: underline,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Text('cm', style: unitStyle),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Text('×', style: unitStyle),
-                    ),
+                    const SizedBox(width: 12),
                     Expanded(
-                      flex: 4,
-                      child: _numberField(
+                      child: _numberTile(
                         label: context.l10n.logsInlineLengthHint,
+                        unit: 'm',
                         controller: _lengthController,
                         focusNode: _lengthFocus,
                         action: TextInputAction.done,
                         onSubmitted: (_) {
                           if (canAdd) _saveAndContinue();
                         },
-                        style: numberStyle,
-                        underline: underline,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text('m', style: unitStyle),
-                    const SizedBox(width: 16),
-                    // Counts as part of the fields so tapping + keeps the
-                    // keyboard open for the next log.
-                    TextFieldTapRegion(
-                      child: SizedBox(
-                        width: 76,
-                        height: 76,
-                        child: FilledButton(
-                          onPressed: canAdd ? _saveAndContinue : null,
-                          style: FilledButton.styleFrom(
-                            shape: const CircleBorder(),
-                            padding: EdgeInsets.zero,
-                            backgroundColor: Colors.green[700],
-                            foregroundColor: Colors.white,
-                          ),
-                          child: Tooltip(
-                            message: context.l10n.commonAdd,
-                            child: Icon(Icons.add, size: 44),
-                          ),
-                        ),
                       ),
                     ),
                   ],
                 ),
                 if (_rangeError != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: 6),
                     child: Text(
                       _rangeError!,
                       style: textTheme.bodyMedium?.copyWith(color: cs.error),
                     ),
                   ),
-                const SizedBox(height: 6),
-                // Volumen  =  0,96 m³   (the label briefly reads "✓ Dodano: N"
-                // after an add, in the same slot, so nothing shifts)
+                const SizedBox(height: 12),
+                // Volumen 0,96 m³            [ + Dodaj ]
+                // (the label briefly reads "✓ Dodano: N" after an add)
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
                   children: [
-                    // Not Flexible: a loose Flexible would reserve half the row
-                    // and leave a gap after "m³".
-                    Text(
-                      _showAdded
-                          ? '✓ ${context.l10n.logsInlineAdded(_addedCount)}'
-                          : context.l10n.logsVolumeLabel,
-                      style: _showAdded
-                          ? unitStyle.copyWith(color: Colors.green[400])
-                          : unitStyle,
-                      maxLines: 1,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: Text('=', style: unitStyle),
-                    ),
                     Expanded(
-                      child: Text(
-                        _calculatedVolume != null
-                            ? Fmt.num(_calculatedVolume!, 2)
-                            : '–',
-                        textAlign: TextAlign.right,
-                        style: numberStyle.copyWith(
-                          color: _calculatedVolume != null
-                              ? cs.onSurface
-                              : cs.onSurfaceVariant,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AnimatedSwitcher(
+                            duration: Motion.of(context, Motion.short),
+                            child: Text(
+                              _showAdded
+                                  ? '✓ ${context.l10n.logsInlineAdded(_addedCount)}'
+                                  : context.l10n.logsVolumeLabel,
+                              key: ValueKey(_showAdded),
+                              maxLines: 1,
+                              style: textTheme.labelLarge?.copyWith(
+                                color: _showAdded
+                                    ? Colors.green[400]
+                                    : cs.onSurfaceVariant,
+                                fontWeight: _showAdded ? FontWeight.bold : null,
+                              ),
+                            ),
+                          ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  _calculatedVolume != null
+                                      ? Fmt.num(_calculatedVolume!, 2)
+                                      : '–',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.headlineLarge?.copyWith(
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.bold,
+                                    color: volumeColor,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'm³',
+                                style: textTheme.titleLarge?.copyWith(
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Counts as part of the fields so tapping it keeps the
+                    // keyboard open for the next log.
+                    TextFieldTapRegion(
+                      child: SizedBox(
+                        height: 60,
+                        child: FilledButton.icon(
+                          onPressed: canAdd ? _saveAndContinue : null,
+                          style: FilledButton.styleFrom(
+                            shape: const StadiumBorder(),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            backgroundColor: Colors.green[700],
+                            foregroundColor: Colors.white,
+                            textStyle: textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          icon: const Icon(Icons.add, size: 30),
+                          label: Text(context.l10n.commonAdd),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Text('m³', style: unitStyle),
                   ],
                 ),
               ],
