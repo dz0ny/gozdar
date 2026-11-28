@@ -11,6 +11,10 @@ export const RELEASES_URL = "https://github.com/dz0ny/gozdar/releases";
 // APK without a version so the link never changes.
 export const ANDROID_APK_URL = "https://github.com/dz0ny/gozdar/releases/latest/download/gozdar-android.apk";
 export const APP_STORE_URL = "https://apps.apple.com/app/id6756237942";
+// Google Play closed test. Anyone who joins the group may opt in on the
+// test page; the same two links are in the app (tester_signup_tile.dart).
+export const PLAY_TESTER_GROUP_URL = "https://groups.google.com/g/gozdar-testers";
+export const PLAY_TEST_OPT_IN_URL = "https://play.google.com/apps/testing/dev.dz0ny.gozdar";
 export const ISSUES_URL = "https://github.com/dz0ny/gozdar/issues";
 export const NEW_ISSUE_URL = "https://github.com/dz0ny/gozdar/issues/new";
 

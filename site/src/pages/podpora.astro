@@ -13,6 +13,11 @@ const faq = [
 		a: "Na telefonu na naši strani tapnite Prenesi za Android; prenese se datoteka gozdar-android.apk. Odprite jo iz obvestila ali mape Prenosi. Ob prvi namestitvi Android vpraša, ali dovolite namestitev iz brskalnika ali upravitelja datotek.",
 	},
 	{
+		id: "preizkusanje",
+		q: "Kako postanem preizkuševalec v Googlu Play?",
+		a: "Google aplikacijo objavi v Trgovini Play šele, ko jo dva tedna preizkuša vsaj 12 ljudi. Najprej se z Google Računom, s katerim ste prijavljeni v Trgovino Play, pridružite skupini gozdar-testers (groups.google.com/g/gozdar-testers). Nato na strani play.google.com/apps/testing/dev.dz0ny.gozdar tapnite Postani preizkuševalec in Gozdar namestite iz Googla Play. Če imate nameščen APK z naše strani, ga Play morda ne bo mogel posodobiti; takrat parcele in hlode najprej izvozite, APK odstranite in Gozdar namestite iz Googla Play. Ista navodila so v aplikaciji pod Nastavitve, Podpora.",
+	},
+	{
 		q: "Karta je prazna ali se ne naloži.",
 		a: "Preverite povezavo in izbrani sloj. Slovenski sloji (kataster, sestoji) se prikažejo le, kadar je izbrana slovenska podlaga, na primer Ortofoto. Če ste brez signala, se prikažejo samo karte, ki ste si jih že ogledali ali jih prenesli.",
 	},
@@ -80,8 +85,8 @@ const schema: WithContext<FAQPage> = {
     <div class="mt-20 grid gap-10 lg:grid-cols-12">
       <h2 class="font-display text-3xl font-semibold leading-tight sm:text-4xl lg:col-span-4">Pogosta vprašanja</h2>
       <div class="divide-y divide-border border-y border-border lg:col-span-8">
-        {faq.map(({ q, a }) => (
-          <details class="group py-5">
+        {faq.map(({ id, q, a }) => (
+          <details id={id} class="group scroll-mt-24 py-5">
             <summary class="flex cursor-pointer list-none items-start justify-between gap-6 text-lg font-semibold [&::-webkit-details-marker]:hidden">
               {q}
               <span class="mt-1 text-primary transition-transform group-open:rotate-45" aria-hidden="true">+</span>

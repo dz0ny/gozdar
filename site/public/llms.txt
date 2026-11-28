@@ -4,7 +4,7 @@
 
 ## Overview
 
-Gozdar runs on Android (APK from GitHub releases; Google Play coming), iOS and iPadOS (App Store: https://apps.apple.com/app/id6756237942), macOS, Windows and Linux. It shows ZGS and GURS map layers (orthophoto, cadastral parcels, forest stands, 40+ layers), searches parcels by number, owner name, address or cadastral municipality, records logs (diameter, length, volume V = π × (d/200)² × L, species, GPS) with m³/PRM/NM totals, exports to Excel, PDF and KML, and copies downloaded maps and cadastral data to nearby phones on the same Wi-Fi. Data stays on the device; no accounts, ads or analytics.
+Gozdar runs on Android (APK from GitHub releases; Google Play closed test: join https://groups.google.com/g/gozdar-testers, then opt in at https://play.google.com/apps/testing/dev.dz0ny.gozdar), iOS and iPadOS (App Store: https://apps.apple.com/app/id6756237942), macOS, Windows and Linux. It shows ZGS and GURS map layers (orthophoto, cadastral parcels, forest stands, 40+ layers), searches parcels by number, owner name, address or cadastral municipality, records logs (diameter, length, volume V = π × (d/200)² × L, species, GPS) with m³/PRM/NM totals, exports to Excel, PDF and KML, and copies downloaded maps and cadastral data to nearby phones on the same Wi-Fi. Data stays on the device; no accounts, ads or analytics.
 
 ## When to use this
 

@@ -1,6 +1,6 @@
 ---
 import { Smartphone, Apple, Monitor, Store, Download } from "lucide-react";
-import { ANDROID_APK_URL, APP_STORE_URL, RELEASES_URL } from "@/lib/site";
+import { ANDROID_APK_URL, APP_STORE_URL, PLAY_TEST_OPT_IN_URL, PLAY_TESTER_GROUP_URL, RELEASES_URL } from "@/lib/site";
 
 // TODO(launch): set this once the Play listing is public. While null, the card
 // shows "Kmalu" and links nowhere.
@@ -14,7 +14,7 @@ const PLAY_URL: string | null = null; // https://play.google.com/store/apps/deta
         Namestite Gozdar.
       </h2>
       <p class="text-lg text-muted-foreground lg:col-span-5">
-        Za iPhone in iPad je v App Storu, za Android kot datoteka APK. Google Play pride kmalu.
+        Za iPhone in iPad je v App Storu, za Android kot datoteka APK. V Googlu Play ga lahko že preizkusite.
       </p>
     </div>
 
@@ -48,7 +48,14 @@ const PLAY_URL: string | null = null; // https://play.google.com/store/apps/deta
         {PLAY_URL ? (
           <a href={PLAY_URL} class="mt-2 inline-block text-primary underline underline-offset-4">Odpri v trgovini</a>
         ) : (
-          <p class="mt-2 text-[0.97rem] text-muted-foreground"><span class="mr-2 inline-block rounded-full bg-muted px-2.5 py-0.5 text-sm font-semibold text-foreground">Kmalu</span>Samodejne posodobitve prek trgovine.</p>
+          <div class="mt-2 text-[0.97rem] text-muted-foreground">
+            <p><span class="mr-2 inline-block rounded-full bg-muted px-2.5 py-0.5 text-sm font-semibold text-foreground">Preizkušanje</span>Google aplikacijo objavi, ko jo dva tedna preizkuša vsaj 12 ljudi. Pomagajte v dveh korakih:</p>
+            <ol class="mt-3 list-decimal space-y-1 pl-5">
+              <li><a href={PLAY_TESTER_GROUP_URL} class="text-primary underline underline-offset-4 hover:text-primary-hover">Pridružite se skupini</a> preizkuševalcev.</li>
+              <li><a href={PLAY_TEST_OPT_IN_URL} class="text-primary underline underline-offset-4 hover:text-primary-hover">Postanite preizkuševalec</a> in namestite Gozdar iz Googla Play.</li>
+            </ol>
+            <p class="mt-3 text-sm"><a href="/podpora/#preizkusanje" class="underline underline-offset-4 hover:text-foreground">Podrobnosti</a></p>
+          </div>
         )}
       </article>
 
