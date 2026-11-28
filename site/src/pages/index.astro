@@ -9,7 +9,7 @@ import OfflineBand from "@/components/OfflineBand.astro";
 import DownloadSection from "@/components/DownloadSection.astro";
 import DataNote from "@/components/DataNote.astro";
 import { identitySchema } from "@/lib/schema";
-import { SITE_DESCRIPTION, LATEST_RELEASE_URL } from "@/lib/site";
+import { SITE_DESCRIPTION, ANDROID_APK_URL } from "@/lib/site";
 import type { MobileApplication, WithContext } from "schema-dts";
 
 const app: WithContext<MobileApplication> = {
@@ -20,7 +20,7 @@ const app: WithContext<MobileApplication> = {
 	applicationCategory: "UtilitiesApplication",
 	operatingSystem: "Android, iOS, macOS, Windows, Linux",
 	inLanguage: "sl",
-	downloadUrl: LATEST_RELEASE_URL,
+	downloadUrl: ANDROID_APK_URL,
 };
 ---
 

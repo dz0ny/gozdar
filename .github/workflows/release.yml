@@ -83,14 +83,16 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          cp build/app/outputs/flutter-apk/app-direct-release.apk build/app/outputs/flutter-apk/gozdar-${RELEASE_TAG}-android.apk
+          # No version in the APK name, so releases/latest/download/gozdar-android.apk
+          # always serves the newest build (the website links there).
+          cp build/app/outputs/flutter-apk/app-direct-release.apk build/app/outputs/flutter-apk/gozdar-android.apk
           cp build/app/outputs/bundle/playRelease/app-play-release.aab build/app/outputs/bundle/playRelease/gozdar-${RELEASE_TAG}-play.aab
 
       - name: Upload assets to GitHub release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/app/outputs/flutter-apk/gozdar-${{ github.event.release.tag_name }}-android.apk
+            build/app/outputs/flutter-apk/gozdar-android.apk
             build/app/outputs/bundle/playRelease/gozdar-${{ github.event.release.tag_name }}-play.aab
 
       - name: Upload Play release to internal testing

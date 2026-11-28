@@ -7,7 +7,9 @@ export const SITE_DESCRIPTION =
 export const CONTACT_EMAIL = "hey@dz0ny.dev";
 export const GITHUB_URL = "https://github.com/dz0ny/gozdar";
 export const RELEASES_URL = "https://github.com/dz0ny/gozdar/releases";
-export const LATEST_RELEASE_URL = "https://github.com/dz0ny/gozdar/releases/latest";
+// GitHub redirects this to the asset of the newest release; CI names the
+// APK without a version so the link never changes.
+export const ANDROID_APK_URL = "https://github.com/dz0ny/gozdar/releases/latest/download/gozdar-android.apk";
 export const APP_STORE_URL = "https://apps.apple.com/app/id6756237942";
 export const ISSUES_URL = "https://github.com/dz0ny/gozdar/issues";
 export const NEW_ISSUE_URL = "https://github.com/dz0ny/gozdar/issues/new";
